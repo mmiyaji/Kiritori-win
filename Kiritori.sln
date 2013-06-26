@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Express 2012 for Windows Desktop
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kiritori", "Kiritori\Kiritori.csproj", "{70A0B8D6-4992-4878-9326-30E2A2D58EDB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{70A0B8D6-4992-4878-9326-30E2A2D58EDB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{70A0B8D6-4992-4878-9326-30E2A2D58EDB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{70A0B8D6-4992-4878-9326-30E2A2D58EDB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{70A0B8D6-4992-4878-9326-30E2A2D58EDB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
