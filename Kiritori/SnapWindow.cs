@@ -10,19 +10,30 @@ using System.Windows.Forms;
 
 namespace Kiritori
 {
-    public partial class Form1 : Form
+    public partial class SnapWindow : Form
     {
-        public Form1()
+        public SnapWindow()
         {
             InitializeComponent();
         }
-
         private void Form1_Load(object sender, EventArgs e)
         {
             pictureBox1.MouseDown +=
                 new MouseEventHandler(Form1_MouseDown);
             pictureBox1.MouseMove +=
                 new MouseEventHandler(Form1_MouseMove);
+            Bitmap bmp = new Bitmap(200, 200);
+            using (Graphics g = Graphics.FromImage(bmp))
+            {
+                g.CopyFromScreen(
+                    new Point(Cursor.Position.X - bmp.Size.Width, Cursor.Position.Y - bmp.Size.Height), 
+                    new Point(0, 0), bmp.Size
+                    );
+            }
+            pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
+            pictureBox1.Image = bmp;
+        }
+        public void setPosition(Point p) {
         }
         //マウスのクリック位置を記憶
         private Point mousePoint;

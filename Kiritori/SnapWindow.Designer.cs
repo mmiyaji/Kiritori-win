@@ -1,6 +1,6 @@
 ﻿namespace Kiritori
 {
-    partial class Form1
+    partial class SnapWindow
     {
         /// <summary>
         /// 必要なデザイナー変数です。
