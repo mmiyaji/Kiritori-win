@@ -10,6 +10,18 @@ using System.Windows.Forms;
 
 namespace Kiritori
 {
+    enum HOTS
+    {
+        MOVE_LEFT   = Keys.Left,
+        MOVE_RIGHT  = Keys.Right,
+        MOVE_UP     = Keys.Up,
+        MOVE_DOWN   = Keys.Down,
+        FLOAT       = (int)Keys.Control + (int)Keys.A,
+        SAVE        = (int)Keys.Control + (int)Keys.S,
+        ZOOM_IN     = Keys.Oemplus,
+        ZOOM_OUT    = Keys.OemMinus,
+    }
+
     public partial class SnapWindow : Form
     {
         public SnapWindow()
@@ -67,6 +79,35 @@ namespace Kiritori
         private void pictureBox1_Click(object sender, EventArgs e)
         {
 
+        }
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            switch((int)keyData){
+                case (int)HOTS.MOVE_LEFT:
+                    Console.WriteLine("left");
+                    break;
+                case (int)HOTS.MOVE_RIGHT:
+                    Console.WriteLine("right");
+                    break;
+                case (int)HOTS.MOVE_UP:
+                    break;
+                case (int)HOTS.MOVE_DOWN:
+                    break;
+                case (int)HOTS.FLOAT:
+                    this.TopMost = !this.TopMost;
+                    break;
+                case (int)HOTS.SAVE:
+                    break;
+                case (int)HOTS.ZOOM_IN:
+                    Console.WriteLine("plus");
+                    break;
+                case (int)HOTS.ZOOM_OUT:
+                    Console.WriteLine("minus");
+                    break;
+                default:
+                    return base.ProcessCmdKey(ref msg, keyData);
+            }
+            return true;
         }
     }
 }
