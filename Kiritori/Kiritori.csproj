@@ -45,6 +45,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="HotKey.cs" />
+    <Compile Include="ScreenWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ScreenWindow.Designer.cs">
+      <DependentUpon>ScreenWindow.cs</DependentUpon>
+    </Compile>
     <Compile Include="SnapWindow.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -59,6 +65,12 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="Form2.resx">
+      <DependentUpon>Form2.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ScreenWindow.resx">
+      <DependentUpon>ScreenWindow.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="SnapWindow.resx">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </EmbeddedResource>
