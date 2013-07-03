@@ -16,11 +16,10 @@ namespace Kiritori
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            SnapWindow f1 = new SnapWindow();
-            f1.Show();
-            
-            SnapWindow f2 = new SnapWindow();
-            f2.Show();
+//            SnapWindow f1 = new SnapWindow();
+//            f1.Show();
+//            SnapWindow f2 = new SnapWindow();
+//            f2.Show();
             Application.Run(new Form2());
         }
     }
