@@ -90,8 +90,11 @@ namespace Kiritori
                     rc.Y = e.Y;
                     rc.Height = startPoint.Y - e.Y;
                 }
-                g.DrawRectangle(p, rc.X, rc.Y, rc.Width, rc.Height);
+//                g.DrawRectangle(p, rc.X, rc.Y, rc.Width, rc.Height);
+                ControlPaint.DrawReversibleFrame(rc,
+                    Color.Red, FrameStyle.Dashed);
                 pictureBox1.Refresh();
+//                pictureBox1.Update();
             }
         }
         //マウスのボタンが離されたとき
