@@ -20,7 +20,8 @@ namespace Kiritori
 //            f1.Show();
 //            SnapWindow f2 = new SnapWindow();
 //            f2.Show();
-            Application.Run(new Form2());
+            new Form2();
+            Application.Run();
         }
     }
 }

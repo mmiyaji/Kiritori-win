@@ -50,6 +50,12 @@ namespace Kiritori
 //            notifyIcon1.Visible = false;
             Application.Exit();
         }
+
+        private void captureToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ScreenWindow s = new ScreenWindow();
+            s.Show();
+        }
     }
     public class CaptureRegion
     {
