@@ -20,6 +20,7 @@ namespace Kiritori
         SAVE        = (int)Keys.Control + (int)Keys.S,
         ZOOM_IN     = Keys.Oemplus,
         ZOOM_OUT    = Keys.OemMinus,
+        ESCAPE      = Keys.Escape,
     }
 
     public partial class SnapWindow : Form
@@ -34,16 +35,21 @@ namespace Kiritori
                 new MouseEventHandler(Form1_MouseDown);
             pictureBox1.MouseMove +=
                 new MouseEventHandler(Form1_MouseMove);
-            Bitmap bmp = new Bitmap(200, 200);
+        }
+        public void capture(Rectangle rc) {
+            Bitmap bmp = new Bitmap(rc.Width, rc.Height);
             using (Graphics g = Graphics.FromImage(bmp))
             {
                 g.CopyFromScreen(
-                    new Point(Cursor.Position.X - bmp.Size.Width, Cursor.Position.Y - bmp.Size.Height), 
-                    new Point(0, 0), bmp.Size
+                    new Point(rc.X, rc.Y),
+                    new Point(0, 0), new Size(rc.Width, rc.Height),
+                    CopyPixelOperation.SourceCopy
                     );
             }
-            pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
+            this.Size = bmp.Size;
+            pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
             pictureBox1.Image = bmp;
+//            this.SetDesktopLocation(rc.X, rc.Y);
         }
         public void setPosition(Point p) {
         }
@@ -84,14 +90,22 @@ namespace Kiritori
         {
             switch((int)keyData){
                 case (int)HOTS.MOVE_LEFT:
+                    this.SetDesktopLocation(this.Location.X - 3, this.Location.Y);
                     Console.WriteLine("left");
                     break;
                 case (int)HOTS.MOVE_RIGHT:
+                    this.SetDesktopLocation(this.Location.X + 3, this.Location.Y);
                     Console.WriteLine("right");
                     break;
                 case (int)HOTS.MOVE_UP:
+                    this.SetDesktopLocation(this.Location.X , this.Location.Y - 3);
                     break;
                 case (int)HOTS.MOVE_DOWN:
+                    this.SetDesktopLocation(this.Location.X, this.Location.Y + 3);
+                    break;
+                case (int)HOTS.ESCAPE:
+                    this.Close();
+                    Console.WriteLine("escape");
                     break;
                 case (int)HOTS.FLOAT:
                     this.TopMost = !this.TopMost;
@@ -99,6 +113,7 @@ namespace Kiritori
                 case (int)HOTS.SAVE:
                     break;
                 case (int)HOTS.ZOOM_IN:
+//                    this.SetBounds(this.Location.X, this.Location.Y, this.Size.Width + 3, this.Size.Height + 3);
                     Console.WriteLine("plus");
                     break;
                 case (int)HOTS.ZOOM_OUT:

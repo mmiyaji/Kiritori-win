@@ -13,6 +13,7 @@ namespace Kiritori
     public partial class ScreenWindow : Form
     {
         private Graphics g;
+        private Bitmap bmp;
         public ScreenWindow()
         {
             InitializeComponent();
@@ -27,7 +28,7 @@ namespace Kiritori
             //ディスプレイの幅
             w = System.Windows.Forms.Screen.GetBounds(this).Width;
             this.SetBounds(0, 0, w, h);
-            Bitmap bmp = new Bitmap(w, h);
+            bmp = new Bitmap(w, h);
             g = Graphics.FromImage(bmp);
             g.CopyFromScreen(
                 new Point(w - bmp.Size.Width, h - bmp.Size.Height),
@@ -49,6 +50,7 @@ namespace Kiritori
         private Point startPoint;
         private Point movePoint;
         private Point endPoint;
+        private Rectangle rc;
         private Boolean isPressed = false;
         //マウスのボタンが押されたとき
         private void ScreenWindow_MouseDown(object sender,
@@ -68,7 +70,7 @@ namespace Kiritori
             if ((e.Button & MouseButtons.Left) == MouseButtons.Left)
             {
 //                movePoint = new Point(e.X, e.Y);
-                Rectangle rc = new Rectangle();
+                rc = new Rectangle();
                 Pen p = new Pen(Color.Black, 10);
                 if (startPoint.X < e.X)
                 {
@@ -91,8 +93,22 @@ namespace Kiritori
                     rc.Height = startPoint.Y - e.Y;
                 }
 //                g.DrawRectangle(p, rc.X, rc.Y, rc.Width, rc.Height);
-                ControlPaint.DrawReversibleFrame(rc,
-                    Color.Red, FrameStyle.Dashed);
+                Pen blackPen = new Pen(Color.Black);
+                Graphics g = Graphics.FromImage(bmp);
+
+                // 描画する線を点線に設定
+                blackPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                blackPen.Width = 1;
+                // 画面を消去
+                g.Clear(SystemColors.Control);
+
+                // 領域を描画
+                g.DrawRectangle(blackPen, rc);
+
+                g.Dispose();
+//                pictureBox1.Image = bmp;
+//                ControlPaint.DrawReversibleFrame(rc,
+//                    Color.White, FrameStyle.Dashed);
                 pictureBox1.Refresh();
 //                pictureBox1.Update();
             }
@@ -105,8 +121,13 @@ namespace Kiritori
             {
                 endPoint = new Point(e.X, e.Y);
                 isPressed = false;
+                this.Close();
                 Console.WriteLine("s" + startPoint + " e" + endPoint);
-                pictureBox1.Update();
+//                pictureBox1.Update();
+                SnapWindow f3 = new SnapWindow();
+                f3.capture(rc);
+                f3.Show();
+                f3.SetDesktopLocation(rc.X, rc.Y);
             }
         }
     }

@@ -36,12 +36,19 @@ namespace Kiritori
         }
         private void Form2_FormClosing(object sender, FormClosingEventArgs e)
         {
+            this.notifyIcon1.Visible = false;
             hotKey.Dispose();
         }
 
         private void Form2_Load(object sender, EventArgs e)
         {
             Console.WriteLine("c");
+        }
+
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+//            notifyIcon1.Visible = false;
+            Application.Exit();
         }
     }
     public class CaptureRegion
