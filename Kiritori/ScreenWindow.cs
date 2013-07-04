@@ -127,8 +127,18 @@ namespace Kiritori
                 SnapWindow f3 = new SnapWindow();
                 f3.capture(rc);
                 f3.Show();
-                f3.SetDesktopLocation(rc.X, rc.Y);
-            }
+                f3.SetDesktopLocation(rc.X, rc.Y);  
+                }
         }
+        const int CS_DROPSHADOW = 0x00020000;
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams cp = base.CreateParams;
+                cp.ClassStyle |= CS_DROPSHADOW;
+                return cp;
+            }
+        } 
     }
 }
