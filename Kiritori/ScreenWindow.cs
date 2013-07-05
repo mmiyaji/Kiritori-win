@@ -44,11 +44,10 @@ namespace Kiritori
                     new MouseEventHandler(ScreenWindow_MouseMove);
             pictureBox1.MouseUp +=
                     new MouseEventHandler(ScreenWindow_MouseUp);
-
+            pictureBox1.Refresh();
         }
         //マウスのクリック位置を記憶
         private Point startPoint;
-        private Point movePoint;
         private Point endPoint;
         private Rectangle rc;
         private Boolean isPressed = false;
@@ -69,7 +68,6 @@ namespace Kiritori
         {
             if ((e.Button & MouseButtons.Left) == MouseButtons.Left)
             {
-//                movePoint = new Point(e.X, e.Y);
                 rc = new Rectangle();
                 Pen p = new Pen(Color.Black, 10);
                 if (startPoint.X < e.X)
@@ -92,25 +90,27 @@ namespace Kiritori
                     rc.Y = e.Y;
                     rc.Height = startPoint.Y - e.Y;
                 }
-//                g.DrawRectangle(p, rc.X, rc.Y, rc.Width, rc.Height);
-                Pen blackPen = new Pen(Color.Black);
-                Graphics g = Graphics.FromImage(bmp);
+                {
+                    Pen blackPen = new Pen(Color.Black);
+                    Graphics g = Graphics.FromImage(bmp);
+                    // 描画する線を点線に設定
+                    blackPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                    blackPen.Width = 1;
+                    // 画面を消去
+                    g.Clear(SystemColors.Control);
 
-                // 描画する線を点線に設定
-                blackPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
-                blackPen.Width = 1;
-                // 画面を消去
-                g.Clear(SystemColors.Control);
+                    // 領域を描画
+                    g.DrawRectangle(blackPen, rc);
+                    //フォントオブジェクトの作成
+                    Font fnt = new Font("Arial", 10);
+                    //文字列を位置(0,0)、青色で表示
+                    g.DrawString(rc.Width.ToString() + "x" + rc.Height.ToString(), fnt, Brushes.Black, e.X + 5, e.Y + 10);
+                    //リソースを解放する
+                    fnt.Dispose();
 
-                // 領域を描画
-                g.DrawRectangle(blackPen, rc);
-
-                g.Dispose();
-//                pictureBox1.Image = bmp;
-//                ControlPaint.DrawReversibleFrame(rc,
-//                    Color.White, FrameStyle.Dashed);
-                pictureBox1.Refresh();
-//                pictureBox1.Update();
+                    g.Dispose();
+                    pictureBox1.Refresh();
+                }
             }
         }
         //マウスのボタンが離されたとき
@@ -122,23 +122,12 @@ namespace Kiritori
                 endPoint = new Point(e.X, e.Y);
                 isPressed = false;
                 this.Close();
-                Console.WriteLine("s" + startPoint + " e" + endPoint);
-//                pictureBox1.Update();
                 SnapWindow f3 = new SnapWindow();
                 f3.capture(rc);
                 f3.Show();
                 f3.SetDesktopLocation(rc.X, rc.Y);  
-                }
-        }
-        const int CS_DROPSHADOW = 0x00020000;
-        protected override CreateParams CreateParams
-        {
-            get
-            {
-                CreateParams cp = base.CreateParams;
-                cp.ClassStyle |= CS_DROPSHADOW;
-                return cp;
             }
-        } 
+        }
+
     }
 }

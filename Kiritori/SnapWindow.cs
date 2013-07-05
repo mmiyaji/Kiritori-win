@@ -18,8 +18,9 @@ namespace Kiritori
         MOVE_DOWN   = Keys.Down,
         FLOAT       = (int)Keys.Control + (int)Keys.A,
         SAVE        = (int)Keys.Control + (int)Keys.S,
-        ZOOM_IN     = Keys.Oemplus,
-        ZOOM_OUT    = Keys.OemMinus,
+        ZOOM_IN     = (int)Keys.Control + (int)Keys.Oemplus,
+        ZOOM_OUT    = (int)Keys.Control + (int)Keys.OemMinus,
+        CLOSE       = (int)Keys.Control + (int)Keys.W,
         ESCAPE      = Keys.Escape,
     }
 
@@ -47,7 +48,8 @@ namespace Kiritori
                     );
             }
             this.Size = bmp.Size;
-            pictureBox1.SizeMode = PictureBoxSizeMode.AutoSize;
+            pictureBox1.Size = bmp.Size;
+            pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; //autosize
             pictureBox1.Image = bmp;
 //            this.SetDesktopLocation(rc.X, rc.Y);
         }
@@ -104,6 +106,7 @@ namespace Kiritori
                     this.SetDesktopLocation(this.Location.X, this.Location.Y + 3);
                     break;
                 case (int)HOTS.ESCAPE:
+                case (int)HOTS.CLOSE:
                     this.Close();
                     Console.WriteLine("escape");
                     break;
@@ -114,9 +117,13 @@ namespace Kiritori
                     break;
                 case (int)HOTS.ZOOM_IN:
 //                    this.SetBounds(this.Location.X, this.Location.Y, this.Size.Width + 3, this.Size.Height + 3);
+                    this.Size = new Size((int)(this.Size.Width * 1.1), (int)(this.Height * 1.1));
+                    this.pictureBox1.Size = this.Size;
                     Console.WriteLine("plus");
                     break;
                 case (int)HOTS.ZOOM_OUT:
+                    this.Size = new Size((int)(this.Size.Width * 0.9), (int)(this.Height * 0.9));
+                    this.pictureBox1.Size = this.Size;
                     Console.WriteLine("minus");
                     break;
                 default:
@@ -124,5 +131,97 @@ namespace Kiritori
             }
             return true;
         }
+        const int CS_DROPSHADOW = 0x00020000;
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams cp = base.CreateParams;
+                cp.ClassStyle |= CS_DROPSHADOW;
+                return cp;
+            }
+        }
+
+        private void closeESCToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void cutCtrlXToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.Close();
+        }
+
+        private void copyCtrlCToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void keepAfloatToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.TopLevel =! this.TopLevel;
+        }
+
+        private void saveImageToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void originalSizeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void zoomInToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.Size = new Size((int)(this.Size.Width * 1.1), (int)(this.Height * 1.1));
+            this.pictureBox1.Size = this.Size;
+        }
+
+        private void zoomOutToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.Size = new Size((int)(this.Size.Width * 0.9), (int)(this.Height * 0.9));
+            this.pictureBox1.Size = this.Size;
+        }
+
+        private void dropShadowToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void preferencesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void printToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void toolStripMenuItem2_Click(object sender, EventArgs e)
+        {
+            this.Opacity = 1.0;
+        }
+
+        private void toolStripMenuItem3_Click(object sender, EventArgs e)
+        {
+            this.Opacity = 0.9;
+        }
+
+        private void toolStripMenuItem4_Click(object sender, EventArgs e)
+        {
+            this.Opacity = 0.8;
+        }
+
+        private void toolStripMenuItem5_Click(object sender, EventArgs e)
+        {
+            this.Opacity = 0.5;
+        }
+
+        private void toolStripMenuItem6_Click(object sender, EventArgs e)
+        {
+            this.Opacity = 0.3;
+        } 
     }
 }
