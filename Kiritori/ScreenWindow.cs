@@ -31,7 +31,7 @@ namespace Kiritori
             bmp = new Bitmap(w, h);
             g = Graphics.FromImage(bmp);
             g.CopyFromScreen(
-                new Point(w - bmp.Size.Width, h - bmp.Size.Height),
+                new Point(w, h),
                 new Point(0, 0), bmp.Size
             );
             pictureBox1.SetBounds(0, 0, w, h);
@@ -45,6 +45,9 @@ namespace Kiritori
             pictureBox1.MouseUp +=
                     new MouseEventHandler(ScreenWindow_MouseUp);
             pictureBox1.Refresh();
+            this.Refresh();
+            this.Update();
+            this.TopLevel = true;
         }
         //マウスのクリック位置を記憶
         private Point startPoint;
@@ -122,12 +125,27 @@ namespace Kiritori
                 endPoint = new Point(e.X, e.Y);
                 isPressed = false;
                 this.Close();
-                SnapWindow f3 = new SnapWindow();
-                f3.capture(rc);
-                f3.Show();
-                f3.SetDesktopLocation(rc.X, rc.Y);  
+                if(rc.Width != 0 || rc.Height != 0){
+                    SnapWindow f3 = new SnapWindow();
+                    f3.capture(rc);
+                    f3.Show();
+                    f3.SetDesktopLocation(rc.X, rc.Y);  
+                }
             }
         }
-
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            switch ((int)keyData)
+            {
+                case (int)HOTS.ESCAPE:
+                case (int)HOTS.CLOSE:
+                    this.Close();
+                    Console.WriteLine("escape");
+                    break;
+                default:
+                    return base.ProcessCmdKey(ref msg, keyData);
+            }
+            return true;
+        }
     }
 }

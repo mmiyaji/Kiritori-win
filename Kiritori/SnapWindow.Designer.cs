@@ -88,24 +88,24 @@
             this.preferencesToolStripMenuItem,
             this.printToolStripMenuItem});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(232, 320);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(232, 298);
             // 
             // closeESCToolStripMenuItem
             // 
             this.closeESCToolStripMenuItem.Name = "closeESCToolStripMenuItem";
-            this.closeESCToolStripMenuItem.Size = new System.Drawing.Size(203, 22);
+            this.closeESCToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.closeESCToolStripMenuItem.Text = "Close Window - (ESC)";
             this.closeESCToolStripMenuItem.Click += new System.EventHandler(this.closeESCToolStripMenuItem_Click);
             // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(200, 6);
+            this.toolStripSeparator1.Size = new System.Drawing.Size(228, 6);
             // 
             // cutCtrlXToolStripMenuItem
             // 
             this.cutCtrlXToolStripMenuItem.Name = "cutCtrlXToolStripMenuItem";
-            this.cutCtrlXToolStripMenuItem.Size = new System.Drawing.Size(235, 22);
+            this.cutCtrlXToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.cutCtrlXToolStripMenuItem.Text = "Cut                 - (Ctrl + X)";
             this.cutCtrlXToolStripMenuItem.Click += new System.EventHandler(this.cutCtrlXToolStripMenuItem_Click);
             // 
@@ -188,35 +188,35 @@
             // toolStripMenuItem2
             // 
             this.toolStripMenuItem2.Name = "toolStripMenuItem2";
-            this.toolStripMenuItem2.Size = new System.Drawing.Size(152, 22);
+            this.toolStripMenuItem2.Size = new System.Drawing.Size(109, 22);
             this.toolStripMenuItem2.Text = "100%";
             this.toolStripMenuItem2.Click += new System.EventHandler(this.toolStripMenuItem2_Click);
             // 
             // toolStripMenuItem3
             // 
             this.toolStripMenuItem3.Name = "toolStripMenuItem3";
-            this.toolStripMenuItem3.Size = new System.Drawing.Size(152, 22);
+            this.toolStripMenuItem3.Size = new System.Drawing.Size(109, 22);
             this.toolStripMenuItem3.Text = "90%";
             this.toolStripMenuItem3.Click += new System.EventHandler(this.toolStripMenuItem3_Click);
             // 
             // toolStripMenuItem4
             // 
             this.toolStripMenuItem4.Name = "toolStripMenuItem4";
-            this.toolStripMenuItem4.Size = new System.Drawing.Size(152, 22);
+            this.toolStripMenuItem4.Size = new System.Drawing.Size(109, 22);
             this.toolStripMenuItem4.Text = "80%";
             this.toolStripMenuItem4.Click += new System.EventHandler(this.toolStripMenuItem4_Click);
             // 
             // toolStripMenuItem5
             // 
             this.toolStripMenuItem5.Name = "toolStripMenuItem5";
-            this.toolStripMenuItem5.Size = new System.Drawing.Size(152, 22);
+            this.toolStripMenuItem5.Size = new System.Drawing.Size(109, 22);
             this.toolStripMenuItem5.Text = "50%";
             this.toolStripMenuItem5.Click += new System.EventHandler(this.toolStripMenuItem5_Click);
             // 
             // toolStripMenuItem6
             // 
             this.toolStripMenuItem6.Name = "toolStripMenuItem6";
-            this.toolStripMenuItem6.Size = new System.Drawing.Size(152, 22);
+            this.toolStripMenuItem6.Size = new System.Drawing.Size(109, 22);
             this.toolStripMenuItem6.Text = "30%";
             this.toolStripMenuItem6.Click += new System.EventHandler(this.toolStripMenuItem6_Click);
             // 
@@ -251,7 +251,6 @@
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "SnapWindow";
-            this.Opacity = 0.9D;
             this.ShowIcon = false;
             this.ShowInTaskbar = false;
             this.Text = "Form1";

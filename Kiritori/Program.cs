@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-
+using System.Diagnostics;
 namespace Kiritori
 {
     static class Program
@@ -14,13 +14,11 @@ namespace Kiritori
         [STAThread]
         static void Main()
         {
+            Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
+            Debug.WriteLine("デバッグ・メッセージを出力");
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-//            SnapWindow f1 = new SnapWindow();
-//            f1.Show();
-//            SnapWindow f2 = new SnapWindow();
-//            f2.Show();
-            new Form2();
+            new MainApplication();
             Application.Run();
         }
     }
