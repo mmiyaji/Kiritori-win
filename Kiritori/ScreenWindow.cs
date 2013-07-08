@@ -29,11 +29,12 @@ namespace Kiritori
             w = System.Windows.Forms.Screen.GetBounds(this).Width;
             this.SetBounds(0, 0, w, h);
             bmp = new Bitmap(w, h);
-            g = Graphics.FromImage(bmp);
-            g.CopyFromScreen(
-                new Point(w, h),
-                new Point(0, 0), bmp.Size
-            );
+            using (g = Graphics.FromImage(bmp)) {
+                g.CopyFromScreen(
+                    new Point(0, 0),
+                    new Point(w, h), bmp.Size
+                );
+            }
             pictureBox1.SetBounds(0, 0, w, h);
             pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
             pictureBox1.Image = bmp;
@@ -95,23 +96,16 @@ namespace Kiritori
                 }
                 {
                     Pen blackPen = new Pen(Color.Black);
-                    Graphics g = Graphics.FromImage(bmp);
-                    // 描画する線を点線に設定
-                    blackPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
-                    blackPen.Width = 1;
-                    // 画面を消去
-                    g.Clear(SystemColors.Control);
-
-                    // 領域を描画
-                    g.DrawRectangle(blackPen, rc);
-                    //フォントオブジェクトの作成
-                    Font fnt = new Font("Arial", 10);
-                    //文字列を位置(0,0)、青色で表示
-                    g.DrawString(rc.Width.ToString() + "x" + rc.Height.ToString(), fnt, Brushes.Black, e.X + 5, e.Y + 10);
-                    //リソースを解放する
-                    fnt.Dispose();
-
-                    g.Dispose();
+                    using (Graphics g = Graphics.FromImage(bmp)) {
+                        blackPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                        blackPen.Width = 1;
+                        g.Clear(SystemColors.Control);
+                        g.DrawRectangle(blackPen, rc);
+                        Font fnt = new Font("Arial", 10);
+                        g.DrawString(rc.Width.ToString() + "x" + rc.Height.ToString(), fnt, Brushes.Black, e.X + 5, e.Y + 10);
+                        fnt.Dispose();
+                        g.Dispose();
+                    }
                     pictureBox1.Refresh();
                 }
             }
@@ -126,10 +120,10 @@ namespace Kiritori
                 isPressed = false;
                 this.Close();
                 if(rc.Width != 0 || rc.Height != 0){
-                    SnapWindow f3 = new SnapWindow();
-                    f3.capture(rc);
-                    f3.Show();
-                    f3.SetDesktopLocation(rc.X, rc.Y);  
+                    SnapWindow sw = new SnapWindow();
+                    sw.capture(rc);
+                    sw.Show();
+                    sw.SetDesktopLocation(rc.X, rc.Y);  
                 }
             }
         }

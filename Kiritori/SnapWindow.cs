@@ -25,10 +25,13 @@ namespace Kiritori
         ESCAPE      = Keys.Escape,
         COPY        = (int)Keys.Control + (int)Keys.C,
         CUT         = (int)Keys.Control + (int)Keys.X,
+        PRINT       = (int)Keys.Control + (int)Keys.P,
     }
 
     public partial class SnapWindow : Form
     {
+        public DateTime date;
+        private int ws, hs;
         public SnapWindow()
         {
             InitializeComponent();
@@ -56,7 +59,8 @@ namespace Kiritori
             pictureBox1.Size = bmp.Size;
             pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; //autosize
             pictureBox1.Image = bmp;
-//            this.SetDesktopLocation(rc.X, rc.Y);
+            date = DateTime.Now;
+            this.Text = date.ToString("yyyyMMdd-HHmmss") + ".png";
         }
         public void setPosition(Point p) {
         }
@@ -83,10 +87,6 @@ namespace Kiritori
                 this.Left += e.X - mousePoint.X;
                 this.Top += e.Y - mousePoint.Y;
                 this.Opacity = 0.3;
-                //または、つぎのようにする
-                //this.Location = new Point(
-                //    this.Location.X + e.X - mousePoint.X,
-                //    this.Location.Y + e.Y - mousePoint.Y);
             }
         }
 
@@ -126,49 +126,15 @@ namespace Kiritori
                     this.TopMost = !this.TopMost;
                     break;
                 case (int)HOTS.SAVE:
-                    //SaveFileDialogクラスのインスタンスを作成
-                    SaveFileDialog sfd = new SaveFileDialog();
-
-                    //はじめのファイル名を指定する
-                    sfd.FileName = "新しいファイル.png";
-                    //はじめに表示されるフォルダを指定する
-                    sfd.InitialDirectory = @"C:\";
-                    //[ファイルの種類]に表示される選択肢を指定する
-//                    sfd.Filter =
-//                        "HTMLファイル(*.html;*.htm)|*.html;*.htm|すべてのファイル(*.*)|*.*";
-                    //[ファイルの種類]ではじめに
-                    //「すべてのファイル」が選択されているようにする
-                    sfd.FilterIndex = 2;
-                    //タイトルを設定する
-                    sfd.Title = "保存先のファイルを選択してください";
-                    //ダイアログボックスを閉じる前に現在のディレクトリを復元するようにする
-                    sfd.RestoreDirectory = true;
-                    //既に存在するファイル名を指定したとき警告する
-                    //デフォルトでTrueなので指定する必要はない
-                    sfd.OverwritePrompt = true;
-                    //存在しないパスが指定されたとき警告を表示する
-                    //デフォルトでTrueなので指定する必要はない
-                    sfd.CheckPathExists = true;
-
-                    //ダイアログを表示する
-                    if (sfd.ShowDialog() == DialogResult.OK)
-                    {
-                        //OKボタンがクリックされたとき
-                        //選択されたファイル名を表示する
-                        this.pictureBox1.Image.Save(sfd.FileName);
-                    }
+                    saveImage();
                     break;
                 case (int)HOTS.ZOOM_IN:
-//                    this.SetBounds(this.Location.X, this.Location.Y, this.Size.Width + 3, this.Size.Height + 3);
-                    this.pictureBox1.Size = new Size((int)(this.pictureBox1.Image.Width * 1.1), 
-                                                     (int)(this.pictureBox1.Image.Height * 1.1));
-                    this.Size = this.pictureBox1.Size;
                     Debug.WriteLine("plus");
+                    zoomIn();
                     break;
                 case (int)HOTS.ZOOM_OUT:
-                    this.Size = new Size((int)(this.Size.Width * 0.9), (int)(this.Height * 0.9));
-                    this.pictureBox1.Size = this.Size;
                     Debug.WriteLine("minus");
+                    zoomOut();
                     break;
                 case (int)HOTS.COPY:
                     Clipboard.SetImage(this.pictureBox1.Image);
@@ -177,11 +143,70 @@ namespace Kiritori
                     Clipboard.SetImage(this.pictureBox1.Image);
                     this.Close();
                     break;
+                case (int)HOTS.PRINT:
+                    printImage();
+                    break;
                 default:
                     return base.ProcessCmdKey(ref msg, keyData);
             }
             return true;
         }
+        public void zoomIn() {
+            ws = (int)(this.pictureBox1.Width * 0.1);
+            hs = (int)(this.pictureBox1.Height * 0.1);
+            this.pictureBox1.Width += ws;
+            this.pictureBox1.Height += hs;
+            this.SetDesktopLocation(this.Location.X - ws / 2, this.Location.Y - hs / 2);
+        }
+        public void zoomOut() {
+            ws = (int)(this.pictureBox1.Width * 0.1);
+            hs = (int)(this.pictureBox1.Height * 0.1);
+            this.pictureBox1.Width -= ws;
+            this.pictureBox1.Height -= hs;
+            this.SetDesktopLocation(this.Location.X + ws / 2, this.Location.Y + hs / 2);
+        }
+        public void zoomOff()
+        {
+            this.pictureBox1.Width = this.pictureBox1.Image.Width;
+            this.pictureBox1.Height = this.pictureBox1.Image.Height;
+        }
+        public void saveImage()
+        {
+            SaveFileDialog sfd = new SaveFileDialog();
+            sfd.FileName = this.Text;
+            //                    sfd.InitialDirectory = @"C:\";
+            sfd.Filter =
+                "Image Files(*.png;*.PNG)|*.png;*.PNG|All Files(*.*)|*.*";
+            sfd.FilterIndex = 1;
+            sfd.Title = "Select a path to save the image";
+            sfd.RestoreDirectory = true;
+            sfd.OverwritePrompt = true;
+            sfd.CheckPathExists = true;
+            if (sfd.ShowDialog() == DialogResult.OK)
+            {
+                this.pictureBox1.Image.Save(sfd.FileName);
+            }
+        }
+        public void printImage() {
+            PrintDialog printDialog1 = new PrintDialog();
+            printDialog1.PrinterSettings = new System.Drawing.Printing.PrinterSettings();
+            if (printDialog1.ShowDialog() == DialogResult.OK)
+            {
+                System.Drawing.Printing.PrintDocument pd =
+                    new System.Drawing.Printing.PrintDocument();
+                pd.PrintPage +=
+                    new System.Drawing.Printing.PrintPageEventHandler(pd_PrintPage);
+                pd.Print();
+            }
+            printDialog1.Dispose();
+        }
+        private void pd_PrintPage(object sender,
+                System.Drawing.Printing.PrintPageEventArgs e)
+        {
+            e.Graphics.DrawImage(this.pictureBox1.Image, e.MarginBounds);
+            e.HasMorePages = false;
+        }
+
         const int CS_DROPSHADOW = 0x00020000;
         protected override CreateParams CreateParams
         {
@@ -217,24 +242,22 @@ namespace Kiritori
 
         private void saveImageToolStripMenuItem_Click(object sender, EventArgs e)
         {
-
+            saveImage();
         }
 
         private void originalSizeToolStripMenuItem_Click(object sender, EventArgs e)
         {
-
+            zoomOff();
         }
 
         private void zoomInToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            this.Size = new Size((int)(this.Size.Width * 1.1), (int)(this.Height * 1.1));
-            this.pictureBox1.Size = this.Size;
+            zoomIn();
         }
 
         private void zoomOutToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            this.Size = new Size((int)(this.Size.Width * 0.9), (int)(this.Height * 0.9));
-            this.pictureBox1.Size = this.Size;
+            zoomOut();
         }
 
         private void dropShadowToolStripMenuItem_Click(object sender, EventArgs e)
@@ -249,7 +272,7 @@ namespace Kiritori
 
         private void printToolStripMenuItem_Click(object sender, EventArgs e)
         {
-
+            printImage();
         }
 
         private void toolStripMenuItem2_Click(object sender, EventArgs e)
