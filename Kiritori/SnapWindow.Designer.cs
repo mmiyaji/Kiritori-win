@@ -255,7 +255,6 @@
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "SnapWindow";
-            this.ShowIcon = false;
             this.ShowInTaskbar = false;
             this.Text = "Form1";
             this.TopMost = true;

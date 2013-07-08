@@ -134,7 +134,6 @@ namespace Kiritori
                 case (int)HOTS.ESCAPE:
                 case (int)HOTS.CLOSE:
                     this.Close();
-                    Console.WriteLine("escape");
                     break;
                 default:
                     return base.ProcessCmdKey(ref msg, keyData);
