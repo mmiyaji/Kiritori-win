@@ -24,17 +24,7 @@ namespace Kiritori
         }
         void hotKey_HotKeyPush(object sender, EventArgs e)
         {
-            if (s == null)
-            {
-                s = new ScreenWindow();
-                s.Show();
-            }
-            else {
-                if(!s.isScreenOpen()){
-                    s = new ScreenWindow();
-                    s.Show();
-                }
-            }
+            this.openScreen();
         }
         private void Form2_FormClosing(object sender, FormClosingEventArgs e)
         {
@@ -55,8 +45,23 @@ namespace Kiritori
 
         private void captureToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            ScreenWindow s = new ScreenWindow();
-            s.Show();
+            this.openScreen();
+        }
+        public void openScreen() {
+            // restrict multiple open
+            if (s == null)
+            {
+                s = new ScreenWindow();
+                s.Show();
+            }
+            else
+            {
+                if (!s.isScreenOpen())
+                {
+                    s = new ScreenWindow();
+                    s.Show();
+                }
+            }
         }
     }
 }
