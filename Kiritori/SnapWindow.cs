@@ -32,8 +32,12 @@ namespace Kiritori
     {
         public DateTime date;
         private int ws, hs;
+        private Boolean isWindowShadow = true;
+        private Boolean isAfloatWindow = true;
         public SnapWindow()
         {
+            this.isWindowShadow = Properties.Settings.Default.isWindowShadow;
+            this.isAfloatWindow = Properties.Settings.Default.isAfloatWindow;
             InitializeComponent();
         }
         private void Form1_Load(object sender, EventArgs e)
@@ -61,6 +65,7 @@ namespace Kiritori
             pictureBox1.Image = bmp;
             date = DateTime.Now;
             this.Text = date.ToString("yyyyMMdd-HHmmss") + ".png";
+            this.TopMost = this.isAfloatWindow;
         }
         public void setPosition(Point p) {
         }
@@ -213,7 +218,11 @@ namespace Kiritori
             get
             {
                 CreateParams cp = base.CreateParams;
-                cp.ClassStyle |= CS_DROPSHADOW;
+                if (this.isWindowShadow)
+                {
+                    Console.WriteLine("yea");
+                    cp.ClassStyle |= CS_DROPSHADOW;
+                }
                 return cp;
             }
         }

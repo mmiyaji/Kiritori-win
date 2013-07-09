@@ -258,7 +258,6 @@
             this.Name = "SnapWindow";
             this.ShowInTaskbar = false;
             this.Text = "Form1";
-            this.TopMost = true;
             this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.contextMenuStrip1.ResumeLayout(false);
