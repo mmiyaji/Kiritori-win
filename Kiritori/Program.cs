@@ -15,7 +15,6 @@ namespace Kiritori
         static void Main()
         {
             Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
-            Debug.WriteLine("デバッグ・メッセージを出力");
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             new MainApplication();

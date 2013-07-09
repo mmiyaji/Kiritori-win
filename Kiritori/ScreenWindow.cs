@@ -14,11 +14,15 @@ namespace Kiritori
     {
         private Graphics g;
         private Bitmap bmp;
+        private Boolean isOpen;
         public ScreenWindow()
         {
+            isOpen = true;
             InitializeComponent();
         }
-
+        public Boolean isScreenOpen() {
+            return this.isOpen;
+        }
         private void Screen_Load(object sender, EventArgs e)
         {
             this.Opacity = 0.61;
@@ -118,7 +122,7 @@ namespace Kiritori
             {
                 endPoint = new Point(e.X, e.Y);
                 isPressed = false;
-                this.Close();
+                this.CloseScreen();
                 if(rc.Width != 0 || rc.Height != 0){
                     SnapWindow sw = new SnapWindow();
                     sw.capture(rc);
@@ -127,13 +131,17 @@ namespace Kiritori
                 }
             }
         }
+        private void CloseScreen() {
+            this.isOpen = false;
+            this.Close();
+        }
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
             switch ((int)keyData)
             {
                 case (int)HOTS.ESCAPE:
                 case (int)HOTS.CLOSE:
-                    this.Close();
+                    this.CloseScreen();
                     break;
                 default:
                     return base.ProcessCmdKey(ref msg, keyData);

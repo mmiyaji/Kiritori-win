@@ -14,7 +14,8 @@ namespace Kiritori
 {
     public partial class MainApplication : Form
     {
-        HotKey hotKey;
+        private HotKey hotKey;
+        private ScreenWindow s;
         public MainApplication()
         {
             InitializeComponent();
@@ -23,8 +24,17 @@ namespace Kiritori
         }
         void hotKey_HotKeyPush(object sender, EventArgs e)
         {
-            ScreenWindow s = new ScreenWindow();
-            s.Show();
+            if (s == null)
+            {
+                s = new ScreenWindow();
+                s.Show();
+            }
+            else {
+                if(!s.isScreenOpen()){
+                    s = new ScreenWindow();
+                    s.Show();
+                }
+            }
         }
         private void Form2_FormClosing(object sender, FormClosingEventArgs e)
         {
