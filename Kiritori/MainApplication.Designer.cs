@@ -32,8 +32,10 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainApplication));
             this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.captureToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.hideAllWindowsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.showAllWindowsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.contextMenuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -48,30 +50,46 @@
             // 
             this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.captureToolStripMenuItem,
+            this.hideAllWindowsToolStripMenuItem,
+            this.showAllWindowsToolStripMenuItem,
             this.exitToolStripMenuItem});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(123, 48);
-            // 
-            // exitToolStripMenuItem
-            // 
-            this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(122, 22);
-            this.exitToolStripMenuItem.Text = "Exit";
-            this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(183, 114);
             // 
             // captureToolStripMenuItem
             // 
             this.captureToolStripMenuItem.Name = "captureToolStripMenuItem";
-            this.captureToolStripMenuItem.Size = new System.Drawing.Size(122, 22);
+            this.captureToolStripMenuItem.Size = new System.Drawing.Size(182, 22);
             this.captureToolStripMenuItem.Text = "Capture";
             this.captureToolStripMenuItem.Click += new System.EventHandler(this.captureToolStripMenuItem_Click);
             // 
-            // Form2
+            // exitToolStripMenuItem
+            // 
+            this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(182, 22);
+            this.exitToolStripMenuItem.Text = "Exit";
+            this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
+            // 
+            // hideAllWindowsToolStripMenuItem
+            // 
+            this.hideAllWindowsToolStripMenuItem.Name = "hideAllWindowsToolStripMenuItem";
+            this.hideAllWindowsToolStripMenuItem.Size = new System.Drawing.Size(182, 22);
+            this.hideAllWindowsToolStripMenuItem.Text = "Hide All Windows";
+            this.hideAllWindowsToolStripMenuItem.Click += new System.EventHandler(this.hideAllWindowsToolStripMenuItem_Click);
+            // 
+            // showAllWindowsToolStripMenuItem
+            // 
+            this.showAllWindowsToolStripMenuItem.Name = "showAllWindowsToolStripMenuItem";
+            this.showAllWindowsToolStripMenuItem.Size = new System.Drawing.Size(182, 22);
+            this.showAllWindowsToolStripMenuItem.Text = "Show All Windows";
+            this.showAllWindowsToolStripMenuItem.Click += new System.EventHandler(this.showAllWindowsToolStripMenuItem_Click);
+            // 
+            // MainApplication
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(284, 262);
-            this.Name = "Form2";
+            this.Name = "MainApplication";
             this.Text = "Form2";
             this.Load += new System.EventHandler(this.Form2_Load);
             this.contextMenuStrip1.ResumeLayout(false);
@@ -85,5 +103,7 @@
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
         private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem captureToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem hideAllWindowsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem showAllWindowsToolStripMenuItem;
     }
 }

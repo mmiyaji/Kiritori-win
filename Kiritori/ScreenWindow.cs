@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.Collections;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -15,8 +16,10 @@ namespace Kiritori
         private Graphics g;
         private Bitmap bmp;
         private Boolean isOpen;
+        private ArrayList captureArray;
         public ScreenWindow()
         {
+            captureArray = new ArrayList();
             isOpen = true;
             InitializeComponent();
         }
@@ -25,7 +28,15 @@ namespace Kiritori
         }
         private void Screen_Load(object sender, EventArgs e)
         {
-            this.Opacity = 0.61;
+            pictureBox1.MouseDown +=
+                    new MouseEventHandler(ScreenWindow_MouseDown);
+            pictureBox1.MouseMove +=
+                    new MouseEventHandler(ScreenWindow_MouseMove);
+            pictureBox1.MouseUp +=
+                    new MouseEventHandler(ScreenWindow_MouseUp);
+        }
+        public void showScreen() {
+            this.Opacity = 0.41;
             int h, w;
             //ディスプレイの高さ
             h = System.Windows.Forms.Screen.GetBounds(this).Height;
@@ -33,7 +44,8 @@ namespace Kiritori
             w = System.Windows.Forms.Screen.GetBounds(this).Width;
             this.SetBounds(0, 0, w, h);
             bmp = new Bitmap(w, h);
-            using (g = Graphics.FromImage(bmp)) {
+            using (g = Graphics.FromImage(bmp))
+            {
                 g.CopyFromScreen(
                     new Point(0, 0),
                     new Point(w, h), bmp.Size
@@ -42,17 +54,11 @@ namespace Kiritori
             pictureBox1.SetBounds(0, 0, w, h);
             pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
             pictureBox1.Image = bmp;
-            Console.WriteLine(pictureBox1.Bounds);
-            pictureBox1.MouseDown +=
-                    new MouseEventHandler(ScreenWindow_MouseDown);
-            pictureBox1.MouseMove +=
-                    new MouseEventHandler(ScreenWindow_MouseMove);
-            pictureBox1.MouseUp +=
-                    new MouseEventHandler(ScreenWindow_MouseUp);
             pictureBox1.Refresh();
             this.Refresh();
             this.Update();
             this.TopLevel = true;
+            this.Show();
         }
         //マウスのクリック位置を記憶
         private Point startPoint;
@@ -127,13 +133,33 @@ namespace Kiritori
                     SnapWindow sw = new SnapWindow();
                     sw.capture(rc);
                     sw.Show();
-                    sw.SetDesktopLocation(rc.X, rc.Y);  
+                    sw.SetDesktopLocation(rc.X, rc.Y);
+                    sw.FormClosing +=
+                        new FormClosingEventHandler(SW_FormClosing);
+                    captureArray.Add(sw);
                 }
             }
         }
-        private void CloseScreen() {
+        public void hideWindows() {
+            foreach(SnapWindow sw in captureArray){
+                sw.minimizeWindow();
+            }
+        }
+        public void showWindows()
+        {
+            foreach (SnapWindow sw in captureArray)
+            {
+                sw.showWindow();
+            }
+        }
+        private void CloseScreen()
+        {
             this.isOpen = false;
-            this.Close();
+            this.Hide();
+        }
+        void SW_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            captureArray.Remove(sender);
         }
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {

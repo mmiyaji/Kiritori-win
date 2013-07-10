@@ -21,6 +21,7 @@ namespace Kiritori
             InitializeComponent();
             hotKey = new HotKey(MOD_KEY.CONTROL | MOD_KEY.SHIFT, Keys.D5);
             hotKey.HotKeyPush += new EventHandler(hotKey_HotKeyPush);
+            s = new ScreenWindow();
         }
         void hotKey_HotKeyPush(object sender, EventArgs e)
         {
@@ -33,7 +34,6 @@ namespace Kiritori
         }
         private void Form2_Load(object sender, EventArgs e)
         {
-            Console.WriteLine("c");
         }
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
@@ -52,16 +52,22 @@ namespace Kiritori
             if (s == null)
             {
                 s = new ScreenWindow();
-                s.Show();
+                s.showScreen();
             }
             else
             {
-                if (!s.isScreenOpen())
-                {
-                    s = new ScreenWindow();
-                    s.Show();
-                }
+                s.showScreen();
             }
+        }
+
+        private void hideAllWindowsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            s.hideWindows();
+        }
+
+        private void showAllWindowsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            s.showWindows();
         }
     }
 }

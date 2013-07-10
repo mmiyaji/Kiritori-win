@@ -151,7 +151,7 @@ namespace Kiritori
                     printImage();
                     break;
                 case (int)HOTS.MINIMIZE:
-                    this.WindowState = FormWindowState.Minimized;
+                    minimizeWindow();
                     break;
                 default:
                     return base.ProcessCmdKey(ref msg, keyData);
@@ -213,7 +213,14 @@ namespace Kiritori
             e.Graphics.DrawImage(this.pictureBox1.Image, e.MarginBounds);
             e.HasMorePages = false;
         }
-
+        public void minimizeWindow()
+        {
+            this.WindowState = FormWindowState.Minimized;
+        }
+        public void showWindow()
+        {
+            this.WindowState = FormWindowState.Normal;
+        }
         const int CS_DROPSHADOW = 0x00020000;
         protected override CreateParams CreateParams
         {
@@ -311,7 +318,7 @@ namespace Kiritori
 
         private void minimizeToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            this.WindowState = FormWindowState.Minimized;
+            this.minimizeWindow();
         } 
     }
 }
