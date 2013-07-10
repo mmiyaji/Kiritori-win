@@ -31,7 +31,6 @@ namespace Kiritori
             this.notifyIcon1.Visible = false;
             hotKey.Dispose();
         }
-
         private void Form2_Load(object sender, EventArgs e)
         {
             Console.WriteLine("c");
@@ -47,6 +46,7 @@ namespace Kiritori
         {
             this.openScreen();
         }
+
         public void openScreen() {
             // restrict multiple open
             if (s == null)

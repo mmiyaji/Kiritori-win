@@ -26,6 +26,7 @@ namespace Kiritori
         COPY        = (int)Keys.Control + (int)Keys.C,
         CUT         = (int)Keys.Control + (int)Keys.X,
         PRINT       = (int)Keys.Control + (int)Keys.P,
+        MINIMIZE    = (int)Keys.Control + (int)Keys.H,
     }
 
     public partial class SnapWindow : Form
@@ -34,6 +35,9 @@ namespace Kiritori
         private int ws, hs;
         private Boolean isWindowShadow = true;
         private Boolean isAfloatWindow = true;
+        //マウスのクリック位置を記憶
+        private Point mousePoint;
+
         public SnapWindow()
         {
             this.isWindowShadow = Properties.Settings.Default.isWindowShadow;
@@ -67,11 +71,6 @@ namespace Kiritori
             this.Text = date.ToString("yyyyMMdd-HHmmss") + ".png";
             this.TopMost = this.isAfloatWindow;
         }
-        public void setPosition(Point p) {
-        }
-        //マウスのクリック位置を記憶
-        private Point mousePoint;
-
         //マウスのボタンが押されたとき
         private void Form1_MouseDown(object sender,
             System.Windows.Forms.MouseEventArgs e)
@@ -151,6 +150,9 @@ namespace Kiritori
                 case (int)HOTS.PRINT:
                     printImage();
                     break;
+                case (int)HOTS.MINIMIZE:
+                    this.WindowState = FormWindowState.Minimized;
+                    break;
                 default:
                     return base.ProcessCmdKey(ref msg, keyData);
             }
@@ -220,7 +222,6 @@ namespace Kiritori
                 CreateParams cp = base.CreateParams;
                 if (this.isWindowShadow)
                 {
-                    Console.WriteLine("yea");
                     cp.ClassStyle |= CS_DROPSHADOW;
                 }
                 return cp;
@@ -271,7 +272,6 @@ namespace Kiritori
 
         private void dropShadowToolStripMenuItem_Click(object sender, EventArgs e)
         {
-
         }
 
         private void preferencesToolStripMenuItem_Click(object sender, EventArgs e)
@@ -307,6 +307,11 @@ namespace Kiritori
         private void toolStripMenuItem6_Click(object sender, EventArgs e)
         {
             this.Opacity = 0.3;
+        }
+
+        private void minimizeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.WindowState = FormWindowState.Minimized;
         } 
     }
 }

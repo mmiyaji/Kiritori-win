@@ -54,6 +54,7 @@
             this.toolStripSeparator5 = new System.Windows.Forms.ToolStripSeparator();
             this.preferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.printToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.minimizeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.contextMenuStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -85,12 +86,13 @@
             this.toolStripSeparator4,
             this.keepAfloatToolStripMenuItem,
             this.dropShadowToolStripMenuItem,
+            this.minimizeToolStripMenuItem,
             this.opacityToolStripMenuItem,
             this.toolStripSeparator5,
             this.preferencesToolStripMenuItem,
             this.printToolStripMenuItem});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(232, 298);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(232, 342);
             // 
             // closeESCToolStripMenuItem
             // 
@@ -241,6 +243,13 @@
             this.printToolStripMenuItem.Text = "Print";
             this.printToolStripMenuItem.Click += new System.EventHandler(this.printToolStripMenuItem_Click);
             // 
+            // minimizeToolStripMenuItem
+            // 
+            this.minimizeToolStripMenuItem.Name = "minimizeToolStripMenuItem";
+            this.minimizeToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
+            this.minimizeToolStripMenuItem.Text = "Minimize";
+            this.minimizeToolStripMenuItem.Click += new System.EventHandler(this.minimizeToolStripMenuItem_Click);
+            // 
             // SnapWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -291,6 +300,7 @@
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator5;
         private System.Windows.Forms.ToolStripMenuItem preferencesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem printToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem minimizeToolStripMenuItem;
     }
 }
 
