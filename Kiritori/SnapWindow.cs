@@ -249,7 +249,6 @@ namespace Kiritori
         private void copyCtrlCToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Clipboard.SetImage(this.pictureBox1.Image);
-            this.Close();
         }
 
         private void keepAfloatToolStripMenuItem_Click(object sender, EventArgs e)
@@ -319,6 +318,11 @@ namespace Kiritori
         private void minimizeToolStripMenuItem_Click(object sender, EventArgs e)
         {
             this.minimizeWindow();
+        }
+
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            Application.Exit();
         } 
     }
 }
