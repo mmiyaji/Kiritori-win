@@ -73,6 +73,7 @@ namespace Kiritori
             date = DateTime.Now;
             this.Text = date.ToString("yyyyMMdd-HHmmss") + ".png";
             this.TopMost = this.isAfloatWindow;
+            this.Opacity = this.alpha_value;
         }
         //マウスのボタンが押されたとき
         private void Form1_MouseDown(object sender,
