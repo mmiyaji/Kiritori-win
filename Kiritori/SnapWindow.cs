@@ -37,11 +37,14 @@ namespace Kiritori
         private Boolean isAfloatWindow = true;
         //マウスのクリック位置を記憶
         private Point mousePoint;
-
+        private double alpha_value;
+        private const double DRAG_ALPHA = 0.3;
+        private const double MIN_ALPHA = 0.1;
         public SnapWindow()
         {
             this.isWindowShadow = Properties.Settings.Default.isWindowShadow;
             this.isAfloatWindow = Properties.Settings.Default.isAfloatWindow;
+            this.alpha_value = Properties.Settings.Default.alpha_value;
             InitializeComponent();
         }
         private void Form1_Load(object sender, EventArgs e)
@@ -90,7 +93,7 @@ namespace Kiritori
             {
                 this.Left += e.X - mousePoint.X;
                 this.Top += e.Y - mousePoint.Y;
-                this.Opacity = 0.3;
+                this.Opacity = DRAG_ALPHA;
             }
         }
 
@@ -98,7 +101,7 @@ namespace Kiritori
         private void Form1_MouseUp(object sender,
             System.Windows.Forms.MouseEventArgs e)
         {
-            this.Opacity = 1.0;
+            this.Opacity = this.alpha_value;
         }
         private void pictureBox1_Click(object sender, EventArgs e)
         {
@@ -284,35 +287,37 @@ namespace Kiritori
         {
 
         }
-
         private void printToolStripMenuItem_Click(object sender, EventArgs e)
         {
             printImage();
         }
-
+        public void setAlpha(double alpha) {
+            this.Opacity = alpha;
+            this.alpha_value = alpha;
+        }
         private void toolStripMenuItem2_Click(object sender, EventArgs e)
         {
-            this.Opacity = 1.0;
+            setAlpha(1.0);
         }
 
         private void toolStripMenuItem3_Click(object sender, EventArgs e)
         {
-            this.Opacity = 0.9;
+            setAlpha(0.9);
         }
 
         private void toolStripMenuItem4_Click(object sender, EventArgs e)
         {
-            this.Opacity = 0.8;
+            setAlpha(0.8);
         }
 
         private void toolStripMenuItem5_Click(object sender, EventArgs e)
         {
-            this.Opacity = 0.5;
+            setAlpha(0.5);
         }
 
         private void toolStripMenuItem6_Click(object sender, EventArgs e)
         {
-            this.Opacity = 0.3;
+            setAlpha(0.3);
         }
 
         private void minimizeToolStripMenuItem_Click(object sender, EventArgs e)

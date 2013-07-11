@@ -36,7 +36,7 @@ namespace Kiritori
                     new MouseEventHandler(ScreenWindow_MouseUp);
         }
         public void showScreen() {
-            this.Opacity = 0.41;
+            this.Opacity = 0.61;
             int h, w;
             //ディスプレイの高さ
             h = System.Windows.Forms.Screen.GetBounds(this).Height;
