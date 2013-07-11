@@ -83,6 +83,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="HotKey.cs" />
+    <Compile Include="PrefForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="PrefForm.Designer.cs">
+      <DependentUpon>PrefForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="ScreenWindow.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -106,6 +112,9 @@
     <EmbeddedResource Include="MainApplication.resx">
       <DependentUpon>MainApplication.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="PrefForm.resx">
+      <DependentUpon>PrefForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="ScreenWindow.resx">
       <DependentUpon>ScreenWindow.cs</DependentUpon>
     </EmbeddedResource>
@@ -120,6 +129,7 @@
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
     </Compile>
     <None Include="Properties\app.manifest" />
     <None Include="Properties\Settings.settings">
@@ -137,6 +147,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="kiritori.ico" />
+    <None Include="resources\icon_128x128.png" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5">
