@@ -49,10 +49,10 @@ namespace Kiritori.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1")]
-        public double alpha_value {
+        [global::System.Configuration.DefaultSettingValueAttribute("100")]
+        public int alpha_value {
             get {
-                return ((double)(this["alpha_value"]));
+                return ((int)(this["alpha_value"]));
             }
             set {
                 this["alpha_value"] = value;

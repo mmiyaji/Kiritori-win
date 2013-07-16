@@ -29,5 +29,20 @@ namespace Kiritori
             //ブラウザで開く
             System.Diagnostics.Process.Start("http://kiritori.ruhenheim.org");
         }
+        private void textBox2_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.Save();
+            PrefForm.ActiveForm.Close();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            PrefForm.ActiveForm.Close();
+        }
     }
 }

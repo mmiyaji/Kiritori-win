@@ -44,7 +44,7 @@ namespace Kiritori
         {
             this.isWindowShadow = Properties.Settings.Default.isWindowShadow;
             this.isAfloatWindow = Properties.Settings.Default.isAfloatWindow;
-            this.alpha_value = Properties.Settings.Default.alpha_value;
+            this.alpha_value = Properties.Settings.Default.alpha_value / 100.0;
             InitializeComponent();
         }
         private void Form1_Load(object sender, EventArgs e)
@@ -94,7 +94,7 @@ namespace Kiritori
             {
                 this.Left += e.X - mousePoint.X;
                 this.Top += e.Y - mousePoint.Y;
-                this.Opacity = DRAG_ALPHA;
+                this.Opacity = this.alpha_value * DRAG_ALPHA;
             }
         }
 
@@ -294,7 +294,7 @@ namespace Kiritori
         }
         public void setAlpha(double alpha) {
             this.Opacity = alpha;
-            this.alpha_value = alpha;
+            this.alpha_value = (int)(alpha * 100);
         }
         private void toolStripMenuItem2_Click(object sender, EventArgs e)
         {
@@ -330,10 +330,5 @@ namespace Kiritori
         {
             Application.Exit();
         }
-
-        private void contextMenuStrip1_Opening(object sender, CancelEventArgs e)
-        {
-
-        } 
     }
 }

@@ -17,6 +17,7 @@ namespace Kiritori
         private Bitmap bmp;
         private Boolean isOpen;
         private ArrayList captureArray;
+        private Font fnt = new Font("Arial", 10);
         public ScreenWindow()
         {
             captureArray = new ArrayList();
@@ -46,7 +47,7 @@ namespace Kiritori
             bmp = new Bitmap(w, h);
             using (g = Graphics.FromImage(bmp))
             {
-                g.Clear(SystemColors.Control);
+                g.Clear(Color.White);
                 g.CopyFromScreen(
                     new Point(0, 0),
                     new Point(w, h), bmp.Size
@@ -56,8 +57,6 @@ namespace Kiritori
             pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
             pictureBox1.Image = bmp;
             pictureBox1.Refresh();
-            this.Refresh();
-            this.Update();
             this.TopLevel = true;
             this.Show();
         }
@@ -107,15 +106,13 @@ namespace Kiritori
                 }
                 {
                     Pen blackPen = new Pen(Color.Black);
-                    using (Graphics g = Graphics.FromImage(bmp)) {
+                    using (g = Graphics.FromImage(bmp)) {
                         blackPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
                         blackPen.Width = 1;
                         g.Clear(SystemColors.Control);
                         g.DrawRectangle(blackPen, rc);
-                        Font fnt = new Font("Arial", 10);
-                        g.DrawString(rc.Width.ToString() + "x" + rc.Height.ToString(), fnt, Brushes.Black, e.X + 5, e.Y + 10);
-                        fnt.Dispose();
-                        g.Dispose();
+                        g.DrawString(rc.Width.ToString() + "x" + rc.Height.ToString(), 
+                            fnt, Brushes.Black, e.X + 5, e.Y + 10);
                     }
                     pictureBox1.Refresh();
                 }
