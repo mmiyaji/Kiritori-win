@@ -46,6 +46,7 @@ namespace Kiritori
             bmp = new Bitmap(w, h);
             using (g = Graphics.FromImage(bmp))
             {
+                g.Clear(SystemColors.Control);
                 g.CopyFromScreen(
                     new Point(0, 0),
                     new Point(w, h), bmp.Size
