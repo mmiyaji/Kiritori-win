@@ -294,7 +294,7 @@ namespace Kiritori
         }
         public void setAlpha(double alpha) {
             this.Opacity = alpha;
-            this.alpha_value = (int)(alpha * 100);
+            this.alpha_value = alpha;
         }
         private void toolStripMenuItem2_Click(object sender, EventArgs e)
         {
