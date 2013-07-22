@@ -35,8 +35,8 @@
             this.captureToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideAllWindowsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showAllWindowsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.preferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.contextMenuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -56,42 +56,44 @@
             this.preferencesToolStripMenuItem,
             this.exitToolStripMenuItem});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(183, 136);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(206, 136);
             // 
             // captureToolStripMenuItem
             // 
             this.captureToolStripMenuItem.Name = "captureToolStripMenuItem";
-            this.captureToolStripMenuItem.Size = new System.Drawing.Size(182, 22);
+            this.captureToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.D5)));
+            this.captureToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
             this.captureToolStripMenuItem.Text = "Capture";
             this.captureToolStripMenuItem.Click += new System.EventHandler(this.captureToolStripMenuItem_Click);
             // 
             // hideAllWindowsToolStripMenuItem
             // 
             this.hideAllWindowsToolStripMenuItem.Name = "hideAllWindowsToolStripMenuItem";
-            this.hideAllWindowsToolStripMenuItem.Size = new System.Drawing.Size(182, 22);
+            this.hideAllWindowsToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
             this.hideAllWindowsToolStripMenuItem.Text = "Hide All Windows";
             this.hideAllWindowsToolStripMenuItem.Click += new System.EventHandler(this.hideAllWindowsToolStripMenuItem_Click);
             // 
             // showAllWindowsToolStripMenuItem
             // 
             this.showAllWindowsToolStripMenuItem.Name = "showAllWindowsToolStripMenuItem";
-            this.showAllWindowsToolStripMenuItem.Size = new System.Drawing.Size(182, 22);
+            this.showAllWindowsToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
             this.showAllWindowsToolStripMenuItem.Text = "Show All Windows";
             this.showAllWindowsToolStripMenuItem.Click += new System.EventHandler(this.showAllWindowsToolStripMenuItem_Click);
-            // 
-            // exitToolStripMenuItem
-            // 
-            this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(182, 22);
-            this.exitToolStripMenuItem.Text = "Exit";
-            this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
             // preferencesToolStripMenuItem
             // 
             this.preferencesToolStripMenuItem.Name = "preferencesToolStripMenuItem";
-            this.preferencesToolStripMenuItem.Size = new System.Drawing.Size(182, 22);
+            this.preferencesToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
             this.preferencesToolStripMenuItem.Text = "Preferences";
             this.preferencesToolStripMenuItem.Click += new System.EventHandler(this.preferencesToolStripMenuItem_Click);
+            // 
+            // exitToolStripMenuItem
+            // 
+            this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            this.exitToolStripMenuItem.Text = "Exit";
+            this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
             // MainApplication
             // 
