@@ -58,11 +58,11 @@ namespace Kiritori
             if (s == null)
             {
                 s = new ScreenWindow();
-                s.showScreen();
+                s.showScreenAll();
             }
             else
             {
-                s.showScreen();
+                s.showScreenAll();
             }
         }
 

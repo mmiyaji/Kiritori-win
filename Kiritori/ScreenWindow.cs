@@ -60,6 +60,52 @@ namespace Kiritori
             this.TopLevel = true;
             this.Show();
         }
+        int x = 0, y = 0, h = 0, w = 0;
+        public void showScreenAll()
+        {
+            this.Opacity = 0.61;
+            this.StartPosition = FormStartPosition.Manual;
+            int index;
+            int upperBound;
+            Screen[] screens = Screen.AllScreens;
+            upperBound = screens.GetUpperBound(0);
+            for (index = 0; index <= upperBound; index++)
+            {
+                if(x > screens[index].Bounds.X){
+                    x = screens[index].Bounds.X;
+                }
+                if (y > screens[index].Bounds.Y)
+                {
+                    y = screens[index].Bounds.Y;
+                }
+                if (w < screens[index].Bounds.Width)
+                {
+                   w = screens[index].Bounds.Width;
+                }
+                if (h < screens[index].Bounds.Height)
+                {
+                    h = screens[index].Bounds.Height;
+                }
+            }
+            w = Math.Abs(x) + Math.Abs(w);
+            h = Math.Abs(y) + Math.Abs(h);
+            this.SetBounds(x, y, w, h);
+            bmp = new Bitmap(w, h);
+            using (g = Graphics.FromImage(bmp))
+            {
+                g.Clear(Color.White);
+                g.CopyFromScreen(
+                    new Point(x, y),
+                    new Point(w, h), bmp.Size
+                );
+            }
+            pictureBox1.SetBounds(0, 0, w, h);
+            pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
+            pictureBox1.Image = bmp;
+            pictureBox1.Refresh();
+            this.TopLevel = true;
+            this.Show();
+        }
         //マウスのクリック位置を記憶
         private Point startPoint;
         private Point endPoint;
@@ -80,7 +126,7 @@ namespace Kiritori
         private void ScreenWindow_MouseMove(object sender,
             System.Windows.Forms.MouseEventArgs e)
         {
-            if ((e.Button & MouseButtons.Left) == MouseButtons.Left)
+            if (isPressed)
             {
                 rc = new Rectangle();
                 Pen p = new Pen(Color.Black, 10);
@@ -129,12 +175,14 @@ namespace Kiritori
                 this.CloseScreen();
                 if(rc.Width != 0 || rc.Height != 0){
                     SnapWindow sw = new SnapWindow();
-                    sw.capture(rc);
-                    sw.Show();
-                    sw.SetDesktopLocation(rc.X, rc.Y);
+                    sw.StartPosition = FormStartPosition.Manual;
+                    sw.capture(new Rectangle(rc.X + x, rc.Y + y, rc.Width, rc.Height));
+                    sw.SetBounds(rc.X + x, rc.Y + y, 0, 0);
                     sw.FormClosing +=
                         new FormClosingEventHandler(SW_FormClosing);
                     captureArray.Add(sw);
+                    sw.Show();
+                    Console.WriteLine(rc.X +";"+ x);
                 }
             }
         }
