@@ -111,6 +111,7 @@ namespace Kiritori
             pictureBox1.Refresh();
             this.TopLevel = true;
             this.Show();
+            Console.WriteLine(h +","+ w);
         }
         int x = 0, y = 0, h = 0, w = 0;
         public void showScreenAll()

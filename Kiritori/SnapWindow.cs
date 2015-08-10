@@ -58,7 +58,7 @@ namespace Kiritori
             this.isWindowShadow = Properties.Settings.Default.isWindowShadow;
             this.isAfloatWindow = Properties.Settings.Default.isAfloatWindow;
             this.alpha_value = Properties.Settings.Default.alpha_value / 100.0;
-            this.TransparencyKey = BackColor;
+//            this.TransparencyKey = BackColor;
             InitializeComponent();
         }
         private void Form1_Load(object sender, EventArgs e)
