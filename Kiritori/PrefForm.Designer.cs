@@ -37,6 +37,10 @@
             this.pictureBox1 = new System.Windows.Forms.PictureBox();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
+            this.label23 = new System.Windows.Forms.Label();
+            this.checkBox3 = new System.Windows.Forms.CheckBox();
+            this.label22 = new System.Windows.Forms.Label();
+            this.label21 = new System.Windows.Forms.Label();
             this.textBox2 = new System.Windows.Forms.TextBox();
             this.label7 = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
@@ -48,6 +52,14 @@
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.trackBar1 = new System.Windows.Forms.TrackBar();
             this.tabPage2 = new System.Windows.Forms.TabPage();
+            this.textBox13 = new System.Windows.Forms.TextBox();
+            this.label19 = new System.Windows.Forms.Label();
+            this.textBox14 = new System.Windows.Forms.TextBox();
+            this.label20 = new System.Windows.Forms.Label();
+            this.textBox12 = new System.Windows.Forms.TextBox();
+            this.label18 = new System.Windows.Forms.Label();
+            this.textBox11 = new System.Windows.Forms.TextBox();
+            this.label17 = new System.Windows.Forms.Label();
             this.textBox10 = new System.Windows.Forms.TextBox();
             this.label16 = new System.Windows.Forms.Label();
             this.textBox9 = new System.Windows.Forms.TextBox();
@@ -66,14 +78,6 @@
             this.label9 = new System.Windows.Forms.Label();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.label8 = new System.Windows.Forms.Label();
-            this.textBox11 = new System.Windows.Forms.TextBox();
-            this.label17 = new System.Windows.Forms.Label();
-            this.textBox12 = new System.Windows.Forms.TextBox();
-            this.label18 = new System.Windows.Forms.Label();
-            this.textBox13 = new System.Windows.Forms.TextBox();
-            this.label19 = new System.Windows.Forms.Label();
-            this.textBox14 = new System.Windows.Forms.TextBox();
-            this.label20 = new System.Windows.Forms.Label();
             this.tabPage5.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.tabControl1.SuspendLayout();
@@ -99,12 +103,17 @@
             // 
             // label3
             // 
+            //自分自身のAssemblyを取得
+            System.Reflection.Assembly asm =
+                System.Reflection.Assembly.GetExecutingAssembly();
+            //バージョンの取得
+            System.Version ver = asm.GetName().Version;
             this.label3.AutoSize = true;
             this.label3.Location = new System.Drawing.Point(185, 78);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(223, 12);
+            this.label3.Size = new System.Drawing.Size(225, 12);
             this.label3.TabIndex = 4;
-            this.label3.Text = "Version 0.9.4 last updated at July 16, 2013";
+            this.label3.Text = "Version " + ver + " last updated at April 14, 2015";
             // 
             // label2
             // 
@@ -134,6 +143,7 @@
             this.linkLabel1.TabIndex = 1;
             this.linkLabel1.TabStop = true;
             this.linkLabel1.Text = "Go to App page - http://kiritori.ruhenheim.org";
+            this.linkLabel1.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel1_LinkClicked);
             // 
             // pictureBox1
             // 
@@ -161,6 +171,10 @@
             // 
             // tabPage1
             // 
+            this.tabPage1.Controls.Add(this.label23);
+            this.tabPage1.Controls.Add(this.checkBox3);
+            this.tabPage1.Controls.Add(this.label22);
+            this.tabPage1.Controls.Add(this.label21);
             this.tabPage1.Controls.Add(this.textBox2);
             this.tabPage1.Controls.Add(this.label7);
             this.tabPage1.Controls.Add(this.label6);
@@ -178,6 +192,47 @@
             this.tabPage1.TabIndex = 6;
             this.tabPage1.Text = "General";
             this.tabPage1.UseVisualStyleBackColor = true;
+            // 
+            // label23
+            // 
+            this.label23.AutoSize = true;
+            this.label23.ForeColor = System.Drawing.SystemColors.GrayText;
+            this.label23.Location = new System.Drawing.Point(32, 149);
+            this.label23.Name = "label23";
+            this.label23.Size = new System.Drawing.Size(175, 12);
+            this.label23.TabIndex = 15;
+            this.label23.Text = "Create shortcut on Startup folder";
+            // 
+            // checkBox3
+            // 
+            this.checkBox3.AutoSize = true;
+            this.checkBox3.Checked = global::Kiritori.Properties.Settings.Default.isStartup;
+            this.checkBox3.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isStartup", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            this.checkBox3.Location = new System.Drawing.Point(34, 130);
+            this.checkBox3.Name = "checkBox3";
+            this.checkBox3.Size = new System.Drawing.Size(140, 16);
+            this.checkBox3.TabIndex = 14;
+            this.checkBox3.Text = "Launch Kiritori at login";
+            this.checkBox3.UseVisualStyleBackColor = true;
+            this.checkBox3.CheckedChanged += new System.EventHandler(this.checkBox3_CheckedChanged);
+            // 
+            // label22
+            // 
+            this.label22.AutoSize = true;
+            this.label22.Location = new System.Drawing.Point(24, 107);
+            this.label22.Name = "label22";
+            this.label22.Size = new System.Drawing.Size(42, 12);
+            this.label22.TabIndex = 13;
+            this.label22.Text = "Startup";
+            // 
+            // label21
+            // 
+            this.label21.AutoSize = true;
+            this.label21.Location = new System.Drawing.Point(211, 21);
+            this.label21.Name = "label21";
+            this.label21.Size = new System.Drawing.Size(65, 12);
+            this.label21.TabIndex = 12;
+            this.label21.Text = "Appearance";
             // 
             // textBox2
             // 
@@ -200,7 +255,7 @@
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(216, 147);
+            this.label6.Location = new System.Drawing.Point(221, 154);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(23, 12);
             this.label6.TabIndex = 7;
@@ -209,7 +264,7 @@
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(368, 147);
+            this.label5.Location = new System.Drawing.Point(373, 154);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(29, 12);
             this.label5.TabIndex = 6;
@@ -218,11 +273,11 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(225, 91);
+            this.label4.Location = new System.Drawing.Point(224, 107);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(86, 12);
+            this.label4.Size = new System.Drawing.Size(127, 12);
             this.label4.TabIndex = 5;
-            this.label4.Text = "Window Opacity";
+            this.label4.Text = "Default Window Opacity";
             // 
             // button2
             // 
@@ -250,7 +305,7 @@
             this.checkBox2.Checked = global::Kiritori.Properties.Settings.Default.isAfloatWindow;
             this.checkBox2.CheckState = System.Windows.Forms.CheckState.Checked;
             this.checkBox2.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isAfloatWindow", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.checkBox2.Location = new System.Drawing.Point(30, 130);
+            this.checkBox2.Location = new System.Drawing.Point(226, 70);
             this.checkBox2.Name = "checkBox2";
             this.checkBox2.Size = new System.Drawing.Size(100, 16);
             this.checkBox2.TabIndex = 2;
@@ -263,7 +318,7 @@
             this.checkBox1.Checked = global::Kiritori.Properties.Settings.Default.isWindowShadow;
             this.checkBox1.CheckState = System.Windows.Forms.CheckState.Checked;
             this.checkBox1.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isWindowShadow", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.checkBox1.Location = new System.Drawing.Point(29, 102);
+            this.checkBox1.Location = new System.Drawing.Point(226, 48);
             this.checkBox1.Name = "checkBox1";
             this.checkBox1.Size = new System.Drawing.Size(103, 16);
             this.checkBox1.TabIndex = 1;
@@ -272,9 +327,10 @@
             // 
             // trackBar1
             // 
+            this.trackBar1.BackColor = System.Drawing.SystemColors.Window;
             this.trackBar1.DataBindings.Add(new System.Windows.Forms.Binding("Value", global::Kiritori.Properties.Settings.Default, "alpha_value", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
             this.trackBar1.LargeChange = 10;
-            this.trackBar1.Location = new System.Drawing.Point(218, 108);
+            this.trackBar1.Location = new System.Drawing.Point(223, 122);
             this.trackBar1.Maximum = 100;
             this.trackBar1.Minimum = 10;
             this.trackBar1.Name = "trackBar1";
@@ -319,6 +375,78 @@
             this.tabPage2.TabIndex = 7;
             this.tabPage2.Text = "Shortcuts";
             this.tabPage2.UseVisualStyleBackColor = true;
+            // 
+            // textBox13
+            // 
+            this.textBox13.Enabled = false;
+            this.textBox13.Location = new System.Drawing.Point(304, 120);
+            this.textBox13.Name = "textBox13";
+            this.textBox13.Size = new System.Drawing.Size(100, 19);
+            this.textBox13.TabIndex = 25;
+            this.textBox13.Text = "right";
+            // 
+            // label19
+            // 
+            this.label19.AutoSize = true;
+            this.label19.Location = new System.Drawing.Point(230, 120);
+            this.label19.Name = "label19";
+            this.label19.Size = new System.Drawing.Size(59, 12);
+            this.label19.TabIndex = 24;
+            this.label19.Text = "move right";
+            // 
+            // textBox14
+            // 
+            this.textBox14.Enabled = false;
+            this.textBox14.Location = new System.Drawing.Point(304, 95);
+            this.textBox14.Name = "textBox14";
+            this.textBox14.Size = new System.Drawing.Size(100, 19);
+            this.textBox14.TabIndex = 23;
+            this.textBox14.Text = "left";
+            // 
+            // label20
+            // 
+            this.label20.AutoSize = true;
+            this.label20.Location = new System.Drawing.Point(230, 95);
+            this.label20.Name = "label20";
+            this.label20.Size = new System.Drawing.Size(53, 12);
+            this.label20.TabIndex = 22;
+            this.label20.Text = "move left";
+            // 
+            // textBox12
+            // 
+            this.textBox12.Enabled = false;
+            this.textBox12.Location = new System.Drawing.Point(304, 70);
+            this.textBox12.Name = "textBox12";
+            this.textBox12.Size = new System.Drawing.Size(100, 19);
+            this.textBox12.TabIndex = 21;
+            this.textBox12.Text = "down";
+            // 
+            // label18
+            // 
+            this.label18.AutoSize = true;
+            this.label18.Location = new System.Drawing.Point(230, 70);
+            this.label18.Name = "label18";
+            this.label18.Size = new System.Drawing.Size(62, 12);
+            this.label18.TabIndex = 20;
+            this.label18.Text = "move down";
+            // 
+            // textBox11
+            // 
+            this.textBox11.Enabled = false;
+            this.textBox11.Location = new System.Drawing.Point(304, 45);
+            this.textBox11.Name = "textBox11";
+            this.textBox11.Size = new System.Drawing.Size(100, 19);
+            this.textBox11.TabIndex = 19;
+            this.textBox11.Text = "up";
+            // 
+            // label17
+            // 
+            this.label17.AutoSize = true;
+            this.label17.Location = new System.Drawing.Point(230, 45);
+            this.label17.Name = "label17";
+            this.label17.Size = new System.Drawing.Size(48, 12);
+            this.label17.TabIndex = 18;
+            this.label17.Text = "move up";
             // 
             // textBox10
             // 
@@ -482,84 +610,13 @@
             this.label8.TabIndex = 0;
             this.label8.Text = "toggle afloat";
             // 
-            // textBox11
-            // 
-            this.textBox11.Enabled = false;
-            this.textBox11.Location = new System.Drawing.Point(304, 45);
-            this.textBox11.Name = "textBox11";
-            this.textBox11.Size = new System.Drawing.Size(100, 19);
-            this.textBox11.TabIndex = 19;
-            this.textBox11.Text = "up";
-            // 
-            // label17
-            // 
-            this.label17.AutoSize = true;
-            this.label17.Location = new System.Drawing.Point(230, 45);
-            this.label17.Name = "label17";
-            this.label17.Size = new System.Drawing.Size(48, 12);
-            this.label17.TabIndex = 18;
-            this.label17.Text = "move up";
-            // 
-            // textBox12
-            // 
-            this.textBox12.Enabled = false;
-            this.textBox12.Location = new System.Drawing.Point(304, 70);
-            this.textBox12.Name = "textBox12";
-            this.textBox12.Size = new System.Drawing.Size(100, 19);
-            this.textBox12.TabIndex = 21;
-            this.textBox12.Text = "down";
-            // 
-            // label18
-            // 
-            this.label18.AutoSize = true;
-            this.label18.Location = new System.Drawing.Point(230, 70);
-            this.label18.Name = "label18";
-            this.label18.Size = new System.Drawing.Size(62, 12);
-            this.label18.TabIndex = 20;
-            this.label18.Text = "move down";
-            // 
-            // textBox13
-            // 
-            this.textBox13.Enabled = false;
-            this.textBox13.Location = new System.Drawing.Point(304, 120);
-            this.textBox13.Name = "textBox13";
-            this.textBox13.Size = new System.Drawing.Size(100, 19);
-            this.textBox13.TabIndex = 25;
-            this.textBox13.Text = "right";
-            // 
-            // label19
-            // 
-            this.label19.AutoSize = true;
-            this.label19.Location = new System.Drawing.Point(230, 120);
-            this.label19.Name = "label19";
-            this.label19.Size = new System.Drawing.Size(59, 12);
-            this.label19.TabIndex = 24;
-            this.label19.Text = "move right";
-            // 
-            // textBox14
-            // 
-            this.textBox14.Enabled = false;
-            this.textBox14.Location = new System.Drawing.Point(304, 95);
-            this.textBox14.Name = "textBox14";
-            this.textBox14.Size = new System.Drawing.Size(100, 19);
-            this.textBox14.TabIndex = 23;
-            this.textBox14.Text = "left";
-            // 
-            // label20
-            // 
-            this.label20.AutoSize = true;
-            this.label20.Location = new System.Drawing.Point(230, 95);
-            this.label20.Name = "label20";
-            this.label20.Size = new System.Drawing.Size(53, 12);
-            this.label20.TabIndex = 22;
-            this.label20.Text = "move left";
-            // 
             // PrefForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(434, 262);
             this.Controls.Add(this.tabControl1);
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MinimumSize = new System.Drawing.Size(450, 300);
             this.Name = "PrefForm";
             this.Text = "Kiritori - Preferences";
@@ -624,6 +681,10 @@
         private System.Windows.Forms.Label label18;
         private System.Windows.Forms.TextBox textBox11;
         private System.Windows.Forms.Label label17;
+        private System.Windows.Forms.CheckBox checkBox3;
+        private System.Windows.Forms.Label label22;
+        private System.Windows.Forms.Label label21;
+        private System.Windows.Forms.Label label23;
 
     }
 }

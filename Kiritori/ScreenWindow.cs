@@ -6,7 +6,7 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Collections;
-using System.Threading.Tasks;
+//using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace Kiritori
@@ -18,8 +18,10 @@ namespace Kiritori
         private Boolean isOpen;
         private ArrayList captureArray;
         private Font fnt = new Font("Arial", 10);
-        public ScreenWindow()
+        private MainApplication ma;
+        public ScreenWindow(MainApplication mainapp)
         {
+            this.ma = mainapp;
             captureArray = new ArrayList();
             isOpen = true;
             InitializeComponent();
@@ -36,6 +38,56 @@ namespace Kiritori
             pictureBox1.MouseUp +=
                     new MouseEventHandler(ScreenWindow_MouseUp);
         }
+        public void openImage() {
+            try {
+                OpenFileDialog openFileDialog1 = new OpenFileDialog();
+                openFileDialog1.Title = "Open Image";
+
+                // ファイルのフィルタを設定する
+                openFileDialog1.Filter = "Image|*.png;*.PNG;*.jpg;*.JPG;*.jpeg;*.JPEG;*.gif;*.GIF;*.bmp;*.BMP|すべてのファイル|*.*";
+                openFileDialog1.FilterIndex = 1;
+                
+                // 有効な Win32 ファイル名だけを受け入れるようにする (初期値 true)
+                openFileDialog1.ValidateNames = false;
+
+                // ダイアログを表示し、戻り値が [OK] の場合は、選択したファイルを表示する
+                if (openFileDialog1.ShowDialog() == DialogResult.OK)
+                {
+                    // 不要になった時点で破棄する (正しくは オブジェクトの破棄を保証する を参照)
+                    openFileDialog1.Dispose();
+
+                    SnapWindow sw = new SnapWindow(this.ma);
+                    sw.StartPosition = FormStartPosition.CenterScreen;
+                    sw.setImageFromPath(openFileDialog1.FileName);
+                    sw.FormClosing +=
+                        new FormClosingEventHandler(SW_FormClosing);
+                    captureArray.Add(sw);
+                    sw.Show();
+                }
+            }catch{
+            }
+        }
+        public SnapWindow getSW(int i) {
+            return (SnapWindow)captureArray[i];
+        }
+        public void openImageFromHistory(ToolStripMenuItem item)
+        {
+            try
+            {
+                SnapWindow sw = new SnapWindow(this.ma);
+                sw.StartPosition = FormStartPosition.CenterScreen;
+                sw.setImageFromBMP((Bitmap)((item.Tag as SnapWindow).main_image));
+                sw.Text = (item.Tag as SnapWindow).Text;
+                sw.FormClosing +=
+                    new FormClosingEventHandler(SW_FormClosing);
+                captureArray.Add(sw);
+                sw.Show();
+            }
+            catch
+            {
+            }
+        }
+
         public void showScreen() {
             this.Opacity = 0.61;
             int h, w;
@@ -174,7 +226,7 @@ namespace Kiritori
                 isPressed = false;
                 this.CloseScreen();
                 if(rc.Width != 0 || rc.Height != 0){
-                    SnapWindow sw = new SnapWindow();
+                    SnapWindow sw = new SnapWindow(this.ma);
                     sw.StartPosition = FormStartPosition.Manual;
                     sw.capture(new Rectangle(rc.X + x, rc.Y + y, rc.Width, rc.Height));
                     sw.SetBounds(rc.X + x, rc.Y + y, 0, 0);
@@ -182,7 +234,7 @@ namespace Kiritori
                         new FormClosingEventHandler(SW_FormClosing);
                     captureArray.Add(sw);
                     sw.Show();
-                    Console.WriteLine(rc.X +";"+ x);
+//                    Console.WriteLine(rc.X +";"+ x);
                 }
             }
         }

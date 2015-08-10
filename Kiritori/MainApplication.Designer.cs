@@ -33,10 +33,12 @@
             this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.captureToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.openToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideAllWindowsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showAllWindowsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.preferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.historyToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
             this.contextMenuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -51,49 +53,64 @@
             // 
             this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.captureToolStripMenuItem,
+            this.openToolStripMenuItem,
+            this.historyToolStripMenuItem1,
             this.hideAllWindowsToolStripMenuItem,
             this.showAllWindowsToolStripMenuItem,
             this.preferencesToolStripMenuItem,
             this.exitToolStripMenuItem});
             this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(206, 136);
+            this.contextMenuStrip1.Size = new System.Drawing.Size(203, 180);
             // 
             // captureToolStripMenuItem
             // 
             this.captureToolStripMenuItem.Name = "captureToolStripMenuItem";
             this.captureToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
             | System.Windows.Forms.Keys.D5)));
-            this.captureToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            this.captureToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.captureToolStripMenuItem.Text = "Capture";
             this.captureToolStripMenuItem.Click += new System.EventHandler(this.captureToolStripMenuItem_Click);
+            // 
+            // openToolStripMenuItem
+            // 
+            this.openToolStripMenuItem.Name = "openToolStripMenuItem";
+            this.openToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
+            this.openToolStripMenuItem.Text = "Open";
+            this.openToolStripMenuItem.Click += new System.EventHandler(this.openToolStripMenuItem_Click);
             // 
             // hideAllWindowsToolStripMenuItem
             // 
             this.hideAllWindowsToolStripMenuItem.Name = "hideAllWindowsToolStripMenuItem";
-            this.hideAllWindowsToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            this.hideAllWindowsToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.hideAllWindowsToolStripMenuItem.Text = "Hide All Windows";
             this.hideAllWindowsToolStripMenuItem.Click += new System.EventHandler(this.hideAllWindowsToolStripMenuItem_Click);
             // 
             // showAllWindowsToolStripMenuItem
             // 
             this.showAllWindowsToolStripMenuItem.Name = "showAllWindowsToolStripMenuItem";
-            this.showAllWindowsToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            this.showAllWindowsToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.showAllWindowsToolStripMenuItem.Text = "Show All Windows";
             this.showAllWindowsToolStripMenuItem.Click += new System.EventHandler(this.showAllWindowsToolStripMenuItem_Click);
             // 
             // preferencesToolStripMenuItem
             // 
             this.preferencesToolStripMenuItem.Name = "preferencesToolStripMenuItem";
-            this.preferencesToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            this.preferencesToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.preferencesToolStripMenuItem.Text = "Preferences";
             this.preferencesToolStripMenuItem.Click += new System.EventHandler(this.preferencesToolStripMenuItem_Click);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(205, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.exitToolStripMenuItem.Text = "Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
+            // 
+            // historyToolStripMenuItem1
+            // 
+            this.historyToolStripMenuItem1.Name = "historyToolStripMenuItem1";
+            this.historyToolStripMenuItem1.Size = new System.Drawing.Size(202, 22);
+            this.historyToolStripMenuItem1.Text = "History";
             // 
             // MainApplication
             // 
@@ -117,5 +134,7 @@
         private System.Windows.Forms.ToolStripMenuItem hideAllWindowsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showAllWindowsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem preferencesToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem openToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem historyToolStripMenuItem1;
     }
 }
