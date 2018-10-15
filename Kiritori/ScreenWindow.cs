@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -120,8 +120,14 @@ namespace Kiritori
             this.StartPosition = FormStartPosition.Manual;
             int index;
             int upperBound;
+            x = 0;
+            y = 0;
+            h = 0;
+            w = 0;
+            // 接続しているすべてのディスプレイを取得
             Screen[] screens = Screen.AllScreens;
             upperBound = screens.GetUpperBound(0);
+            // すべてのディスプレイにおける基準点（左上）とサイズを計算
             for (index = 0; index <= upperBound; index++)
             {
                 if(x > screens[index].Bounds.X){
@@ -131,17 +137,20 @@ namespace Kiritori
                 {
                     y = screens[index].Bounds.Y;
                 }
-                if (w < screens[index].Bounds.Width)
+                if (w < screens[index].Bounds.Width + screens[index].Bounds.X)
                 {
-                   w = screens[index].Bounds.Width;
+                   w = screens[index].Bounds.Width + screens[index].Bounds.X;
                 }
-                if (h < screens[index].Bounds.Height)
+                if (h < screens[index].Bounds.Height + screens[index].Bounds.Y)
                 {
-                    h = screens[index].Bounds.Height;
+                    h = screens[index].Bounds.Height + screens[index].Bounds.Y;
                 }
             }
+            // 複数ディスプレイ時にメインより左上のディスプレイの基準点がマイナスになるため、座標系を補正
             w = Math.Abs(x) + Math.Abs(w);
             h = Math.Abs(y) + Math.Abs(h);
+
+            // ディスプレイ全体に白幕（スクリーン）を描画
             this.SetBounds(x, y, w, h);
             bmp = new Bitmap(w, h);
             using (g = Graphics.FromImage(bmp))
@@ -158,6 +167,8 @@ namespace Kiritori
             pictureBox1.Refresh();
             this.TopLevel = true;
             this.Show();
+
+            //Console.WriteLine(x + ":" + y + " " + h + "," + w + "@" + upperBound);
         }
         //マウスのクリック位置を記憶
         private Point startPoint;
