@@ -31,7 +31,7 @@ namespace Kiritori
 
         }
 
-        private void button2_Click(object sender, EventArgs e)
+        private void btnSavestings_Click(object sender, EventArgs e)
         {
             Properties.Settings.Default.Save();
             PrefForm.ActiveForm.Close();
@@ -136,7 +136,7 @@ namespace Kiritori
         private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
             //リンク先に移動したことにする
-            linkLabel1.LinkVisited = true;
+            labelLinkWebsite.LinkVisited = true;
             //ブラウザで開く
             System.Diagnostics.Process.Start("https://kiritori.ruhenheim.org");
         }
