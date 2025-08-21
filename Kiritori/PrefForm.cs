@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
+using System.IO;
 //using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -19,7 +20,9 @@ namespace Kiritori
 
         private void PrefForm_Load(object sender, EventArgs e)
         {
-
+            string startupDir = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+            string shortcutPath = Path.Combine(startupDir, Application.ProductName + ".lnk");
+            checkBox3.Checked = File.Exists(shortcutPath);
         }
 
         private void textBox2_TextChanged(object sender, EventArgs e)
@@ -31,10 +34,7 @@ namespace Kiritori
         {
             Properties.Settings.Default.Save();
             PrefForm.ActiveForm.Close();
-            if (Properties.Settings.Default.isStartup)
-            {
-                SetCurrentVersionRun();
-            }
+            SetStartupShortcut(Properties.Settings.Default.isStartup);
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -44,66 +44,51 @@ namespace Kiritori
         }
 
         /// <summary>
-        /// CurrentUserのRunにアプリケーションの実行ファイルパスを登録する
-        /// http://dobon.net/vb/dotnet/file/createshortcut.html
         /// </summary>
-        private static void SetCurrentVersionRun()
+        private static void SetStartupShortcut(bool enable)
         {
-            //作成するショートカットのパス
-            string shortcutPath = System.IO.Path.Combine(
-                System.Environment.GetFolderPath(System.Environment.SpecialFolder.Startup),
-                Application.ProductName + @".lnk");
-            if (!System.IO.File.Exists(shortcutPath))
+            string startupDir = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+            string shortcutPath = Path.Combine(startupDir, Application.ProductName + ".lnk");
+
+            if (!enable)
             {
-                //ショートカットのリンク先
-                string targetPath = Application.ExecutablePath;
+                if (File.Exists(shortcutPath)) File.Delete(shortcutPath);
+                return;
+            }
 
-                //WshShellを作成
-                Type t = Type.GetTypeFromCLSID(new Guid("72C24DD5-D70A-438B-8A42-98424B88AFB8"));
-                object shell = Activator.CreateInstance(t);
+            string targetPath = Application.ExecutablePath;
 
-                //WshShortcutを作成
-                object shortcut = t.InvokeMember("CreateShortcut",
-                    System.Reflection.BindingFlags.InvokeMethod, null, shell,
-                    new object[] { shortcutPath });
-                try {
-                    //リンク先
-                    t.InvokeMember("TargetPath",
-                        System.Reflection.BindingFlags.SetProperty, null, shortcut,
-                        new object[] { targetPath });
-                    //アイコンのパス
-                    t.InvokeMember("IconLocation",
-                        System.Reflection.BindingFlags.SetProperty, null, shortcut,
-                        new object[] { Application.ExecutablePath + ",0" });
-                    //その他のプロパティも同様に設定できるため、省略
+            // WshShell COM を手動で呼び出す
+            Type t = Type.GetTypeFromCLSID(new Guid("72C24DD5-D70A-438B-8A42-98424B88AFB8"));
+            object shell = Activator.CreateInstance(t);
 
-                    //ショートカットを作成
-                    t.InvokeMember("Save",
-                        System.Reflection.BindingFlags.InvokeMethod,
-                        null, shortcut, null);
-                }finally{
-                    //後始末
-                    System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shortcut);
-                    System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shell);
-                }
+            object shortcut = t.InvokeMember("CreateShortcut",
+                System.Reflection.BindingFlags.InvokeMethod, null, shell,
+                new object[] { shortcutPath });
+
+            try
+            {
+                t.InvokeMember("TargetPath", System.Reflection.BindingFlags.SetProperty,
+                    null, shortcut, new object[] { targetPath });
+                t.InvokeMember("WorkingDirectory", System.Reflection.BindingFlags.SetProperty,
+                    null, shortcut, new object[] { Path.GetDirectoryName(targetPath) });
+                t.InvokeMember("IconLocation", System.Reflection.BindingFlags.SetProperty,
+                    null, shortcut, new object[] { targetPath + ",0" });
+
+                t.InvokeMember("Save", System.Reflection.BindingFlags.InvokeMethod,
+                    null, shortcut, null);
+            }
+            finally
+            {
+                System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shortcut);
+                System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shell);
             }
         }
-        /// <summary>
-        /// スタートアップにショートカットファイルあり かつ　設定解除した際に警告を表示→システムでは自動削除しない方針
-        /// </summary>
+
         private void checkBox3_CheckedChanged(object sender, EventArgs e)
         {
-            //作成するショートカットのパス
-            string shortcutPath = System.IO.Path.Combine(
-                System.Environment.GetFolderPath(System.Environment.SpecialFolder.Startup),
-                Application.ProductName + @".lnk");
-            if (!checkBox3.Checked && System.IO.File.Exists(shortcutPath))
-            {
-                MessageBox.Show("Please delete shortcut file(" + shortcutPath + ") on your own.",
-                    "Warnning",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Warning);                
-            }
+            // チェックONならスタートアップ登録、OFFなら削除
+            SetStartupShortcut(checkBox3.Checked);
         }
 
         private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

@@ -14,7 +14,7 @@
     <IsWebBootstrapper>true</IsWebBootstrapper>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
-    <PublishUrl>C:\Users\MIYAJI\SkyDrive\公開\</PublishUrl>
+    <PublishUrl>C:\Users\mail\Documents\publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Web</InstallFrom>
     <UpdateEnabled>true</UpdateEnabled>
@@ -27,7 +27,7 @@
     <InstallUrl>http://kiriotri.ruhenheim.org/</InstallUrl>
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
     <WebPage>publish.htm</WebPage>
-    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationRevision>2</ApplicationRevision>
     <ApplicationVersion>1.1.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
@@ -59,10 +59,10 @@
   </PropertyGroup>
   <PropertyGroup />
   <PropertyGroup>
-    <ManifestCertificateThumbprint>F209D53D4303586B1307BDDFF49CEAB9577DE9A5</ManifestCertificateThumbprint>
+    <ManifestCertificateThumbprint>3EC53372E4DEDC79D3712F270D57374D074F0E0A</ManifestCertificateThumbprint>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestKeyFile>Kiritori_TemporaryKey.pfx</ManifestKeyFile>
+    <ManifestKeyFile>Kiritori_3_TemporaryKey.pfx</ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
     <GenerateManifests>true</GenerateManifests>
@@ -74,7 +74,7 @@
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
   </PropertyGroup>
   <PropertyGroup>
-    <SignManifests>false</SignManifests>
+    <SignManifests>true</SignManifests>
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject>
@@ -144,6 +144,7 @@
     </Compile>
     <None Include="Kiritori_1_TemporaryKey.pfx" />
     <None Include="Kiritori_2_TemporaryKey.pfx" />
+    <None Include="Kiritori_3_TemporaryKey.pfx" />
     <None Include="Kiritori_TemporaryKey.pfx" />
     <None Include="Properties\app.manifest" />
     <None Include="Properties\Settings.settings">
