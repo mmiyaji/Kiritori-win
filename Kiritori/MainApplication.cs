@@ -26,7 +26,7 @@ namespace Kiritori
             s = new ScreenWindow(this);
             ApplyDpiToUi(GetDpiForWindowSafe(this.Handle));
         }
-        
+
         // --- DPI 変更を受け取り、UI のスケール依存を更新
         protected override void WndProc(ref Message m)
         {
@@ -106,7 +106,8 @@ namespace Kiritori
             this.openScreen();
         }
 
-        public void openScreen() {
+        public void openScreen()
+        {
             // restrict multiple open
             if (s == null)
             {
@@ -151,7 +152,7 @@ namespace Kiritori
             // historyToolStripMenuItem1.DropDownItems.Add(item1);
             item1.Click += new System.EventHandler(this.historyToolStripMenuItem1_item_Click);
             historyToolStripMenuItem1.DropDownItems.Insert(0, item1);
-                        
+
             // 件数制限を超えていたら古いものを削除
             while (historyToolStripMenuItem1.DropDownItems.Count > limit)
             {
@@ -184,7 +185,7 @@ namespace Kiritori
             ToolStripMenuItem item = (ToolStripMenuItem)sender;
             this.openImageFromHistory(item);
         }
-        
+
         private String substringAtCount(string source, int count)
         {
             String newStr = "";
@@ -212,5 +213,18 @@ namespace Kiritori
             }
             return newStr;
         }
+        private void NotifyIcon1_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                PrefForm pref = new PrefForm();
+                pref.Show();
+            }
+            else if (e.Button == MouseButtons.Right)
+            {
+                // 右クリックは ContextMenuStrip が出るので、通常は何もしない
+            }
+        }
+
     }
 }
