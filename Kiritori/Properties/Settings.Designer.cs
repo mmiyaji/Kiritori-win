@@ -82,5 +82,29 @@ namespace Kiritori.Properties {
                 this["HistoryLimit"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool FirstRunShown {
+            get {
+                return ((bool)(this["FirstRunShown"]));
+            }
+            set {
+                this["FirstRunShown"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool DoNotShowOnStartup {
+            get {
+                return ((bool)(this["DoNotShowOnStartup"]));
+            }
+            set {
+                this["DoNotShowOnStartup"] = value;
+            }
+        }
     }
 }

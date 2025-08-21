@@ -9,6 +9,7 @@ using System.Text;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
 //using System.Windows.Forms.Cursor;
+using Kiritori.Properties;
 
 namespace Kiritori
 {
@@ -25,6 +26,7 @@ namespace Kiritori
             Application.ApplicationExit += new EventHandler(Application_ApplicationExit);
             s = new ScreenWindow(this);
             ApplyDpiToUi(GetDpiForWindowSafe(this.Handle));
+            MaybeShowPreferencesOnStartup();
         }
 
         // --- DPI 変更を受け取り、UI のスケール依存を更新
@@ -55,6 +57,36 @@ namespace Kiritori
             try { s?.OnHostDpiChanged(dpi); } catch { /* ScreenWindow 未対応でもOK */ }
         }
 
+        private void MaybeShowPreferencesOnStartup()
+        {
+            // 初回だけは強制表示
+            if (!Settings.Default.FirstRunShown)
+            {
+                ShowPreferencesNonModal();
+                Settings.Default.FirstRunShown = true;
+                Settings.Default.Save(); // 記録
+                return;
+            }
+
+            // 2回目以降は、「表示しない」がOFF（= false）のときだけ表示
+            // DoNotShowOnStartup == true のときは出さない
+            if (!Settings.Default.DoNotShowOnStartup)
+            {
+                ShowPreferencesNonModal();
+            }
+        }
+
+        private void ShowPreferencesNonModal()
+        {
+            try
+            {
+                var pref = new PrefForm();
+                pref.StartPosition = FormStartPosition.CenterScreen;
+                pref.Show(); // 非モーダルで表示
+                pref.BringToFront();
+            }
+            catch { /* 無視 or ログ */ }
+        }
         // Utility: コントロール木から指定型を列挙
         private IEnumerable<T> ComponentsRecursive<T>() where T : Control
         {

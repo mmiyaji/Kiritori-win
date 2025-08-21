@@ -74,11 +74,17 @@
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
   </PropertyGroup>
   <PropertyGroup>
-    <SignManifests>true</SignManifests>
+    <SignManifests>false</SignManifests>
   </PropertyGroup>
   <PropertyGroup>
     <StartupObject>
     </StartupObject>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>Kiritori_3_TemporaryKey.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -90,6 +96,9 @@
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
+    <Reference Include="Windows">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Windows Kits\10\UnionMetadata\10.0.26100.0\Windows.winmd</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="HotKey.cs" />
@@ -142,6 +151,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
+    <None Include="kiritori.pfx" />
     <None Include="Kiritori_1_TemporaryKey.pfx" />
     <None Include="Kiritori_2_TemporaryKey.pfx" />
     <None Include="Kiritori_3_TemporaryKey.pfx" />

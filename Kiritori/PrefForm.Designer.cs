@@ -38,7 +38,7 @@
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage1 = new System.Windows.Forms.TabPage();
             this.label23 = new System.Windows.Forms.Label();
-            this.checkBox3 = new System.Windows.Forms.CheckBox();
+            // this.checkBox3 = new System.Windows.Forms.CheckBox();
             this.label22 = new System.Windows.Forms.Label();
             this.label21 = new System.Windows.Forms.Label();
             this.textBox2 = new System.Windows.Forms.TextBox();
@@ -80,6 +80,9 @@
             this.label8 = new System.Windows.Forms.Label();
             this.labelHistory = new System.Windows.Forms.Label();
             this.textBoxHistory = new System.Windows.Forms.NumericUpDown();
+            this.btnOpenStartupSettings = new System.Windows.Forms.Button();
+            this.chkDoNotShowOnStartup = new System.Windows.Forms.CheckBox();
+            this.labelTrayNote = new System.Windows.Forms.Label();
 
             this.tabPage5.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
@@ -112,16 +115,16 @@
             //バージョンの取得
             System.Version ver = asm.GetName().Version;
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(170, 80);
+            this.label3.Location = new System.Drawing.Point(170, 60);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(225, 12);
             this.label3.TabIndex = 4;
-            this.label3.Text = "Version " + ver + " last updated at April 14, 2015";
+            this.label3.Text = "Version " + ver + " last updated at 21 Aug, 2025";
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(170, 117);
+            this.label2.Location = new System.Drawing.Point(170, 87);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(216, 12);
             this.label2.TabIndex = 3;
@@ -131,7 +134,7 @@
             // 
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("MS UI Gothic", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.label1.Location = new System.Drawing.Point(170, 43);
+            this.label1.Location = new System.Drawing.Point(170, 23);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(156, 16);
             this.label1.TabIndex = 2;
@@ -140,19 +143,50 @@
             // linkLabel1
             // 
             this.linkLabel1.AutoSize = true;
-            this.linkLabel1.Location = new System.Drawing.Point(170, 159);
+            this.linkLabel1.Location = new System.Drawing.Point(170, 119);
             this.linkLabel1.Name = "linkLabel1";
             this.linkLabel1.Size = new System.Drawing.Size(238, 12);
             this.linkLabel1.TabIndex = 1;
             this.linkLabel1.TabStop = true;
-            this.linkLabel1.Text = "Go to App page - http://kiritori.ruhenheim.org";
+            this.linkLabel1.Text = "Go to App page - https://kiritori.ruhenheim.org";
             this.linkLabel1.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel1_LinkClicked);
+
+            // chkDoNotShowOnStartup
+            this.chkDoNotShowOnStartup.AutoSize = true;
+            this.chkDoNotShowOnStartup.Location = new System.Drawing.Point(25, 200);
+            this.chkDoNotShowOnStartup.Name = "chkDoNotShowOnStartup";
+            this.chkDoNotShowOnStartup.Size = new System.Drawing.Size(195, 16);
+            this.chkDoNotShowOnStartup.TabIndex = 17;
+            this.chkDoNotShowOnStartup.Text = "Don’t show this screen at startup";
+            this.chkDoNotShowOnStartup.UseVisualStyleBackColor = true;
+            // Settings と双方向バインド（既定値 True）
+            this.chkDoNotShowOnStartup.DataBindings.Add(
+                new System.Windows.Forms.Binding(
+                    "Checked",
+                    global::Kiritori.Properties.Settings.Default,
+                    "DoNotShowOnStartup",
+                    true,
+                    System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+
+            this.chkDoNotShowOnStartup.CheckedChanged += new System.EventHandler(this.chkDoNotShowOnStartup_CheckedChanged);
+            // General タブに追加
+            this.tabPage5.Controls.Add(this.chkDoNotShowOnStartup);
+
+            this.labelTrayNote.AutoSize = true;
+            this.labelTrayNote.ForeColor = System.Drawing.SystemColors.GrayText;
+            this.labelTrayNote.Location = new System.Drawing.Point(24, 160); // 位置は調整
+            this.labelTrayNote.Name = "labelTrayNote";
+            this.labelTrayNote.Size = new System.Drawing.Size(360, 24);
+            this.labelTrayNote.TabIndex = 18;
+            this.labelTrayNote.Text = "'Kiritori' runs in the system tray.\r\nRight-click the tray icon to open or exit.";
+
+            this.tabPage5.Controls.Add(this.labelTrayNote);
             // 
             // pictureBox1
             // 
             this.pictureBox1.Image = global::Kiritori.Properties.Resources.icon_128x128;
             this.pictureBox1.InitialImage = ((System.Drawing.Image)(resources.GetObject("pictureBox1.InitialImage")));
-            this.pictureBox1.Location = new System.Drawing.Point(25, 43);
+            this.pictureBox1.Location = new System.Drawing.Point(25, 23);
             this.pictureBox1.Name = "pictureBox1";
             this.pictureBox1.Size = new System.Drawing.Size(128, 128);
             this.pictureBox1.TabIndex = 0;
@@ -160,8 +194,8 @@
             // 
             // tabControl1
             // 
-            this.tabControl1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
+            this.tabControl1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.tabControl1.Controls.Add(this.tabPage5);
             this.tabControl1.Controls.Add(this.tabPage1);
@@ -175,7 +209,8 @@
             // tabPage1
             // 
             this.tabPage1.Controls.Add(this.label23);
-            this.tabPage1.Controls.Add(this.checkBox3);
+            // this.tabPage1.Controls.Add(this.checkBox3);
+            //this.tabPage1.Controls.Add(this.btnOpenStartupSettings);
             this.tabPage1.Controls.Add(this.labelHistory);
             this.tabPage1.Controls.Add(this.textBoxHistory);
             this.tabPage1.Controls.Add(this.label22);
@@ -197,34 +232,51 @@
             this.tabPage1.TabIndex = 6;
             this.tabPage1.Text = "General";
             this.tabPage1.UseVisualStyleBackColor = true;
+
             // 
             // label23
             // 
+            // this.label23.AutoSize = true;
+            // this.label23.ForeColor = System.Drawing.SystemColors.GrayText;
+            // this.label23.Location = new System.Drawing.Point(32, 200);
+            // this.label23.Name = "label23";
+            // this.label23.Size = new System.Drawing.Size(175, 12);
+            // this.label23.TabIndex = 15;
+            // this.label23.Text = "Create shortcut on Startup folder";
             this.label23.AutoSize = true;
             this.label23.ForeColor = System.Drawing.SystemColors.GrayText;
-            this.label23.Location = new System.Drawing.Point(32, 200);
+            this.label23.Location = new System.Drawing.Point(32, 196);
             this.label23.Name = "label23";
-            this.label23.Size = new System.Drawing.Size(175, 12);
+            this.label23.Size = new System.Drawing.Size(320, 30);
             this.label23.TabIndex = 15;
-            this.label23.Text = "Create shortcut on Startup folder";
-            // 
+            this.label23.Text = "From Settings > Apps > Startup,\n"
+                                + "you can enable or disable Kiritori.";
             // checkBox3
             // 
-            this.checkBox3.AutoSize = true;
-            this.checkBox3.Checked = global::Kiritori.Properties.Settings.Default.isStartup;
-            this.checkBox3.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isStartup", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.checkBox3.Location = new System.Drawing.Point(34, 180);
-            this.checkBox3.Name = "checkBox3";
-            this.checkBox3.Size = new System.Drawing.Size(140, 16);
-            this.checkBox3.TabIndex = 14;
-            this.checkBox3.Text = "Launch Kiritori at login";
-            this.checkBox3.UseVisualStyleBackColor = true;
-            this.checkBox3.CheckedChanged += new System.EventHandler(this.checkBox3_CheckedChanged);
+            // this.checkBox3.AutoSize = true;
+            // this.checkBox3.Checked = global::Kiritori.Properties.Settings.Default.isStartup;
+            // this.checkBox3.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isStartup", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            // this.checkBox3.Location = new System.Drawing.Point(34, 180);
+            // this.checkBox3.Name = "checkBox3";
+            // this.checkBox3.Size = new System.Drawing.Size(140, 16);
+            // this.checkBox3.TabIndex = 14;
+            // this.checkBox3.Text = "Launch Kiritori at login";
+            // this.checkBox3.UseVisualStyleBackColor = true;
+            // this.checkBox3.CheckedChanged += new System.EventHandler(this.checkBox3_CheckedChanged);
+            // btnOpenStartupSettings
+            this.btnOpenStartupSettings.Location = new System.Drawing.Point(34, 156);
+            this.btnOpenStartupSettings.Name = "btnOpenStartupSettings";
+            this.btnOpenStartupSettings.Size = new System.Drawing.Size(150, 25);
+            this.btnOpenStartupSettings.TabIndex = 14;
+            this.btnOpenStartupSettings.Text = "Open Startup settings";
+            this.btnOpenStartupSettings.UseVisualStyleBackColor = true;
+            this.btnOpenStartupSettings.Click += new System.EventHandler(this.btnOpenStartupSettings_Click);
+            this.tabPage1.Controls.Add(this.btnOpenStartupSettings);
             // 
             // label22
             // 
             this.label22.AutoSize = true;
-            this.label22.Location = new System.Drawing.Point(24, 158);
+            this.label22.Location = new System.Drawing.Point(24, 133);
             this.label22.Name = "label22";
             this.label22.Size = new System.Drawing.Size(42, 12);
             this.label22.TabIndex = 13;
@@ -233,14 +285,14 @@
             // label22
             // 
             this.labelHistory.AutoSize = true;
-            this.labelHistory.Location = new System.Drawing.Point(24, 87);
+            this.labelHistory.Location = new System.Drawing.Point(24, 77);
             this.labelHistory.Name = "labelHistory";
             this.labelHistory.Size = new System.Drawing.Size(42, 12);
             this.labelHistory.TabIndex = 13;
             this.labelHistory.Text = "History";
 
             this.textBoxHistory.Enabled = true;
-            this.textBoxHistory.Location = new System.Drawing.Point(30, 107);
+            this.textBoxHistory.Location = new System.Drawing.Point(30, 97);
             this.textBoxHistory.Name = "textBoxHistory";
             this.textBoxHistory.Size = new System.Drawing.Size(100, 19);
             this.textBoxHistory.TabIndex = 16;
@@ -707,12 +759,14 @@
         private System.Windows.Forms.Label label18;
         private System.Windows.Forms.TextBox textBox11;
         private System.Windows.Forms.Label label17;
-        private System.Windows.Forms.CheckBox checkBox3;
+        // private System.Windows.Forms.CheckBox checkBox3;
         private System.Windows.Forms.Label label22;
         private System.Windows.Forms.Label label21;
         private System.Windows.Forms.Label label23;
         private System.Windows.Forms.Label labelHistory;
         private System.Windows.Forms.NumericUpDown textBoxHistory;
-
+        private System.Windows.Forms.Button btnOpenStartupSettings;
+        private System.Windows.Forms.CheckBox chkDoNotShowOnStartup;
+        private System.Windows.Forms.Label labelTrayNote;
     }
 }
