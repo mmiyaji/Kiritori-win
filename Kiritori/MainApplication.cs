@@ -134,18 +134,29 @@ namespace Kiritori
             }
             s.openImageFromHistory(item);
         }
-        public void setHistory(SnapWindow sw) {
+        public void setHistory(SnapWindow sw)
+        {
+            int limit = Properties.Settings.Default.HistoryLimit;
+            if (limit == 0) return;
+
             ToolStripMenuItem item1 = new ToolStripMenuItem();
             item1.Image = sw.thumbnail_image;
-//            item1.Text = sw.Text;
+            //            item1.Text = sw.Text;
             // ファイル名が一行表示だと長くなるので、てきとーに改行
             item1.Text = substringAtCount(sw.Text, 30);
             item1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.ImageAndText;
             item1.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
             item1.ImageScaling = ToolStripItemImageScaling.None;
             item1.Tag = sw;
-            historyToolStripMenuItem1.DropDownItems.Add(item1);
+            // historyToolStripMenuItem1.DropDownItems.Add(item1);
             item1.Click += new System.EventHandler(this.historyToolStripMenuItem1_item_Click);
+            historyToolStripMenuItem1.DropDownItems.Insert(0, item1);
+                        
+            // 件数制限を超えていたら古いものを削除
+            while (historyToolStripMenuItem1.DropDownItems.Count > limit)
+            {
+                historyToolStripMenuItem1.DropDownItems.RemoveAt(historyToolStripMenuItem1.DropDownItems.Count - 1);
+            }
         }
         private void hideAllWindowsToolStripMenuItem_Click(object sender, EventArgs e)
         {

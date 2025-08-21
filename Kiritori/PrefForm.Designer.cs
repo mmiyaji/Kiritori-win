@@ -78,6 +78,9 @@
             this.label9 = new System.Windows.Forms.Label();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.label8 = new System.Windows.Forms.Label();
+            this.labelHistory = new System.Windows.Forms.Label();
+            this.textBoxHistory = new System.Windows.Forms.NumericUpDown();
+
             this.tabPage5.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.tabControl1.SuspendLayout();
@@ -109,7 +112,7 @@
             //バージョンの取得
             System.Version ver = asm.GetName().Version;
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(185, 78);
+            this.label3.Location = new System.Drawing.Point(170, 80);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(225, 12);
             this.label3.TabIndex = 4;
@@ -173,6 +176,8 @@
             // 
             this.tabPage1.Controls.Add(this.label23);
             this.tabPage1.Controls.Add(this.checkBox3);
+            this.tabPage1.Controls.Add(this.labelHistory);
+            this.tabPage1.Controls.Add(this.textBoxHistory);
             this.tabPage1.Controls.Add(this.label22);
             this.tabPage1.Controls.Add(this.label21);
             this.tabPage1.Controls.Add(this.textBox2);
@@ -197,7 +202,7 @@
             // 
             this.label23.AutoSize = true;
             this.label23.ForeColor = System.Drawing.SystemColors.GrayText;
-            this.label23.Location = new System.Drawing.Point(32, 149);
+            this.label23.Location = new System.Drawing.Point(32, 200);
             this.label23.Name = "label23";
             this.label23.Size = new System.Drawing.Size(175, 12);
             this.label23.TabIndex = 15;
@@ -208,7 +213,7 @@
             this.checkBox3.AutoSize = true;
             this.checkBox3.Checked = global::Kiritori.Properties.Settings.Default.isStartup;
             this.checkBox3.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isStartup", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.checkBox3.Location = new System.Drawing.Point(34, 130);
+            this.checkBox3.Location = new System.Drawing.Point(34, 180);
             this.checkBox3.Name = "checkBox3";
             this.checkBox3.Size = new System.Drawing.Size(140, 16);
             this.checkBox3.TabIndex = 14;
@@ -219,11 +224,32 @@
             // label22
             // 
             this.label22.AutoSize = true;
-            this.label22.Location = new System.Drawing.Point(24, 107);
+            this.label22.Location = new System.Drawing.Point(24, 158);
             this.label22.Name = "label22";
             this.label22.Size = new System.Drawing.Size(42, 12);
             this.label22.TabIndex = 13;
             this.label22.Text = "Startup";
+            // 
+            // label22
+            // 
+            this.labelHistory.AutoSize = true;
+            this.labelHistory.Location = new System.Drawing.Point(24, 87);
+            this.labelHistory.Name = "labelHistory";
+            this.labelHistory.Size = new System.Drawing.Size(42, 12);
+            this.labelHistory.TabIndex = 13;
+            this.labelHistory.Text = "History";
+
+            this.textBoxHistory.Enabled = true;
+            this.textBoxHistory.Location = new System.Drawing.Point(30, 107);
+            this.textBoxHistory.Name = "textBoxHistory";
+            this.textBoxHistory.Size = new System.Drawing.Size(100, 19);
+            this.textBoxHistory.TabIndex = 16;
+            this.textBoxHistory.Minimum = 0;
+            this.textBoxHistory.Maximum = 100;
+            this.textBoxHistory.Increment = 1;
+            this.textBoxHistory.DataBindings.Add(new System.Windows.Forms.Binding("Value", global::Kiritori.Properties.Settings.Default, "HistoryLimit", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            this.textBoxHistory.Value = global::Kiritori.Properties.Settings.Default.HistoryLimit;
+
             // 
             // label21
             // 
@@ -327,7 +353,7 @@
             // 
             // trackBar1
             // 
-            this.trackBar1.BackColor = System.Drawing.SystemColors.Window;
+            this.trackBar1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(249)))), ((int)(((byte)(249)))));
             this.trackBar1.DataBindings.Add(new System.Windows.Forms.Binding("Value", global::Kiritori.Properties.Settings.Default, "alpha_value", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
             this.trackBar1.LargeChange = 10;
             this.trackBar1.Location = new System.Drawing.Point(223, 122);
@@ -685,6 +711,8 @@
         private System.Windows.Forms.Label label22;
         private System.Windows.Forms.Label label21;
         private System.Windows.Forms.Label label23;
+        private System.Windows.Forms.Label labelHistory;
+        private System.Windows.Forms.NumericUpDown textBoxHistory;
 
     }
 }
