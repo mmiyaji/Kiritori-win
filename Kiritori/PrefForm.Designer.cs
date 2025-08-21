@@ -455,7 +455,7 @@
             this.textBox10.Name = "textBox10";
             this.textBox10.Size = new System.Drawing.Size(100, 19);
             this.textBox10.TabIndex = 17;
-            this.textBox10.Text = "Ctril + h";
+            this.textBox10.Text = "Ctrl + h";
             // 
             // label16
             // 
@@ -491,7 +491,7 @@
             this.textBox8.Name = "textBox8";
             this.textBox8.Size = new System.Drawing.Size(100, 19);
             this.textBox8.TabIndex = 13;
-            this.textBox8.Text = "Ctril + -";
+            this.textBox8.Text = "Ctrl + -";
             // 
             // label14
             // 
@@ -509,7 +509,7 @@
             this.textBox7.Name = "textBox7";
             this.textBox7.Size = new System.Drawing.Size(100, 19);
             this.textBox7.TabIndex = 11;
-            this.textBox7.Text = "Ctril + +";
+            this.textBox7.Text = "Ctrl + +";
             // 
             // label13
             // 
@@ -527,7 +527,7 @@
             this.textBox6.Name = "textBox6";
             this.textBox6.Size = new System.Drawing.Size(100, 19);
             this.textBox6.TabIndex = 9;
-            this.textBox6.Text = "Ctril + s";
+            this.textBox6.Text = "Ctrl + s";
             // 
             // label12
             // 
@@ -545,7 +545,7 @@
             this.textBox5.Name = "textBox5";
             this.textBox5.Size = new System.Drawing.Size(100, 19);
             this.textBox5.TabIndex = 7;
-            this.textBox5.Text = "Ctril + c";
+            this.textBox5.Text = "Ctrl + c";
             // 
             // label11
             // 
@@ -563,7 +563,7 @@
             this.textBox4.Name = "textBox4";
             this.textBox4.Size = new System.Drawing.Size(100, 19);
             this.textBox4.TabIndex = 5;
-            this.textBox4.Text = "Ctril + x";
+            this.textBox4.Text = "Ctrl + x";
             // 
             // label10
             // 
@@ -581,7 +581,7 @@
             this.textBox3.Name = "textBox3";
             this.textBox3.Size = new System.Drawing.Size(100, 19);
             this.textBox3.TabIndex = 3;
-            this.textBox3.Text = "Ctril + w, ESC";
+            this.textBox3.Text = "Ctrl + w, ESC";
             // 
             // label9
             // 
@@ -599,7 +599,7 @@
             this.textBox1.Name = "textBox1";
             this.textBox1.Size = new System.Drawing.Size(100, 19);
             this.textBox1.TabIndex = 1;
-            this.textBox1.Text = "Ctril + a";
+            this.textBox1.Text = "Ctrl + a";
             // 
             // label8
             // 
