@@ -328,6 +328,20 @@ namespace Kiritori
                 sw.showWindow();
             }
         }
+        public void closeWindows()
+        {
+            // 現在の内容で固定した配列を作ってから閉じる
+            var snapshot = captureArray.Cast<SnapWindow>().ToArray();
+            foreach (var sw in snapshot)
+            {
+                try
+                {
+                    if (sw != null && !sw.IsDisposed)
+                        sw.closeWindow();
+                }
+                catch { /* 必要ならログ */ }
+            }
+        }
         private void CloseScreen()
         {
             this.isOpen = false;

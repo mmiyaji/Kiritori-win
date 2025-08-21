@@ -1,16 +1,17 @@
-﻿namespace Kiritori
+﻿using System.Drawing;
+
+namespace Kiritori
 {
     partial class PrefForm
     {
         /// <summary>
-        /// Required designer variable.
+        /// 必要なデザイナー変数です。
         /// </summary>
         private System.ComponentModel.IContainer components = null;
 
         /// <summary>
-        /// Clean up any resources being used.
+        /// 使用中のリソースをすべてクリーンアップします。
         /// </summary>
-        /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -20,16 +21,18 @@
             base.Dispose(disposing);
         }
 
-        #region Windows Form Designer generated code
+        #region Windows フォーム デザイナーで生成されたコード
 
         /// <summary>
-        /// Required method for Designer support - do not modify
-        /// the contents of this method with the code editor.
+        /// デザイナー サポートに必要なメソッドです。このメソッドの内容を
+        /// コード エディターで変更しないでください。
         /// </summary>
         private void InitializeComponent()
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(PrefForm));
             this.tabInfo = new System.Windows.Forms.TabPage();
+            this.labelTrayNote = new System.Windows.Forms.Label();
+            this.chkDoNotShowOnStartup = new System.Windows.Forms.CheckBox();
             this.labelVersion = new System.Windows.Forms.Label();
             this.labelSign = new System.Windows.Forms.Label();
             this.labelAppName = new System.Windows.Forms.Label();
@@ -38,7 +41,9 @@
             this.tabControl = new System.Windows.Forms.TabControl();
             this.tabPageBasic = new System.Windows.Forms.TabPage();
             this.labelStartupInfo = new System.Windows.Forms.Label();
-            // this.checkBox3 = new System.Windows.Forms.CheckBox();
+            this.btnOpenStartupSettings = new System.Windows.Forms.Button();
+            this.labelHistory = new System.Windows.Forms.Label();
+            this.textBoxHistory = new System.Windows.Forms.NumericUpDown();
             this.labelStartup = new System.Windows.Forms.Label();
             this.labelAppearance = new System.Windows.Forms.Label();
             this.textBoxKiritori = new System.Windows.Forms.TextBox();
@@ -68,7 +73,7 @@
             this.labelZoomOut = new System.Windows.Forms.Label();
             this.textBoxZoomIn = new System.Windows.Forms.TextBox();
             this.labelZoomIn = new System.Windows.Forms.Label();
-            this.textBoxSave= new System.Windows.Forms.TextBox();
+            this.textBoxSave = new System.Windows.Forms.TextBox();
             this.labelSave = new System.Windows.Forms.Label();
             this.textBoxCopy = new System.Windows.Forms.TextBox();
             this.labelCopy = new System.Windows.Forms.Label();
@@ -78,22 +83,19 @@
             this.labelClose = new System.Windows.Forms.Label();
             this.textBoxAfloat = new System.Windows.Forms.TextBox();
             this.labelAfloat = new System.Windows.Forms.Label();
-            this.labelHistory = new System.Windows.Forms.Label();
-            this.textBoxHistory = new System.Windows.Forms.NumericUpDown();
-            this.btnOpenStartupSettings = new System.Windows.Forms.Button();
-            this.chkDoNotShowOnStartup = new System.Windows.Forms.CheckBox();
-            this.labelTrayNote = new System.Windows.Forms.Label();
-
             this.tabInfo.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.picAppIcon)).BeginInit();
             this.tabControl.SuspendLayout();
             this.tabPageBasic.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.textBoxHistory)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackbarOpacty)).BeginInit();
             this.tabPageShortcuts.SuspendLayout();
             this.SuspendLayout();
             // 
             // tabInfo
             // 
+            this.tabInfo.Controls.Add(this.labelTrayNote);
+            this.tabInfo.Controls.Add(this.chkDoNotShowOnStartup);
             this.tabInfo.Controls.Add(this.labelVersion);
             this.tabInfo.Controls.Add(this.labelSign);
             this.tabInfo.Controls.Add(this.labelAppName);
@@ -107,90 +109,83 @@
             this.tabInfo.Text = "Info";
             this.tabInfo.UseVisualStyleBackColor = true;
             // 
-            // labelVersion
+            // labelTrayNote
             // 
-            //自分自身のAssemblyを取得
-            System.Reflection.Assembly asm =
-                System.Reflection.Assembly.GetExecutingAssembly();
-            //バージョンの取得
-            System.Version ver = asm.GetName().Version;
-            this.labelVersion.AutoSize = true;
-            this.labelVersion.Location = new System.Drawing.Point(170, 60);
-            this.labelVersion.Name = "labelVersion";
-            this.labelVersion.Size = new System.Drawing.Size(225, 12);
-            this.labelVersion.TabIndex = 4;
-            this.labelVersion.Text = "Version " + ver + " last updated at 21 Aug, 2025";
+            this.labelTrayNote.AutoSize = true;
+            this.labelTrayNote.ForeColor = System.Drawing.SystemColors.GrayText;
+            this.labelTrayNote.Location = new System.Drawing.Point(24, 160);
+            this.labelTrayNote.Name = "labelTrayNote";
+            this.labelTrayNote.Size = new System.Drawing.Size(360, 24);
+            this.labelTrayNote.TabIndex = 7;
+            this.labelTrayNote.Text = "\'Kiritori\' runs in the system tray.\r\nRight-click the tray icon to open or exit.";
             // 
-            // labelSign
-            // 
-            this.labelSign.AutoSize = true;
-            this.labelSign.Location = new System.Drawing.Point(170, 87);
-            this.labelSign.Name = "labelSign";
-            this.labelSign.Size = new System.Drawing.Size(216, 12);
-            this.labelSign.TabIndex = 3;
-            this.labelSign.Text = "Developed by Masahiro MIYAJI (mmiyaji)";
-            // 
-            // labelAppName
-            // 
-            this.labelAppName.AutoSize = true;
-            this.labelAppName.Font = new System.Drawing.Font("MS UI Gothic", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.labelAppName.Location = new System.Drawing.Point(170, 23);
-            this.labelAppName.Name = "labelAppName";
-            this.labelAppName.Size = new System.Drawing.Size(156, 16);
-            this.labelAppName.TabIndex = 2;
-            this.labelAppName.Text = "Kiritori for windows";
-            // 
-            // labelLinkWebsite
-            // 
-            this.labelLinkWebsite.AutoSize = true;
-            this.labelLinkWebsite.Location = new System.Drawing.Point(170, 119);
-            this.labelLinkWebsite.Name = "labelLinkWebsite";
-            this.labelLinkWebsite.Size = new System.Drawing.Size(238, 12);
-            this.labelLinkWebsite.TabIndex = 1;
-            this.labelLinkWebsite.TabStop = true;
-            this.labelLinkWebsite.Text = "Go to App page - https://kiritori.ruhenheim.org";
-            this.labelLinkWebsite.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel1_LinkClicked);
-
             // chkDoNotShowOnStartup
+            // 
             this.chkDoNotShowOnStartup.AutoSize = true;
             this.chkDoNotShowOnStartup.Location = new System.Drawing.Point(25, 200);
             this.chkDoNotShowOnStartup.Name = "chkDoNotShowOnStartup";
             this.chkDoNotShowOnStartup.Size = new System.Drawing.Size(195, 16);
-            this.chkDoNotShowOnStartup.TabIndex = 17;
+            this.chkDoNotShowOnStartup.TabIndex = 6;
             this.chkDoNotShowOnStartup.Text = "Don’t show this screen at startup";
             this.chkDoNotShowOnStartup.UseVisualStyleBackColor = true;
-            // Settings と双方向バインド（既定値 True）
-            this.chkDoNotShowOnStartup.DataBindings.Add(
-                new System.Windows.Forms.Binding(
-                    "Checked",
-                    global::Kiritori.Properties.Settings.Default,
-                    "DoNotShowOnStartup",
-                    true,
-                    System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-
+            this.chkDoNotShowOnStartup.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "DoNotShowOnStartup", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            this.chkDoNotShowOnStartup.Checked = global::Kiritori.Properties.Settings.Default.DoNotShowOnStartup;
             this.chkDoNotShowOnStartup.CheckedChanged += new System.EventHandler(this.chkDoNotShowOnStartup_CheckedChanged);
-            // General タブに追加
-            this.tabInfo.Controls.Add(this.chkDoNotShowOnStartup);
-
-            this.labelTrayNote.AutoSize = true;
-            this.labelTrayNote.ForeColor = System.Drawing.SystemColors.GrayText;
-            this.labelTrayNote.Location = new System.Drawing.Point(24, 160); // 位置は調整
-            this.labelTrayNote.Name = "labelTrayNote";
-            this.labelTrayNote.Size = new System.Drawing.Size(360, 24);
-            this.labelTrayNote.TabIndex = 18;
-            this.labelTrayNote.Text = "'Kiritori' runs in the system tray.\r\nRight-click the tray icon to open or exit.";
-
-            this.tabInfo.Controls.Add(this.labelTrayNote);
             // 
             // picAppIcon
             // 
             this.picAppIcon.Image = global::Kiritori.Properties.Resources.icon_128x128;
             this.picAppIcon.InitialImage = ((System.Drawing.Image)(resources.GetObject("picAppIcon.InitialImage")));
-            this.picAppIcon.Location = new System.Drawing.Point(25, 23);
+            this.picAppIcon.Location = new System.Drawing.Point(20, 20);
             this.picAppIcon.Name = "picAppIcon";
             this.picAppIcon.Size = new System.Drawing.Size(128, 128);
             this.picAppIcon.TabIndex = 0;
             this.picAppIcon.TabStop = false;
+            // 
+            // labelAppName
+            // 
+            this.labelAppName.AutoSize = true;
+            //this.labelAppName.Font = new System.Drawing.Font("MS UI Gothic", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
+            this.labelAppName.Font = new Font(
+                this.labelAppName.Font.FontFamily,           // 既存フォントの名前を保持
+                this.labelAppName.Font.Size + 7,             // サイズを拡大
+                FontStyle.Bold                               // 太字
+            );
+            this.labelAppName.Font = new Font(this.labelAppName.Font, FontStyle.Bold);
+            this.labelAppName.Location = new System.Drawing.Point(155, 23);
+            this.labelAppName.Name = "labelAppName";
+            this.labelAppName.Size = new System.Drawing.Size(156, 16);
+            this.labelAppName.TabIndex = 2;
+            this.labelAppName.Text = "\"Kiritori\" for windows";
+            // 
+            // labelVersion
+            // 
+            this.labelVersion.AutoSize = true;
+            this.labelVersion.Location = new System.Drawing.Point(170, 60);
+            this.labelVersion.Name = "labelVersion";
+            this.labelVersion.Size = new System.Drawing.Size(195, 12);
+            this.labelVersion.TabIndex = 4;
+            this.labelVersion.Text = "Version - last updated at (on load)";
+            // 
+            // labelSign
+            // 
+            this.labelSign.AutoSize = true;
+            this.labelSign.Location = new System.Drawing.Point(170, 85);
+            this.labelSign.Name = "labelSign";
+            this.labelSign.Size = new System.Drawing.Size(216, 12);
+            this.labelSign.TabIndex = 3;
+            this.labelSign.Text = "Developed by mmiyaji";
+            // 
+            // labelLinkWebsite
+            // 
+            this.labelLinkWebsite.AutoSize = true;
+            this.labelLinkWebsite.Location = new System.Drawing.Point(170, 110);
+            this.labelLinkWebsite.Name = "labelLinkWebsite";
+            this.labelLinkWebsite.Size = new System.Drawing.Size(260, 12);
+            this.labelLinkWebsite.TabIndex = 1;
+            this.labelLinkWebsite.TabStop = true;
+            this.labelLinkWebsite.Text = "HomePage - https://kiritori.ruhenheim.org";
+            this.labelLinkWebsite.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel1_LinkClicked);
             // 
             // tabControl
             // 
@@ -209,8 +204,7 @@
             // tabPageBasic
             // 
             this.tabPageBasic.Controls.Add(this.labelStartupInfo);
-            // this.tabPageBasic.Controls.Add(this.checkBox3);
-            //this.tabPageBasic.Controls.Add(this.btnOpenStartupSettings);
+            this.tabPageBasic.Controls.Add(this.btnOpenStartupSettings);
             this.tabPageBasic.Controls.Add(this.labelHistory);
             this.tabPageBasic.Controls.Add(this.textBoxHistory);
             this.tabPageBasic.Controls.Add(this.labelStartup);
@@ -232,38 +226,19 @@
             this.tabPageBasic.TabIndex = 6;
             this.tabPageBasic.Text = "Basic";
             this.tabPageBasic.UseVisualStyleBackColor = true;
-
             // 
-            // labalStartupInfo
+            // labelStartupInfo
             // 
-            // this.labalStartupInfo.AutoSize = true;
-            // this.labalStartupInfo.ForeColor = System.Drawing.SystemColors.GrayText;
-            // this.labalStartupInfo.Location = new System.Drawing.Point(32, 200);
-            // this.labalStartupInfo.Name = "labalStartupInfo";
-            // this.labalStartupInfo.Size = new System.Drawing.Size(175, 12);
-            // this.labalStartupInfo.TabIndex = 15;
-            // this.labalStartupInfo.Text = "Create shortcut on Startup folder";
             this.labelStartupInfo.AutoSize = true;
             this.labelStartupInfo.ForeColor = System.Drawing.SystemColors.GrayText;
             this.labelStartupInfo.Location = new System.Drawing.Point(32, 196);
-            this.labelStartupInfo.Name = "labalStartupInfo";
+            this.labelStartupInfo.Name = "labelStartupInfo";
             this.labelStartupInfo.Size = new System.Drawing.Size(320, 30);
             this.labelStartupInfo.TabIndex = 15;
-            this.labelStartupInfo.Text = "From Settings > Apps > Startup,\n"
-                                + "you can enable or disable Kiritori.";
-            // checkBox3
+            this.labelStartupInfo.Text = "From Settings > Apps > Startup,\r\nyou can enable or disable Kiritori.";
             // 
-            // this.checkBox3.AutoSize = true;
-            // this.checkBox3.Checked = global::Kiritori.Properties.Settings.Default.isStartup;
-            // this.checkBox3.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isStartup", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            // this.checkBox3.Location = new System.Drawing.Point(34, 180);
-            // this.checkBox3.Name = "checkBox3";
-            // this.checkBox3.Size = new System.Drawing.Size(140, 16);
-            // this.checkBox3.TabIndex = 14;
-            // this.checkBox3.Text = "Launch Kiritori at login";
-            // this.checkBox3.UseVisualStyleBackColor = true;
-            // this.checkBox3.CheckedChanged += new System.EventHandler(this.checkBox3_CheckedChanged);
             // btnOpenStartupSettings
+            // 
             this.btnOpenStartupSettings.Location = new System.Drawing.Point(34, 156);
             this.btnOpenStartupSettings.Name = "btnOpenStartupSettings";
             this.btnOpenStartupSettings.Size = new System.Drawing.Size(150, 25);
@@ -271,7 +246,28 @@
             this.btnOpenStartupSettings.Text = "Open Startup settings";
             this.btnOpenStartupSettings.UseVisualStyleBackColor = true;
             this.btnOpenStartupSettings.Click += new System.EventHandler(this.btnOpenStartupSettings_Click);
-            this.tabPageBasic.Controls.Add(this.btnOpenStartupSettings);
+            // 
+            // labelHistory
+            // 
+            this.labelHistory.AutoSize = true;
+            this.labelHistory.Location = new System.Drawing.Point(24, 77);
+            this.labelHistory.Name = "labelHistory";
+            this.labelHistory.Size = new System.Drawing.Size(41, 12);
+            this.labelHistory.TabIndex = 13;
+            this.labelHistory.Text = "History";
+            // 
+            // textBoxHistory
+            // 
+            this.textBoxHistory.DataBindings.Add(new System.Windows.Forms.Binding("Value", global::Kiritori.Properties.Settings.Default, "HistoryLimit", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            this.textBoxHistory.Enabled = true;
+            this.textBoxHistory.Increment = new decimal(new int[] { 1, 0, 0, 0 });
+            this.textBoxHistory.Location = new System.Drawing.Point(35, 97);
+            this.textBoxHistory.Maximum = new decimal(new int[] { 100, 0, 0, 0 });
+            this.textBoxHistory.Minimum = new decimal(new int[] { 0, 0, 0, 0 });
+            this.textBoxHistory.Name = "textBoxHistory";
+            this.textBoxHistory.Size = new System.Drawing.Size(100, 19);
+            this.textBoxHistory.TabIndex = 16;
+            this.textBoxHistory.Value = global::Kiritori.Properties.Settings.Default.HistoryLimit;
             // 
             // labelStartup
             // 
@@ -281,27 +277,6 @@
             this.labelStartup.Size = new System.Drawing.Size(42, 12);
             this.labelStartup.TabIndex = 13;
             this.labelStartup.Text = "Startup";
-            // 
-            // labelStartup
-            // 
-            this.labelHistory.AutoSize = true;
-            this.labelHistory.Location = new System.Drawing.Point(24, 77);
-            this.labelHistory.Name = "labelHistory";
-            this.labelHistory.Size = new System.Drawing.Size(42, 12);
-            this.labelHistory.TabIndex = 13;
-            this.labelHistory.Text = "History";
-
-            this.textBoxHistory.Enabled = true;
-            this.textBoxHistory.Location = new System.Drawing.Point(30, 97);
-            this.textBoxHistory.Name = "textBoxHistory";
-            this.textBoxHistory.Size = new System.Drawing.Size(100, 19);
-            this.textBoxHistory.TabIndex = 16;
-            this.textBoxHistory.Minimum = 0;
-            this.textBoxHistory.Maximum = 100;
-            this.textBoxHistory.Increment = 1;
-            this.textBoxHistory.DataBindings.Add(new System.Windows.Forms.Binding("Value", global::Kiritori.Properties.Settings.Default, "HistoryLimit", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.textBoxHistory.Value = global::Kiritori.Properties.Settings.Default.HistoryLimit;
-
             // 
             // labelAppearance
             // 
@@ -375,7 +350,7 @@
             this.btnCancelSettings.TabIndex = 3;
             this.btnCancelSettings.Text = "Cancel";
             this.btnCancelSettings.UseVisualStyleBackColor = true;
-            this.btnCancelSettings.Click += new System.EventHandler(this.button1_Click);
+            this.btnCancelSettings.Click += new System.EventHandler(this.btnCancelSettings_Click);
             // 
             // chkAfloat
             // 
@@ -458,7 +433,7 @@
             // 
             this.textBoxMoveRight.Enabled = false;
             this.textBoxMoveRight.Location = new System.Drawing.Point(304, 120);
-            this.textBoxMoveRight.Name = "textBox13";
+            this.textBoxMoveRight.Name = "textBoxMoveRight";
             this.textBoxMoveRight.Size = new System.Drawing.Size(100, 19);
             this.textBoxMoveRight.TabIndex = 25;
             this.textBoxMoveRight.Text = "right";
@@ -467,7 +442,7 @@
             // 
             this.labelMoveRight.AutoSize = true;
             this.labelMoveRight.Location = new System.Drawing.Point(230, 120);
-            this.labelMoveRight.Name = "label19";
+            this.labelMoveRight.Name = "labelMoveRight";
             this.labelMoveRight.Size = new System.Drawing.Size(59, 12);
             this.labelMoveRight.TabIndex = 24;
             this.labelMoveRight.Text = "move right";
@@ -476,7 +451,7 @@
             // 
             this.textBoxMoveLeft.Enabled = false;
             this.textBoxMoveLeft.Location = new System.Drawing.Point(304, 95);
-            this.textBoxMoveLeft.Name = "textBox14";
+            this.textBoxMoveLeft.Name = "textBoxMoveLeft";
             this.textBoxMoveLeft.Size = new System.Drawing.Size(100, 19);
             this.textBoxMoveLeft.TabIndex = 23;
             this.textBoxMoveLeft.Text = "left";
@@ -485,7 +460,7 @@
             // 
             this.labelMoveLeft.AutoSize = true;
             this.labelMoveLeft.Location = new System.Drawing.Point(230, 95);
-            this.labelMoveLeft.Name = "label20";
+            this.labelMoveLeft.Name = "labelMoveLeft";
             this.labelMoveLeft.Size = new System.Drawing.Size(53, 12);
             this.labelMoveLeft.TabIndex = 22;
             this.labelMoveLeft.Text = "move left";
@@ -494,7 +469,7 @@
             // 
             this.textBoxMoveDown.Enabled = false;
             this.textBoxMoveDown.Location = new System.Drawing.Point(304, 70);
-            this.textBoxMoveDown.Name = "textBox12";
+            this.textBoxMoveDown.Name = "textBoxMoveDown";
             this.textBoxMoveDown.Size = new System.Drawing.Size(100, 19);
             this.textBoxMoveDown.TabIndex = 21;
             this.textBoxMoveDown.Text = "down";
@@ -503,7 +478,7 @@
             // 
             this.labelMoveDown.AutoSize = true;
             this.labelMoveDown.Location = new System.Drawing.Point(230, 70);
-            this.labelMoveDown.Name = "label18";
+            this.labelMoveDown.Name = "labelMoveDown";
             this.labelMoveDown.Size = new System.Drawing.Size(62, 12);
             this.labelMoveDown.TabIndex = 20;
             this.labelMoveDown.Text = "move down";
@@ -512,7 +487,7 @@
             // 
             this.textBoxMoveUp.Enabled = false;
             this.textBoxMoveUp.Location = new System.Drawing.Point(304, 45);
-            this.textBoxMoveUp.Name = "textBox11";
+            this.textBoxMoveUp.Name = "textBoxMoveUp";
             this.textBoxMoveUp.Size = new System.Drawing.Size(100, 19);
             this.textBoxMoveUp.TabIndex = 19;
             this.textBoxMoveUp.Text = "up";
@@ -521,7 +496,7 @@
             // 
             this.labelMoveUp.AutoSize = true;
             this.labelMoveUp.Location = new System.Drawing.Point(230, 45);
-            this.labelMoveUp.Name = "label17";
+            this.labelMoveUp.Name = "labelMoveUp";
             this.labelMoveUp.Size = new System.Drawing.Size(48, 12);
             this.labelMoveUp.TabIndex = 18;
             this.labelMoveUp.Text = "move up";
@@ -530,7 +505,7 @@
             // 
             this.textBoxMinimize.Enabled = false;
             this.textBoxMinimize.Location = new System.Drawing.Point(304, 20);
-            this.textBoxMinimize.Name = "textBox10";
+            this.textBoxMinimize.Name = "textBoxMinimize";
             this.textBoxMinimize.Size = new System.Drawing.Size(100, 19);
             this.textBoxMinimize.TabIndex = 17;
             this.textBoxMinimize.Text = "Ctrl + h";
@@ -539,7 +514,7 @@
             // 
             this.labelMinimize.AutoSize = true;
             this.labelMinimize.Location = new System.Drawing.Point(230, 20);
-            this.labelMinimize.Name = "label16";
+            this.labelMinimize.Name = "labelMinimize";
             this.labelMinimize.Size = new System.Drawing.Size(49, 12);
             this.labelMinimize.TabIndex = 16;
             this.labelMinimize.Text = "minimize";
@@ -548,7 +523,7 @@
             // 
             this.textBoxPrint.Enabled = false;
             this.textBoxPrint.Location = new System.Drawing.Point(98, 195);
-            this.textBoxPrint.Name = "textBox9";
+            this.textBoxPrint.Name = "textBoxPrint";
             this.textBoxPrint.Size = new System.Drawing.Size(100, 19);
             this.textBoxPrint.TabIndex = 15;
             this.textBoxPrint.Text = "Ctrl + p";
@@ -557,7 +532,7 @@
             // 
             this.labelPrint.AutoSize = true;
             this.labelPrint.Location = new System.Drawing.Point(22, 196);
-            this.labelPrint.Name = "label15";
+            this.labelPrint.Name = "labelPrint";
             this.labelPrint.Size = new System.Drawing.Size(28, 12);
             this.labelPrint.TabIndex = 14;
             this.labelPrint.Text = "print";
@@ -566,7 +541,7 @@
             // 
             this.textBoxZoomOut.Enabled = false;
             this.textBoxZoomOut.Location = new System.Drawing.Point(98, 145);
-            this.textBoxZoomOut.Name = "textBox8";
+            this.textBoxZoomOut.Name = "textBoxZoomOut";
             this.textBoxZoomOut.Size = new System.Drawing.Size(100, 19);
             this.textBoxZoomOut.TabIndex = 13;
             this.textBoxZoomOut.Text = "Ctrl + -";
@@ -584,7 +559,7 @@
             // 
             this.textBoxZoomIn.Enabled = false;
             this.textBoxZoomIn.Location = new System.Drawing.Point(98, 120);
-            this.textBoxZoomIn.Name = "textBox7";
+            this.textBoxZoomIn.Name = "textBoxZoomIn";
             this.textBoxZoomIn.Size = new System.Drawing.Size(100, 19);
             this.textBoxZoomIn.TabIndex = 11;
             this.textBoxZoomIn.Text = "Ctrl + +";
@@ -598,7 +573,7 @@
             this.labelZoomIn.TabIndex = 10;
             this.labelZoomIn.Text = "zoom in";
             // 
-            // textBoxZoomo
+            // textBoxSave
             // 
             this.textBoxSave.Enabled = false;
             this.textBoxSave.Location = new System.Drawing.Point(98, 95);
@@ -705,6 +680,7 @@
             this.tabControl.ResumeLayout(false);
             this.tabPageBasic.ResumeLayout(false);
             this.tabPageBasic.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.textBoxHistory)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.trackbarOpacty)).EndInit();
             this.tabPageShortcuts.ResumeLayout(false);
             this.tabPageShortcuts.PerformLayout();

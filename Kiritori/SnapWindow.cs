@@ -397,6 +397,10 @@ namespace Kiritori
         {
             this.WindowState = FormWindowState.Normal;
         }
+        public void closeWindow()
+        {
+            this.Close();
+        }
         const int CS_DROPSHADOW = 0x00020000;
         protected override CreateParams CreateParams
         {

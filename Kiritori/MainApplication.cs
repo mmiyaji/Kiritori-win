@@ -200,6 +200,10 @@ namespace Kiritori
         {
             s.showWindows();
         }
+        private void closeAllWindowsToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            s.closeWindows();
+        }
 
         private void preferencesToolStripMenuItem_Click(object sender, EventArgs e)
         {
