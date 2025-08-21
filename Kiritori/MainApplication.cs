@@ -14,6 +14,7 @@ namespace Kiritori
 {
     public partial class MainApplication : Form
     {
+        private const int WM_DPICHANGED = 0x02E0;
         private HotKey hotKey;
         private ScreenWindow s;
         public MainApplication()
@@ -23,6 +24,59 @@ namespace Kiritori
             hotKey.HotKeyPush += new EventHandler(hotKey_HotKeyPush);
             Application.ApplicationExit += new EventHandler(Application_ApplicationExit);
             s = new ScreenWindow(this);
+            ApplyDpiToUi(GetDpiForWindowSafe(this.Handle));
+        }
+        
+        // --- DPI 変更を受け取り、UI のスケール依存を更新
+        protected override void WndProc(ref Message m)
+        {
+            base.WndProc(ref m);
+            if (m.Msg == WM_DPICHANGED)
+            {
+                // wParam の下位ワードが新しい DPI
+                int newDpi = (int)((uint)m.WParam & 0xFFFF);
+                ApplyDpiToUi(newDpi);
+            }
+        }
+
+        private void ApplyDpiToUi(int dpi)
+        {
+            // ToolStrip / Menu の画像スケール
+            // 例: 16px 基準で DPI に合わせる
+            int px = (int)Math.Round(16 * dpi / 96.0);
+            foreach (var ts in this.ComponentsRecursive<ToolStrip>())
+            {
+                ts.ImageScalingSize = new Size(px, px);
+            }
+            // NotifyIcon のアイコンそのものは OS がよしなにしてくれますが、
+            // 必要に応じて DPI 切替時にアイコンを差し替える処理を追加してもOK。
+
+            // ScreenWindow 側に DPI 変更を知らせたい場合（後述のフック用）
+            try { s?.OnHostDpiChanged(dpi); } catch { /* ScreenWindow 未対応でもOK */ }
+        }
+
+        // Utility: コントロール木から指定型を列挙
+        private IEnumerable<T> ComponentsRecursive<T>() where T : Control
+        {
+            Queue<Control> q = new Queue<Control>();
+            q.Enqueue(this);
+            while (q.Count > 0)
+            {
+                var c = q.Dequeue();
+                if (c is T t) yield return t;
+                foreach (Control child in c.Controls) q.Enqueue(child);
+            }
+        }
+
+        // Utility: GetDpiForWindow の安全呼び出し
+        private int GetDpiForWindowSafe(IntPtr hWnd)
+        {
+            try { return Native.GetDpiForWindow(hWnd); } catch { return 96; }
+        }
+
+        private static class Native
+        {
+            [DllImport("user32.dll")] public static extern int GetDpiForWindow(IntPtr hWnd);
         }
         void hotKey_HotKeyPush(object sender, EventArgs e)
         {
@@ -56,7 +110,7 @@ namespace Kiritori
             // restrict multiple open
             if (s == null)
             {
-                s = new ScreenWindow(this);
+                s = new ScreenWindow(this, () => GetDpiForWindowSafe(this.Handle));
                 s.showScreenAll();
             }
             else

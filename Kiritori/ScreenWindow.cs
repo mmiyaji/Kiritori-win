@@ -8,25 +8,36 @@ using System.Text;
 using System.Collections;
 //using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Runtime.InteropServices;
 
 namespace Kiritori
 {
     public partial class ScreenWindow : Form
     {
+        private readonly Func<int> getHostDpi;
         private Graphics g;
         private Bitmap bmp;
+        private Bitmap baseBmp; // キャプチャ原本
         private Boolean isOpen;
         private ArrayList captureArray;
         private Font fnt = new Font("Arial", 10);
         private MainApplication ma;
-        public ScreenWindow(MainApplication mainapp)
+        private int currentDpi = 96; 
+        public ScreenWindow(MainApplication mainapp, Func<int> getHostDpi = null)
         {
             this.ma = mainapp;
+            this.getHostDpi = getHostDpi ?? (() =>
+            {
+                try { return GetDpiForWindow(this.Handle); } catch { return 96; }
+            });
             captureArray = new ArrayList();
             isOpen = true;
             InitializeComponent();
+            this.DoubleBuffered = true;
+            try { OnHostDpiChanged(this.getHostDpi()); } catch { }
         }
-        public Boolean isScreenOpen() {
+        public Boolean isScreenOpen()
+        {
             return this.isOpen;
         }
         private void Screen_Load(object sender, EventArgs e)
@@ -38,15 +49,17 @@ namespace Kiritori
             pictureBox1.MouseUp +=
                     new MouseEventHandler(ScreenWindow_MouseUp);
         }
-        public void openImage() {
-            try {
+        public void openImage()
+        {
+            try
+            {
                 OpenFileDialog openFileDialog1 = new OpenFileDialog();
                 openFileDialog1.Title = "Open Image";
 
                 // ファイルのフィルタを設定する
                 openFileDialog1.Filter = "Image|*.png;*.PNG;*.jpg;*.JPG;*.jpeg;*.JPEG;*.gif;*.GIF;*.bmp;*.BMP|すべてのファイル|*.*";
                 openFileDialog1.FilterIndex = 1;
-                
+
                 // 有効な Win32 ファイル名だけを受け入れるようにする (初期値 true)
                 openFileDialog1.ValidateNames = false;
 
@@ -64,10 +77,13 @@ namespace Kiritori
                     captureArray.Add(sw);
                     sw.Show();
                 }
-            }catch{
+            }
+            catch
+            {
             }
         }
-        public SnapWindow getSW(int i) {
+        public SnapWindow getSW(int i)
+        {
             return (SnapWindow)captureArray[i];
         }
         public void openImageFromHistory(ToolStripMenuItem item)
@@ -88,79 +104,103 @@ namespace Kiritori
             }
         }
 
-        public void showScreen() {
-            this.Opacity = 0.61;
-            int h, w;
-            //ディスプレイの高さ
-            h = System.Windows.Forms.Screen.GetBounds(this).Height;
-            //ディスプレイの幅
-            w = System.Windows.Forms.Screen.GetBounds(this).Width;
-            this.SetBounds(0, 0, w, h);
+        public void showScreen()
+        {
+            // this.Opacity = 0.61;
+            this.Opacity = 1.0;
+            // int h, w;
+            // //ディスプレイの高さ
+            // h = System.Windows.Forms.Screen.GetBounds(this).Height;
+            // //ディスプレイの幅
+            // w = System.Windows.Forms.Screen.GetBounds(this).Width;
+            // this.SetBounds(0, 0, w, h);
+            // bmp = new Bitmap(w, h);
+            var vs = GetVirtualScreenPhysical();
+            int w = vs.W, h = vs.H;
+            this.SetBounds(vs.X, vs.Y, w, h);
             bmp = new Bitmap(w, h);
             using (g = Graphics.FromImage(bmp))
             {
-                g.Clear(Color.White);
-                g.CopyFromScreen(
-                    new Point(0, 0),
-                    new Point(w, h), bmp.Size
-                );
+                // g.Clear(Color.White);
+                // g.CopyFromScreen(
+                //     new Point(0, 0),
+                //     new Point(w, h), bmp.Size
+                // );
+                g.CopyFromScreen(new Point(vs.X, vs.Y), new Point(0, 0), bmp.Size);
             }
+            baseBmp = (Bitmap)bmp.Clone();
+            // 全体をうっすら白く
+            using (g = Graphics.FromImage(bmp))
+            using (var mask = new SolidBrush(Color.FromArgb(80, Color.White))) // 濃さは80～120で調整
+            g.FillRectangle(mask, new Rectangle(0, 0, w, h));
+
             pictureBox1.SetBounds(0, 0, w, h);
             pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
             pictureBox1.Image = bmp;
             pictureBox1.Refresh();
             this.TopLevel = true;
             this.Show();
-            Console.WriteLine(h +","+ w);
+            // Console.WriteLine(h + "," + w);
         }
         int x = 0, y = 0, h = 0, w = 0;
         public void showScreenAll()
         {
-            this.Opacity = 0.61;
+            // this.Opacity = 0.61;
+            this.Opacity = 1.0;
             this.StartPosition = FormStartPosition.Manual;
-            int index;
-            int upperBound;
-            x = 0;
-            y = 0;
-            h = 0;
-            w = 0;
-            // 接続しているすべてのディスプレイを取得
-            Screen[] screens = Screen.AllScreens;
-            upperBound = screens.GetUpperBound(0);
-            // すべてのディスプレイにおける基準点（左上）とサイズを計算
-            for (index = 0; index <= upperBound; index++)
-            {
-                if(x > screens[index].Bounds.X){
-                    x = screens[index].Bounds.X;
-                }
-                if (y > screens[index].Bounds.Y)
-                {
-                    y = screens[index].Bounds.Y;
-                }
-                if (w < screens[index].Bounds.Width + screens[index].Bounds.X)
-                {
-                   w = screens[index].Bounds.Width + screens[index].Bounds.X;
-                }
-                if (h < screens[index].Bounds.Height + screens[index].Bounds.Y)
-                {
-                    h = screens[index].Bounds.Height + screens[index].Bounds.Y;
-                }
-            }
-            // 複数ディスプレイ時にメインより左上のディスプレイの基準点がマイナスになるため、座標系を補正
-            w = Math.Abs(x) + Math.Abs(w);
-            h = Math.Abs(y) + Math.Abs(h);
+            // int index;
+            // int upperBound;
+            // x = 0;
+            // y = 0;
+            // h = 0;
+            // w = 0;
+            // // 接続しているすべてのディスプレイを取得
+            // Screen[] screens = Screen.AllScreens;
+            // upperBound = screens.GetUpperBound(0);
+            // // すべてのディスプレイにおける基準点（左上）とサイズを計算
+            // for (index = 0; index <= upperBound; index++)
+            // {
+            //     if (x > screens[index].Bounds.X)
+            //     {
+            //         x = screens[index].Bounds.X;
+            //     }
+            //     if (y > screens[index].Bounds.Y)
+            //     {
+            //         y = screens[index].Bounds.Y;
+            //     }
+            //     if (w < screens[index].Bounds.Width + screens[index].Bounds.X)
+            //     {
+            //         w = screens[index].Bounds.Width + screens[index].Bounds.X;
+            //     }
+            //     if (h < screens[index].Bounds.Height + screens[index].Bounds.Y)
+            //     {
+            //         h = screens[index].Bounds.Height + screens[index].Bounds.Y;
+            //     }
+            // }
+            // // 複数ディスプレイ時にメインより左上のディスプレイの基準点がマイナスになるため、座標系を補正
+            // w = Math.Abs(x) + Math.Abs(w);
+            // h = Math.Abs(y) + Math.Abs(h);
+            // 物理ピクセルで仮想スクリーンを取得（負座標も含む）
+            var vs = GetVirtualScreenPhysical();
+            x = vs.X; y = vs.Y; w = vs.W; h = vs.H;
 
             // ディスプレイ全体に白幕（スクリーン）を描画
             this.SetBounds(x, y, w, h);
             bmp = new Bitmap(w, h);
             using (g = Graphics.FromImage(bmp))
             {
-                g.Clear(Color.White);
-                g.CopyFromScreen(
-                    new Point(x, y),
-                    new Point(w, h), bmp.Size
-                );
+                // g.Clear(Color.White);
+                // g.CopyFromScreen(
+                //     new Point(x, y),
+                //     new Point(w, h), bmp.Size
+                // );
+                g.CopyFromScreen(new Point(x, y), new Point(0, 0), bmp.Size);
             }
+            baseBmp = (Bitmap)bmp.Clone();
+            using (g = Graphics.FromImage(bmp))
+            using (var mask = new SolidBrush(Color.FromArgb(80, Color.White)))
+            g.FillRectangle(mask, new Rectangle(0, 0, w, h));
+
             pictureBox1.SetBounds(0, 0, w, h);
             pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
             pictureBox1.Image = bmp;
@@ -214,15 +254,38 @@ namespace Kiritori
                     rc.Y = e.Y;
                     rc.Height = startPoint.Y - e.Y;
                 }
+                // {
+                //     Pen blackPen = new Pen(Color.Black);
+                //     using (g = Graphics.FromImage(bmp))
+                //     {
+                //         blackPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                //         blackPen.Width = 1;
+                //         g.Clear(SystemColors.Control);
+                //         g.DrawRectangle(blackPen, rc);
+                //         g.DrawString(rc.Width.ToString() + "x" + rc.Height.ToString(),
+                //             fnt, Brushes.Black, e.X + 5, e.Y + 10);
+                //     }
+                //     pictureBox1.Refresh();
+                // }
                 {
-                    Pen blackPen = new Pen(Color.Black);
-                    using (g = Graphics.FromImage(bmp)) {
-                        blackPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
-                        blackPen.Width = 1;
-                        g.Clear(SystemColors.Control);
-                        g.DrawRectangle(blackPen, rc);
-                        g.DrawString(rc.Width.ToString() + "x" + rc.Height.ToString(), 
-                            fnt, Brushes.Black, e.X + 5, e.Y + 10);
+                    using (g = Graphics.FromImage(bmp))
+                    {
+                        // 原本から毎回描き直し
+                        g.DrawImage(baseBmp, Point.Empty);
+
+                        // 外側だけに半透明白マスクをかける
+                        using (var mask = new SolidBrush(Color.FromArgb(80, Color.White)))
+                        using (var outside = new Region(new Rectangle(0, 0, bmp.Width, bmp.Height)))
+                        {
+                            outside.Exclude(rc);           // 選択範囲は除外（＝透けない）
+                            g.FillRegion(mask, outside);   // 外側だけ白っぽく
+                        }
+
+                        using (var blackPen = new Pen(Color.Black) { Width = 1, DashStyle = System.Drawing.Drawing2D.DashStyle.Dash })
+                        {
+                            g.DrawRectangle(blackPen, rc); // 破線枠
+                        }
+                        g.DrawString($"{rc.Width}x{rc.Height}", fnt, Brushes.Black, e.X + 5, e.Y + 10);
                     }
                     pictureBox1.Refresh();
                 }
@@ -237,7 +300,8 @@ namespace Kiritori
                 endPoint = new Point(e.X, e.Y);
                 isPressed = false;
                 this.CloseScreen();
-                if(rc.Width != 0 || rc.Height != 0){
+                if (rc.Width != 0 || rc.Height != 0)
+                {
                     SnapWindow sw = new SnapWindow(this.ma);
                     sw.StartPosition = FormStartPosition.Manual;
                     sw.capture(new Rectangle(rc.X + x, rc.Y + y, rc.Width, rc.Height));
@@ -246,12 +310,14 @@ namespace Kiritori
                         new FormClosingEventHandler(SW_FormClosing);
                     captureArray.Add(sw);
                     sw.Show();
-//                    Console.WriteLine(rc.X +";"+ x);
+                    //                    Console.WriteLine(rc.X +";"+ x);
                 }
             }
         }
-        public void hideWindows() {
-            foreach(SnapWindow sw in captureArray){
+        public void hideWindows()
+        {
+            foreach (SnapWindow sw in captureArray)
+            {
                 sw.minimizeWindow();
             }
         }
@@ -283,6 +349,51 @@ namespace Kiritori
                     return base.ProcessCmdKey(ref msg, keyData);
             }
             return true;
+        }
+
+        // --- DPI/スクリーン関連 ---
+        [DllImport("user32.dll")] private static extern int GetDpiForWindow(IntPtr hWnd); // Win10+
+        [DllImport("user32.dll")] private static extern int GetSystemMetrics(int nIndex);
+        [DllImport("user32.dll")] private static extern int GetSystemMetricsForDpi(int nIndex, uint dpi); // Win10+
+        private const int SM_XVIRTUALSCREEN = 76, SM_YVIRTUALSCREEN = 77, SM_CXVIRTUALSCREEN = 78, SM_CYVIRTUALSCREEN = 79;
+
+        private struct PhysVS { public int X, Y, W, H; }
+        private PhysVS GetVirtualScreenPhysical()
+        {
+            try
+            {
+                int dpi = GetDpiForWindow(this.Handle); // 例: 96,120,144...
+                int x = GetSystemMetricsForDpi(SM_XVIRTUALSCREEN, (uint)dpi);
+                int y = GetSystemMetricsForDpi(SM_YVIRTUALSCREEN, (uint)dpi);
+                int cx = GetSystemMetricsForDpi(SM_CXVIRTUALSCREEN, (uint)dpi);
+                int cy = GetSystemMetricsForDpi(SM_CYVIRTUALSCREEN, (uint)dpi);
+                return new PhysVS { X = x, Y = y, W = cx, H = cy };
+            }
+            catch
+            {
+                // フォールバック（プロセスが PM 対応ならこれも物理ピクセル）
+                var vs = SystemInformation.VirtualScreen;
+                return new PhysVS { X = vs.X, Y = vs.Y, W = vs.Width, H = vs.Height };
+            }
+        }
+        /// <summary>
+        /// ホスト側(MainApplication)や自分自身で DPI が変わったときに呼び出す。
+        /// フォント・線幅など DPI 依存のリソースを作り直す。
+        /// </summary>
+        public void OnHostDpiChanged(int newDpi)
+        {
+            if (newDpi <= 0) newDpi = 96;
+            if (newDpi == currentDpi) return;
+            currentDpi = newDpi;
+
+            // フォントを DPI に合わせて再生成
+            fnt?.Dispose();
+            int basePt = 10; // 元が 96dpi のとき 10pt 相当
+            float scaledPt = basePt * (currentDpi / 96f);
+            fnt = new Font("Arial", scaledPt, GraphicsUnit.Point);
+
+            // 必要に応じて他の DPI 依存リソースも調整
+            // 例: ペンの太さ, PictureBox のサイズモード etc.
         }
     }
 }
