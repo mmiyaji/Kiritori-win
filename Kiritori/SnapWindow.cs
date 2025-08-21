@@ -22,19 +22,19 @@ namespace Kiritori
         SHIFT_MOVE_UP = Keys.Up         | Keys.Shift,
         SHIFT_MOVE_DOWN = Keys.Down     | Keys.Shift,
         FLOAT = (int)Keys.Control + (int)Keys.A,
-        SAVE        = (int)Keys.Control + (int)Keys.S,
-        LOAD        = (int)Keys.Control + (int)Keys.O,
-        OPEN        = (int)Keys.Control + (int)Keys.N,
-        ZOOM_IN     = (int)Keys.Control + (int)Keys.Oemplus,
-        ZOOM_OUT    = (int)Keys.Control + (int)Keys.OemMinus,
-        CLOSE       = (int)Keys.Control + (int)Keys.W,
+        SAVE        = (int)Keys.Control | (int)Keys.S,
+        LOAD        = (int)Keys.Control | (int)Keys.O,
+        OPEN        = (int)Keys.Control | (int)Keys.N,
+        ZOOM_IN     = (int)Keys.Control | (int)Keys.Oemplus,
+        ZOOM_OUT    = (int)Keys.Control | (int)Keys.OemMinus,
+        CLOSE       = (int)Keys.Control | (int)Keys.W,
         ESCAPE      = Keys.Escape,
-        COPY        = (int)Keys.Control + (int)Keys.C,
-        CUT         = (int)Keys.Control + (int)Keys.X,
-        PRINT       = (int)Keys.Control + (int)Keys.P,
-        MINIMIZE    = (int)Keys.Control + (int)Keys.H
+        COPY        = (int)Keys.Control | (int)Keys.C,
+        CUT         = (int)Keys.Control | (int)Keys.X,
+        PRINT       = (int)Keys.Control | (int)Keys.P,
+        MINIMIZE    = (int)Keys.Control | (int)Keys.H
     }
-    
+
     public partial class SnapWindow : Form
     {
         public DateTime date;
@@ -46,10 +46,20 @@ namespace Kiritori
         private double alpha_value;
         private const double DRAG_ALPHA = 0.3;
         private const double MIN_ALPHA = 0.1;
-        private const int    MOVE_STEP = 3;
+        private const int MOVE_STEP = 3;
         private const int SHIFT_MOVE_STEP = MOVE_STEP * 10;
         private const int THUMB_WIDTH = 250;
         private MainApplication ma;
+        private string _overlayText = null;
+        private DateTime _overlayStart;
+        private readonly int _overlayDurationMs = 1400; // 表示時間
+        private readonly int _overlayFadeMs = 300;      // 終了前フェード
+        private readonly Timer _overlayTimer;
+        private Font _overlayFont = new Font("Segoe UI", 10f, FontStyle.Bold);
+        private int _dpi = 96;
+
+        private double _scale = 0.1;
+
         public Bitmap main_image;
         public Bitmap thumbnail_image;
         public SnapWindow(MainApplication mainapp)
@@ -59,6 +69,31 @@ namespace Kiritori
             this.isAfloatWindow = Properties.Settings.Default.isAfloatWindow;
             this.alpha_value = Properties.Settings.Default.alpha_value / 100.0;
             //            this.TransparencyKey = BackColor;
+            _overlayTimer = new Timer();
+            _overlayTimer.Interval = 33; // ~30fps
+            _overlayTimer.Tick += (s, e) =>
+            {
+                if (_overlayText == null) { _overlayTimer.Stop(); return; }
+                // 表示時間を過ぎたら消す
+                if ((DateTime.Now - _overlayStart).TotalMilliseconds > _overlayDurationMs)
+                {
+                    _overlayText = null;
+                    Invalidate(); // 消すため再描画
+                    _overlayTimer.Stop();
+                    return;
+                }
+                Invalidate(new Rectangle(ClientSize.Width - 300, ClientSize.Height - 120, 300, 120));
+            };
+
+            // try
+            // {
+            //     // DPI 取得できるならフォント調整（任意）
+            //     _dpi = GetDpiForWindowSafe(this.Handle); // 例: ヘルパーメソッド
+            //     float scale = _dpi / 96f;
+            //     _overlayFont.Dispose();
+            //     _overlayFont = new Font("Segoe UI", 10f * scale, FontStyle.Bold, GraphicsUnit.Point);
+            // }
+            // catch { }
             InitializeComponent();
         }
         private void Form1_Load(object sender, EventArgs e)
@@ -70,7 +105,9 @@ namespace Kiritori
             pictureBox1.MouseUp +=
                 new MouseEventHandler(Form1_MouseUp);
         }
-        public void capture(Rectangle rc) {
+        public void capture(Rectangle rc)
+        {
+            Debug.WriteLine($"Capturing: {rc}");
             Bitmap bmp = new Bitmap(rc.Width, rc.Height);
             using (Graphics g = Graphics.FromImage(bmp))
             {
@@ -93,7 +130,8 @@ namespace Kiritori
             this.setThumbnail(bmp);
             ma.setHistory(this);
         }
-        private void setThumbnail(Bitmap bmp) {
+        private void setThumbnail(Bitmap bmp)
+        {
             this.main_image = bmp;
             if (bmp.Size.Width > THUMB_WIDTH)
             {
@@ -153,7 +191,8 @@ namespace Kiritori
         }
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            switch((int)keyData){
+            switch ((int)keyData)
+            {
                 case (int)HOTS.MOVE_LEFT:
                     this.SetDesktopLocation(this.Location.X - MOVE_STEP, this.Location.Y);
                     break;
@@ -218,19 +257,24 @@ namespace Kiritori
             }
             return true;
         }
-        public void zoomIn() {
-            ws = (int)(this.pictureBox1.Width * 0.1);
-            hs = (int)(this.pictureBox1.Height * 0.1);
+        public void zoomIn()
+        {
+            Debug.WriteLine($"Zooming in: current scale {_scale}");
+            ws = (int)(this.pictureBox1.Width * _scale);
+            hs = (int)(this.pictureBox1.Height * _scale);
             this.pictureBox1.Width += ws;
             this.pictureBox1.Height += hs;
             this.SetDesktopLocation(this.Location.X - ws / 2, this.Location.Y - hs / 2);
+            ShowOverlay($"Zoom {(int)Math.Round((1.0+_scale) * 100)}%");
         }
-        public void zoomOut() {
-            ws = (int)(this.pictureBox1.Width * 0.1);
-            hs = (int)(this.pictureBox1.Height * 0.1);
+        public void zoomOut()
+        {
+            ws = (int)(this.pictureBox1.Width * _scale);
+            hs = (int)(this.pictureBox1.Height * _scale);
             this.pictureBox1.Width -= ws;
             this.pictureBox1.Height -= hs;
             this.SetDesktopLocation(this.Location.X + ws / 2, this.Location.Y + hs / 2);
+            ShowOverlay($"Zoom {(int)Math.Round((1.0-_scale) * 100)}%");
         }
         public void zoomOff()
         {
@@ -300,7 +344,8 @@ namespace Kiritori
                     openFileDialog1.Dispose();
                 }
             }
-            catch {
+            catch
+            {
                 this.Close();
             }
         }
@@ -329,13 +374,14 @@ namespace Kiritori
                 this.TopMost = this.isAfloatWindow;
                 this.Opacity = this.alpha_value;
                 this.StartPosition = FormStartPosition.CenterScreen;
-                this.SetDesktopLocation(this.DesktopLocation.X - (int)(this.Size.Width /2.0), this.DesktopLocation.Y - (int)(this.Size.Height /2.0));
+                this.SetDesktopLocation(this.DesktopLocation.X - (int)(this.Size.Width / 2.0), this.DesktopLocation.Y - (int)(this.Size.Height / 2.0));
 
                 this.main_image = bmp;
                 this.setThumbnail(bmp);
                 ma.setHistory(this);
             }
-            catch {
+            catch
+            {
                 this.Close();
             }
         }
@@ -362,7 +408,7 @@ namespace Kiritori
 
                 this.main_image = bmp;
                 this.setThumbnail(bmp);
-//                ma.setHistory(this);
+                //                ma.setHistory(this);
             }
             catch
             {
@@ -458,7 +504,7 @@ namespace Kiritori
 
         private void dropShadowToolStripMenuItem_Click(object sender, EventArgs e)
         {
-//            this.FormBorderStyle = FormBorderStyle.None;
+            //            this.FormBorderStyle = FormBorderStyle.None;
         }
 
         private void preferencesToolStripMenuItem_Click(object sender, EventArgs e)
@@ -470,7 +516,8 @@ namespace Kiritori
         {
             printImage();
         }
-        public void setAlpha(double alpha) {
+        public void setAlpha(double alpha)
+        {
             this.Opacity = alpha;
             this.alpha_value = alpha;
         }
@@ -508,5 +555,70 @@ namespace Kiritori
         {
             Application.Exit();
         }
+        public void ShowOverlay(string text)
+        {
+            Debug.WriteLine($"Overlay: {text}");
+            _overlayText = text;
+            _overlayStart = DateTime.Now;
+            _overlayTimer.Start();
+            Invalidate();
+        }
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+
+            if (string.IsNullOrEmpty(_overlayText)) return;
+
+            var g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+
+            // 残り時間からアルファ算出（フェードアウト）
+            double elapsed = (DateTime.Now - _overlayStart).TotalMilliseconds;
+            int alpha = 200; // ベース不透明度
+            double remain = _overlayDurationMs - elapsed;
+            if (remain < _overlayFadeMs)
+            {
+                alpha = (int)(alpha * (remain / _overlayFadeMs));
+                if (alpha < 0) alpha = 0;
+            }
+
+            // テキスト計測
+            string text = _overlayText;
+            var padding = (int)(10 * (_dpi / 96f));
+            SizeF ts = g.MeasureString(text, _overlayFont);
+            int w = (int)Math.Ceiling(ts.Width) + padding * 2;
+            int h = (int)Math.Ceiling(ts.Height) + padding * 2;
+
+            int margin = (int)(12 * (_dpi / 96f));
+            int x = ClientSize.Width - w - margin;
+            int y = ClientSize.Height - h - margin;
+
+            // 角丸背景
+            using (var path = RoundedRect(new Rectangle(x, y, w, h), radius: (int)(8 * (_dpi / 96f))))
+            using (var bg = new SolidBrush(Color.FromArgb(alpha, 0, 0, 0)))
+            using (var pen = new Pen(Color.FromArgb(Math.Max(80, alpha), 255, 255, 255), 1f))
+            using (var txt = new SolidBrush(Color.FromArgb(Math.Max(180, alpha), 255, 255, 255)))
+            {
+                g.FillPath(bg, path);
+                g.DrawPath(pen, path);
+                g.DrawString(text, _overlayFont, txt, x + padding, y + padding);
+            }
+        }
+
+        // 角丸矩形のヘルパー
+        private static System.Drawing.Drawing2D.GraphicsPath RoundedRect(Rectangle r, int radius)
+        {
+            int d = radius * 2;
+            var path = new System.Drawing.Drawing2D.GraphicsPath();
+            path.AddArc(r.X, r.Y, d, d, 180, 90);
+            path.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+            path.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+            path.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+
     }
 }
