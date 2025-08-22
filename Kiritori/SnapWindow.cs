@@ -62,8 +62,11 @@ namespace Kiritori
 
         private double _zoom = 1.0;           // 現在倍率
         private const double zoomStep = 1.10; // 10% ずつ
-        private const double zoomMin = 0.1;   // お好みで
-        private const double zoomMax = 8.0;   // お好みで
+        private const double zoomMin = 0.01;
+        private const double zoomMax = 10.0;
+        private Image _originalImage;  // 元画像を保持
+        private float _scale = 1f;
+        private const float ScaleStep = 1.1f; // 10% ずつ
 
         public Bitmap main_image;
         public Bitmap thumbnail_image;
@@ -128,9 +131,8 @@ namespace Kiritori
             }
             this.Size = bmp.Size;
             pictureBox1.Size = bmp.Size;
-            pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; //autosize
-            _zoom = 1.0;
-            ApplyZoom(_zoom, keepCenter: false);
+            // pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; //autosize
+            SetImageAndResetZoom(bmp);
             pictureBox1.Image = bmp;
             date = DateTime.Now;
             this.Text = date.ToString("yyyyMMdd-HHmmss") + ".png";
@@ -275,33 +277,25 @@ namespace Kiritori
         }
         public void zoomIn()
         {
-            Debug.WriteLine($"Zoom in from: {_zoom}");
-            // ws = (int)(this.pictureBox1.Width * _scale);
-            // hs = (int)(this.pictureBox1.Height * _scale);
-            // this.pictureBox1.Width += ws;
-            // this.pictureBox1.Height += hs;
-            // this.SetDesktopLocation(this.Location.X - ws / 2, this.Location.Y - hs / 2);
-            ApplyZoom(_zoom * zoomStep, keepCenter:true);
-            // ShowOverlay($"Zoom {(int)Math.Round((1.0 + _scale) * 100)}%");
+            _scale *= ScaleStep;                 // 1.1倍
+            ApplyZoom(redrawOnly:false);
+            ShowOverlay($"Zoom {(int)Math.Round(_scale * 100)}%");
         }
+
         public void zoomOut()
         {
-            Debug.WriteLine($"Zoom out from: {_zoom}");
-            // ws = (int)(this.pictureBox1.Width * _scale);
-            // hs = (int)(this.pictureBox1.Height * _scale);
-            // this.pictureBox1.Width -= ws;
-            // this.pictureBox1.Height -= hs;
-            // this.SetDesktopLocation(this.Location.X + ws / 2, this.Location.Y + hs / 2);
-            ApplyZoom(_zoom / zoomStep, keepCenter:true);
-            // ShowOverlay($"Zoom {(int)Math.Round((1.0 - _scale) * 100)}%");
+            _scale /= ScaleStep;                 // 1/1.1倍
+            // 極端に小さくしすぎない
+            if (_scale < 0.1f) _scale = 0.1f;
+            ApplyZoom(redrawOnly:false);
+            ShowOverlay($"Zoom {(int)Math.Round(_scale * 100)}%");
         }
-        public void zoomOff()
+
+        public void zoomOff() // 原寸へ
         {
-            Debug.WriteLine($"Zooming off: current scale {1.0}");
-            // this.pictureBox1.Width = this.pictureBox1.Image.Width;
-            // this.pictureBox1.Height = this.pictureBox1.Image.Height;
-            ApplyZoom(1.0, keepCenter:true);
-            // ShowOverlay($"Zoom {100}%");
+            _scale = 1f;
+            ApplyZoom(redrawOnly:false);
+            ShowOverlay("Zoom 100%");
         }
         public void saveImage()
         {
@@ -353,9 +347,7 @@ namespace Kiritori
                     }
                     this.Size = bs;
                     pictureBox1.Size = bs;
-                    pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; //autosize
-                    _zoom = 1.0;
-                    ApplyZoom(_zoom, keepCenter: false);
+                    SetImageAndResetZoom(bmp);
                     pictureBox1.Image = bmp;
                     this.Text = openFileDialog1.FileName;
                     this.StartPosition = FormStartPosition.CenterScreen;
@@ -395,9 +387,8 @@ namespace Kiritori
                 }
                 this.Size = bs;
                 pictureBox1.Size = bs;
-                pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; //autosize
-                _zoom = 1.0;
-                ApplyZoom(_zoom, keepCenter: false);
+                // pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; //autosize
+                SetImageAndResetZoom(bmp);
                 pictureBox1.Image = bmp;
                 this.Text = fname;
                 this.TopMost = this.isAfloatWindow;
@@ -428,9 +419,10 @@ namespace Kiritori
                 }
                 this.Size = bs;
                 pictureBox1.Size = bs;
-                pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; //autosize
-                _zoom = 1.0;
-                ApplyZoom(_zoom, keepCenter: false);
+                // pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; //autosize
+                // _zoom = 1.0;
+                // ApplyZoom(_zoom, keepCenter: false);
+                SetImageAndResetZoom(bmp);
                 pictureBox1.Image = bmp;
                 this.TopMost = this.isAfloatWindow;
                 this.Opacity = this.alpha_value;
@@ -652,39 +644,62 @@ namespace Kiritori
             return path;
         }
         
-        private void ApplyZoom(double newZoom, bool keepCenter = true)
+        private void SetImageAndResetZoom(Image img)
         {
-            if (pictureBox1.Image == null) return;
+            // 元画像を保持
+            _originalImage?.Dispose();
+            _originalImage = (Image)img.Clone();
 
-            newZoom = Math.Max(zoomMin, Math.Min(zoomMax, newZoom));
-            var img = pictureBox1.Image;
+            _scale = 1f;
+            pictureBox1.SizeMode = PictureBoxSizeMode.Normal; // 重要: Zoomは使わない
+            ApplyZoom(redrawOnly:false);
+        }
 
-            int newW = (int)Math.Round(img.Width  * newZoom);
-            int newH = (int)Math.Round(img.Height * newZoom);
+        private void ApplyZoom(bool redrawOnly)
+        {
+            if (_originalImage == null) return;
 
-            // 画面中心を保つために、現在のウィンドウ中心を保存
-            int cx = this.Left + this.Width  / 2;
-            int cy = this.Top  + this.Height / 2;
+            int newW = Math.Max(1, (int)Math.Round(_originalImage.Width * _scale));
+            int newH = Math.Max(1, (int)Math.Round(_originalImage.Height * _scale));
 
-            this.SuspendLayout();
+            // 画面の中心を保つため、拡縮前後のクライアント差分を計算
+            Size oldClient = this.ClientSize;
 
-            // PictureBox と ClientSize を完全一致させる（白フチ防止）
-            pictureBox1.Location = new Point(0, 0);
-            pictureBox1.Size = new Size(newW, newH);
-            this.ClientSize = pictureBox1.Size;
-
-            this.ResumeLayout();
-
-            if (keepCenter)
+            // 高品質でリサイズしたビットマップを作成（余白なし）
+            Bitmap bmp = new Bitmap(newW, newH);
+            using (Graphics g = Graphics.FromImage(bmp))
             {
-                // ウィンドウ中心を元の位置に戻す
-                this.Left = cx - this.Width  / 2;
-                this.Top  = cy - this.Height / 2;
+                g.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceOver;
+                g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+
+                g.DrawImage(_originalImage, 0, 0, newW, newH);
             }
 
-            _zoom = newZoom;
-            ShowOverlay($"Zoom {(int)Math.Round(_zoom * 100)}%");
+            // 古い Image の破棄
+            var oldImg = pictureBox1.Image;
+            pictureBox1.Image = bmp;
+            oldImg?.Dispose();
+
+            // PictureBox は画像と同サイズに
+            pictureBox1.Width = newW;
+            pictureBox1.Height = newH;
+
+            // フォームのクライアントを画像にぴったり合わせる
+            this.ClientSize = new Size(newW, newH);
+
+            // 中心補正（拡縮で位置がズレないように）
+            if (!redrawOnly)
+            {
+                int dx = (this.ClientSize.Width - oldClient.Width) / 2;
+                int dy = (this.ClientSize.Height - oldClient.Height) / 2;
+                this.Left -= dx;
+                this.Top  -= dy;
+            }
         }
+
 
     }
 }
