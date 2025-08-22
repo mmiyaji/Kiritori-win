@@ -76,6 +76,7 @@ namespace Kiritori
             this.isWindowShadow = Properties.Settings.Default.isWindowShadow;
             this.isAfloatWindow = Properties.Settings.Default.isAfloatWindow;
             this.alpha_value = Properties.Settings.Default.alpha_value / 100.0;
+            this.MinimumSize = Size.Empty;
             //            this.TransparencyKey = BackColor;
             _overlayTimer = new Timer();
             _overlayTimer.Interval = 33; // ~30fps
@@ -95,15 +96,6 @@ namespace Kiritori
                     pictureBox1.ClientSize.Height - 120, 300, 120));
             };
 
-            // try
-            // {
-            //     // DPI 取得できるならフォント調整（任意）
-            //     _dpi = GetDpiForWindowSafe(this.Handle); // 例: ヘルパーメソッド
-            //     float scale = _dpi / 96f;
-            //     _overlayFont.Dispose();
-            //     _overlayFont = new Font("Segoe UI", 10f * scale, FontStyle.Bold, GraphicsUnit.Point);
-            // }
-            // catch { }
             InitializeComponent();
             this.pictureBox1.Paint += PictureBox1_Paint;
             this.DoubleBuffered = true; // チラつき軽減
@@ -201,9 +193,9 @@ namespace Kiritori
         }
         private void Form1_Resize(object sender, System.EventArgs e)
         {
-            Control control = (Control)sender;
-            this.pictureBox1.Width = control.Size.Width;
-            this.pictureBox1.Height = control.Size.Height;
+            // Control control = (Control)sender;
+            // this.pictureBox1.Width = control.Size.Width;
+            // this.pictureBox1.Height = control.Size.Height;
         }
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
@@ -623,6 +615,14 @@ namespace Kiritori
         }
         public void ShowOverlay(string text)
         {
+            const int MIN_WIDTH = 100;   // お好みで調整
+            const int MIN_HEIGHT = 50;  // お好みで調整
+
+            if (this.ClientSize.Width < MIN_WIDTH || this.ClientSize.Height < MIN_HEIGHT)
+            {
+                Debug.WriteLine($"Overlay suppressed (too small): {this.ClientSize.Width}x{this.ClientSize.Height}");
+                return;
+            }
             Debug.WriteLine($"Overlay: {text}");
             _overlayText = text;
             _overlayStart = DateTime.Now;
