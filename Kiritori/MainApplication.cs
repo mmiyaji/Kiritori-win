@@ -25,6 +25,8 @@ namespace Kiritori
             hotKey.HotKeyPush += new EventHandler(hotKey_HotKeyPush);
             Application.ApplicationExit += new EventHandler(Application_ApplicationExit);
             s = new ScreenWindow(this);
+            this.AutoScaleMode = AutoScaleMode.Dpi;
+            this.AutoScaleDimensions = new SizeF(96F, 96F);
             ApplyDpiToUi(GetDpiForWindowSafe(this.Handle));
             MaybeShowPreferencesOnStartup();
         }
@@ -259,6 +261,29 @@ namespace Kiritori
             else if (e.Button == MouseButtons.Right)
             {
                 // 右クリックは ContextMenuStrip が出るので、通常は何もしない
+            }
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            if (this.WindowState == FormWindowState.Minimized)
+            {
+                this.ShowInTaskbar = false;
+                this.Hide();
+                notifyIcon1.Visible = true;
+
+                // 初回だけ説明バルーン
+                if (!Kiritori.Properties.Settings.Default.TrayBalloonShown)
+                {
+                    notifyIcon1.BalloonTipTitle = "Kiritori is running in the tray";
+                    notifyIcon1.BalloonTipText  = "Double-click to open. Right-click for menu (Open / Exit).";
+                    notifyIcon1.BalloonTipIcon  = ToolTipIcon.Info;
+                    notifyIcon1.ShowBalloonTip(4000);
+
+                    Kiritori.Properties.Settings.Default.TrayBalloonShown = true;
+                    Kiritori.Properties.Settings.Default.Save();
+                }
             }
         }
 

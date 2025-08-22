@@ -107,6 +107,8 @@ namespace Kiritori
             InitializeComponent();
             this.pictureBox1.Paint += PictureBox1_Paint;
             this.DoubleBuffered = true; // チラつき軽減
+            this.AutoScaleMode = AutoScaleMode.Dpi;
+            this.AutoScaleDimensions = new SizeF(96F, 96F);
         }
         private void Form1_Load(object sender, EventArgs e)
         {

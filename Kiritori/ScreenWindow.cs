@@ -34,6 +34,8 @@ namespace Kiritori
             isOpen = true;
             InitializeComponent();
             this.DoubleBuffered = true;
+            this.AutoScaleMode = AutoScaleMode.Dpi;
+            this.AutoScaleDimensions = new SizeF(96F, 96F);
             try { OnHostDpiChanged(this.getHostDpi()); } catch { }
         }
         public Boolean isScreenOpen()

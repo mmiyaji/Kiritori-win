@@ -4,7 +4,7 @@ using System.IO;
 using System.Windows.Forms;
 using System.Reflection;
 using System.Globalization;
-
+using System.Drawing; 
 namespace Kiritori
 {
     public partial class PrefForm : Form
@@ -12,6 +12,8 @@ namespace Kiritori
         public PrefForm()
         {
             InitializeComponent();
+            this.AutoScaleMode = AutoScaleMode.Dpi;
+            this.AutoScaleDimensions = new SizeF(96F, 96F);
         }
 
         private void PrefForm_Load(object sender, EventArgs e)

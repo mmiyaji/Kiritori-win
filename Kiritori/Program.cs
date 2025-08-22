@@ -4,6 +4,7 @@ using System.Linq;
 //using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 namespace Kiritori
 {
     static class Program
@@ -11,9 +12,70 @@ namespace Kiritori
         /// <summary>
         /// アプリケーションのメイン エントリ ポイントです。
         /// </summary>
+        /// 
+        // Win10+: 最も強力（Per-Monitor v2）
+        [DllImport("user32.dll")] static extern bool SetProcessDpiAwarenessContext(IntPtr dpiContext);
+        static readonly IntPtr DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = new IntPtr(-4); // 定数
+
+        // Win8.1+: Per-Monitor（v1）
+        enum PROCESS_DPI_AWARENESS
+        {
+            PROCESS_DPI_UNAWARE = 0,
+            PROCESS_SYSTEM_DPI_AWARE = 1,
+            PROCESS_PER_MONITOR_DPI_AWARE = 2
+        }
+        [DllImport("Shcore.dll")] static extern int SetProcessDpiAwareness(PROCESS_DPI_AWARENESS value);
+
+        // Vista/Win7: System-DPI aware
+        [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
+
+        [DllImport("Shcore.dll")] static extern int GetProcessDpiAwareness(IntPtr hprocess, out int value);
+        [DllImport("kernel32.dll")] static extern IntPtr GetCurrentProcess();
+
+
+
         [STAThread]
         static void Main()
         {
+// ===== DPI Awareness を可能な限り高く設定 =====
+            bool dpiSet = false;
+            try
+            {
+                // Win10 以降なら PMv2 を要求
+                dpiSet = SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+            }
+            catch { /* OS が古い等 */ }
+
+            if (!dpiSet)
+            {
+                try
+                {
+                    // Win8.1 以降なら Per-Monitor（v1）
+                    int hr = SetProcessDpiAwareness(PROCESS_DPI_AWARENESS.PROCESS_PER_MONITOR_DPI_AWARE);
+                    dpiSet = (hr == 0 /*S_OK*/ || hr == 0x5 /*E_ACCESSDENIED: 既に設定済み*/);
+                }
+                catch { }
+            }
+
+            if (!dpiSet)
+            {
+                try
+                {
+                    // さらに古い OS では System-DPI Aware
+                    dpiSet = SetProcessDPIAware();
+                }
+                catch { }
+            }
+
+            // （任意）今の DPI Awareness をデバッグ出力
+            try
+            {
+                int v; GetProcessDpiAwareness(GetCurrentProcess(), out v);
+                // 0:Unaware 1:System 2:PerMonitor
+                System.Diagnostics.Debug.WriteLine($"[DPI] Awareness={v}");
+            }
+            catch { }
+
             Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
