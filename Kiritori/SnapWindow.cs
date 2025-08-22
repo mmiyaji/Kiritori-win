@@ -60,7 +60,10 @@ namespace Kiritori
         private Font _overlayFont = new Font("Segoe UI", 10f, FontStyle.Bold);
         private int _dpi = 96;
 
-        private double _scale = 0.1;
+        private double _zoom = 1.0;           // 現在倍率
+        private const double zoomStep = 1.10; // 10% ずつ
+        private const double zoomMin = 0.1;   // お好みで
+        private const double zoomMax = 8.0;   // お好みで
 
         public Bitmap main_image;
         public Bitmap thumbnail_image;
@@ -85,7 +88,7 @@ namespace Kiritori
                 }
                 // 位置を指定するなら範囲無効化でもOK
                 pictureBox1.Invalidate(new Rectangle(
-                    pictureBox1.ClientSize.Width  - 300,
+                    pictureBox1.ClientSize.Width - 300,
                     pictureBox1.ClientSize.Height - 120, 300, 120));
             };
 
@@ -126,6 +129,8 @@ namespace Kiritori
             this.Size = bmp.Size;
             pictureBox1.Size = bmp.Size;
             pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; //autosize
+            _zoom = 1.0;
+            ApplyZoom(_zoom, keepCenter: false);
             pictureBox1.Image = bmp;
             date = DateTime.Now;
             this.Text = date.ToString("yyyyMMdd-HHmmss") + ".png";
@@ -270,30 +275,33 @@ namespace Kiritori
         }
         public void zoomIn()
         {
-            Debug.WriteLine($"Zooming in: current scale {_scale}");
-            ws = (int)(this.pictureBox1.Width * _scale);
-            hs = (int)(this.pictureBox1.Height * _scale);
-            this.pictureBox1.Width += ws;
-            this.pictureBox1.Height += hs;
-            this.SetDesktopLocation(this.Location.X - ws / 2, this.Location.Y - hs / 2);
-            ShowOverlay($"Zoom {(int)Math.Round((1.0+_scale) * 100)}%");
+            Debug.WriteLine($"Zoom in from: {_zoom}");
+            // ws = (int)(this.pictureBox1.Width * _scale);
+            // hs = (int)(this.pictureBox1.Height * _scale);
+            // this.pictureBox1.Width += ws;
+            // this.pictureBox1.Height += hs;
+            // this.SetDesktopLocation(this.Location.X - ws / 2, this.Location.Y - hs / 2);
+            ApplyZoom(_zoom * zoomStep, keepCenter:true);
+            // ShowOverlay($"Zoom {(int)Math.Round((1.0 + _scale) * 100)}%");
         }
         public void zoomOut()
         {
-            Debug.WriteLine($"Zooming out: current scale {_scale}");
-            ws = (int)(this.pictureBox1.Width * _scale);
-            hs = (int)(this.pictureBox1.Height * _scale);
-            this.pictureBox1.Width -= ws;
-            this.pictureBox1.Height -= hs;
-            this.SetDesktopLocation(this.Location.X + ws / 2, this.Location.Y + hs / 2);
-            ShowOverlay($"Zoom {(int)Math.Round((1.0-_scale) * 100)}%");
+            Debug.WriteLine($"Zoom out from: {_zoom}");
+            // ws = (int)(this.pictureBox1.Width * _scale);
+            // hs = (int)(this.pictureBox1.Height * _scale);
+            // this.pictureBox1.Width -= ws;
+            // this.pictureBox1.Height -= hs;
+            // this.SetDesktopLocation(this.Location.X + ws / 2, this.Location.Y + hs / 2);
+            ApplyZoom(_zoom / zoomStep, keepCenter:true);
+            // ShowOverlay($"Zoom {(int)Math.Round((1.0 - _scale) * 100)}%");
         }
         public void zoomOff()
         {
             Debug.WriteLine($"Zooming off: current scale {1.0}");
-            this.pictureBox1.Width = this.pictureBox1.Image.Width;
-            this.pictureBox1.Height = this.pictureBox1.Image.Height;
-            ShowOverlay($"Zoom {100}%");
+            // this.pictureBox1.Width = this.pictureBox1.Image.Width;
+            // this.pictureBox1.Height = this.pictureBox1.Image.Height;
+            ApplyZoom(1.0, keepCenter:true);
+            // ShowOverlay($"Zoom {100}%");
         }
         public void saveImage()
         {
@@ -346,6 +354,8 @@ namespace Kiritori
                     this.Size = bs;
                     pictureBox1.Size = bs;
                     pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; //autosize
+                    _zoom = 1.0;
+                    ApplyZoom(_zoom, keepCenter: false);
                     pictureBox1.Image = bmp;
                     this.Text = openFileDialog1.FileName;
                     this.StartPosition = FormStartPosition.CenterScreen;
@@ -386,6 +396,8 @@ namespace Kiritori
                 this.Size = bs;
                 pictureBox1.Size = bs;
                 pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; //autosize
+                _zoom = 1.0;
+                ApplyZoom(_zoom, keepCenter: false);
                 pictureBox1.Image = bmp;
                 this.Text = fname;
                 this.TopMost = this.isAfloatWindow;
@@ -417,6 +429,8 @@ namespace Kiritori
                 this.Size = bs;
                 pictureBox1.Size = bs;
                 pictureBox1.SizeMode = PictureBoxSizeMode.Zoom; //autosize
+                _zoom = 1.0;
+                ApplyZoom(_zoom, keepCenter: false);
                 pictureBox1.Image = bmp;
                 this.TopMost = this.isAfloatWindow;
                 this.Opacity = this.alpha_value;
@@ -611,7 +625,7 @@ namespace Kiritori
             int h = (int)Math.Ceiling(ts.Height) + padding * 2;
 
             int margin = (int)(12 * (_dpi / 96f));
-            int x = pictureBox1.ClientSize.Width  - w - margin;
+            int x = pictureBox1.ClientSize.Width - w - margin;
             int y = pictureBox1.ClientSize.Height - h - margin;
 
             using (var path = RoundedRect(new Rectangle(x, y, w, h), radius: (int)(8 * (_dpi / 96f))))
@@ -636,6 +650,40 @@ namespace Kiritori
             path.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
             path.CloseFigure();
             return path;
+        }
+        
+        private void ApplyZoom(double newZoom, bool keepCenter = true)
+        {
+            if (pictureBox1.Image == null) return;
+
+            newZoom = Math.Max(zoomMin, Math.Min(zoomMax, newZoom));
+            var img = pictureBox1.Image;
+
+            int newW = (int)Math.Round(img.Width  * newZoom);
+            int newH = (int)Math.Round(img.Height * newZoom);
+
+            // 画面中心を保つために、現在のウィンドウ中心を保存
+            int cx = this.Left + this.Width  / 2;
+            int cy = this.Top  + this.Height / 2;
+
+            this.SuspendLayout();
+
+            // PictureBox と ClientSize を完全一致させる（白フチ防止）
+            pictureBox1.Location = new Point(0, 0);
+            pictureBox1.Size = new Size(newW, newH);
+            this.ClientSize = pictureBox1.Size;
+
+            this.ResumeLayout();
+
+            if (keepCenter)
+            {
+                // ウィンドウ中心を元の位置に戻す
+                this.Left = cx - this.Width  / 2;
+                this.Top  = cy - this.Height / 2;
+            }
+
+            _zoom = newZoom;
+            ShowOverlay($"Zoom {(int)Math.Round(_zoom * 100)}%");
         }
 
     }
