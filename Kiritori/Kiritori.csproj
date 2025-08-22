@@ -102,7 +102,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DpiUtil.cs" />
     <Compile Include="HotKey.cs" />
     <Compile Include="PrefForm.cs">
       <SubType>Form</SubType>

@@ -54,7 +54,7 @@ namespace Kiritori
         private MainApplication ma;
         private string _overlayText = null;
         private DateTime _overlayStart;
-        private readonly int _overlayDurationMs = 1400; // 表示時間
+        private readonly int _overlayDurationMs = 2000; // 表示時間
         private readonly int _overlayFadeMs = 300;      // 終了前フェード
         private readonly Timer _overlayTimer;
         private Font _overlayFont = new Font("Segoe UI", 10f, FontStyle.Bold);
@@ -277,27 +277,62 @@ namespace Kiritori
             }
             return true;
         }
+        // 追加: フィールド
+        private int _zoomStep = 0;            // 0=100%, +1=110%, -1=90% ...
+        private const float STEP_LINEAR = 0.10f;  // 10% 刻み
+        private const float MIN_SCALE = 0.10f;    // 10% まで縮小可（お好みで）
+        private const float MAX_SCALE = 8.00f;    // 800% まで拡大可（お好みで）
+
         public void zoomIn()
         {
-            _scale *= ScaleStep;                 // 1.1倍
+            _zoomStep++;
+            UpdateScaleFromStep();
             ApplyZoom(redrawOnly:false);
             ShowOverlay($"Zoom {(int)Math.Round(_scale * 100)}%");
         }
 
         public void zoomOut()
         {
-            _scale /= ScaleStep;                 // 1/1.1倍
-            // 極端に小さくしすぎない
-            if (_scale < 0.1f) _scale = 0.1f;
+            _zoomStep--;
+            UpdateScaleFromStep();
             ApplyZoom(redrawOnly:false);
             ShowOverlay($"Zoom {(int)Math.Round(_scale * 100)}%");
         }
 
-        public void zoomOff() // 原寸へ
+        public void zoomOff()
         {
-            _scale = 1f;
+            _zoomStep = 0;   // = 100%
+            UpdateScaleFromStep();
             ApplyZoom(redrawOnly:false);
             ShowOverlay("Zoom 100%");
+        }
+
+        // 任意: 直接パーセント指定（例: 150 -> 150%）
+        public void ZoomToPercent(int percent)
+        {
+            _zoomStep = (int)Math.Round((percent - 100) / (STEP_LINEAR * 100f));
+            UpdateScaleFromStep();
+            ApplyZoom(redrawOnly:false);
+            ShowOverlay($"Zoom {percent}%");
+        }
+
+        // 元画像基準で _scale を再計算（線形 10% 刻み）
+        private void UpdateScaleFromStep()
+        {
+            // オリジナル基準: 1.0 + 0.1 * step （110%, 120%, ... / 90%, 80%, ...）
+            _scale = 1.0f + (_zoomStep * STEP_LINEAR);
+
+            // クランプ（必要なければ外してOK）
+            if (_scale < MIN_SCALE)
+            {
+                _scale = MIN_SCALE;
+                _zoomStep = (int)Math.Round((MIN_SCALE - 1.0f) / STEP_LINEAR);
+            }
+            else if (_scale > MAX_SCALE)
+            {
+                _scale = MAX_SCALE;
+                _zoomStep = (int)Math.Round((MAX_SCALE - 1.0f) / STEP_LINEAR);
+            }
         }
         public void saveImage()
         {
@@ -536,8 +571,7 @@ namespace Kiritori
 
         private void preferencesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            PrefForm pref = new PrefForm();
-            pref.Show();
+            PrefForm.ShowSingleton(this);
         }
         private void printToolStripMenuItem_Click(object sender, EventArgs e)
         {

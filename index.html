@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kiritori – 画面キャプチャ & スニッピング支援ツール</title>
+  <meta name="description" content="Kiritori は Windows 向けの軽量キャプチャ & スニッピング支援ツールです。キーボードショートカット、領域固定、ズーム、OCR 連携など。" />
+  <link rel="icon" href="/favicon.ico" />
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Kiritori – 画面キャプチャ & スニッピング支援ツール" />
+  <meta property="og:description" content="Windows 向けの軽量キャプチャツール。ホットキー、領域固定、ズーム、OCR 連携。" />
+  <meta property="og:url" content="https://kiritori.ruhenheim.org/" />
+  <meta property="og:image" content="https://kiritori.ruhenheim.org/og-image.png" />
+  <meta name="theme-color" content="#0ea5e9" />
+  <style>
+    :root {
+      --bg: #0b1020;          /* dark bg */
+      --panel: #0f172a;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --brand: #0ea5e9;       /* sky-500 */
+      --brand-2: #38bdf8;     /* sky-400 */
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --border: #1f2937;
+      --shadow: 0 8px 30px rgba(2,6,23,.35);
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f8fafc;
+        --panel: #ffffff;
+        --text: #0f172a;
+        --muted: #475569;
+        --border: #e2e8f0;
+        --shadow: 0 8px 30px rgba(2,6,23,.08);
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 600px at 70% -10%, rgba(56,189,248,.18), transparent 60%),
+                  radial-gradient(1000px 600px at -10% 20%, rgba(56,189,248,.12), transparent 60%), var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    a { color: var(--brand-2); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header {
+      position: sticky; top: 0; z-index: 50; backdrop-filter: saturate(140%) blur(8px);
+      background: color-mix(in oklab, var(--bg) 86%, transparent);
+      border-bottom: 1px solid var(--border);
+    }
+    .container { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+    .nav { display:flex; align-items:center; justify-content:space-between; height: 64px; }
+    .logo { display:flex; align-items:center; gap:12px; font-weight:700; letter-spacing:.1px; }
+    .logo-badge { width:32px; height:32px; border-radius:10px; background:linear-gradient(135deg, var(--brand), var(--brand-2)); box-shadow: var(--shadow); display:grid; place-items:center; color:white; font-weight:900; }
+    .nav a.btn { display:inline-flex; align-items:center; gap:10px; padding:10px 14px; border:1px solid var(--border); border-radius:12px; background:var(--panel); box-shadow:var(--shadow); }
+
+    .hero { display:grid; grid-template-columns: 1.1fr .9fr; gap: 28px; align-items: center; padding: 64px 0 36px; }
+    .hero h1 { font-size: clamp(28px, 4vw, 44px); line-height:1.2; margin: 0 0 12px; }
+    .hero p { margin: 0 0 16px; color: var(--muted); }
+    .callouts { display:flex; gap:12px; flex-wrap:wrap; margin-top: 14px; }
+    .chip { padding:6px 10px; border-radius:999px; border:1px solid var(--border); background: color-mix(in oklab, var(--panel) 92%, transparent); font-size: 13px; color: var(--muted); }
+    .download-card { background: var(--panel); border:1px solid var(--border); border-radius: 18px; padding: 18px; box-shadow: var(--shadow); }
+    .dl-grid { display:grid; grid-template-columns: 1fr; gap: 12px; }
+    .dl-row { display:flex; align-items:center; justify-content:space-between; gap: 12px; padding: 12px; border:1px dashed var(--border); border-radius: 14px; background: color-mix(in oklab, var(--panel) 92%, transparent); }
+    .dl-row .pill { font-size:12px; padding: 4px 8px; border-radius:999px; border:1px solid var(--border); color: var(--muted); }
+    .dl-row strong { font-size: 15px; }
+    .btn-primary { display:inline-flex; align-items:center; gap:10px; padding: 12px 16px; border-radius: 12px; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: white; font-weight:700; box-shadow: var(--shadow); cursor:pointer; }
+    .btn-ghost { display:inline-flex; align-items:center; gap:10px; padding: 10px 12px; border-radius: 12px; border:1px solid var(--border); background:transparent; color: var(--text); cursor: not-allowed; opacity:.55; }
+
+    .section { padding: 48px 0; }
+    .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .card { background: var(--panel); border:1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
+    .card h3 { margin: 0 0 6px; font-size: 18px; }
+    .card p { margin: 0; color: var(--muted); font-size: 14px; }
+
+    .two { display:grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    details { border:1px solid var(--border); border-radius: 14px; padding: 12px 14px; background: color-mix(in oklab, var(--panel) 92%, transparent); }
+    details + details { margin-top: 10px; }
+    summary { cursor: pointer; font-weight: 600; }
+
+    footer { border-top:1px solid var(--border); padding: 28px 0 56px; color: var(--muted); }
+    .muted { color: var(--muted); }
+
+    @media (max-width: 920px) { .hero { grid-template-columns: 1fr; } .two { grid-template-columns: 1fr; } .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <div class="logo"><div class="logo-badge">K</div> Kiritori</div>
+      <nav>
+        <a class="btn" href="#download">ダウンロード</a>
+        <a class="btn" href="#features">特徴</a>
+        <a class="btn" href="#faq">FAQ</a>
+        <a class="btn" href="#policy">ポリシー</a>
+        <a class="btn" href="https://github.com/mmiyaji/Kiritori-win" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <div>
+        <h1>一瞬で切り取る。<br>Windows 向けスニッピング補助 <span style="color:var(--brand-2)">Kiritori</span></h1>
+        <p>ホットキーで即キャプチャ、領域固定やピクセル単位のズーム、オーバーレイ表示、OCR 連携まで。開発・検証・資料作成の速度を上げます。</p>
+        <div class="callouts">
+          <span class="chip">軽量・常駐</span>
+          <span class="chip">高 DPI 対応</span>
+          <span class="chip">ホットキー</span>
+          <span class="chip">ズーム & ガイド</span>
+          <span class="chip">OCR 連携（外部ツール）</span>
+        </div>
+        <div style="display:flex; gap:12px; margin-top:18px">
+          <a class="btn-primary" href="#download">今すぐ入手</a>
+          <a class="btn-ghost" href="#changelog">変更履歴</a>
+        </div>
+      </div>
+      <div class="download-card">
+        <h2 style="margin:0 0 8px">クイックダウンロード</h2>
+        <div class="dl-grid" id="download">
+          <div class="dl-row">
+            <div>
+              <strong>Windows 10/11</strong>
+              <div class="muted">実行ファイル（.zip 推奨）</div>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center">
+              <span class="pill" id="latestVersion">v—</span>
+              <a class="btn-primary" id="dlWinZip" href="#">ZIP</a>
+              <a class="btn-primary" id="dlWinExe" href="#">EXE</a>
+            </div>
+          </div>
+          <div class="dl-row" aria-disabled="true">
+            <div>
+              <strong>macOS</strong>
+              <div class="muted">現在、公開停止中です</div>
+            </div>
+            <button class="btn-ghost" title="開発中のため利用できません">利用不可</button>
+          </div>
+        </div>
+        <div style="margin-top:10px" class="muted">※ Windows 版は GitHub Releases から配布します。SmartScreen が表示された場合は発行元を確認の上、許可してください。</div>
+      </div>
+    </section>
+
+    <section class="section" id="features">
+      <h2>主な特徴</h2>
+      <div class="grid" style="margin-top:12px">
+        <div class="card"><h3>すばやいキャプチャ</h3><p>グローバルホットキーで即時に領域選択。固定領域・履歴から再実行も。</p></div>
+        <div class="card"><h3>高 DPI / マルチモニタ</h3><p>Per-Monitor DPI 対応で拡大縮小やにじみを最小化。</p></div>
+        <div class="card"><h3>ズームとガイド</h3><p>拡大表示やグリッド、ピクセル測定で UI 調整がラクに。</p></div>
+        <div class="card"><h3>OCR 連携</h3><p>外部 OCR（Tesseract / Capture2Text 等）と組み合わせて文字起こしに。</p></div>
+        <div class="card"><h3>軽量・常駐</h3><p>トレイ常駐で必要な時だけ素早く。ショートカットはカスタマイズ可。</p></div>
+        <div class="card"><h3>オープンソース</h3><p>GitHub で開発・ issue 受付。フィードバック歓迎です。</p></div>
+      </div>
+    </section>
+
+    <section class="section two" id="changelog">
+      <div>
+        <h2>変更履歴</h2>
+        <details open>
+          <summary>vX.Y.Z – 2025-08-XX</summary>
+          <ul>
+            <li>高 DPI でのズームと位置補正を改善</li>
+            <li>CS_DROPSHADOW の適用を安定化</li>
+            <li>ホットキー競合時のリカバリを改善</li>
+          </ul>
+        </details>
+        <details>
+          <summary>vX.Y.(前) – 2025-07-XX</summary>
+          <ul>
+            <li>領域固定の再実行ショートカット追加</li>
+            <li>ログ出力と診断オーバーレイ追加</li>
+          </ul>
+        </details>
+        <p class="muted" style="margin-top:8px">※ 正式な履歴は GitHub Releases を参照してください。</p>
+      </div>
+      <div>
+        <h2>よくある質問（FAQ）</h2>
+        <details>
+          <summary>「保護されていない通信」と出るのは？</summary>
+          <p>混在コンテンツ（HTTPS ページ内の HTTP 画像等）や TLS/証明書設定の問題が原因になります。本サイトはすべて HTTPS のみ・HSTS 強制を推奨しています。</p>
+        </details>
+        <details>
+          <summary>配布ファイルは EXE と ZIP どちらが良い？</summary>
+          <p>ブラウザやプロキシで誤検知されにくい ZIP を推奨します。ZIP 内には EXE と README、署名/ハッシュを同梱してください。</p>
+        </details>
+        <details>
+          <summary>SmartScreen が出ます</summary>
+          <p>署名がない場合や配布直後は表示されることがあります。発行元/ハッシュを確認し、信頼できる場合のみ実行してください。</p>
+        </details>
+      </div>
+    </section>
+
+    <section class="section two" id="policy">
+      <div>
+        <h2>プライバシー & ライセンス</h2>
+        <p>Kiritori は個人情報を収集しません（自動アップデートやトラッキングなし）。ソースコードと配布バイナリのライセンスはリポジトリをご確認ください。</p>
+        <ul class="muted">
+          <li><a href="https://github.com/mmiyaji/Kiritori-win" target="_blank" rel="noopener">GitHub リポジトリ</a></li>
+          <li><a href="https://github.com/mmiyaji/Kiritori-win/releases" target="_blank" rel="noopener">Releases（配布）</a></li>
+        </ul>
+      </div>
+      <div>
+        <h2>サポート</h2>
+        <p>不具合やご要望は GitHub Issues へ。商用や組織導入に関する問い合わせは下記へ。</p>
+        <ul class="muted">
+          <li>不具合報告: GitHub Issues</li>
+          <li>連絡先: <a href="mailto:contact@ruhenheim.org">contact@ruhenheim.org</a></li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap">
+        <div>© <span id="year"></span> Ruhenheim / Kiritori</div>
+        <div class="muted">macOS 版は現在公開停止中です</div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // 年表示
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // GitHub Releases から最新を取得（必要に応じてリポジトリを変更）
+    // 失敗時はフォールバックの # を維持
+    (async function(){
+      try {
+        const repo = 'mmiyaji/Kiritori-win';
+        const r = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, { headers: { 'Accept': 'application/vnd.github+json' } });
+        if (!r.ok) return;
+        const j = await r.json();
+        const tag = j.tag_name || j.name || '';
+        document.getElementById('latestVersion').textContent = tag || 'latest';
+        const assets = j.assets || [];
+        const zip = assets.find(a => /\.zip$/i.test(a.name));
+        const exe = assets.find(a => /\.exe$/i.test(a.name));
+        if (zip) document.getElementById('dlWinZip').href = zip.browser_download_url;
+        if (exe) document.getElementById('dlWinExe').href = exe.browser_download_url;
+      } catch(e) { /* ignore */ }
+    })();
+  </script>
+
+  <!-- 推奨: セキュリティヘッダ（サーバ設定例）
+  Nginx:
+  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+  add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; script-src 'self' https://api.github.com; style-src 'self' 'unsafe-inline'; connect-src https://api.github.com;" always;
+  add_header X-Content-Type-Options nosniff always;
+  add_header Referrer-Policy no-referrer-when-downgrade always;
+  add_header Permissions-Policy camera=(), microphone=(), geolocation=();
+  # http -> https へ 301 リダイレクトも忘れずに
+  -->
+</body>
+</html>

@@ -9,13 +9,45 @@ namespace Kiritori
 {
     public partial class PrefForm : Form
     {
+        private static PrefForm _instance;
         public PrefForm()
         {
             InitializeComponent();
             this.AutoScaleMode = AutoScaleMode.Dpi;
             this.AutoScaleDimensions = new SizeF(96F, 96F);
+            this.StartPosition = FormStartPosition.CenterScreen;
         }
 
+        /// <summary>
+        /// 設定ウィンドウを常に1つだけ表示する。
+        /// 既に開いていれば前面に出してアクティブ化する。
+        /// </summary>
+        public static void ShowSingleton(IWin32Window owner = null)
+        {
+            if (_instance == null || _instance.IsDisposed)
+            {
+                _instance = new PrefForm();
+                _instance.FormClosed += (s, e) => _instance = null;
+
+                if (owner != null)
+                    _instance.Show(owner);
+                else
+                    _instance.Show();
+            }
+            else
+            {
+                // 最小化復帰
+                if (_instance.WindowState == FormWindowState.Minimized)
+                    _instance.WindowState = FormWindowState.Normal;
+
+                // 所有者を更新（任意）
+                if (owner is Form f && _instance.Owner != f)
+                    _instance.Owner = f;
+
+                _instance.BringToFront();
+                _instance.Activate();
+            }
+        }
         private void PrefForm_Load(object sender, EventArgs e)
         {
             // Infoタブのバージョン表示を更新

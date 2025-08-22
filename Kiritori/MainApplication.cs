@@ -64,7 +64,7 @@ namespace Kiritori
             // 初回だけは強制表示
             if (!Settings.Default.FirstRunShown)
             {
-                ShowPreferencesNonModal();
+                PrefForm.ShowSingleton(this);
                 Settings.Default.FirstRunShown = true;
                 Settings.Default.Save(); // 記録
                 return;
@@ -74,21 +74,10 @@ namespace Kiritori
             // DoNotShowOnStartup == true のときは出さない
             if (!Settings.Default.DoNotShowOnStartup)
             {
-                ShowPreferencesNonModal();
+                PrefForm.ShowSingleton(this);
             }
         }
 
-        private void ShowPreferencesNonModal()
-        {
-            try
-            {
-                var pref = new PrefForm();
-                pref.StartPosition = FormStartPosition.CenterScreen;
-                pref.Show(); // 非モーダルで表示
-                pref.BringToFront();
-            }
-            catch { /* 無視 or ログ */ }
-        }
         // Utility: コントロール木から指定型を列挙
         private IEnumerable<T> ComponentsRecursive<T>() where T : Control
         {
@@ -209,8 +198,9 @@ namespace Kiritori
 
         private void preferencesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            PrefForm pref = new PrefForm();
-            pref.Show();
+            // PrefForm pref = new PrefForm();
+            // pref.Show();
+            PrefForm.ShowSingleton(this);
         }
 
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
@@ -255,8 +245,7 @@ namespace Kiritori
         {
             if (e.Button == MouseButtons.Left)
             {
-                PrefForm pref = new PrefForm();
-                pref.Show();
+                PrefForm.ShowSingleton(this);
             }
             else if (e.Button == MouseButtons.Right)
             {

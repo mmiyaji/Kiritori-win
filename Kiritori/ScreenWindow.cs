@@ -20,7 +20,7 @@ namespace Kiritori
         private Bitmap baseBmp; // キャプチャ原本
         private Boolean isOpen;
         private ArrayList captureArray;
-        private Font fnt = new Font("Arial", 10);
+        private Font fnt = new Font("Segoe UI", 10);
         private MainApplication ma;
         private int currentDpi = 96; 
         public ScreenWindow(MainApplication mainapp, Func<int> getHostDpi = null)
@@ -200,7 +200,7 @@ namespace Kiritori
             }
             baseBmp = (Bitmap)bmp.Clone();
             using (g = Graphics.FromImage(bmp))
-            using (var mask = new SolidBrush(Color.FromArgb(80, Color.White)))
+            using (var mask = new SolidBrush(Color.FromArgb(30, Color.White)))
             g.FillRectangle(mask, new Rectangle(0, 0, w, h));
 
             pictureBox1.SetBounds(0, 0, w, h);
@@ -276,7 +276,7 @@ namespace Kiritori
                         g.DrawImage(baseBmp, Point.Empty);
 
                         // 外側だけに半透明白マスクをかける
-                        using (var mask = new SolidBrush(Color.FromArgb(80, Color.White)))
+                        using (var mask = new SolidBrush(Color.FromArgb(30, Color.White)))
                         using (var outside = new Region(new Rectangle(0, 0, bmp.Width, bmp.Height)))
                         {
                             outside.Exclude(rc);           // 選択範囲は除外（＝透けない）
@@ -406,7 +406,7 @@ namespace Kiritori
             fnt?.Dispose();
             int basePt = 10; // 元が 96dpi のとき 10pt 相当
             float scaledPt = basePt * (currentDpi / 96f);
-            fnt = new Font("Arial", scaledPt, GraphicsUnit.Point);
+            fnt = new Font("Segoe UI", scaledPt, GraphicsUnit.Point);
 
             // 必要に応じて他の DPI 依存リソースも調整
             // 例: ペンの太さ, PictureBox のサイズモード etc.
