@@ -69,6 +69,8 @@ namespace Kiritori
             this.labelMinimize = new System.Windows.Forms.Label();
             this.textBoxPrint = new System.Windows.Forms.TextBox();
             this.labelPrint = new System.Windows.Forms.Label();
+            this.textBoxZoomOff = new System.Windows.Forms.TextBox();
+            this.labelZoomOff = new System.Windows.Forms.Label();
             this.textBoxZoomOut = new System.Windows.Forms.TextBox();
             this.labelZoomOut = new System.Windows.Forms.Label();
             this.textBoxZoomIn = new System.Windows.Forms.TextBox();
@@ -407,6 +409,8 @@ namespace Kiritori
             this.tabPageShortcuts.Controls.Add(this.labelMinimize);
             this.tabPageShortcuts.Controls.Add(this.textBoxPrint);
             this.tabPageShortcuts.Controls.Add(this.labelPrint);
+            this.tabPageShortcuts.Controls.Add(this.labelZoomOff);
+            this.tabPageShortcuts.Controls.Add(this.textBoxZoomOff);
             this.tabPageShortcuts.Controls.Add(this.textBoxZoomOut);
             this.tabPageShortcuts.Controls.Add(this.labelZoomOut);
             this.tabPageShortcuts.Controls.Add(this.textBoxZoomIn);
@@ -519,23 +523,14 @@ namespace Kiritori
             this.labelMinimize.TabIndex = 16;
             this.labelMinimize.Text = "minimize";
             // 
-            // textBoxPrint
+            // textBoxZoomOff
             // 
-            this.textBoxPrint.Enabled = false;
-            this.textBoxPrint.Location = new System.Drawing.Point(98, 195);
-            this.textBoxPrint.Name = "textBoxPrint";
-            this.textBoxPrint.Size = new System.Drawing.Size(100, 19);
-            this.textBoxPrint.TabIndex = 15;
-            this.textBoxPrint.Text = "Ctrl + p";
-            // 
-            // labelPrint
-            // 
-            this.labelPrint.AutoSize = true;
-            this.labelPrint.Location = new System.Drawing.Point(22, 196);
-            this.labelPrint.Name = "labelPrint";
-            this.labelPrint.Size = new System.Drawing.Size(28, 12);
-            this.labelPrint.TabIndex = 14;
-            this.labelPrint.Text = "print";
+            this.textBoxZoomOff.Enabled = false;
+            this.textBoxZoomOff.Location = new System.Drawing.Point(98, 170);
+            this.textBoxZoomOff.Name = "textBoxZoomOff";
+            this.textBoxZoomOff.Size = new System.Drawing.Size(100, 19);
+            this.textBoxZoomOff.TabIndex = 26;
+            this.textBoxZoomOff.Text = "Ctrl + 0";
             // 
             // textBoxZoomOut
             // 
@@ -545,6 +540,15 @@ namespace Kiritori
             this.textBoxZoomOut.Size = new System.Drawing.Size(100, 19);
             this.textBoxZoomOut.TabIndex = 13;
             this.textBoxZoomOut.Text = "Ctrl + -";
+            // 
+            // labelZoomOff
+            // 
+            this.labelZoomOff.AutoSize = true;
+            this.labelZoomOff.Location = new System.Drawing.Point(24, 170);
+            this.labelZoomOff.Name = "labelZoomOff";
+            this.labelZoomOff.Size = new System.Drawing.Size(51, 12);
+            this.labelZoomOff.TabIndex = 27;
+            this.labelZoomOff.Text = "zoom off";
             // 
             // labelZoomOut
             // 
@@ -648,7 +652,7 @@ namespace Kiritori
             // textBoxAfloat
             // 
             this.textBoxAfloat.Enabled = false;
-            this.textBoxAfloat.Location = new System.Drawing.Point(98, 170);
+            this.textBoxAfloat.Location = new System.Drawing.Point(98, 195);
             this.textBoxAfloat.Name = "textBoxAfloat";
             this.textBoxAfloat.Size = new System.Drawing.Size(100, 19);
             this.textBoxAfloat.TabIndex = 1;
@@ -657,11 +661,29 @@ namespace Kiritori
             // labelAfloat
             // 
             this.labelAfloat.AutoSize = true;
-            this.labelAfloat.Location = new System.Drawing.Point(22, 171);
+            this.labelAfloat.Location = new System.Drawing.Point(22, 195);
             this.labelAfloat.Name = "labelAfloat";
             this.labelAfloat.Size = new System.Drawing.Size(69, 12);
             this.labelAfloat.TabIndex = 0;
             this.labelAfloat.Text = "toggle afloat";
+            // 
+            // textBoxPrint
+            // 
+            this.textBoxPrint.Enabled = false;
+            this.textBoxPrint.Location = new System.Drawing.Point(304, 145);
+            this.textBoxPrint.Name = "textBoxPrint";
+            this.textBoxPrint.Size = new System.Drawing.Size(100, 19);
+            this.textBoxPrint.TabIndex = 15;
+            this.textBoxPrint.Text = "Ctrl + p";
+            // 
+            // labelPrint
+            // 
+            this.labelPrint.AutoSize = true;
+            this.labelPrint.Location = new System.Drawing.Point(230, 145);
+            this.labelPrint.Name = "labelPrint";
+            this.labelPrint.Size = new System.Drawing.Size(28, 12);
+            this.labelPrint.TabIndex = 14;
+            this.labelPrint.Text = "print";
             // 
             // PrefForm
             // 
@@ -714,6 +736,8 @@ namespace Kiritori
         private System.Windows.Forms.TextBox textBoxClose;
         private System.Windows.Forms.Label labelClose;
         private System.Windows.Forms.TextBox textBoxZoomOut;
+        private System.Windows.Forms.Label labelZoomOff;
+        private System.Windows.Forms.TextBox textBoxZoomOff;
         private System.Windows.Forms.Label labelZoomOut;
         private System.Windows.Forms.TextBox textBoxZoomIn;
         private System.Windows.Forms.Label labelZoomIn;

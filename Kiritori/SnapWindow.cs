@@ -21,18 +21,20 @@ namespace Kiritori
         SHIFT_MOVE_RIGHT = Keys.Right   | Keys.Shift,
         SHIFT_MOVE_UP = Keys.Up         | Keys.Shift,
         SHIFT_MOVE_DOWN = Keys.Down     | Keys.Shift,
-        FLOAT = (int)Keys.Control + (int)Keys.A,
-        SAVE        = (int)Keys.Control | (int)Keys.S,
-        LOAD        = (int)Keys.Control | (int)Keys.O,
-        OPEN        = (int)Keys.Control | (int)Keys.N,
-        ZOOM_IN     = (int)Keys.Control | (int)Keys.Oemplus,
-        ZOOM_OUT    = (int)Keys.Control | (int)Keys.OemMinus,
-        CLOSE       = (int)Keys.Control | (int)Keys.W,
+        FLOAT       = Keys.Control | Keys.A,
+        SAVE        = Keys.Control | Keys.S,
+        LOAD        = Keys.Control | Keys.O,
+        OPEN        = Keys.Control | Keys.N,
+        ZOOM_ORIGIN_NUMPAD = Keys.Control | Keys.NumPad0, // テンキーの 0
+        ZOOM_ORIGIN_MAIN   = Keys.Control | Keys.D0,       // メイン行の 0
+        ZOOM_IN     = Keys.Control | Keys.Oemplus,
+        ZOOM_OUT    = Keys.Control | Keys.OemMinus,
+        CLOSE       = Keys.Control | Keys.W,
         ESCAPE      = Keys.Escape,
-        COPY        = (int)Keys.Control | (int)Keys.C,
-        CUT         = (int)Keys.Control | (int)Keys.X,
-        PRINT       = (int)Keys.Control | (int)Keys.P,
-        MINIMIZE    = (int)Keys.Control | (int)Keys.H
+        COPY        = Keys.Control | Keys.C,
+        CUT         = Keys.Control | Keys.X,
+        PRINT       = Keys.Control | Keys.P,
+        MINIMIZE    = Keys.Control | Keys.H
     }
 
     public partial class SnapWindow : Form
@@ -238,6 +240,10 @@ namespace Kiritori
                 case (int)HOTS.OPEN:
                     openImage();
                     break;
+                case (int)HOTS.ZOOM_ORIGIN_NUMPAD:
+                case (int)HOTS.ZOOM_ORIGIN_MAIN:
+                    zoomOff();
+                    break;
                 case (int)HOTS.ZOOM_IN:
                     zoomIn();
                     break;
@@ -287,7 +293,7 @@ namespace Kiritori
             Debug.WriteLine($"Zooming off: current scale {1.0}");
             this.pictureBox1.Width = this.pictureBox1.Image.Width;
             this.pictureBox1.Height = this.pictureBox1.Image.Height;
-            ShowOverlay($"Original Size {100}%");
+            ShowOverlay($"Zoom {100}%");
         }
         public void saveImage()
         {
