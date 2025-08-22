@@ -74,15 +74,17 @@ namespace Kiritori
             _overlayTimer.Tick += (s, e) =>
             {
                 if (_overlayText == null) { _overlayTimer.Stop(); return; }
-                // 表示時間を過ぎたら消す
                 if ((DateTime.Now - _overlayStart).TotalMilliseconds > _overlayDurationMs)
                 {
                     _overlayText = null;
-                    Invalidate(); // 消すため再描画
+                    pictureBox1.Invalidate();
                     _overlayTimer.Stop();
                     return;
                 }
-                Invalidate(new Rectangle(ClientSize.Width - 300, ClientSize.Height - 120, 300, 120));
+                // 位置を指定するなら範囲無効化でもOK
+                pictureBox1.Invalidate(new Rectangle(
+                    pictureBox1.ClientSize.Width  - 300,
+                    pictureBox1.ClientSize.Height - 120, 300, 120));
             };
 
             // try
@@ -95,6 +97,8 @@ namespace Kiritori
             // }
             // catch { }
             InitializeComponent();
+            this.pictureBox1.Paint += PictureBox1_Paint;
+            this.DoubleBuffered = true; // チラつき軽減
         }
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -129,6 +133,7 @@ namespace Kiritori
             this.main_image = bmp;
             this.setThumbnail(bmp);
             ma.setHistory(this);
+            ShowOverlay($"Kiritori");
         }
         private void setThumbnail(Bitmap bmp)
         {
@@ -269,6 +274,7 @@ namespace Kiritori
         }
         public void zoomOut()
         {
+            Debug.WriteLine($"Zooming out: current scale {_scale}");
             ws = (int)(this.pictureBox1.Width * _scale);
             hs = (int)(this.pictureBox1.Height * _scale);
             this.pictureBox1.Width -= ws;
@@ -278,8 +284,10 @@ namespace Kiritori
         }
         public void zoomOff()
         {
+            Debug.WriteLine($"Zooming off: current scale {1.0}");
             this.pictureBox1.Width = this.pictureBox1.Image.Width;
             this.pictureBox1.Height = this.pictureBox1.Image.Height;
+            ShowOverlay($"Original Size {100}%");
         }
         public void saveImage()
         {
@@ -295,7 +303,9 @@ namespace Kiritori
             if (sfd.ShowDialog() == DialogResult.OK)
             {
                 this.pictureBox1.Image.Save(sfd.FileName);
+                ShowOverlay("Saved");
             }
+            sfd.Dispose();
         }
         public void loadImage()
         {
@@ -338,6 +348,7 @@ namespace Kiritori
                     this.main_image = bmp;
                     this.setThumbnail(bmp);
                     ma.setHistory(this);
+                    ShowOverlay("Loaded");
                 }
                 else
                 {
@@ -426,6 +437,8 @@ namespace Kiritori
                 pd.PrintPage +=
                     new System.Drawing.Printing.PrintPageEventHandler(pd_PrintPage);
                 pd.Print();
+                pd.Dispose();
+                ShowOverlay("Printed");
             }
             printDialog1.Dispose();
         }
@@ -524,26 +537,31 @@ namespace Kiritori
         private void toolStripMenuItem2_Click(object sender, EventArgs e)
         {
             setAlpha(1.0);
+            ShowOverlay("Opacity: 100%");
         }
 
         private void toolStripMenuItem3_Click(object sender, EventArgs e)
         {
             setAlpha(0.9);
+            ShowOverlay("Opacity: 90%");
         }
 
         private void toolStripMenuItem4_Click(object sender, EventArgs e)
         {
             setAlpha(0.8);
+            ShowOverlay("Opacity: 80%");
         }
 
         private void toolStripMenuItem5_Click(object sender, EventArgs e)
         {
             setAlpha(0.5);
+            ShowOverlay("Opacity: 50%");
         }
 
         private void toolStripMenuItem6_Click(object sender, EventArgs e)
         {
             setAlpha(0.3);
+            ShowOverlay("Opacity: 30%");
         }
 
         private void minimizeToolStripMenuItem_Click(object sender, EventArgs e)
@@ -561,12 +579,10 @@ namespace Kiritori
             _overlayText = text;
             _overlayStart = DateTime.Now;
             _overlayTimer.Start();
-            Invalidate();
+            pictureBox1.Invalidate();
         }
-        protected override void OnPaint(PaintEventArgs e)
+        private void PictureBox1_Paint(object sender, PaintEventArgs e)
         {
-            base.OnPaint(e);
-
             if (string.IsNullOrEmpty(_overlayText)) return;
 
             var g = e.Graphics;
@@ -574,9 +590,8 @@ namespace Kiritori
             g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
             g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
 
-            // 残り時間からアルファ算出（フェードアウト）
             double elapsed = (DateTime.Now - _overlayStart).TotalMilliseconds;
-            int alpha = 200; // ベース不透明度
+            int alpha = 200;
             double remain = _overlayDurationMs - elapsed;
             if (remain < _overlayFadeMs)
             {
@@ -584,18 +599,15 @@ namespace Kiritori
                 if (alpha < 0) alpha = 0;
             }
 
-            // テキスト計測
-            string text = _overlayText;
             var padding = (int)(10 * (_dpi / 96f));
-            SizeF ts = g.MeasureString(text, _overlayFont);
+            var ts = g.MeasureString(_overlayText, _overlayFont);
             int w = (int)Math.Ceiling(ts.Width) + padding * 2;
             int h = (int)Math.Ceiling(ts.Height) + padding * 2;
 
             int margin = (int)(12 * (_dpi / 96f));
-            int x = ClientSize.Width - w - margin;
-            int y = ClientSize.Height - h - margin;
+            int x = pictureBox1.ClientSize.Width  - w - margin;
+            int y = pictureBox1.ClientSize.Height - h - margin;
 
-            // 角丸背景
             using (var path = RoundedRect(new Rectangle(x, y, w, h), radius: (int)(8 * (_dpi / 96f))))
             using (var bg = new SolidBrush(Color.FromArgb(alpha, 0, 0, 0)))
             using (var pen = new Pen(Color.FromArgb(Math.Max(80, alpha), 255, 255, 255), 1f))
@@ -603,7 +615,7 @@ namespace Kiritori
             {
                 g.FillPath(bg, path);
                 g.DrawPath(pen, path);
-                g.DrawString(text, _overlayFont, txt, x + padding, y + padding);
+                g.DrawString(_overlayText, _overlayFont, txt, x + padding, y + padding);
             }
         }
 
