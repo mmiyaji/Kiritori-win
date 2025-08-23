@@ -211,7 +211,7 @@ namespace Kiritori
 
                 // --- 2) バー塗りはアンチエイリアスOFFでカリッと
                 var oldSmooth = g.SmoothingMode;
-                var oldPixel  = g.PixelOffsetMode;
+                var oldPixel = g.PixelOffsetMode;
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
                 g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Default;
 
@@ -242,6 +242,33 @@ namespace Kiritori
 
             this.labelDescHeader.Location = new Point(x, y);
             this.labelDescHeader.BringToFront();
+        }
+        // KeyDownイベントでキーを取得
+        private void textBoxKiritori_KeyDown(object sender, KeyEventArgs e)
+        {
+            // 修飾キー
+            string modifier = "";
+            if (e.Control) modifier += "Ctrl + ";
+            if (e.Shift) modifier += "Shift + ";
+            if (e.Alt) modifier += "Alt + ";
+
+            // 押されたキー
+            Keys key = e.KeyCode;
+
+            // 修飾キー単体は無視（Ctrlだけ押した場合とか）
+            if (key == Keys.ControlKey || key == Keys.ShiftKey || key == Keys.Menu)
+                return;
+
+            this.textBoxKiritori.Text = modifier + key.ToString();
+
+            // 他のコントロールにキーイベントが行かないように
+            e.SuppressKeyPress = true;
+        }
+
+        // 矢印キーやTabなど特殊キーを捕捉するため
+        private void textBoxKiritori_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
+        {
+            e.IsInputKey = true;
         }
 
     }

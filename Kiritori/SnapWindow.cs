@@ -44,6 +44,7 @@ namespace Kiritori
         //private int ws, hs;
         private Boolean isWindowShadow = true;
         private Boolean isAfloatWindow = true;
+        private Boolean isOverlay = true;
         //マウスのクリック位置を記憶
         private Point mousePoint;
         private double alpha_value;
@@ -86,6 +87,7 @@ namespace Kiritori
             this.ma = mainapp;
             this.isWindowShadow = Properties.Settings.Default.isWindowShadow;
             this.isAfloatWindow = Properties.Settings.Default.isAfloatWindow;
+            this.isOverlay = Properties.Settings.Default.isOverlay;
             this.alpha_value = Properties.Settings.Default.alpha_value / 100.0;
             this.MinimumSize = Size.Empty;
             //            this.TransparencyKey = BackColor;
@@ -666,6 +668,7 @@ namespace Kiritori
         }
         public void ShowOverlay(string text)
         {
+            if (!this.isOverlay) return;
             if (this.ClientSize.Width < MIN_WIDTH || this.ClientSize.Height < MIN_HEIGHT)
             {
                 Debug.WriteLine($"Overlay suppressed (too small): {this.ClientSize.Width}x{this.ClientSize.Height}");

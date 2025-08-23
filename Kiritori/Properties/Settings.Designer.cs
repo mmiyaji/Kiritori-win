@@ -106,5 +106,17 @@ namespace Kiritori.Properties {
                 this["DoNotShowOnStartup"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool isOverlay {
+            get {
+                return ((bool)(this["isOverlay"]));
+            }
+            set {
+                this["isOverlay"] = value;
+            }
+        }
     }
 }

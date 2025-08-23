@@ -56,6 +56,7 @@ namespace Kiritori
             this.btnSavestings = new System.Windows.Forms.Button();
             this.btnCancelSettings = new System.Windows.Forms.Button();
             this.chkAfloat = new System.Windows.Forms.CheckBox();
+            this.chkOverlay = new System.Windows.Forms.CheckBox();
             this.chkWindowShadow = new System.Windows.Forms.CheckBox();
             this.trackbarOpacty = new System.Windows.Forms.TrackBar();
             this.tabPageShortcuts = new System.Windows.Forms.TabPage();
@@ -292,6 +293,7 @@ namespace Kiritori
             this.tabPageBasic.Controls.Add(this.btnSavestings);
             this.tabPageBasic.Controls.Add(this.btnCancelSettings);
             this.tabPageBasic.Controls.Add(this.chkAfloat);
+            this.tabPageBasic.Controls.Add(this.chkOverlay);
             this.tabPageBasic.Controls.Add(this.chkWindowShadow);
             this.tabPageBasic.Controls.Add(this.trackbarOpacty);
             this.tabPageBasic.Location = new System.Drawing.Point(4, 22);
@@ -365,11 +367,14 @@ namespace Kiritori
             // textBoxKiritori
             // 
             this.textBoxKiritori.Enabled = false;
+            // this.textBoxKiritori.ReadOnly = true;
             this.textBoxKiritori.Location = new System.Drawing.Point(35, 48);
             this.textBoxKiritori.Name = "textBoxKiritori";
             this.textBoxKiritori.Size = new System.Drawing.Size(100, 19);
             this.textBoxKiritori.TabIndex = 11;
             this.textBoxKiritori.Text = "Ctrl + Shift + 5";
+            this.textBoxKiritori.KeyDown += textBoxKiritori_KeyDown;
+            this.textBoxKiritori.PreviewKeyDown += textBoxKiritori_PreviewKeyDown;
             // 
             // labelKiritori
             // 
@@ -383,7 +388,7 @@ namespace Kiritori
             // labelOpacity1
             // 
             this.labelOpacity1.AutoSize = true;
-            this.labelOpacity1.Location = new System.Drawing.Point(221, 154);
+            this.labelOpacity1.Location = new System.Drawing.Point(221, 164);
             this.labelOpacity1.Name = "labelOpacity1";
             this.labelOpacity1.Size = new System.Drawing.Size(23, 12);
             this.labelOpacity1.TabIndex = 7;
@@ -392,7 +397,7 @@ namespace Kiritori
             // labelOpacity2
             // 
             this.labelOpacity2.AutoSize = true;
-            this.labelOpacity2.Location = new System.Drawing.Point(373, 154);
+            this.labelOpacity2.Location = new System.Drawing.Point(373, 164);
             this.labelOpacity2.Name = "labelOpacity2";
             this.labelOpacity2.Size = new System.Drawing.Size(29, 12);
             this.labelOpacity2.TabIndex = 6;
@@ -401,7 +406,7 @@ namespace Kiritori
             // labelOpacityDefault
             // 
             this.labelOpacityDefault.AutoSize = true;
-            this.labelOpacityDefault.Location = new System.Drawing.Point(224, 107);
+            this.labelOpacityDefault.Location = new System.Drawing.Point(224, 127);
             this.labelOpacityDefault.Name = "labelOpacityDefault";
             this.labelOpacityDefault.Size = new System.Drawing.Size(127, 12);
             this.labelOpacityDefault.TabIndex = 5;
@@ -436,9 +441,22 @@ namespace Kiritori
             this.chkAfloat.Location = new System.Drawing.Point(226, 70);
             this.chkAfloat.Name = "chkAfloat";
             this.chkAfloat.Size = new System.Drawing.Size(100, 16);
-            this.chkAfloat.TabIndex = 2;
+            this.chkAfloat.TabIndex = 8;
             this.chkAfloat.Text = "always in front";
             this.chkAfloat.UseVisualStyleBackColor = true;
+            // 
+            // chkOverlay
+            // 
+            this.chkOverlay.AutoSize = true;
+            this.chkOverlay.Checked = global::Kiritori.Properties.Settings.Default.isOverlay;
+            this.chkOverlay.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chkOverlay.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isOverlay", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            this.chkOverlay.Location = new System.Drawing.Point(226, 95);
+            this.chkOverlay.Name = "chkOverlay";
+            this.chkOverlay.Size = new System.Drawing.Size(100, 16);
+            this.chkOverlay.TabIndex = 2;
+            this.chkOverlay.Text = "Text Overlay";
+            this.chkOverlay.UseVisualStyleBackColor = true;
             // 
             // chkWindowShadow
             // 
@@ -446,7 +464,7 @@ namespace Kiritori
             this.chkWindowShadow.Checked = global::Kiritori.Properties.Settings.Default.isWindowShadow;
             this.chkWindowShadow.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkWindowShadow.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isWindowShadow", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.chkWindowShadow.Location = new System.Drawing.Point(226, 48);
+            this.chkWindowShadow.Location = new System.Drawing.Point(226, 45);
             this.chkWindowShadow.Name = "chkWindowShadow";
             this.chkWindowShadow.Size = new System.Drawing.Size(103, 16);
             this.chkWindowShadow.TabIndex = 1;
@@ -458,7 +476,7 @@ namespace Kiritori
             this.trackbarOpacty.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(249)))), ((int)(((byte)(249)))));
             this.trackbarOpacty.DataBindings.Add(new System.Windows.Forms.Binding("Value", global::Kiritori.Properties.Settings.Default, "alpha_value", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
             this.trackbarOpacty.LargeChange = 10;
-            this.trackbarOpacty.Location = new System.Drawing.Point(223, 122);
+            this.trackbarOpacty.Location = new System.Drawing.Point(223, 142);
             this.trackbarOpacty.Maximum = 100;
             this.trackbarOpacty.Minimum = 10;
             this.trackbarOpacty.Name = "trackbarOpacty";
@@ -814,6 +832,7 @@ namespace Kiritori
         private System.Windows.Forms.TabControl tabControl;
         private System.Windows.Forms.TabPage tabPageBasic;
         private System.Windows.Forms.CheckBox chkAfloat;
+        private System.Windows.Forms.CheckBox chkOverlay;
         private System.Windows.Forms.CheckBox chkWindowShadow;
         private System.Windows.Forms.TrackBar trackbarOpacty;
         private System.Windows.Forms.Button btnSavestings;
