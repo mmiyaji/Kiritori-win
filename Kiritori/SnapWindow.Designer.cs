@@ -56,8 +56,6 @@
             this.preferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.printToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.historyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.toolStripSeparator6 = new System.Windows.Forms.ToolStripSeparator();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.contextMenuStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -81,8 +79,6 @@
             this.toolStripSeparator1,
             this.cutCtrlXToolStripMenuItem,
             this.copyCtrlXToolStripMenuItem,
-            this.toolStripSeparator6,
-            this.historyToolStripMenuItem,
             this.toolStripSeparator2,
             this.saveImageToolStripMenuItem,
             this.toolStripSeparator3,
@@ -153,20 +149,23 @@
             this.originalSizeToolStripMenuItem.Name = "originalSizeToolStripMenuItem";
             this.originalSizeToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.originalSizeToolStripMenuItem.Text = "Original Size";
+            this.originalSizeToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.NumPad0)));
+            this.originalSizeToolStripMenuItem.ShortcutKeyDisplayString = "Ctrl+0";
             this.originalSizeToolStripMenuItem.Click += new System.EventHandler(this.originalSizeToolStripMenuItem_Click);
-            // 
-            // zoomInToolStripMenuItem
-            // 
+            // Zoom In
             this.zoomInToolStripMenuItem.Name = "zoomInToolStripMenuItem";
             this.zoomInToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
-            this.zoomInToolStripMenuItem.Text = "Zoom In              Ctrl+\"+\"";
+            this.zoomInToolStripMenuItem.Text = "Zoom In";
+            this.zoomInToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Oemplus)));
+            this.zoomInToolStripMenuItem.ShortcutKeyDisplayString = "Ctrl+'+'";
             this.zoomInToolStripMenuItem.Click += new System.EventHandler(this.zoomInToolStripMenuItem_Click);
-            // 
-            // zoomOutToolStripMenuItem
-            // 
+
+            // Zoom Out
             this.zoomOutToolStripMenuItem.Name = "zoomOutToolStripMenuItem";
             this.zoomOutToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
-            this.zoomOutToolStripMenuItem.Text = "Zoom Out            Ctrl+\"-\"";
+            this.zoomOutToolStripMenuItem.Text = "Zoom Out";
+            this.zoomOutToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.OemMinus)));
+            this.zoomOutToolStripMenuItem.ShortcutKeyDisplayString = "Ctrl+'-'";
             this.zoomOutToolStripMenuItem.Click += new System.EventHandler(this.zoomOutToolStripMenuItem_Click);
             // 
             // toolStripSeparator4
@@ -271,17 +270,6 @@
             this.exitToolStripMenuItem.Text = "Exit Kiritori";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
-            // historyToolStripMenuItem
-            // 
-            this.historyToolStripMenuItem.Name = "historyToolStripMenuItem";
-            this.historyToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
-            this.historyToolStripMenuItem.Text = "History";
-            // 
-            // toolStripSeparator6
-            // 
-            this.toolStripSeparator6.Name = "toolStripSeparator6";
-            this.toolStripSeparator6.Size = new System.Drawing.Size(228, 6);
-            // 
             // SnapWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -334,8 +322,6 @@
         private System.Windows.Forms.ToolStripMenuItem printToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem minimizeToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
-        private System.Windows.Forms.ToolStripSeparator toolStripSeparator6;
-        private System.Windows.Forms.ToolStripMenuItem historyToolStripMenuItem;
     }
 }
 
