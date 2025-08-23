@@ -4,14 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Kiritori – 画面キャプチャ & スニッピング支援ツール</title>
-  <meta name="description" content="Kiritori は Windows 向けの軽量キャプチャ & スニッピング支援ツールです。キーボードショートカット、領域固定、ズーム、OCR 連携など。" />
-  <link rel="icon" href="/favicon.ico" />
+  <meta name="description" content="Kiritori は Windows 向けの軽量キャプチャ & スニッピング支援ツールです。キーボードショートカット、領域固定、ズーム。" />
+  <link rel="icon" href="/kiritori.ico" />
   <!-- Open Graph -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Kiritori – 画面キャプチャ & スニッピング支援ツール" />
-  <meta property="og:description" content="Windows 向けの軽量キャプチャツール。ホットキー、領域固定、ズーム、OCR 連携。" />
+  <meta property="og:description" content="Windows 向けの軽量キャプチャツール。ホットキー、領域固定、ズーム。" />
   <meta property="og:url" content="https://kiritori.ruhenheim.org/" />
-  <meta property="og:image" content="https://kiritori.ruhenheim.org/og-image.png" />
+  <meta property="og:image" content="https://kiritori.ruhenheim.org/icon_256x256.png" />
   <meta name="theme-color" content="#0ea5e9" />
   <style>
     :root {
@@ -85,6 +85,23 @@
 
     footer { border-top:1px solid var(--border); padding: 28px 0 56px; color: var(--muted); }
     .muted { color: var(--muted); }
+    /* 拡大画像用モーダル */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal img {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    }
 
     @media (max-width: 920px) { .hero { grid-template-columns: 1fr; } .two { grid-template-columns: 1fr; } .grid { grid-template-columns: 1fr; } }
   </style>
@@ -92,7 +109,11 @@
 <body>
   <header>
     <div class="container nav">
-      <div class="logo"><div class="logo-badge">K</div> Kiritori</div>
+      <div class="logo">
+        <img src="https://kiritori.ruhenheim.org/icon_256x256.png" alt="Kiritori logo"
+            style="width:32px; height:32px; border-radius:8px; box-shadow:var(--shadow)">
+        <span>Kiritori</span>
+      </div>
       <nav>
         <a class="btn" href="#download">ダウンロード</a>
         <a class="btn" href="#features">特徴</a>
@@ -107,13 +128,12 @@
     <section class="hero">
       <div>
         <h1>一瞬で切り取る。<br>Windows 向けスニッピング補助 <span style="color:var(--brand-2)">Kiritori</span></h1>
-        <p>ホットキーで即キャプチャ、領域固定やピクセル単位のズーム、オーバーレイ表示、OCR 連携まで。開発・検証・資料作成の速度を上げます。</p>
+        <p>ホットキーで即キャプチャ、領域固定やピクセル単位のズーム、オーバーレイ表示。開発・検証・資料作成の速度を上げます。</p>
         <div class="callouts">
           <span class="chip">軽量・常駐</span>
           <span class="chip">高 DPI 対応</span>
           <span class="chip">ホットキー</span>
           <span class="chip">ズーム & ガイド</span>
-          <span class="chip">OCR 連携（外部ツール）</span>
         </div>
         <div style="display:flex; gap:12px; margin-top:18px">
           <a class="btn-primary" href="#download">今すぐ入手</a>
@@ -149,12 +169,21 @@
     <section class="section" id="features">
       <h2>主な特徴</h2>
       <div class="grid" style="margin-top:12px">
-        <div class="card"><h3>すばやいキャプチャ</h3><p>グローバルホットキーで即時に領域選択。固定領域・履歴から再実行も。</p></div>
-        <div class="card"><h3>高 DPI / マルチモニタ</h3><p>Per-Monitor DPI 対応で拡大縮小やにじみを最小化。</p></div>
-        <div class="card"><h3>ズームとガイド</h3><p>拡大表示やグリッド、ピクセル測定で UI 調整がラクに。</p></div>
-        <div class="card"><h3>OCR 連携</h3><p>外部 OCR（Tesseract / Capture2Text 等）と組み合わせて文字起こしに。</p></div>
-        <div class="card"><h3>軽量・常駐</h3><p>トレイ常駐で必要な時だけ素早く。ショートカットはカスタマイズ可。</p></div>
-        <div class="card"><h3>オープンソース</h3><p>GitHub で開発・ issue 受付。フィードバック歓迎です。</p></div>
+        <div class="card">
+          <a href="https://kiritori.ruhenheim.org/screenshot_001.png" target="_blank">
+            <img src="https://kiritori.ruhenheim.org/screenshot_001.png" alt="キャプチャのイメージ" style="width:100%; border-radius:12px; margin-bottom:8px" class="feature-img">
+          </a>
+          <h3>すばやいキャプチャ</h3>
+          <p>グローバルホットキーで即時に領域選択(Ctrl+Shift+5)。固定領域・履歴から再実行も。</p>
+        </div>
+
+        <div class="card">
+          <a href="https://kiritori.ruhenheim.org/screenshot_002.png" target="_blank">
+            <img src="https://kiritori.ruhenheim.org/screenshot_002.png" alt="動作のイメージ" style="width:100%; border-radius:12px; margin-bottom:8px" class="feature-img">
+          </a>
+          <h3>軽量・常駐</h3>
+          <p>トレイ常駐で必要な時だけ素早く。ショートカット操作可能。</p>
+        </div>
       </div>
     </section>
 
@@ -162,18 +191,10 @@
       <div>
         <h2>変更履歴</h2>
         <details open>
-          <summary>vX.Y.Z – 2025-08-XX</summary>
+          <summary>v1.1.0 – 2025-08-24</summary>
           <ul>
             <li>高 DPI でのズームと位置補正を改善</li>
             <li>CS_DROPSHADOW の適用を安定化</li>
-            <li>ホットキー競合時のリカバリを改善</li>
-          </ul>
-        </details>
-        <details>
-          <summary>vX.Y.(前) – 2025-07-XX</summary>
-          <ul>
-            <li>領域固定の再実行ショートカット追加</li>
-            <li>ログ出力と診断オーバーレイ追加</li>
           </ul>
         </details>
         <p class="muted" style="margin-top:8px">※ 正式な履歴は GitHub Releases を参照してください。</p>
@@ -181,16 +202,13 @@
       <div>
         <h2>よくある質問（FAQ）</h2>
         <details>
-          <summary>「保護されていない通信」と出るのは？</summary>
-          <p>混在コンテンツ（HTTPS ページ内の HTTP 画像等）や TLS/証明書設定の問題が原因になります。本サイトはすべて HTTPS のみ・HSTS 強制を推奨しています。</p>
-        </details>
-        <details>
           <summary>配布ファイルは EXE と ZIP どちらが良い？</summary>
-          <p>ブラウザやプロキシで誤検知されにくい ZIP を推奨します。ZIP 内には EXE と README、署名/ハッシュを同梱してください。</p>
+          <p>ブラウザやプロキシで誤検知されにくい ZIP を推奨します。</p>
         </details>
         <details>
           <summary>SmartScreen が出ます</summary>
-          <p>署名がない場合や配布直後は表示されることがあります。発行元/ハッシュを確認し、信頼できる場合のみ実行してください。</p>
+          <p>署名がない場合や配布直後は表示されることがあります。発行元を確認し、信頼できる場合のみ実行してください。</p>
+          <!-- <p>署名がない場合や配布直後は表示されることがあります。発行元/ハッシュを確認し、信頼できる場合のみ実行してください。</p> -->
         </details>
       </div>
     </section>
@@ -198,7 +216,7 @@
     <section class="section two" id="policy">
       <div>
         <h2>プライバシー & ライセンス</h2>
-        <p>Kiritori は個人情報を収集しません（自動アップデートやトラッキングなし）。ソースコードと配布バイナリのライセンスはリポジトリをご確認ください。</p>
+        <p>Kiritori は個人情報を収集しません（自動アップデートやトラッキングなし）。</p>
         <ul class="muted">
           <li><a href="https://github.com/mmiyaji/Kiritori-win" target="_blank" rel="noopener">GitHub リポジトリ</a></li>
           <li><a href="https://github.com/mmiyaji/Kiritori-win/releases" target="_blank" rel="noopener">Releases（配布）</a></li>
@@ -206,15 +224,17 @@
       </div>
       <div>
         <h2>サポート</h2>
-        <p>不具合やご要望は GitHub Issues へ。商用や組織導入に関する問い合わせは下記へ。</p>
+        <p>不具合やご要望は GitHub Issues へ。</p>
         <ul class="muted">
           <li>不具合報告: GitHub Issues</li>
-          <li>連絡先: <a href="mailto:contact@ruhenheim.org">contact@ruhenheim.org</a></li>
+          <li>連絡先: <a href="mailto:mmiyaji@ruhenheim.org">mmiyaji@ruhenheim.org</a></li>
         </ul>
       </div>
     </section>
   </main>
-
+  <div id="imgModal" class="modal">
+    <img id="modalImg" src="" alt="">
+  </div>
   <footer>
     <div class="container">
       <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap">
@@ -245,6 +265,19 @@
         if (exe) document.getElementById('dlWinExe').href = exe.browser_download_url;
       } catch(e) { /* ignore */ }
     })();
+    document.querySelectorAll('.feature-img').forEach(img => {
+      img.addEventListener('click', e => {
+        e.preventDefault();
+        const modal = document.getElementById('imgModal');
+        const modalImg = document.getElementById('modalImg');
+        modalImg.src = img.src;
+        modal.style.display = 'flex';
+      });
+    });
+
+    document.getElementById('imgModal').addEventListener('click', () => {
+      document.getElementById('imgModal').style.display = 'none';
+    });
   </script>
 
   <!-- 推奨: セキュリティヘッダ（サーバ設定例）
