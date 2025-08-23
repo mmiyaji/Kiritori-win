@@ -67,8 +67,7 @@ namespace Kiritori
         {
             // 設定保存（双方向バインド済みのため Save のみでOK）
             Properties.Settings.Default.Save();
-            this.Close();
-
+            // this.Close();
             // 旧：スタートアップのショートカット作成はMSIX配布では不要
             // SetStartupShortcut(Properties.Settings.Default.isStartup);
         }

@@ -839,6 +839,5 @@ namespace Kiritori
             ShowOverlay(this.isWindowShadow ? "Shadow: ON" : "Shadow: OFF");
         }
 
-
     }
 }
