@@ -106,17 +106,5 @@ namespace Kiritori.Properties {
                 this["DoNotShowOnStartup"] = value;
             }
         }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool TrayBalloonShown {
-            get {
-                return ((bool)(this["TrayBalloonShown"]));
-            }
-            set {
-                this["TrayBalloonShown"] = value;
-            }
-        }
     }
 }

@@ -252,29 +252,5 @@ namespace Kiritori
                 // 右クリックは ContextMenuStrip が出るので、通常は何もしない
             }
         }
-
-        protected override void OnResize(EventArgs e)
-        {
-            base.OnResize(e);
-            if (this.WindowState == FormWindowState.Minimized)
-            {
-                this.ShowInTaskbar = false;
-                this.Hide();
-                notifyIcon1.Visible = true;
-
-                // 初回だけ説明バルーン
-                if (!Kiritori.Properties.Settings.Default.TrayBalloonShown)
-                {
-                    notifyIcon1.BalloonTipTitle = "Kiritori is running in the tray";
-                    notifyIcon1.BalloonTipText  = "Double-click to open. Right-click for menu (Open / Exit).";
-                    notifyIcon1.BalloonTipIcon  = ToolTipIcon.Info;
-                    notifyIcon1.ShowBalloonTip(4000);
-
-                    Kiritori.Properties.Settings.Default.TrayBalloonShown = true;
-                    Kiritori.Properties.Settings.Default.Save();
-                }
-            }
-        }
-
     }
 }

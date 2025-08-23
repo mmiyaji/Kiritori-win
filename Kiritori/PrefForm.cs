@@ -63,10 +63,6 @@ namespace Kiritori
                 DateTime.Now
             );
         }
-
-        // 不要（デザイナに紐付けていなければ呼ばれません）
-        private void textBox2_TextChanged(object sender, EventArgs e) { }
-
         private void btnSavestings_Click(object sender, EventArgs e)
         {
             // 設定保存（双方向バインド済みのため Save のみでOK）
