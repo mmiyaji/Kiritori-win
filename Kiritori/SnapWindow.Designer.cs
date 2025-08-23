@@ -184,6 +184,7 @@
             // dropShadowToolStripMenuItem
             // 
             this.dropShadowToolStripMenuItem.Name = "dropShadowToolStripMenuItem";
+            this.dropShadowToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.D)));
             this.dropShadowToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.dropShadowToolStripMenuItem.Text = "Toggle Drop Shadow";
             this.dropShadowToolStripMenuItem.Click += new System.EventHandler(this.dropShadowToolStripMenuItem_Click);

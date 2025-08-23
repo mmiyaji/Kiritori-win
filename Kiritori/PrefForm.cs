@@ -180,5 +180,74 @@ namespace Kiritori
             }
             catch { /* 失敗時は無視 */ }
         }
+        private System.Drawing.Drawing2D.GraphicsPath RoundRect(Rectangle r, int radius)
+        {
+            int d = radius * 2;
+            var path = new System.Drawing.Drawing2D.GraphicsPath();
+            path.AddArc(r.X, r.Y, d, d, 180, 90);
+            path.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+            path.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+            path.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+
+        private void descCard_Paint(object sender, PaintEventArgs e)
+        {
+            var p = (Panel)sender;
+            var g = e.Graphics;
+
+            // ベース矩形（枠線1pxぶん内側）
+            var rect = new Rectangle(0, 0, p.Width - 1, p.Height - 1);
+            int radius = 8;
+
+            using (var path = RoundRect(rect, radius))
+            using (var border = new Pen(Color.FromArgb(210, 215, 220), 1f))
+            using (var accent = new SolidBrush(SystemColors.Highlight))
+            {
+                // --- 1) 角丸カードの内側だけにクリップしてバーを塗る（にじみ防止）
+                var state = g.Save();
+                g.SetClip(path, System.Drawing.Drawing2D.CombineMode.Replace);
+
+                // バーは枠の内側に 1px 余白を取る（枠のAAと干渉しない）
+                const int inset = 1;
+                const int barW = 4;
+                var bar = new Rectangle(rect.X + inset, rect.Y + inset, barW, rect.Height - inset * 2);
+
+                // --- 2) バー塗りはアンチエイリアスOFFでカリッと
+                var oldSmooth = g.SmoothingMode;
+                var oldPixel  = g.PixelOffsetMode;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
+                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Default;
+
+                g.FillRectangle(accent, bar);
+
+                // 元に戻す
+                g.SmoothingMode = oldSmooth;
+                g.PixelOffsetMode = oldPixel;
+                g.Restore(state);
+
+                // --- 3) 枠は最後にアンチエイリアスONで重ねる（バーにじみの上書き）
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                g.DrawPath(border, path);
+            }
+        }
+
+        // PrefForm クラス内に配置関数を追加
+        private void PositionDescHeader()
+        {
+            if (this.labelDescHeader == null || this.descCard == null) return;
+
+            // 先に AutoSize させて高さを確定
+            this.labelDescHeader.AutoSize = true;
+
+            int x = this.descCard.Left + 8;                          // 左から少し
+            int y = this.descCard.Top - (this.labelDescHeader.Height / 2); // 半分だけ被せる
+            if (y < 8) y = 8;                                         // 画面上端はみ出し防止
+
+            this.labelDescHeader.Location = new Point(x, y);
+            this.labelDescHeader.BringToFront();
+        }
+
     }
 }

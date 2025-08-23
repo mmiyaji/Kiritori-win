@@ -1,4 +1,5 @@
 ﻿using System.Drawing;
+using System.Windows.Forms;
 
 namespace Kiritori
 {
@@ -32,6 +33,7 @@ namespace Kiritori
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(PrefForm));
             this.tabInfo = new System.Windows.Forms.TabPage();
             this.labelTrayNote = new System.Windows.Forms.Label();
+            // this.labelDescription = new System.Windows.Forms.Label();
             this.chkDoNotShowOnStartup = new System.Windows.Forms.CheckBox();
             this.labelVersion = new System.Windows.Forms.Label();
             this.labelSign = new System.Windows.Forms.Label();
@@ -85,6 +87,8 @@ namespace Kiritori
             this.labelClose = new System.Windows.Forms.Label();
             this.textBoxAfloat = new System.Windows.Forms.TextBox();
             this.labelAfloat = new System.Windows.Forms.Label();
+            this.textBoxDropShadow = new System.Windows.Forms.TextBox();
+            this.labelDropShadow = new System.Windows.Forms.Label();
             this.tabInfo.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.picAppIcon)).BeginInit();
             this.tabControl.SuspendLayout();
@@ -93,6 +97,20 @@ namespace Kiritori
             ((System.ComponentModel.ISupportInitialize)(this.trackbarOpacty)).BeginInit();
             this.tabPageShortcuts.SuspendLayout();
             this.SuspendLayout();
+            // 
+            // tabControl
+            // 
+            this.tabControl.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.tabControl.Controls.Add(this.tabInfo);
+            this.tabControl.Controls.Add(this.tabPageBasic);
+            this.tabControl.Controls.Add(this.tabPageShortcuts);
+            this.tabControl.Location = new System.Drawing.Point(0, 0);
+            this.tabControl.Name = "tabControl";
+            this.tabControl.SelectedIndex = 0;
+            this.tabControl.Size = new System.Drawing.Size(434, 278);
+            this.tabControl.TabIndex = 0;
             // 
             // tabInfo
             // 
@@ -106,25 +124,67 @@ namespace Kiritori
             this.tabInfo.Location = new System.Drawing.Point(4, 22);
             this.tabInfo.Name = "tabInfo";
             this.tabInfo.Padding = new System.Windows.Forms.Padding(3);
-            this.tabInfo.Size = new System.Drawing.Size(426, 237);
+            this.tabInfo.Size = new System.Drawing.Size(426, 252);
             this.tabInfo.TabIndex = 5;
             this.tabInfo.Text = "Info";
             this.tabInfo.UseVisualStyleBackColor = true;
+
+            // descCard はそのまま
+            this.descCard = new System.Windows.Forms.Panel();
+            this.descCard.Location = new System.Drawing.Point(20, 140);
+            this.descCard.Size = new System.Drawing.Size(390, 60);
+            this.descCard.Padding = new System.Windows.Forms.Padding(14, 12, 14, 12);
+            this.descCard.Anchor = (AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right);
+            this.descCard.BackColor = Color.FromArgb(248, 248, 248);
+            this.descCard.Paint += new System.Windows.Forms.PaintEventHandler(this.descCard_Paint);
+            this.tabInfo.Controls.Add(this.descCard);
+
+            // 本文ラベル（カードの中）
+            this.labelDescription = new System.Windows.Forms.Label();
+            this.labelDescription.AutoSize = true;
+            this.labelDescription.MaximumSize = new System.Drawing.Size(360, 0);
+            this.labelDescription.Text =
+            "• Capture any screen region instantly.\n" +
+            "• Shows as a borderless, always-on-top window.\n" +
+            "• Move, zoom, copy, or save the cutout.";
+            this.labelDescription.Dock = DockStyle.Top;
+            this.descCard.Controls.Add(this.labelDescription);
+
+            // ←ここがポイント：ヘッダーは tabInfo の子にする（descCard ではない）
+            this.labelDescHeader = new System.Windows.Forms.Label();
+            this.labelDescHeader.AutoSize = true;
+            this.labelDescHeader.Font = new Font(this.Font, FontStyle.Bold);
+            this.labelDescHeader.Text = "What Kiritori does";
+
+            // バッジっぽく見せるための余白と背景
+            this.labelDescHeader.Padding = new Padding(8, 2, 8, 2);
+            // カードの縁を“消す”ためにタブ背景色で塗る
+            this.labelDescHeader.BackColor = this.tabInfo.BackColor;
+
+            this.tabInfo.Controls.Add(this.labelDescHeader);
+            // 前面に
+            this.labelDescHeader.BringToFront();
+
+            // レイアウト時にカード位置から算出して“半分かぶせる”
+            this.tabInfo.Layout += (s, e) => PositionDescHeader();
+
             // 
             // labelTrayNote
             // 
             this.labelTrayNote.AutoSize = true;
             this.labelTrayNote.ForeColor = System.Drawing.SystemColors.GrayText;
-            this.labelTrayNote.Location = new System.Drawing.Point(24, 160);
+            // this.labelTrayNote.Location = new System.Drawing.Point(24, 160);
+            this.labelTrayNote.Location = new System.Drawing.Point(25, 230);
             this.labelTrayNote.Name = "labelTrayNote";
             this.labelTrayNote.Size = new System.Drawing.Size(360, 24);
             this.labelTrayNote.TabIndex = 7;
-            this.labelTrayNote.Text = "\'Kiritori\' runs in the system tray.\r\nRight-click the tray icon to open or exit.";
+            this.labelTrayNote.Text = "Tip: Right-click the tray icon for menu.  Hotkey: Ctrl + Shift + 5";
             // 
             // chkDoNotShowOnStartup
             // 
             this.chkDoNotShowOnStartup.AutoSize = true;
-            this.chkDoNotShowOnStartup.Location = new System.Drawing.Point(25, 200);
+            // this.chkDoNotShowOnStartup.Location = new System.Drawing.Point(25, 200);
+            this.chkDoNotShowOnStartup.Location = new System.Drawing.Point(25, 210);
             this.chkDoNotShowOnStartup.Name = "chkDoNotShowOnStartup";
             this.chkDoNotShowOnStartup.Size = new System.Drawing.Size(195, 16);
             this.chkDoNotShowOnStartup.TabIndex = 6;
@@ -136,11 +196,25 @@ namespace Kiritori
             // 
             // picAppIcon
             // 
-            this.picAppIcon.Image = global::Kiritori.Properties.Resources.icon_128x128;
-            this.picAppIcon.InitialImage = ((System.Drawing.Image)(resources.GetObject("picAppIcon.InitialImage")));
-            this.picAppIcon.Location = new System.Drawing.Point(20, 20);
-            this.picAppIcon.Name = "picAppIcon";
-            this.picAppIcon.Size = new System.Drawing.Size(128, 128);
+            var src = global::Kiritori.Properties.Resources.icon_128x128;
+            int tgt = 120; // ここを 88/92/100 にすれば微調整可
+
+            var scaled = new Bitmap(tgt, tgt, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+            using (var g = Graphics.FromImage(scaled))
+            {
+                g.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceOver;
+                g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+
+                g.DrawImage(src, new Rectangle(0, 0, tgt, tgt));
+            }
+
+            // 置き換え
+            this.picAppIcon.Image = scaled;
+            this.picAppIcon.Location = new System.Drawing.Point(20, 10);
+            this.picAppIcon.SizeMode = PictureBoxSizeMode.AutoSize; // 生成したサイズのまま表示            this.picAppIcon.Name = "picAppIcon";
             this.picAppIcon.TabIndex = 0;
             this.picAppIcon.TabStop = false;
             // 
@@ -154,7 +228,7 @@ namespace Kiritori
                 FontStyle.Bold                               // 太字
             );
             this.labelAppName.Font = new Font(this.labelAppName.Font, FontStyle.Bold);
-            this.labelAppName.Location = new System.Drawing.Point(155, 23);
+            this.labelAppName.Location = new System.Drawing.Point(155, 13);
             this.labelAppName.Name = "labelAppName";
             this.labelAppName.Size = new System.Drawing.Size(156, 16);
             this.labelAppName.TabIndex = 2;
@@ -163,7 +237,7 @@ namespace Kiritori
             // labelVersion
             // 
             this.labelVersion.AutoSize = true;
-            this.labelVersion.Location = new System.Drawing.Point(170, 60);
+            this.labelVersion.Location = new System.Drawing.Point(170, 50);
             this.labelVersion.Name = "labelVersion";
             this.labelVersion.Size = new System.Drawing.Size(195, 12);
             this.labelVersion.TabIndex = 4;
@@ -172,7 +246,7 @@ namespace Kiritori
             // labelSign
             // 
             this.labelSign.AutoSize = true;
-            this.labelSign.Location = new System.Drawing.Point(170, 85);
+            this.labelSign.Location = new System.Drawing.Point(170, 75);
             this.labelSign.Name = "labelSign";
             this.labelSign.Size = new System.Drawing.Size(216, 12);
             this.labelSign.TabIndex = 3;
@@ -181,27 +255,26 @@ namespace Kiritori
             // labelLinkWebsite
             // 
             this.labelLinkWebsite.AutoSize = true;
-            this.labelLinkWebsite.Location = new System.Drawing.Point(170, 110);
+            this.labelLinkWebsite.Location = new System.Drawing.Point(170, 100);
             this.labelLinkWebsite.Name = "labelLinkWebsite";
             this.labelLinkWebsite.Size = new System.Drawing.Size(260, 12);
             this.labelLinkWebsite.TabIndex = 1;
             this.labelLinkWebsite.TabStop = true;
             this.labelLinkWebsite.Text = "HomePage - https://kiritori.ruhenheim.org";
             this.labelLinkWebsite.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel1_LinkClicked);
-            // 
-            // tabControl
-            // 
-            this.tabControl.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.tabControl.Controls.Add(this.tabInfo);
-            this.tabControl.Controls.Add(this.tabPageBasic);
-            this.tabControl.Controls.Add(this.tabPageShortcuts);
-            this.tabControl.Location = new System.Drawing.Point(0, 0);
-            this.tabControl.Name = "tabControl";
-            this.tabControl.SelectedIndex = 0;
-            this.tabControl.Size = new System.Drawing.Size(434, 263);
-            this.tabControl.TabIndex = 0;
+            // // labelDescription
+            // this.labelDescription = new System.Windows.Forms.Label();
+            // this.labelDescription.AutoSize = true;
+            // this.labelDescription.Location = new System.Drawing.Point(25, 155);
+            // this.labelDescription.MaximumSize = new System.Drawing.Size(360, 0); // 幅で折返し
+            // this.labelDescription.Name = "labelDescription";
+            // this.labelDescription.TabIndex = 8;
+            // this.labelDescription.Text =
+            //     "\'Kiritori\' is a lightweight screen capture tool. " +
+            //     "Select any region of the screen and it instantly appears as a " +
+            //     "borderless, always-on-top window that you can move, zoom, copy, or save.";
+            // this.tabInfo.Controls.Add(this.labelDescription);
+
             // 
             // tabPageBasic
             // 
@@ -224,7 +297,7 @@ namespace Kiritori
             this.tabPageBasic.Location = new System.Drawing.Point(4, 22);
             this.tabPageBasic.Name = "tabPageBasic";
             this.tabPageBasic.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageBasic.Size = new System.Drawing.Size(426, 237);
+            this.tabPageBasic.Size = new System.Drawing.Size(426, 247);
             this.tabPageBasic.TabIndex = 6;
             this.tabPageBasic.Text = "Basic";
             this.tabPageBasic.UseVisualStyleBackColor = true;
@@ -425,10 +498,12 @@ namespace Kiritori
             this.tabPageShortcuts.Controls.Add(this.labelClose);
             this.tabPageShortcuts.Controls.Add(this.textBoxAfloat);
             this.tabPageShortcuts.Controls.Add(this.labelAfloat);
+            this.tabPageShortcuts.Controls.Add(this.textBoxDropShadow);
+            this.tabPageShortcuts.Controls.Add(this.labelDropShadow);
             this.tabPageShortcuts.Location = new System.Drawing.Point(4, 22);
             this.tabPageShortcuts.Name = "tabPageShortcuts";
             this.tabPageShortcuts.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageShortcuts.Size = new System.Drawing.Size(426, 237);
+            this.tabPageShortcuts.Size = new System.Drawing.Size(426, 247);
             this.tabPageShortcuts.TabIndex = 7;
             this.tabPageShortcuts.Text = "Shortcuts";
             this.tabPageShortcuts.UseVisualStyleBackColor = true;
@@ -665,7 +740,25 @@ namespace Kiritori
             this.labelAfloat.Name = "labelAfloat";
             this.labelAfloat.Size = new System.Drawing.Size(69, 12);
             this.labelAfloat.TabIndex = 0;
-            this.labelAfloat.Text = "toggle afloat";
+            this.labelAfloat.Text = "afloat";
+            // 
+            // textBoxDropShadow
+            // 
+            this.textBoxDropShadow.Enabled = false;
+            this.textBoxDropShadow.Location = new System.Drawing.Point(98, 220);
+            this.textBoxDropShadow.Name = "textBoxDropShadow";
+            this.textBoxDropShadow.Size = new System.Drawing.Size(100, 19);
+            this.textBoxDropShadow.TabIndex = 1;
+            this.textBoxDropShadow.Text = "Ctrl + d";
+            // 
+            // labelDropShadow
+            // 
+            this.labelDropShadow.AutoSize = true;
+            this.labelDropShadow.Location = new System.Drawing.Point(22, 220);
+            this.labelDropShadow.Name = "labelDropShadow";
+            this.labelDropShadow.Size = new System.Drawing.Size(69, 12);
+            this.labelDropShadow.TabIndex = 0;
+            this.labelDropShadow.Text = "drop shadow";
             // 
             // textBoxPrint
             // 
@@ -692,7 +785,7 @@ namespace Kiritori
             this.ClientSize = new System.Drawing.Size(434, 262);
             this.Controls.Add(this.tabControl);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.MinimumSize = new System.Drawing.Size(450, 300);
+            this.MinimumSize = new System.Drawing.Size(450, 320);
             this.Name = "PrefForm";
             this.Text = "Kiritori - Main / Preferences";
             this.Load += new System.EventHandler(this.PrefForm_Load);
@@ -733,6 +826,8 @@ namespace Kiritori
         private System.Windows.Forms.TabPage tabPageShortcuts;
         private System.Windows.Forms.TextBox textBoxAfloat;
         private System.Windows.Forms.Label labelAfloat;
+        private System.Windows.Forms.TextBox textBoxDropShadow;
+        private System.Windows.Forms.Label labelDropShadow;
         private System.Windows.Forms.TextBox textBoxClose;
         private System.Windows.Forms.Label labelClose;
         private System.Windows.Forms.TextBox textBoxZoomOut;
@@ -767,5 +862,8 @@ namespace Kiritori
         private System.Windows.Forms.Button btnOpenStartupSettings;
         private System.Windows.Forms.CheckBox chkDoNotShowOnStartup;
         private System.Windows.Forms.Label labelTrayNote;
+        private System.Windows.Forms.Panel descCard;
+        private System.Windows.Forms.Label labelDescHeader;
+        private System.Windows.Forms.Label labelDescription;
     }
 }

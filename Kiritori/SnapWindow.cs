@@ -22,6 +22,7 @@ namespace Kiritori
         SHIFT_MOVE_UP = Keys.Up         | Keys.Shift,
         SHIFT_MOVE_DOWN = Keys.Down     | Keys.Shift,
         FLOAT       = Keys.Control | Keys.A,
+        SHADOW      = Keys.Control | Keys.D,
         SAVE        = Keys.Control | Keys.S,
         LOAD        = Keys.Control | Keys.O,
         OPEN        = Keys.Control | Keys.N,
@@ -117,7 +118,7 @@ namespace Kiritori
             this.AutoScaleMode = AutoScaleMode.Dpi;
             this.AutoScaleDimensions = new SizeF(96F, 96F);
         }
-        
+
         private (Bitmap normal, Bitmap hover) GetCloseBitmapsForDpi(int dpi)
         {
             int key = (dpi <= 0 ? this.DeviceDpi : dpi);
@@ -222,7 +223,7 @@ namespace Kiritori
             if (_isDragging && (e.Button & MouseButtons.Left) == MouseButtons.Left)
             {
                 this.Left += e.X - mousePoint.X;
-                this.Top  += e.Y - mousePoint.Y;
+                this.Top += e.Y - mousePoint.Y;
                 this.Opacity = this.alpha_value * DRAG_ALPHA;
             }
         }
@@ -271,6 +272,9 @@ namespace Kiritori
                     break;
                 case (int)HOTS.SHIFT_MOVE_DOWN:
                     this.SetDesktopLocation(this.Location.X, this.Location.Y + SHIFT_MOVE_STEP);
+                    break;
+                case (int)HOTS.SHADOW:
+                    this.ToggleShadow(!this.isWindowShadow);
                     break;
                 case (int)HOTS.FLOAT:
                     this.TopMost = !this.TopMost;
@@ -326,7 +330,7 @@ namespace Kiritori
         {
             _zoomStep++;
             UpdateScaleFromStep();
-            ApplyZoom(redrawOnly:false);
+            ApplyZoom(redrawOnly: false);
             ShowOverlay($"Zoom {(int)Math.Round(_scale * 100)}%");
         }
 
@@ -334,7 +338,7 @@ namespace Kiritori
         {
             _zoomStep--;
             UpdateScaleFromStep();
-            ApplyZoom(redrawOnly:false);
+            ApplyZoom(redrawOnly: false);
             ShowOverlay($"Zoom {(int)Math.Round(_scale * 100)}%");
         }
 
@@ -342,7 +346,7 @@ namespace Kiritori
         {
             _zoomStep = 0;   // = 100%
             UpdateScaleFromStep();
-            ApplyZoom(redrawOnly:false);
+            ApplyZoom(redrawOnly: false);
             ShowOverlay("Zoom 100%");
         }
 
@@ -351,7 +355,7 @@ namespace Kiritori
         {
             _zoomStep = (int)Math.Round((percent - 100) / (STEP_LINEAR * 100f));
             UpdateScaleFromStep();
-            ApplyZoom(redrawOnly:false);
+            ApplyZoom(redrawOnly: false);
             ShowOverlay($"Zoom {percent}%");
         }
 
@@ -605,7 +609,7 @@ namespace Kiritori
 
         private void dropShadowToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            //            this.FormBorderStyle = FormBorderStyle.None;
+            ToggleShadow(!this.isWindowShadow);
         }
 
         private void preferencesToolStripMenuItem_Click(object sender, EventArgs e)
@@ -676,9 +680,9 @@ namespace Kiritori
         private void PictureBox1_Paint(object sender, PaintEventArgs e)
         {
             var g = e.Graphics;
-            g.SmoothingMode     = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-            g.PixelOffsetMode   = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
 
             // ===== オーバーレイ（あれば描く） =====
             if (!string.IsNullOrEmpty(_overlayText))
@@ -698,13 +702,13 @@ namespace Kiritori
                 int h = (int)System.Math.Ceiling(ts.Height) + padding * 2;
 
                 int margin = (int)(12 * (_dpi / 96f));
-                int x = pictureBox1.ClientSize.Width  - w - margin;
+                int x = pictureBox1.ClientSize.Width - w - margin;
                 int y = pictureBox1.ClientSize.Height - h - margin;
 
                 using (var path = RoundedRect(new Rectangle(x, y, w, h), radius: (int)(8 * (_dpi / 96f))))
-                using (var bg   = new SolidBrush(Color.FromArgb(alpha, 0, 0, 0)))
-                using (var pen  = new Pen(Color.FromArgb(System.Math.Max(80, alpha), 255, 255, 255), 1f))
-                using (var txt  = new SolidBrush(Color.FromArgb(System.Math.Max(180, alpha), 255, 255, 255)))
+                using (var bg = new SolidBrush(Color.FromArgb(alpha, 0, 0, 0)))
+                using (var pen = new Pen(Color.FromArgb(System.Math.Max(80, alpha), 255, 255, 255), 1f))
+                using (var txt = new SolidBrush(Color.FromArgb(System.Math.Max(180, alpha), 255, 255, 255)))
                 {
                     g.FillPath(bg, path);
                     g.DrawPath(pen, path);
@@ -714,17 +718,17 @@ namespace Kiritori
 
             // ===== 右上クローズボタン（ウィンドウにホバー中のみ） =====
             if (_hoverWindow &&
-                pictureBox1.ClientSize.Width  >= MIN_WIDTH &&
+                pictureBox1.ClientSize.Width >= MIN_WIDTH &&
                 pictureBox1.ClientSize.Height >= MIN_HEIGHT)
             {
                 // DPIに合わせたPNGを取得（PNG版のキャッシュ関数を使う想定）
                 var pair = GetCloseBitmapsForDpi(this.DeviceDpi);
-                var img  = _hoverClose ? pair.hover : pair.normal;
+                var img = _hoverClose ? pair.hover : pair.normal;
 
                 float scale = this.DeviceDpi / 96f;
                 int marginPx = (int)System.Math.Round(8 * scale);
 
-                int x = pictureBox1.ClientSize.Width  - img.Width  - marginPx;
+                int x = pictureBox1.ClientSize.Width - img.Width - marginPx;
                 int y = marginPx;
 
                 _closeBtnRect = new Rectangle(x, y, img.Width, img.Height);
@@ -771,7 +775,7 @@ namespace Kiritori
             path.CloseFigure();
             return path;
         }
-        
+
         private void SetImageAndResetZoom(Image img)
         {
             // 元画像を保持
@@ -780,7 +784,7 @@ namespace Kiritori
 
             _scale = 1f;
             pictureBox1.SizeMode = PictureBoxSizeMode.Normal; // 重要: Zoomは使わない
-            ApplyZoom(redrawOnly:false);
+            ApplyZoom(redrawOnly: false);
         }
 
         private void ApplyZoom(bool redrawOnly)
@@ -824,8 +828,15 @@ namespace Kiritori
                 int dx = (this.ClientSize.Width - oldClient.Width) / 2;
                 int dy = (this.ClientSize.Height - oldClient.Height) / 2;
                 this.Left -= dx;
-                this.Top  -= dy;
+                this.Top -= dy;
             }
+        }
+
+        public void ToggleShadow(bool enable)
+        {
+            this.isWindowShadow = enable;
+            this.RecreateHandle();
+            ShowOverlay(this.isWindowShadow ? "Shadow: ON" : "Shadow: OFF");
         }
 
 
