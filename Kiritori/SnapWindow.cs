@@ -40,7 +40,7 @@ namespace Kiritori
     public partial class SnapWindow : Form
     {
         public DateTime date;
-        private int ws, hs;
+        //private int ws, hs;
         private Boolean isWindowShadow = true;
         private Boolean isAfloatWindow = true;
         //マウスのクリック位置を記憶
@@ -60,16 +60,26 @@ namespace Kiritori
         private Font _overlayFont = new Font("Segoe UI", 10f, FontStyle.Bold);
         private int _dpi = 96;
 
-        private double _zoom = 1.0;           // 現在倍率
+        //private double _zoom = 1.0;           // 現在倍率
         private const double zoomStep = 1.10; // 10% ずつ
         private const double zoomMin = 0.01;
         private const double zoomMax = 10.0;
         private Image _originalImage;  // 元画像を保持
         private float _scale = 1f;
         private const float ScaleStep = 1.1f; // 10% ずつ
+        const int MIN_WIDTH = 100;  // ホバー時のボタン表示調整用
+        const int MIN_HEIGHT = 50;  // ホバー時のボタン表示調整用
 
         public Bitmap main_image;
         public Bitmap thumbnail_image;
+        private readonly Dictionary<int, (Bitmap normal, Bitmap hover)> _closeIconCache
+            = new Dictionary<int, (Bitmap normal, Bitmap hover)>();
+        // SnapWindow クラスのフィールドに追加
+        private bool _hoverWindow = false;          // マウスがウィンドウ上にあるか
+        private bool _hoverClose = false;           // マウスが「×ボタン」上にあるか
+        private Rectangle _closeBtnRect = Rectangle.Empty; // ×ボタンの領域
+        private bool _isDragging = false;
+
         public SnapWindow(MainApplication mainapp)
         {
             this.ma = mainapp;
@@ -98,10 +108,33 @@ namespace Kiritori
 
             InitializeComponent();
             this.pictureBox1.Paint += PictureBox1_Paint;
+            this.pictureBox1.MouseMove += PictureBox1_MouseMove_Icon;
+            this.pictureBox1.MouseClick += PictureBox1_MouseClick_Icon;
+            this.pictureBox1.MouseEnter += (_, __) => { _hoverWindow = true; pictureBox1.Invalidate(); };
+            this.pictureBox1.MouseLeave += (_, __) => { _hoverWindow = false; _hoverClose = false; pictureBox1.Invalidate(); };
+
             this.DoubleBuffered = true; // チラつき軽減
             this.AutoScaleMode = AutoScaleMode.Dpi;
             this.AutoScaleDimensions = new SizeF(96F, 96F);
         }
+        
+        private (Bitmap normal, Bitmap hover) GetCloseBitmapsForDpi(int dpi)
+        {
+            int key = (dpi <= 0 ? this.DeviceDpi : dpi);
+            if (_closeIconCache.TryGetValue(key, out var cached)) return cached;
+
+            float scale = key / 96f;
+            int size = (int)Math.Round(20 * scale);
+
+            // resx から取得した Bitmap を DPI に合わせてリサイズ
+            Bitmap bmpNormal = new Bitmap(Properties.Resources.close, new Size(size, size));
+            // Bitmap bmpHover = new Bitmap(Properties.Resources.close_hover, new Size(size, size));
+            Bitmap bmpHover = new Bitmap(Properties.Resources.close_bold, new Size(size, size));
+
+            _closeIconCache[key] = (bmpNormal, bmpHover);
+            return _closeIconCache[key];
+        }
+
         private void Form1_Load(object sender, EventArgs e)
         {
             pictureBox1.MouseDown +=
@@ -158,35 +191,49 @@ namespace Kiritori
                 this.thumbnail_image = bmp;
             }
         }
-        //マウスのボタンが押されたとき
-        private void Form1_MouseDown(object sender,
-            System.Windows.Forms.MouseEventArgs e)
+        // マウスダウン
+        private void Form1_MouseDown(object sender, MouseEventArgs e)
         {
-            if ((e.Button & MouseButtons.Left) == MouseButtons.Left)
-            {
-                //位置を記憶する
-                mousePoint = new Point(e.X, e.Y);
-            }
+            if (e.Button != MouseButtons.Left) return;
+
+            // ×ボタン上ならドラッグ開始しない（クリック処理は PictureBox1_MouseClick_Icon でClose）
+            if (!_closeBtnRect.IsEmpty && _closeBtnRect.Contains(e.Location))
+                return;
+
+            mousePoint = new Point(e.X, e.Y);
+            _isDragging = true;
         }
 
-        //マウスが動いたとき
-        private void Form1_MouseMove(object sender,
-            System.Windows.Forms.MouseEventArgs e)
+        // マウスムーブ
+        private void Form1_MouseMove(object sender, MouseEventArgs e)
         {
-            if ((e.Button & MouseButtons.Left) == MouseButtons.Left)
+            // ×ボタン上では常にドラッグしない
+            if (!_closeBtnRect.IsEmpty && _closeBtnRect.Contains(e.Location))
+            {
+                // 視覚的に分かりやすくするならカーソル変更（任意）
+                this.Cursor = Cursors.Hand;
+                return;
+            }
+            else
+            {
+                this.Cursor = Cursors.Default; // 任意
+            }
+
+            if (_isDragging && (e.Button & MouseButtons.Left) == MouseButtons.Left)
             {
                 this.Left += e.X - mousePoint.X;
-                this.Top += e.Y - mousePoint.Y;
+                this.Top  += e.Y - mousePoint.Y;
                 this.Opacity = this.alpha_value * DRAG_ALPHA;
             }
         }
 
-        //マウスのボタンが押されたとき
-        private void Form1_MouseUp(object sender,
-            System.Windows.Forms.MouseEventArgs e)
+        // マウスアップ
+        private void Form1_MouseUp(object sender, MouseEventArgs e)
         {
+            _isDragging = false;
             this.Opacity = this.alpha_value;
         }
+
         private void pictureBox1_Click(object sender, EventArgs e)
         {
 
@@ -615,9 +662,6 @@ namespace Kiritori
         }
         public void ShowOverlay(string text)
         {
-            const int MIN_WIDTH = 100;   // お好みで調整
-            const int MIN_HEIGHT = 50;  // お好みで調整
-
             if (this.ClientSize.Width < MIN_WIDTH || this.ClientSize.Height < MIN_HEIGHT)
             {
                 Debug.WriteLine($"Overlay suppressed (too small): {this.ClientSize.Width}x{this.ClientSize.Height}");
@@ -631,41 +675,89 @@ namespace Kiritori
         }
         private void PictureBox1_Paint(object sender, PaintEventArgs e)
         {
-            if (string.IsNullOrEmpty(_overlayText)) return;
-
             var g = e.Graphics;
-            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            g.SmoothingMode     = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+            g.PixelOffsetMode   = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
 
-            double elapsed = (DateTime.Now - _overlayStart).TotalMilliseconds;
-            int alpha = 200;
-            double remain = _overlayDurationMs - elapsed;
-            if (remain < _overlayFadeMs)
+            // ===== オーバーレイ（あれば描く） =====
+            if (!string.IsNullOrEmpty(_overlayText))
             {
-                alpha = (int)(alpha * (remain / _overlayFadeMs));
-                if (alpha < 0) alpha = 0;
+                double elapsed = (DateTime.Now - _overlayStart).TotalMilliseconds;
+                int alpha = 200;
+                double remain = _overlayDurationMs - elapsed;
+                if (remain < _overlayFadeMs)
+                {
+                    alpha = (int)(alpha * (remain / _overlayFadeMs));
+                    if (alpha < 0) alpha = 0;
+                }
+
+                var padding = (int)(10 * (_dpi / 96f));
+                var ts = g.MeasureString(_overlayText, _overlayFont);
+                int w = (int)System.Math.Ceiling(ts.Width) + padding * 2;
+                int h = (int)System.Math.Ceiling(ts.Height) + padding * 2;
+
+                int margin = (int)(12 * (_dpi / 96f));
+                int x = pictureBox1.ClientSize.Width  - w - margin;
+                int y = pictureBox1.ClientSize.Height - h - margin;
+
+                using (var path = RoundedRect(new Rectangle(x, y, w, h), radius: (int)(8 * (_dpi / 96f))))
+                using (var bg   = new SolidBrush(Color.FromArgb(alpha, 0, 0, 0)))
+                using (var pen  = new Pen(Color.FromArgb(System.Math.Max(80, alpha), 255, 255, 255), 1f))
+                using (var txt  = new SolidBrush(Color.FromArgb(System.Math.Max(180, alpha), 255, 255, 255)))
+                {
+                    g.FillPath(bg, path);
+                    g.DrawPath(pen, path);
+                    g.DrawString(_overlayText, _overlayFont, txt, x + padding, y + padding);
+                }
             }
 
-            var padding = (int)(10 * (_dpi / 96f));
-            var ts = g.MeasureString(_overlayText, _overlayFont);
-            int w = (int)Math.Ceiling(ts.Width) + padding * 2;
-            int h = (int)Math.Ceiling(ts.Height) + padding * 2;
-
-            int margin = (int)(12 * (_dpi / 96f));
-            int x = pictureBox1.ClientSize.Width - w - margin;
-            int y = pictureBox1.ClientSize.Height - h - margin;
-
-            using (var path = RoundedRect(new Rectangle(x, y, w, h), radius: (int)(8 * (_dpi / 96f))))
-            using (var bg = new SolidBrush(Color.FromArgb(alpha, 0, 0, 0)))
-            using (var pen = new Pen(Color.FromArgb(Math.Max(80, alpha), 255, 255, 255), 1f))
-            using (var txt = new SolidBrush(Color.FromArgb(Math.Max(180, alpha), 255, 255, 255)))
+            // ===== 右上クローズボタン（ウィンドウにホバー中のみ） =====
+            if (_hoverWindow &&
+                pictureBox1.ClientSize.Width  >= MIN_WIDTH &&
+                pictureBox1.ClientSize.Height >= MIN_HEIGHT)
             {
-                g.FillPath(bg, path);
-                g.DrawPath(pen, path);
-                g.DrawString(_overlayText, _overlayFont, txt, x + padding, y + padding);
+                // DPIに合わせたPNGを取得（PNG版のキャッシュ関数を使う想定）
+                var pair = GetCloseBitmapsForDpi(this.DeviceDpi);
+                var img  = _hoverClose ? pair.hover : pair.normal;
+
+                float scale = this.DeviceDpi / 96f;
+                int marginPx = (int)System.Math.Round(8 * scale);
+
+                int x = pictureBox1.ClientSize.Width  - img.Width  - marginPx;
+                int y = marginPx;
+
+                _closeBtnRect = new Rectangle(x, y, img.Width, img.Height);
+
+                // 半透明の背景丸（ホバーで少し濃く）
+                int pad = (int)Math.Round(1 * scale); // scaleに合わせて1px程度
+                using (var bg = new SolidBrush(Color.FromArgb(_hoverClose ? 160 : 120, 0, 0, 0)))
+                    g.FillEllipse(bg, Rectangle.Inflate(_closeBtnRect, pad, pad));
+
+                g.DrawImage(img, _closeBtnRect);
+            }
+            else
+            {
+                _closeBtnRect = Rectangle.Empty;
+                _hoverClose = false;
             }
         }
+        private void PictureBox1_MouseMove_Icon(object sender, MouseEventArgs e)
+        {
+            bool now = _closeBtnRect.Contains(e.Location);
+            if (now != _hoverClose)
+            {
+                _hoverClose = now;
+                pictureBox1.Invalidate(_closeBtnRect);
+            }
+        }
+
+        private void PictureBox1_MouseClick_Icon(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left && _closeBtnRect.Contains(e.Location))
+                this.Close();
+        }
+
 
         // 角丸矩形のヘルパー
         private static System.Drawing.Drawing2D.GraphicsPath RoundedRect(Rectangle r, int radius)
