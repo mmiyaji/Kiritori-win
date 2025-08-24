@@ -112,3 +112,4 @@ UpgradeLog*.XML
 *.pfx
 old_*
 Thumbs.db
+dist/
