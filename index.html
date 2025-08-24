@@ -102,6 +102,19 @@
       border-radius: 12px;
       box-shadow: 0 8px 30px rgba(0,0,0,0.6);
     }
+    .small-video {
+      width: 100%;
+      max-height: 160px;
+      border-radius: 12px;
+      cursor: pointer;
+      object-fit: cover;
+    }
+    .modal video {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    }
 
     @media (max-width: 920px) { .hero { grid-template-columns: 1fr; } .two { grid-template-columns: 1fr; } .grid { grid-template-columns: 1fr; } }
   </style>
@@ -128,12 +141,13 @@
     <section class="hero">
       <div>
         <h1>一瞬で切り取る。<br>Windows 向けスニッピング補助 <span style="color:var(--brand-2)">Kiritori</span></h1>
-        <p>ホットキーで即キャプチャ、領域固定やピクセル単位のズーム、オーバーレイ表示。開発・検証・資料作成の速度を上げます。</p>
+        <p>ホットキーで即キャプチャ、キャプチャした領域は画面の最前面に固定されます。
+          画面の一部を切り取り・表示することで、一時的に別々の画面情報を並べることができ、開発・検証・資料作成の速度を上げます。</p>
         <div class="callouts">
           <span class="chip">軽量・常駐</span>
           <span class="chip">高 DPI 対応</span>
           <span class="chip">ホットキー</span>
-          <span class="chip">ズーム & ガイド</span>
+          <span class="chip">ズーム & 透過</span>
         </div>
         <div style="display:flex; gap:12px; margin-top:18px">
           <a class="btn-primary" href="#download">今すぐ入手</a>
@@ -170,12 +184,21 @@
       <h2>主な特徴</h2>
       <div class="grid" style="margin-top:12px">
         <div class="card">
+          <video class="feature-video small-video" autoplay muted playsinline controls loop>
+            <source src="https://kiritori.ruhenheim.org/kiritori_demo.webm" type="video/webm">
+            <source src="https://kiritori.ruhenheim.org/kiritori_demo.mp4" type="video/mp4"> <!-- fallback for Safari -->
+            お使いのブラウザは動画をサポートしていません
+          </video>
+          <h3>すばやいキャプチャ</h3>
+          <p>ホットキーで即キャプチャ。固定領域・履歴から再実行も可能。</p>
+        </div>
+        <!-- <div class="card">
           <a href="https://kiritori.ruhenheim.org/screenshot_001.png" target="_blank">
             <img src="https://kiritori.ruhenheim.org/screenshot_001.png" alt="キャプチャのイメージ" style="width:100%; border-radius:12px; margin-bottom:8px" class="feature-img">
           </a>
           <h3>すばやいキャプチャ</h3>
           <p>グローバルホットキーで即時に領域選択(Ctrl+Shift+5)。固定領域・履歴から再実行も。</p>
-        </div>
+        </div> -->
 
         <div class="card">
           <a href="https://kiritori.ruhenheim.org/screenshot_002.png" target="_blank">
@@ -216,7 +239,7 @@
     <section class="section two" id="policy">
       <div>
         <h2>プライバシー & ライセンス</h2>
-        <p>Kiritori は個人情報を収集しません（自動アップデートやトラッキングなし）。</p>
+        <p>Kiritori は個人情報を収集しません（トラッキングなし）。</p>
         <ul class="muted">
           <li><a href="https://github.com/mmiyaji/Kiritori-win" target="_blank" rel="noopener">GitHub リポジトリ</a></li>
           <li><a href="https://github.com/mmiyaji/Kiritori-win/releases" target="_blank" rel="noopener">Releases（配布）</a></li>
@@ -234,6 +257,9 @@
   </main>
   <div id="imgModal" class="modal">
     <img id="modalImg" src="" alt="">
+  </div>
+  <div id="videoModal" class="modal">
+    <video id="modalVideo" controls autoplay loop muted playsinline></video>
   </div>
   <footer>
     <div class="container">
@@ -277,6 +303,22 @@
 
     document.getElementById('imgModal').addEventListener('click', () => {
       document.getElementById('imgModal').style.display = 'none';
+    });
+    document.querySelectorAll('.small-video').forEach(v => {
+      v.addEventListener('click', () => {
+        const modal = document.getElementById('videoModal');
+        const modalVideo = document.getElementById('modalVideo');
+        modalVideo.src = v.querySelector('source').src; // 同じ動画を拡大表示
+        modal.style.display = 'flex';
+      });
+    });
+
+    document.getElementById('videoModal').addEventListener('click', () => {
+      const modal = document.getElementById('videoModal');
+      const modalVideo = document.getElementById('modalVideo');
+      modal.style.display = 'none';
+      modalVideo.pause();
+      modalVideo.src = ""; // メモリ解放
     });
   </script>
 

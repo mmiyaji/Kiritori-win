@@ -4,7 +4,8 @@ using System.IO;
 using System.Windows.Forms;
 using System.Reflection;
 using System.Globalization;
-using System.Drawing; 
+using System.Drawing;
+using System.ComponentModel;
 namespace Kiritori
 {
     public partial class PrefForm : Form
@@ -16,6 +17,41 @@ namespace Kiritori
             this.AutoScaleMode = AutoScaleMode.Dpi;
             this.AutoScaleDimensions = new SizeF(96F, 96F);
             this.StartPosition = FormStartPosition.CenterScreen;
+
+            if (!IsInDesignMode())
+            {
+                // 初期配置と、以後の変化を拾う
+                this.Load += (_, __) => PositionDescHeader();
+                this.tabInfo.Layout += (_, __) => PositionDescHeader();
+                this.descCard.LocationChanged += (_, __) => PositionDescHeader();
+                this.descCard.SizeChanged += (_, __) => PositionDescHeader();
+                this.labelDescHeader.TextChanged += (_, __) => PositionDescHeader();
+                var src = Properties.Resources.icon_128x128;
+                picAppIcon.Image?.Dispose(); // 先に破棄（初期画像がある場合）
+                picAppIcon.Image = ScaleBitmap(src, 120, 120);
+            }
+        }
+        private static bool IsInDesignMode()
+        {
+            // WinFormsのDesignModeはconstructorでは正しく取れないことがあるため二段構え
+            if (LicenseManager.UsageMode == LicenseUsageMode.Designtime) return true;
+            var exe = Application.ExecutablePath ?? string.Empty;
+            return exe.EndsWith("devenv.exe", StringComparison.OrdinalIgnoreCase)   // VS
+                || exe.EndsWith("Blend.exe", StringComparison.OrdinalIgnoreCase);   // Blend等
+        }
+        private static Bitmap ScaleBitmap(Image src, int w, int h)
+        {
+            var bmp = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceOver;
+                g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                g.DrawImage(src, new Rectangle(0, 0, w, h));
+            }
+            return bmp;
         }
 
         /// <summary>
@@ -231,18 +267,45 @@ namespace Kiritori
         // PrefForm クラス内に配置関数を追加
         private void PositionDescHeader()
         {
+            if (IsInDesignMode()) return;
+            if (this.IsDisposed || !this.IsHandleCreated) return;
             if (this.labelDescHeader == null || this.descCard == null) return;
+            if (this.labelDescHeader.Parent == null || this.descCard.Parent == null) return;
 
-            // 先に AutoSize させて高さを確定
-            this.labelDescHeader.AutoSize = true;
+            // descCardの左上を、labelの親座標系に変換
+            var labelParent = this.labelDescHeader.Parent;
+            var cardParent  = this.descCard.Parent;
 
-            int x = this.descCard.Left + 8;                          // 左から少し
-            int y = this.descCard.Top - (this.labelDescHeader.Height / 2); // 半分だけ被せる
-            if (y < 8) y = 8;                                         // 画面上端はみ出し防止
+            Point cardTopLeftInLabelParent;
+            if (labelParent == cardParent)
+            {
+                cardTopLeftInLabelParent = this.descCard.Location;
+            }
+            else
+            {
+                var screenPt = cardParent.PointToScreen(this.descCard.Location);
+                cardTopLeftInLabelParent = labelParent.PointToClient(screenPt);
+            }
 
-            this.labelDescHeader.Location = new Point(x, y);
-            this.labelDescHeader.BringToFront();
+            labelParent.SuspendLayout();
+            try
+            {
+                // AutoSizeで高さを確定（再入による無限Layoutを避けたい場合は、必要時のみにする）
+                this.labelDescHeader.AutoSize = true;
+
+                int x = cardTopLeftInLabelParent.X + 8;
+                int y = cardTopLeftInLabelParent.Y - (this.labelDescHeader.Height / 2);
+                if (y < 8) y = 8;
+
+                this.labelDescHeader.Location = new Point(x, y);
+                this.labelDescHeader.BringToFront();
+            }
+            finally
+            {
+                labelParent.ResumeLayout();
+            }
         }
+
         // KeyDownイベントでキーを取得
         private void textBoxKiritori_KeyDown(object sender, KeyEventArgs e)
         {

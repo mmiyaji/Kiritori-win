@@ -167,7 +167,7 @@ namespace Kiritori
             this.labelDescHeader.BringToFront();
 
             // レイアウト時にカード位置から算出して“半分かぶせる”
-            this.tabInfo.Layout += (s, e) => PositionDescHeader();
+            // this.tabInfo.Layout += (s, e) => PositionDescHeader();
 
             // 
             // labelTrayNote
@@ -197,25 +197,10 @@ namespace Kiritori
             // 
             // picAppIcon
             // 
-            var src = global::Kiritori.Properties.Resources.icon_128x128;
-            int tgt = 120; // ここを 88/92/100 にすれば微調整可
-
-            var scaled = new Bitmap(tgt, tgt, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
-            using (var g = Graphics.FromImage(scaled))
-            {
-                g.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceOver;
-                g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
-
-                g.DrawImage(src, new Rectangle(0, 0, tgt, tgt));
-            }
-
-            // 置き換え
-            this.picAppIcon.Image = scaled;
+            this.picAppIcon.Image = global::Kiritori.Properties.Resources.icon_128x128;
             this.picAppIcon.Location = new System.Drawing.Point(20, 10);
-            this.picAppIcon.SizeMode = PictureBoxSizeMode.AutoSize; // 生成したサイズのまま表示            this.picAppIcon.Name = "picAppIcon";
+            this.picAppIcon.Size = new System.Drawing.Size(120, 120); // 表示サイズだけ決める
+            this.picAppIcon.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.picAppIcon.TabIndex = 0;
             this.picAppIcon.TabStop = false;
             // 
