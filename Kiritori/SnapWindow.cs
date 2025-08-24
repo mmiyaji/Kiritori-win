@@ -8,6 +8,8 @@ using System.Text;
 //using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Diagnostics;
+using System.IO;
+using System.Drawing.Imaging;
 
 namespace Kiritori
 {
@@ -26,6 +28,7 @@ namespace Kiritori
         SAVE        = Keys.Control | Keys.S,
         LOAD        = Keys.Control | Keys.O,
         OPEN        = Keys.Control | Keys.N,
+        EDIT_MSPAINT        = Keys.Control | Keys.E,
         ZOOM_ORIGIN_NUMPAD = Keys.Control | Keys.NumPad0, // テンキーの 0
         ZOOM_ORIGIN_MAIN   = Keys.Control | Keys.D0,       // メイン行の 0
         ZOOM_IN     = Keys.Control | Keys.Oemplus,
@@ -81,6 +84,24 @@ namespace Kiritori
         private bool _hoverClose = false;           // マウスが「×ボタン」上にあるか
         private Rectangle _closeBtnRect = Rectangle.Empty; // ×ボタンの領域
         private bool _isDragging = false;
+        private int _zoomStep = 0;            // 0=100%, +1=110%, -1=90% ...
+        private const float STEP_LINEAR = 0.10f;  // 10% 刻み
+        private const float MIN_SCALE = 0.10f;    // 10% まで縮小可（お好みで）
+        private const float MAX_SCALE = 8.00f;    // 800% まで拡大可（お好みで）
+        const int CS_DROPSHADOW = 0x00020000;
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams cp = base.CreateParams;
+                if (this.isWindowShadow)
+                {
+                    cp.ClassStyle |= CS_DROPSHADOW;
+                }
+                return cp;
+            }
+        }
+
 
         public SnapWindow(MainApplication mainapp)
         {
@@ -279,7 +300,7 @@ namespace Kiritori
                     this.ToggleShadow(!this.isWindowShadow);
                     break;
                 case (int)HOTS.FLOAT:
-                    this.TopMost = !this.TopMost;
+                    afloatImage(this);
                     break;
                 case (int)HOTS.ESCAPE:
                 case (int)HOTS.CLOSE:
@@ -294,6 +315,9 @@ namespace Kiritori
                 case (int)HOTS.OPEN:
                     openImage();
                     break;
+                case (int)HOTS.EDIT_MSPAINT:
+                    editInMSPaint(this);
+                    break;
                 case (int)HOTS.ZOOM_ORIGIN_NUMPAD:
                 case (int)HOTS.ZOOM_ORIGIN_MAIN:
                     zoomOff();
@@ -305,11 +329,10 @@ namespace Kiritori
                     zoomOut();
                     break;
                 case (int)HOTS.COPY:
-                    Clipboard.SetImage(this.pictureBox1.Image);
+                    copyImage(this);
                     break;
                 case (int)HOTS.CUT:
-                    Clipboard.SetImage(this.pictureBox1.Image);
-                    this.Close();
+                    closeImage(this);
                     break;
                 case (int)HOTS.PRINT:
                     printImage();
@@ -322,12 +345,6 @@ namespace Kiritori
             }
             return true;
         }
-        // 追加: フィールド
-        private int _zoomStep = 0;            // 0=100%, +1=110%, -1=90% ...
-        private const float STEP_LINEAR = 0.10f;  // 10% 刻み
-        private const float MIN_SCALE = 0.10f;    // 10% まで縮小可（お好みで）
-        private const float MAX_SCALE = 8.00f;    // 800% まで拡大可（お好みで）
-
         public void zoomIn()
         {
             _zoomStep++;
@@ -549,25 +566,121 @@ namespace Kiritori
         public void showWindow()
         {
             this.WindowState = FormWindowState.Normal;
+            ShowOverlay($"Show");
         }
         public void closeWindow()
         {
+            // ShowOverlay($"Close");
             this.Close();
         }
-        const int CS_DROPSHADOW = 0x00020000;
-        protected override CreateParams CreateParams
+        public void copyImage(object sender)
         {
-            get
+            copyCtrlCToolStripMenuItem_Click(sender, EventArgs.Empty);
+        }
+        public void closeImage(object sender)
+        {
+            closeESCToolStripMenuItem_Click(sender, EventArgs.Empty);
+        }
+        public void afloatImage(object sender)
+        {
+            keepAfloatToolStripMenuItem_Click(sender, EventArgs.Empty);
+        }
+
+        public void editInMSPaint(object sender)
+        {
+            editPaintToolStripMenuItem_Click(sender, EventArgs.Empty);
+            ShowOverlay($"Edit");
+        }
+        private string _paintEditPath;  // 編集ファイルのパス（元ファイル or 一時ファイル）
+        private void editPaintToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            try
             {
-                CreateParams cp = base.CreateParams;
-                if (this.isWindowShadow)
+                if (pictureBox1.Image == null)
                 {
-                    cp.ClassStyle |= CS_DROPSHADOW;
+                    MessageBox.Show(this, "No image to edit.", "Kiritori",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
                 }
-                return cp;
+
+                // 元画像のパスがわかるなら優先（例: Open時に Image.Tag にパスを入れている場合）
+                string preferredSrcPath = pictureBox1.Image?.Tag as string;
+
+                // 編集対象ファイルの決定
+                if (!string.IsNullOrEmpty(preferredSrcPath) && File.Exists(preferredSrcPath))
+                {
+                    _paintEditPath = preferredSrcPath;
+                }
+                else
+                {
+                    // 一時PNGへ保存（アルファは Paint で失われる可能性があります）
+                    _paintEditPath = Path.Combine(
+                        Path.GetTempPath(),
+                        $"Kiritori_Edit_{DateTime.Now:yyyyMMdd_HHmmssfff}.png"
+                    );
+                    using (var bmp = new Bitmap(pictureBox1.Image))
+                    {
+                        bmp.Save(_paintEditPath, ImageFormat.Png);
+                    }
+                }
+
+                // MSPaint 起動
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "mspaint.exe",            // PATH にある想定（通常OK）
+                    Arguments = $"\"{_paintEditPath}\"",
+                    UseShellExecute = true
+                };
+
+                var proc = Process.Start(psi);
+                if (proc == null) return;
+
+                proc.EnableRaisingEvents = true;
+                proc.Exited += (s, ev) =>
+                {
+                    // Paint を閉じたらリロード（UIスレッドへ）
+                    try
+                    {
+                        if (File.Exists(_paintEditPath))
+                        {
+                            // 他プロセスのロック回避: FileShare.ReadWrite で読む
+                            using (var fs = new FileStream(_paintEditPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                            using (var img = Image.FromStream(fs))
+                            {
+                                var updated = new Bitmap(img);
+                                this.BeginInvoke((Action)(() =>
+                                {
+                                    var old = pictureBox1.Image;
+                                    pictureBox1.Image = updated;
+
+                                    // 元パスがあるなら維持、一時ならタグを更新可
+                                    if (string.IsNullOrEmpty(preferredSrcPath))
+                                        pictureBox1.Image.Tag = _paintEditPath;
+
+                                    old?.Dispose();
+                                }));
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // 読み込み失敗は無視（保存されなかった等）
+                        Debug.WriteLine("Failed to load edited image: " + _paintEditPath);
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Failed to open in Paint.\r\n" + ex.Message,
+                    "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
+
+        private void captureToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.ma.openScreen();
+        }
         private void closeESCToolStripMenuItem_Click(object sender, EventArgs e)
         {
             this.Close();
@@ -582,16 +695,22 @@ namespace Kiritori
         private void copyCtrlCToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Clipboard.SetImage(this.pictureBox1.Image);
+            ShowOverlay($"Copy");
         }
 
         private void keepAfloatToolStripMenuItem_Click(object sender, EventArgs e)
         {
             this.TopMost = !this.TopMost;
+            ShowOverlay($"Keep Afloat: {this.TopMost}");
         }
 
         private void saveImageToolStripMenuItem_Click(object sender, EventArgs e)
         {
             saveImage();
+        }
+        private void openImageToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            openImage();
         }
 
         private void originalSizeToolStripMenuItem_Click(object sender, EventArgs e)
@@ -607,6 +726,35 @@ namespace Kiritori
         private void zoomOutToolStripMenuItem_Click(object sender, EventArgs e)
         {
             zoomOut();
+        }
+        private void size10ToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ZoomToPercent(10);
+        }
+
+        private void size50ToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ZoomToPercent(50);
+        }
+
+        private void size100ToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ZoomToPercent(100);
+        }
+
+        private void size150ToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ZoomToPercent(150);
+        }
+
+        private void size200ToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ZoomToPercent(200);
+        }
+
+        private void size500ToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            ZoomToPercent(500);
         }
 
         private void dropShadowToolStripMenuItem_Click(object sender, EventArgs e)
@@ -627,31 +775,31 @@ namespace Kiritori
             this.Opacity = alpha;
             this.alpha_value = alpha;
         }
-        private void toolStripMenuItem2_Click(object sender, EventArgs e)
+        private void opacity100toolStripMenuItem_Click(object sender, EventArgs e)
         {
             setAlpha(1.0);
             ShowOverlay("Opacity: 100%");
         }
 
-        private void toolStripMenuItem3_Click(object sender, EventArgs e)
+        private void opacity90toolStripMenuItem_Click(object sender, EventArgs e)
         {
             setAlpha(0.9);
             ShowOverlay("Opacity: 90%");
         }
 
-        private void toolStripMenuItem4_Click(object sender, EventArgs e)
+        private void opacity80toolStripMenuItem_Click(object sender, EventArgs e)
         {
             setAlpha(0.8);
             ShowOverlay("Opacity: 80%");
         }
 
-        private void toolStripMenuItem5_Click(object sender, EventArgs e)
+        private void opacity50toolStripMenuItem_Click(object sender, EventArgs e)
         {
             setAlpha(0.5);
             ShowOverlay("Opacity: 50%");
         }
 
-        private void toolStripMenuItem6_Click(object sender, EventArgs e)
+        private void opacity30toolStripMenuItem_Click(object sender, EventArgs e)
         {
             setAlpha(0.3);
             ShowOverlay("Opacity: 30%");
