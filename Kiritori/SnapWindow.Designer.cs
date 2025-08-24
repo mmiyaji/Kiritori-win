@@ -104,7 +104,7 @@ namespace Kiritori
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.contextMenuStrip1.SuspendLayout();
             this.SuspendLayout();
-            this.Resize += new System.EventHandler(this.Form1_Resize);
+            //this.Resize += new System.EventHandler(this.Form1_Resize);
             // 
             // pictureBox1
             // 
@@ -115,7 +115,7 @@ namespace Kiritori
             this.pictureBox1.Size = new System.Drawing.Size(276, 230);
             this.pictureBox1.TabIndex = 0;
             this.pictureBox1.TabStop = false;
-            this.pictureBox1.Click += new System.EventHandler(this.pictureBox1_Click);
+            // this.pictureBox1.Click += new System.EventHandler(this.pictureBox1_Click);
             // 
             // contextMenuStrip1
             // 
