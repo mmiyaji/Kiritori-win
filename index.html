@@ -11,7 +11,7 @@
   <meta property="og:title" content="Kiritori – 画面キャプチャ & スニッピング支援ツール" />
   <meta property="og:description" content="Windows 向けの軽量キャプチャツール。ホットキー、領域固定、ズーム。" />
   <meta property="og:url" content="https://kiritori.ruhenheim.org/" />
-  <meta property="og:image" content="https://kiritori.ruhenheim.org/icon_256x256.png" />
+  <meta property="og:image" content="https://kiritori.ruhenheim.org/static/icon_256x256.png" />
   <meta name="theme-color" content="#0ea5e9" />
   <style>
     :root {
@@ -104,7 +104,7 @@
     }
     .small-video {
       width: 100%;
-      max-height: 160px;
+      /* max-height: 300px; */
       border-radius: 12px;
       cursor: pointer;
       object-fit: cover;
@@ -123,7 +123,7 @@
   <header>
     <div class="container nav">
       <div class="logo">
-        <img src="https://kiritori.ruhenheim.org/icon_256x256.png" alt="Kiritori logo"
+        <img src="https://kiritori.ruhenheim.org/static/icon_256x256.png" alt="Kiritori logo"
             style="width:32px; height:32px; border-radius:8px; box-shadow:var(--shadow)">
         <span>Kiritori</span>
       </div>
@@ -185,27 +185,47 @@
       <div class="grid" style="margin-top:12px">
         <div class="card">
           <video class="feature-video small-video" autoplay muted playsinline controls loop>
-            <source src="https://kiritori.ruhenheim.org/kiritori_demo.webm" type="video/webm">
-            <source src="https://kiritori.ruhenheim.org/kiritori_demo.mp4" type="video/mp4"> <!-- fallback for Safari -->
+            <source src="https://kiritori.ruhenheim.org/static/kiritori_demo.webm" type="video/webm">
+            <source src="https://kiritori.ruhenheim.org/static/kiritori_demo.mp4" type="video/mp4"> <!-- fallback for Safari -->
             お使いのブラウザは動画をサポートしていません
           </video>
-          <h3>すばやいキャプチャ</h3>
-          <p>ホットキーで即キャプチャ。固定領域・履歴から再実行も可能。</p>
+          <h3>使い方は簡単</h3>
+          <p>ホットキーで画面の一部だけを即キャプチャ。枠なし最前面に固定し、移動・ズーム・コピー・保存で比較や検証を効率化。</p>
         </div>
-        <!-- <div class="card">
-          <a href="https://kiritori.ruhenheim.org/screenshot_001.png" target="_blank">
-            <img src="https://kiritori.ruhenheim.org/screenshot_001.png" alt="キャプチャのイメージ" style="width:100%; border-radius:12px; margin-bottom:8px" class="feature-img">
-          </a>
-          <h3>すばやいキャプチャ</h3>
-          <p>グローバルホットキーで即時に領域選択(Ctrl+Shift+5)。固定領域・履歴から再実行も。</p>
-        </div> -->
-
         <div class="card">
-          <a href="https://kiritori.ruhenheim.org/screenshot_002.png" target="_blank">
-            <img src="https://kiritori.ruhenheim.org/screenshot_002.png" alt="動作のイメージ" style="width:100%; border-radius:12px; margin-bottom:8px" class="feature-img">
+          <a href="https://kiritori.ruhenheim.org/static/screenshot_001.png" target="_blank">
+            <img src="https://kiritori.ruhenheim.org/static/screenshot_001.png" alt="キャプチャのイメージ" style="width:100%; border-radius:12px; margin-bottom:8px" class="feature-img">
           </a>
-          <h3>軽量・常駐</h3>
-          <p>トレイ常駐で必要な時だけ素早く。ショートカット操作可能。</p>
+          <h3>画面を切り取って付箋化</h3>
+          <p>グローバルホットキーで即時に領域選択(Ctrl+Shift+5)。付箋のように画面上に固定。</p>
+        </div>
+        <div class="card">
+          <a href="https://kiritori.ruhenheim.org/static/screenshot_003.png" target="_blank">
+            <img src="https://kiritori.ruhenheim.org/static/screenshot_003.png" alt="キャプチャのイメージ" style="width:100%; border-radius:12px; margin-bottom:8px" class="feature-img">
+          </a>
+          <h3>簡単設定</h3>
+          <p>設定はシンプルで、すぐに使い始められます。メインウィンドウを閉じてもタスクトレイに常駐します。</p>
+        </div>
+        <div class="card">
+          <a href="https://kiritori.ruhenheim.org/screenshot_004.png" target="_blank">
+            <img src="https://kiritori.ruhenheim.org/static/screenshot_004.png" alt="動作のイメージ" style="width:100%; border-radius:12px; margin-bottom:8px" class="feature-img">
+          </a>
+          <h3>簡単操作</h3>
+          <p>ショートカット操作可能。ESCでウィンドウを閉じる、Ctrl+Sで画像保存、Ctrl+Cでクリップボードに画像をコピーなど。</p>
+        </div>
+        <div class="card">
+          <a href="https://kiritori.ruhenheim.org/static/screenshot_005.png" target="_blank">
+            <img src="https://kiritori.ruhenheim.org/static/screenshot_005.png" alt="動作のイメージ" style="width:100%; border-radius:12px; margin-bottom:8px" class="feature-img">
+          </a>
+          <h3>右クリックメニューからも操作可能</h3>
+          <p>透過率やサイズも変更可能です。</p>
+        </div>
+        <div class="card">
+          <a href="https://kiritori.ruhenheim.org/static/screenshot_006.png" target="_blank">
+            <img src="https://kiritori.ruhenheim.org/static/screenshot_006.png" alt="動作のイメージ" style="width:100%; border-radius:12px; margin-bottom:8px" class="feature-img">
+          </a>
+          <h3>履歴管理</h3>
+          <p>タスクトレイから簡単にアクセス可能。履歴から再表示も可能。</p>
         </div>
       </div>
     </section>
@@ -250,7 +270,7 @@
         <p>不具合やご要望は GitHub Issues へ。</p>
         <ul class="muted">
           <li>不具合報告: GitHub Issues</li>
-          <li>連絡先: <a href="mailto:mmiyaji@ruhenheim.org">mmiyaji@ruhenheim.org</a></li>
+          <li>連絡先: mmiyaji / <a href="mailto:mmiyaji@ruhenheim.org">mmiyaji@ruhenheim.org</a></li>
         </ul>
       </div>
     </section>
