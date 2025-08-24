@@ -130,6 +130,7 @@
       <nav>
         <a class="btn" href="#download">ダウンロード</a>
         <a class="btn" href="#features">特徴</a>
+        <a class="btn" href="#changelog">変更履歴</a>
         <a class="btn" href="#faq">FAQ</a>
         <a class="btn" href="#policy">ポリシー</a>
         <a class="btn" href="https://github.com/mmiyaji/Kiritori-win" target="_blank" rel="noopener">GitHub</a>
@@ -233,11 +234,7 @@
     <section class="section two" id="changelog">
       <div>
         <h2>変更履歴</h2>
-        <details open>
-          <summary>v1.1.0 – 2025-08-24</summary>
-          <ul>
-            <li>高DPI対応(ディスプレイの拡大設定)</li>
-          </ul>
+        <details>
           <summary>v1.0.0 – 2013-07-05</summary>
           <ul>
             <li>初回リリース</li>
@@ -343,94 +340,105 @@
       modalVideo.pause();
       modalVideo.src = ""; // メモリ解放
     });
-    (async function renderChangelogFromReleases(){
-  const ownerRepo = 'mmiyaji/Kiritori-win';
-  const endpoint  = `https://api.github.com/repos/${ownerRepo}/releases?per_page=10`; // 最新10件
-  const hostEl    = document.querySelector('#changelog > div'); // 左カラム（見出しの直下）
-
-  if (!hostEl) return;
-
-  // ETagでブラウザにキャッシュ（レート制限節約）
-  const keyETag = 'gh_rel_etag';
-  const keyData = 'gh_rel_cache';
-  const cached  = localStorage.getItem(keyData);
-  const etag    = localStorage.getItem(keyETag);
-  const headers = { 'Accept': 'application/vnd.github+json' };
-  if (etag) headers['If-None-Match'] = etag;
-
-  let releases = null;
-  try {
-    const res = await fetch(endpoint, { headers });
-    if (res.status === 304 && cached) {
-      releases = JSON.parse(cached);
-    } else if (res.ok) {
-      releases = await res.json();
-      const newEtag = res.headers.get('ETag');
-      if (newEtag) localStorage.setItem(keyETag, newEtag);
-      localStorage.setItem(keyData, JSON.stringify(releases));
-    } else {
-      // 失敗時は何もしない（静的な書き置き表示を活かす）
-      return;
-    }
-  } catch { return; }
-
-  // draft / prerelease を除外（必要なら変更）
-  releases = (releases || []).filter(r => !r.draft); // prerelease も出したいならこの行だけにする
-  // releases = releases.filter(r => !r.draft && !r.prerelease);
-
-  // 簡易 Markdown → HTML（箇条書きだけ対応、他は<pre>）
-  const mdToHtml = (body) => {
-    if (!body) return '';
-    const lines = body.split(/\r?\n/);
-    const items = lines.filter(l => /^\s*[-*]\s+/.test(l)).map(l => l.replace(/^\s*[-*]\s+/, ''));
-    if (items.length >= 1) {
-      return '<ul>' + items.map(x => `<li>${escapeHtml(x)}</li>`).join('') + '</ul>';
-    }
-    // それ以外は安全のためエスケープして <pre>
-    return `<pre style="white-space:pre-wrap">${escapeHtml(body)}</pre>`;
-  };
-
-  const escapeHtml = (s) => s.replace(/[&<>"']/g, c => ({
-    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-  }[c]));
-
-  // 既存の details（手書き）を置き換え
-  const container = document.createElement('div');
-  const list = releases.map(r => {
-    const tag = r.tag_name || r.name || 'untagged';
-    const date = r.published_at ? new Date(r.published_at).toISOString().slice(0,10) : '';
-    const url  = r.html_url;
-    const body = mdToHtml(r.body || '');
-
-    // ZIP/EXE 資産へのリンク（あれば表示）
-    const zip = (r.assets || []).find(a => /\.zip$/i.test(a.name));
-    const exe = (r.assets || []).find(a => /\.exe$/i.test(a.name));
-    const assetsHtml = (zip || exe) ? (
-      `<div style="display:flex;gap:8px;margin:.4rem 0">
-         ${zip ? `<a class="btn" href="${zip.browser_download_url}">ZIP</a>` : ''}
-         ${exe ? `<a class="btn" href="${exe.browser_download_url}">EXE</a>` : ''}
-       </div>`
-    ) : '';
-
-    return `
-      <details>
-        <summary>${escapeHtml(tag)} – ${escapeHtml(date)} <a href="${url}" target="_blank" rel="noopener" style="margin-left:.5rem">Release</a></summary>
-        ${assetsHtml}
-        ${body}
-      </details>
-    `;
-  }).join('');
-
-  container.innerHTML = `
-    <h2>変更履歴</h2>
-    ${list || '<p class="muted">公開済みのリリースが見つかりませんでした。</p>'}
-    <p class="muted" style="margin-top:8px">※ 正式な履歴は <a href="https://github.com/mmiyaji/Kiritori-win/releases" target="_blank" rel="noopener">GitHub Releases</a> を参照してください。</p>
-  `;
-
-  // #changelog の左カラム全体を入れ替え
-  hostEl.replaceWith(container);
-})();
   </script>
+  <script>
+  (async function injectReleasesAboveFirstChangelog(){
+    const ownerRepo = 'mmiyaji/Kiritori-win';
+    const endpoint  = `https://api.github.com/repos/${ownerRepo}/releases?per_page=10`;
+    const host      = document.querySelector('#changelog > div'); // 左カラム
+    if (!host) return;
+
+    // v1.0.0（初回リリース）など、すでに書かれている details を探す
+    const firstDetails = host.querySelector('details');
+
+    // ETag + localStorage でレート制限を節約
+    const keyETag = 'gh_rel_etag';
+    const keyData = 'gh_rel_cache';
+    const cached  = localStorage.getItem(keyData);
+    const etag    = localStorage.getItem(keyETag);
+    const headers = { 'Accept': 'application/vnd.github+json' };
+    if (etag) headers['If-None-Match'] = etag;
+
+    let releases = null;
+    try {
+      const res = await fetch(endpoint, { headers });
+      if (res.status === 304 && cached) {
+        releases = JSON.parse(cached);
+      } else if (res.ok) {
+        releases = await res.json();
+        const newEtag = res.headers.get('ETag');
+        if (newEtag) localStorage.setItem(keyETag, newEtag);
+        localStorage.setItem(keyData, JSON.stringify(releases));
+      } else {
+        return; // 失敗時は静的な履歴だけ表示
+      }
+    } catch { return; }
+
+    // draft を除外。prerelease を含めたい場合は条件を調整してください
+    releases = (releases || []).filter(r => !r.draft && !r.prerelease);
+
+    // すでに HTML に書いてある初回 v1.0.0 と重複しないようにタグで除外（必要に応じて調整）
+    releases = releases.filter(r => (r.tag_name || '').toLowerCase() !== 'v1.0.0');
+
+    // 文字列を安全に
+    const esc = (s='') => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    // 簡易 Markdown → HTML（箇条書きの -/* のみ <li>、他は <pre>）
+    const mdToHtml = (body='') => {
+      const lines = body.split(/\r?\n/);
+      const items = lines.filter(l => /^\s*[-*]\s+/.test(l)).map(l => l.replace(/^\s*[-*]\s+/, ''));
+      if (items.length) return '<ul>' + items.map(x => `<li>${esc(x)}</li>`).join('') + '</ul>';
+      return `<pre style="white-space:pre-wrap">${esc(body)}</pre>`;
+    };
+
+    // 生成した details 群を「一塊のフラグメント」として最上部（最初の details の手前）に挿入
+    const frag = document.createDocumentFragment();
+    let firstInsertedDetails = null;
+
+    releases.forEach((r, idx) => {
+      const tag  = r.tag_name || r.name || 'untagged';
+      const date = r.published_at ? new Date(r.published_at).toISOString().slice(0,10) : '';
+      const url  = r.html_url;
+      const body = mdToHtml(r.body || '');
+      const zip  = (r.assets || []).find(a => /\.zip$/i.test(a.name));
+      const exe  = (r.assets || []).find(a => /\.exe$/i.test(a.name));
+
+      const wrap = document.createElement('div');
+      wrap.innerHTML = `
+        <details>
+          <summary>${esc(tag)} – ${esc(date)} <a href="${url}" target="_blank" rel="noopener" style="margin-left:.5rem">Release</a></summary>
+          ${(zip || exe) ? `
+            <div style="display:flex;gap:8px;margin:.5rem 0">
+              ${zip ? `<a class="btn" href="${zip.browser_download_url}">ZIP</a>` : ''}
+              ${exe ? `<a class="btn" href="${exe.browser_download_url}">EXE</a>` : ''}
+            </div>` : ''
+          }
+          ${body}
+        </details>
+      `.trim();
+
+      const details = wrap.firstElementChild;
+      if (!firstInsertedDetails) firstInsertedDetails = details; // 最初（＝最新）を控えておく
+      frag.appendChild(details);
+    });
+
+    if (frag.childNodes.length === 0) return; // 追加するものがない
+
+    // 既存の details は一旦すべて閉じる（「最新だけ open」にするため）
+    host.querySelectorAll('details').forEach(d => d.removeAttribute('open'));
+
+    // 挿入位置：最初の details の直前（＝静的 v1.0.0 より上）
+    if (firstDetails) {
+      host.insertBefore(frag, firstDetails);
+    } else {
+      host.appendChild(frag);
+    }
+
+    // 最新（今回挿入した最初の details）だけ open
+    if (firstInsertedDetails) firstInsertedDetails.setAttribute('open', '');
+
+  })();
+</script>
 
   <!-- 推奨: セキュリティヘッダ（サーバ設定例）
   Nginx:
