@@ -8,12 +8,12 @@
   IgnorableNamespaces="uap rescap desktop">
 
   <Identity
-    Name="3919b3ce-fe05-4be6-b587-34207ab17e35"
-    Publisher="CN=mmiyaji"
-    Version="1.0.0.0" />
+    Name="mmiyaji.kiritori"
+    Publisher="CN=663C5D03-791A-4B2C-8509-629FA1CA125A"
+    Version="1.1.0.0" />
 
   <Properties>
-    <DisplayName>KiritoriPackage</DisplayName>
+    <DisplayName>kiritori</DisplayName>
     <PublisherDisplayName>mmiyaji</PublisherDisplayName>
     <Logo>Images\StoreLogo.png</Logo>
   </Properties>
@@ -29,22 +29,22 @@
 
   <Applications>
     <Application Id="App"
-      Executable="$targetnametoken$.exe"
-      EntryPoint="$targetentrypoint$">
+      Executable="Kiritori\Kiritori.exe"
+      EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="KiritoriPackage"
-        Description="KiritoriPackage"
+        DisplayName="kiritori"
+        Description="ホットキーで即キャプチャ、キャプチャした領域は付箋のように画面の最前面に固定されます。 画面の一部を切り取り・表示することで、一時的に別々の画面情報を並べることができ、開発・検証・資料作成の速度を上げます。"
         BackgroundColor="transparent"
         Square150x150Logo="Images\Square150x150Logo.png"
         Square44x44Logo="Images\Square44x44Logo.png">
-        <uap:DefaultTile Wide310x150Logo="Images\Wide310x150Logo.png" />
-        <uap:SplashScreen Image="Images\Square150x150Logo.png" />
+        <uap:DefaultTile Wide310x150Logo="Images\Wide310x150Logo.png"  Square71x71Logo="Images\SmallTile.png" Square310x310Logo="Images\LargeTile.png"/>
+        <uap:SplashScreen Image="Images\SplashScreen.png"/>
       </uap:VisualElements>
       <Extensions>
         <desktop:Extension
          Category="windows.startupTask"
-          Executable="$targetnametoken$.exe"
-          EntryPoint="$targetentrypoint$">
+          Executable="Kiritori\Kiritori.exe"
+          EntryPoint="Windows.FullTrustApplication">
           <desktop:StartupTask
               TaskId="KiritoriStartup"
               Enabled="false"
