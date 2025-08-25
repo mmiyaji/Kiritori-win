@@ -189,7 +189,24 @@ namespace Kiritori
             Properties.Settings.Default.Reload();
             this.Close();
         }
+        private void btnExitApp_Click(object sender, EventArgs e)
+        {
+            Debug.WriteLine("Exit button clicked");
+            DialogResult result = MessageBox.Show(
+                "Are you sure you want to exit the application?",
+                "Confirm Exit",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+            Debug.WriteLine(result);
 
+            if (result == DialogResult.Yes)
+            {
+                // 変更を破棄
+                Properties.Settings.Default.Reload();
+                Application.Exit();
+            }
+        }
         /// <summary>
         /// 旧方式（スタートアップフォルダに LNK 作成）。MSIX/ストア配布なら不要。
         /// 必要ならコメントを外して使ってください。

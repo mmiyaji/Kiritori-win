@@ -500,9 +500,9 @@ namespace Kiritori
             this.btnCancelSettings.Name = "btnCancelSettings";
             this.btnCancelSettings.Size = new System.Drawing.Size(75, 23);
             this.btnCancelSettings.TabIndex = 3;
-            this.btnCancelSettings.Text = "Close";
+            this.btnCancelSettings.Text = "ExitApp";
             this.btnCancelSettings.UseVisualStyleBackColor = true;
-            this.btnCancelSettings.Click += new System.EventHandler(this.btnCancelSettings_Click);
+            this.btnCancelSettings.Click += new System.EventHandler(this.btnExitApp_Click);
             // 
             // chkWindowShadow
             // 
