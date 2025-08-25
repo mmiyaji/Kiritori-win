@@ -34,7 +34,8 @@ namespace Kiritori
         private System.Windows.Forms.CheckBox chkOverlay;
         private System.Windows.Forms.CheckBox chkWindowShadow;
         private System.Windows.Forms.CheckBox chkScreenGuide;
-        private System.Windows.Forms.TrackBar trackbarOpacty;
+        private System.Windows.Forms.CheckBox chkHighlightOnHover;
+        private System.Windows.Forms.TrackBar trackbarOpacity;
         private System.Windows.Forms.Button btnSavestings;
         private System.Windows.Forms.Label labelOpacity1;
         private System.Windows.Forms.Label labelOpacity2;
@@ -132,7 +133,8 @@ namespace Kiritori
             this.chkOverlay = new System.Windows.Forms.CheckBox();
             this.chkWindowShadow = new System.Windows.Forms.CheckBox();
             this.chkScreenGuide = new System.Windows.Forms.CheckBox();
-            this.trackbarOpacty = new System.Windows.Forms.TrackBar();
+            this.chkHighlightOnHover = new System.Windows.Forms.CheckBox();
+            this.trackbarOpacity = new System.Windows.Forms.TrackBar();
             this.tabPageShortcuts = new System.Windows.Forms.TabPage();
             this.textBoxMoveRight = new System.Windows.Forms.TextBox();
             this.labelMoveRight = new System.Windows.Forms.Label();
@@ -176,7 +178,7 @@ namespace Kiritori
             this.tabControl.SuspendLayout();
             this.tabPageBasic.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.textBoxHistory)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.trackbarOpacty)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackbarOpacity)).BeginInit();
             this.tabPageShortcuts.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -363,7 +365,8 @@ namespace Kiritori
             this.tabPageBasic.Controls.Add(this.chkOverlay);
             this.tabPageBasic.Controls.Add(this.chkWindowShadow);
             this.tabPageBasic.Controls.Add(this.chkScreenGuide);
-            this.tabPageBasic.Controls.Add(this.trackbarOpacty);
+            this.tabPageBasic.Controls.Add(this.chkHighlightOnHover);
+            this.tabPageBasic.Controls.Add(this.trackbarOpacity);
             this.tabPageBasic.Location = new System.Drawing.Point(4, 22);
             this.tabPageBasic.Name = "tabPageBasic";
             this.tabPageBasic.Padding = new System.Windows.Forms.Padding(3);
@@ -481,33 +484,6 @@ namespace Kiritori
             this.labelKiritori.TabIndex = 10;
             this.labelKiritori.Text = "Capture Hotkey";
             // 
-            // labelOpacity1
-            // 
-            this.labelOpacity1.AutoSize = true;
-            this.labelOpacity1.Location = new System.Drawing.Point(221, 184);
-            this.labelOpacity1.Name = "labelOpacity1";
-            this.labelOpacity1.Size = new System.Drawing.Size(23, 12);
-            this.labelOpacity1.TabIndex = 7;
-            this.labelOpacity1.Text = "10%";
-            // 
-            // labelOpacity2
-            // 
-            this.labelOpacity2.AutoSize = true;
-            this.labelOpacity2.Location = new System.Drawing.Point(373, 184);
-            this.labelOpacity2.Name = "labelOpacity2";
-            this.labelOpacity2.Size = new System.Drawing.Size(29, 12);
-            this.labelOpacity2.TabIndex = 6;
-            this.labelOpacity2.Text = "100%";
-            // 
-            // labelOpacityDefault
-            // 
-            this.labelOpacityDefault.AutoSize = true;
-            this.labelOpacityDefault.Location = new System.Drawing.Point(224, 147);
-            this.labelOpacityDefault.Name = "labelOpacityDefault";
-            this.labelOpacityDefault.Size = new System.Drawing.Size(127, 12);
-            this.labelOpacityDefault.TabIndex = 5;
-            this.labelOpacityDefault.Text = "Default Window Opacity";
-            // 
             // btnSavestings
             // 
             this.btnSavestings.Location = new System.Drawing.Point(329, 213);
@@ -528,13 +504,26 @@ namespace Kiritori
             this.btnCancelSettings.UseVisualStyleBackColor = true;
             this.btnCancelSettings.Click += new System.EventHandler(this.btnCancelSettings_Click);
             // 
+            // chkWindowShadow
+            // 
+            this.chkWindowShadow.AutoSize = true;
+            this.chkWindowShadow.Checked = global::Kiritori.Properties.Settings.Default.isWindowShadow;
+            this.chkWindowShadow.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chkWindowShadow.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isWindowShadow", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            this.chkWindowShadow.Location = new System.Drawing.Point(226, 40);
+            this.chkWindowShadow.Name = "chkWindowShadow";
+            this.chkWindowShadow.Size = new System.Drawing.Size(103, 16);
+            this.chkWindowShadow.TabIndex = 1;
+            this.chkWindowShadow.Text = "Window Shadow";
+            this.chkWindowShadow.UseVisualStyleBackColor = true;
+            // 
             // chkAfloat
             // 
             this.chkAfloat.AutoSize = true;
             this.chkAfloat.Checked = global::Kiritori.Properties.Settings.Default.isAfloatWindow;
             this.chkAfloat.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkAfloat.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isAfloatWindow", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.chkAfloat.Location = new System.Drawing.Point(226, 70);
+            this.chkAfloat.Location = new System.Drawing.Point(226, 60);
             this.chkAfloat.Name = "chkAfloat";
             this.chkAfloat.Size = new System.Drawing.Size(100, 16);
             this.chkAfloat.TabIndex = 8;
@@ -547,25 +536,12 @@ namespace Kiritori
             this.chkOverlay.Checked = global::Kiritori.Properties.Settings.Default.isOverlay;
             this.chkOverlay.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkOverlay.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isOverlay", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.chkOverlay.Location = new System.Drawing.Point(226, 95);
+            this.chkOverlay.Location = new System.Drawing.Point(226, 80);
             this.chkOverlay.Name = "chkOverlay";
             this.chkOverlay.Size = new System.Drawing.Size(100, 16);
             this.chkOverlay.TabIndex = 2;
             this.chkOverlay.Text = "Text Overlay";
             this.chkOverlay.UseVisualStyleBackColor = true;
-            // 
-            // chkWindowShadow
-            // 
-            this.chkWindowShadow.AutoSize = true;
-            this.chkWindowShadow.Checked = global::Kiritori.Properties.Settings.Default.isWindowShadow;
-            this.chkWindowShadow.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chkWindowShadow.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isWindowShadow", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.chkWindowShadow.Location = new System.Drawing.Point(226, 45);
-            this.chkWindowShadow.Name = "chkWindowShadow";
-            this.chkWindowShadow.Size = new System.Drawing.Size(103, 16);
-            this.chkWindowShadow.TabIndex = 1;
-            this.chkWindowShadow.Text = "Window Shadow";
-            this.chkWindowShadow.UseVisualStyleBackColor = true;
             // 
             // chkScreenGuide
             // 
@@ -573,27 +549,67 @@ namespace Kiritori
             this.chkScreenGuide.Checked = global::Kiritori.Properties.Settings.Default.isScreenGuide;
             this.chkScreenGuide.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkScreenGuide.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isScreenGuide", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.chkScreenGuide.Location = new System.Drawing.Point(226, 120);
+            this.chkScreenGuide.Location = new System.Drawing.Point(226, 100);
             this.chkScreenGuide.Name = "chkScreenGuide";
             this.chkScreenGuide.Size = new System.Drawing.Size(103, 16);
             this.chkScreenGuide.TabIndex = 1;
             this.chkScreenGuide.Text = "Screen Guide";
             this.chkScreenGuide.UseVisualStyleBackColor = true;
             // 
-            // trackbarOpacty
+            // chkHighlightOnHover
             // 
-            this.trackbarOpacty.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(249)))), ((int)(((byte)(249)))));
-            this.trackbarOpacty.DataBindings.Add(new System.Windows.Forms.Binding("Value", global::Kiritori.Properties.Settings.Default, "alpha_value", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.trackbarOpacty.LargeChange = 10;
-            this.trackbarOpacty.Location = new System.Drawing.Point(223, 162);
-            this.trackbarOpacty.Maximum = 100;
-            this.trackbarOpacty.Minimum = 10;
-            this.trackbarOpacty.Name = "trackbarOpacty";
-            this.trackbarOpacty.Size = new System.Drawing.Size(186, 45);
-            this.trackbarOpacty.SmallChange = 5;
-            this.trackbarOpacty.TabIndex = 0;
-            this.trackbarOpacty.TickFrequency = 10;
-            this.trackbarOpacty.Value = global::Kiritori.Properties.Settings.Default.alpha_value;
+            this.chkHighlightOnHover.AutoSize = true;
+            this.chkHighlightOnHover.Checked = global::Kiritori.Properties.Settings.Default.isHighlightWindowOnHover;
+            this.chkHighlightOnHover.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chkHighlightOnHover.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isHighlightWindowOnHover", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            this.chkHighlightOnHover.Location = new System.Drawing.Point(226, 120);
+            this.chkHighlightOnHover.Name = "chkHighlightOnHover";
+            this.chkHighlightOnHover.Size = new System.Drawing.Size(103, 16);
+            this.chkHighlightOnHover.TabIndex = 1;
+            this.chkHighlightOnHover.Text = "Highlight on Hover";
+            this.chkHighlightOnHover.UseVisualStyleBackColor = true;
+            // 
+            // trackbarOpacity
+            // 
+            this.trackbarOpacity.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(249)))), ((int)(((byte)(249)))));
+            this.trackbarOpacity.DataBindings.Add(new System.Windows.Forms.Binding("Value", global::Kiritori.Properties.Settings.Default, "alpha_value", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            this.trackbarOpacity.LargeChange = 10;
+            this.trackbarOpacity.Location = new System.Drawing.Point(223, 162);
+            this.trackbarOpacity.Maximum = 100;
+            this.trackbarOpacity.Minimum = 10;
+            this.trackbarOpacity.Name = "trackbarOpacity";
+            this.trackbarOpacity.Size = new System.Drawing.Size(186, 45);
+            this.trackbarOpacity.SmallChange = 5;
+            this.trackbarOpacity.TabIndex = 0;
+            this.trackbarOpacity.TickFrequency = 10;
+            this.trackbarOpacity.Value = global::Kiritori.Properties.Settings.Default.alpha_value;
+            // 
+            // labelOpacity1
+            // 
+            this.labelOpacity1.AutoSize = true;
+            this.labelOpacity1.Location = new System.Drawing.Point(221, 190);
+            this.labelOpacity1.Name = "labelOpacity1";
+            this.labelOpacity1.Size = new System.Drawing.Size(23, 12);
+            this.labelOpacity1.TabIndex = 7;
+            this.labelOpacity1.Text = "10%";
+            // 
+            // labelOpacity2
+            // 
+            this.labelOpacity2.AutoSize = true;
+            this.labelOpacity2.Location = new System.Drawing.Point(373, 190);
+            this.labelOpacity2.Name = "labelOpacity2";
+            this.labelOpacity2.Size = new System.Drawing.Size(29, 12);
+            this.labelOpacity2.TabIndex = 6;
+            this.labelOpacity2.Text = "100%";
+            // 
+            // labelOpacityDefault
+            // 
+            this.labelOpacityDefault.AutoSize = true;
+            this.labelOpacityDefault.Location = new System.Drawing.Point(224, 147);
+            this.labelOpacityDefault.Name = "labelOpacityDefault";
+            this.labelOpacityDefault.Size = new System.Drawing.Size(127, 12);
+            this.labelOpacityDefault.TabIndex = 5;
+            this.labelOpacityDefault.Text = "Default Window Opacity";
             // 
             // tabPageShortcuts
             // 
@@ -983,7 +999,7 @@ namespace Kiritori
             this.tabPageBasic.ResumeLayout(false);
             this.tabPageBasic.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.textBoxHistory)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.trackbarOpacty)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.trackbarOpacity)).EndInit();
             this.tabPageShortcuts.ResumeLayout(false);
             this.tabPageShortcuts.PerformLayout();
             this.ResumeLayout(false);

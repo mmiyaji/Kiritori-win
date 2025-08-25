@@ -102,6 +102,11 @@ namespace Kiritori
         private string _paintEditPath;  // 編集ファイルのパス（元ファイル or 一時ファイル）
         public bool SuppressHistory { get; set; } = false;
 
+        private bool isHighlightOnHover = true;
+        // 線の太さや余白
+        private const int HOVER_BORDER_THICKNESS = 3;
+        private const int HOVER_INNER_LINE_THICKNESS = 1;
+        private const int HOVER_MARGIN = 3;   // 画像の内側に寄せる分
         #endregion
 
         #region ===== Win32/プロパティ =====
@@ -130,6 +135,7 @@ namespace Kiritori
             this.isAfloatWindow = Properties.Settings.Default.isAfloatWindow;
             this.isOverlay = Properties.Settings.Default.isOverlay;
             this.alpha_value = Properties.Settings.Default.alpha_value / 100.0;
+            this.isHighlightOnHover = Properties.Settings.Default.isHighlightWindowOnHover;
             this.MinimumSize = Size.Empty;
 
             _overlayTimer = new Timer { Interval = 33 }; // ~30fps
@@ -410,6 +416,30 @@ namespace Kiritori
                     g.DrawString(_overlayText, _overlayFont, txt, x + padding, y + padding);
                 }
             }
+            // --- マウスホバー中の内枠強調 ---
+            if (isHighlightOnHover && _hoverWindow)
+            {
+                var r = pictureBox1.ClientRectangle;
+
+                // ペンの太さ（DPI対応可）
+                float thickness = 3f * this.DeviceDpi / 96f;
+
+                // 内側に収めるためにペン幅分だけ縮める
+                int inset = (int)Math.Ceiling(thickness);
+                r.Inflate(-inset, -inset);
+
+                if (r.Width > 0 && r.Height > 0)
+                {
+                    using (var pen = new Pen(Color.DeepSkyBlue, thickness))
+                    {
+                        // Insetで「内側だけ」に描く
+                        pen.Alignment = System.Drawing.Drawing2D.PenAlignment.Inset;
+                        e.Graphics.DrawRectangle(pen, r);
+                    }
+                }
+            }
+
+
 
             if (_hoverWindow &&
                 pictureBox1.ClientSize.Width >= MIN_WIDTH &&

@@ -130,5 +130,17 @@ namespace Kiritori.Properties {
                 this["isScreenGuide"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool isHighlightWindowOnHover {
+            get {
+                return ((bool)(this["isHighlightWindowOnHover"]));
+            }
+            set {
+                this["isHighlightWindowOnHover"] = value;
+            }
+        }
     }
 }
