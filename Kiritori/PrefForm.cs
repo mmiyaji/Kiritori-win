@@ -17,28 +17,28 @@ namespace Kiritori
             _initStartupToggle = true;
             InitializeComponent();
 
-        var b = this.chkRunAtStartup.DataBindings["Checked"];
-        if (b != null) this.chkRunAtStartup.DataBindings.Remove(b);
+            var b = this.chkRunAtStartup.DataBindings["Checked"];
+            if (b != null) this.chkRunAtStartup.DataBindings.Remove(b);
 
-        this.AutoScaleMode = AutoScaleMode.Dpi;
-        this.AutoScaleDimensions = new SizeF(96F, 96F);
-        this.StartPosition = FormStartPosition.CenterScreen;
+            this.AutoScaleMode = AutoScaleMode.Dpi;
+            this.AutoScaleDimensions = new SizeF(96F, 96F);
+            this.StartPosition = FormStartPosition.CenterScreen;
 
-        if (!IsInDesignMode())
-        {
-            this.Load += PrefForm_LoadAsync;
-            this.tabInfo.Layout += (_, __) => PositionDescHeader();
-            this.descCard.LocationChanged += (_, __) => PositionDescHeader();
-            this.descCard.SizeChanged += (_, __) => PositionDescHeader();
-            this.labelDescHeader.TextChanged += (_, __) => PositionDescHeader();
-            var src = Properties.Resources.icon_128x128;
-            picAppIcon.Image?.Dispose();
-            picAppIcon.Image = ScaleBitmap(src, 120, 120);
-        }
+            if (!IsInDesignMode())
+            {
+                this.Load += PrefForm_LoadAsync;
+                this.tabInfo.Layout += (_, __) => PositionDescHeader();
+                this.descCard.LocationChanged += (_, __) => PositionDescHeader();
+                this.descCard.SizeChanged += (_, __) => PositionDescHeader();
+                this.labelDescHeader.TextChanged += (_, __) => PositionDescHeader();
+                var src = Properties.Resources.icon_128x128;
+                picAppIcon.Image?.Dispose();
+                picAppIcon.Image = ScaleBitmap(src, 120, 120);
+            }
 
-        btnOpenStartupSettings.Text = PackagedHelper.IsPackaged()
-            ? "Open Startup settings"
-            : "Open Startup folder";
+            btnOpenStartupSettings.Text = PackagedHelper.IsPackaged()
+                ? "Open Startup settings"
+                : "Open Startup folder";
         }
         private async void PrefForm_LoadAsync(object sender, EventArgs e)
         {
@@ -74,11 +74,11 @@ namespace Kiritori
             finally
             {
                 _initStartupToggle = false;
-                chkRunAtStartup.CheckedChanged += chkRunAtStartup_CheckedChangedAsync;
+                chkRunAtStartup.CheckedChanged += ChkRunAtStartup_CheckedChanged;
             }
         }
 
-        private async void chkRunAtStartup_CheckedChangedAsync(object sender, EventArgs e)
+        private void ChkRunAtStartup_CheckedChanged(object sender, EventArgs e)
         {
             if (_initStartupToggle) return; // 初期化中は無視
 
@@ -296,23 +296,6 @@ namespace Kiritori
             // チェック変更は即時保存
             Properties.Settings.Default.DoNotShowOnStartup = chkDoNotShowOnStartup.Checked;
             Properties.Settings.Default.Save();
-        }
-
-        // 旧チェックボックス用ハンドラ（デザイナで使っていなければ実行されません）
-        private void checkBox3_CheckedChanged(object sender, EventArgs e)
-        {
-            try
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "ms-settings:startupapps",
-                    UseShellExecute = true
-                });
-            }
-            catch
-            {
-                MessageBox.Show("Please enable Kiritori from 'Settings > Apps > Startup'.");
-            }
         }
 
         private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

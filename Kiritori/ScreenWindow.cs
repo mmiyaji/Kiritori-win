@@ -22,7 +22,10 @@ namespace Kiritori
         private ArrayList captureArray;
         private Font fnt = new Font("Segoe UI", 10);
         private MainApplication ma;
-        private int currentDpi = 96; 
+        private int currentDpi = 96;
+        private int snapGrid = 50;      // グリッド間隔(px)
+        private int edgeSnapTol = 6;    // 端スナップの許容距離(px)
+        private bool showSnapGuides = true; // Alt中にガイド線を描くか
         public ScreenWindow(MainApplication mainapp, Func<int> getHostDpi = null)
         {
             this.ma = mainapp;
@@ -50,6 +53,45 @@ namespace Kiritori
                     new MouseEventHandler(ScreenWindow_MouseMove);
             pictureBox1.MouseUp +=
                     new MouseEventHandler(ScreenWindow_MouseUp);
+        }
+        private bool IsAltDown() => (ModifierKeys & Keys.Alt) == Keys.Alt;
+        private bool IsGuidesEnabled()
+        {
+            // Altで反転
+            bool baseVal = Properties.Settings.Default.isScreenGuide;
+            if ((ModifierKeys & Keys.Alt) != 0) return !baseVal;
+            return baseVal;
+        }
+
+        private bool IsSnapEnabled()
+        {
+            // Ctrlで反転
+            bool baseVal = false;
+            if ((ModifierKeys & Keys.Control) != 0) return !baseVal;
+            return baseVal;
+        }
+
+        private bool IsSquareConstraint()
+        {
+            return (ModifierKeys & Keys.Shift) != 0;
+        }
+        private Point SnapPoint(Point p)
+        {
+            if (bmp == null) return p;
+
+            // 1) グリッドにスナップ（四捨五入）
+            int sx = (int)Math.Round(p.X / (double)snapGrid) * snapGrid;
+            int sy = (int)Math.Round(p.Y / (double)snapGrid) * snapGrid;
+            p = new Point(sx, sy);
+
+            // 2) 画像端にスナップ（許容距離内なら吸着）
+            int W = bmp.Width, H = bmp.Height;
+            if (Math.Abs(p.X - 0) <= edgeSnapTol) p.X = 0;
+            if (Math.Abs(p.Y - 0) <= edgeSnapTol) p.Y = 0;
+            if (Math.Abs(p.X - (W - 1)) <= edgeSnapTol) p.X = W - 1;
+            if (Math.Abs(p.Y - (H - 1)) <= edgeSnapTol) p.Y = H - 1;
+
+            return p;
         }
         public void openImage()
         {
@@ -134,7 +176,7 @@ namespace Kiritori
             // 全体をうっすら白く
             using (g = Graphics.FromImage(bmp))
             using (var mask = new SolidBrush(Color.FromArgb(80, Color.White))) // 濃さは80～120で調整
-            g.FillRectangle(mask, new Rectangle(0, 0, w, h));
+                g.FillRectangle(mask, new Rectangle(0, 0, w, h));
 
             pictureBox1.SetBounds(0, 0, w, h);
             pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
@@ -150,6 +192,8 @@ namespace Kiritori
             // this.Opacity = 0.61;
             this.Opacity = 1.0;
             this.StartPosition = FormStartPosition.Manual;
+            // this.showSnapGuides = Properties.Settings.Default.isScreenGuide;
+
             // int index;
             // int upperBound;
             // x = 0;
@@ -200,8 +244,8 @@ namespace Kiritori
             }
             baseBmp = (Bitmap)bmp.Clone();
             using (g = Graphics.FromImage(bmp))
-            using (var mask = new SolidBrush(Color.FromArgb(30, Color.White)))
-            g.FillRectangle(mask, new Rectangle(0, 0, w, h));
+            using (var mask = new SolidBrush(Color.FromArgb(40, Color.White)))
+                g.FillRectangle(mask, new Rectangle(0, 0, w, h));
 
             pictureBox1.SetBounds(0, 0, w, h);
             pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
@@ -214,6 +258,9 @@ namespace Kiritori
         }
         //マウスのクリック位置を記憶
         private Point startPoint;
+        private Point startPointPhys;
+        private Point hoverPoint = Point.Empty;
+        private bool showHover = true;
         private Point endPoint;
         private Rectangle rc;
         private Boolean isPressed = false;
@@ -225,6 +272,7 @@ namespace Kiritori
             {
                 //位置を記憶する
                 startPoint = new Point(e.X, e.Y);
+                startPointPhys = new Point(e.X + x, e.Y + y);
                 isPressed = true;
             }
         }
@@ -232,65 +280,102 @@ namespace Kiritori
         private void ScreenWindow_MouseMove(object sender,
             System.Windows.Forms.MouseEventArgs e)
         {
-            if (isPressed)
+            hoverPoint = new Point(e.X, e.Y);
+
+            if (!isPressed)
             {
-                rc = new Rectangle();
-                Pen p = new Pen(Color.Black, 10);
-                if (startPoint.X < e.X)
+                if (IsGuidesEnabled())
                 {
-                    rc.X = startPoint.X;
-                    rc.Width = e.X - startPoint.X;
+                    RedrawHoverOnly();
                 }
-                else
+                return;
+            }
+            Point cur = new Point(e.X, e.Y);
+            if (IsSnapEnabled())
+            {
+                cur = SnapPoint(cur);
+            }
+            rc.X = Math.Min(startPoint.X, cur.X);
+            rc.Y = Math.Min(startPoint.Y, cur.Y);
+            rc.Width  = Math.Abs(cur.X - startPoint.X);
+            rc.Height = Math.Abs(cur.Y - startPoint.Y);
+            // rc = new Rectangle();
+            // // Pen p = new Pen(Color.Black, 10);
+            // if (startPoint.X < e.X)
+            // {
+            //     rc.X = startPoint.X;
+            //     rc.Width = e.X - startPoint.X;
+            // }
+            // else
+            // {
+            //     rc.X = e.X;
+            //     rc.Width = startPoint.X - e.X;
+            // }
+            // if (startPoint.Y < e.Y)
+            // {
+            //     rc.Y = startPoint.Y;
+            //     rc.Height = e.Y - startPoint.Y;
+            // }
+            // else
+            // {
+            //     rc.Y = e.Y;
+            //     rc.Height = startPoint.Y - e.Y;
+            // }
+            // {
+            //     Pen blackPen = new Pen(Color.Black);
+            //     using (g = Graphics.FromImage(bmp))
+            //     {
+            //         blackPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+            //         blackPen.Width = 1;
+            //         g.Clear(SystemColors.Control);
+            //         g.DrawRectangle(blackPen, rc);
+            //         g.DrawString(rc.Width.ToString() + "x" + rc.Height.ToString(),
+            //             fnt, Brushes.Black, e.X + 5, e.Y + 10);
+            //     }
+            //     pictureBox1.Refresh();
+            // }
+            if (IsSquareConstraint())
+            {
+                int size = Math.Min(rc.Width, rc.Height);
+                rc.Width = rc.Height = size;
+            }
+            using (g = Graphics.FromImage(bmp))
+            {
+                // 原本から毎回描き直し
+                g.DrawImage(baseBmp, Point.Empty);
+
+                // 外側だけに半透明白マスクをかける
+                using (var mask = new SolidBrush(Color.FromArgb(40, Color.White)))
+                using (var outside = new Region(new Rectangle(0, 0, bmp.Width, bmp.Height)))
                 {
-                    rc.X = e.X;
-                    rc.Width = startPoint.X - e.X;
+                    outside.Exclude(rc);           // 選択範囲は除外（＝透けない）
+                    g.FillRegion(mask, outside);   // 外側だけ白っぽく
                 }
-                if (startPoint.Y < e.Y)
+
+                using (var blackPen = new Pen(Color.Black) { Width = 1, DashStyle = System.Drawing.Drawing2D.DashStyle.Dash })
                 {
-                    rc.Y = startPoint.Y;
-                    rc.Height = e.Y - startPoint.Y;
+                    g.DrawRectangle(blackPen, rc); // 破線枠
                 }
-                else
+
+                if (IsGuidesEnabled())
                 {
-                    rc.Y = e.Y;
-                    rc.Height = startPoint.Y - e.Y;
-                }
-                // {
-                //     Pen blackPen = new Pen(Color.Black);
-                //     using (g = Graphics.FromImage(bmp))
-                //     {
-                //         blackPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
-                //         blackPen.Width = 1;
-                //         g.Clear(SystemColors.Control);
-                //         g.DrawRectangle(blackPen, rc);
-                //         g.DrawString(rc.Width.ToString() + "x" + rc.Height.ToString(),
-                //             fnt, Brushes.Black, e.X + 5, e.Y + 10);
-                //     }
-                //     pictureBox1.Refresh();
-                // }
-                {
-                    using (g = Graphics.FromImage(bmp))
+                    // 1) 選択サイズ
+                    DrawLabel(g, $"{rc.Width} x {rc.Height}", new Point(e.X + 12, e.Y + 12));
+
+                    // 2) 開始点の十字マーカー
+                    DrawCrosshair(g, startPoint);
+
+                    // 3) 開始点の“物理座標”ラベル（開始点のすぐ右下に表示）
+                    DrawLabel(g, $"{startPointPhys.X}, {startPointPhys.Y}", new Point(startPoint.X + 10, startPoint.Y + 10));
+                    using (var pen = new Pen(Color.FromArgb(120, Color.Black)))
                     {
-                        // 原本から毎回描き直し
-                        g.DrawImage(baseBmp, Point.Empty);
-
-                        // 外側だけに半透明白マスクをかける
-                        using (var mask = new SolidBrush(Color.FromArgb(30, Color.White)))
-                        using (var outside = new Region(new Rectangle(0, 0, bmp.Width, bmp.Height)))
-                        {
-                            outside.Exclude(rc);           // 選択範囲は除外（＝透けない）
-                            g.FillRegion(mask, outside);   // 外側だけ白っぽく
-                        }
-
-                        using (var blackPen = new Pen(Color.Black) { Width = 1, DashStyle = System.Drawing.Drawing2D.DashStyle.Dash })
-                        {
-                            g.DrawRectangle(blackPen, rc); // 破線枠
-                        }
-                        g.DrawString($"{rc.Width}x{rc.Height}", fnt, Brushes.Black, e.X + 5, e.Y + 10);
+                        g.DrawLine(pen, 0, cur.Y, bmp.Width, cur.Y);
+                        g.DrawLine(pen, cur.X, 0, cur.X, bmp.Height);
                     }
-                    pictureBox1.Refresh();
                 }
+
+                // g.DrawString($"{rc.Width}x{rc.Height}", fnt, Brushes.Black, e.X + 5, e.Y + 10);
+                pictureBox1.Refresh();
             }
         }
         //マウスのボタンが離されたとき
@@ -316,6 +401,44 @@ namespace Kiritori
                 }
             }
         }
+        private void RedrawHoverOnly()
+        {
+            if (!showHover || bmp == null || baseBmp == null) return;
+
+            var pt = hoverPoint;
+            if (IsAltDown())
+                pt = SnapPoint(pt);
+
+            using (g = Graphics.FromImage(bmp))
+            {
+                // 原本から描き直し
+                g.DrawImage(baseBmp, Point.Empty);
+
+                // 全体を薄く白（選択前のスクリーン状態）
+                using (var mask = new SolidBrush(Color.FromArgb(40, Color.White)))
+                    g.FillRectangle(mask, new Rectangle(0, 0, bmp.Width, bmp.Height));
+
+                if (showSnapGuides && IsAltDown())
+                {
+                    using (var pen = new Pen(Color.FromArgb(120, Color.Black)))
+                    {
+                        g.DrawLine(pen, 0, pt.Y, bmp.Width, pt.Y);
+                        g.DrawLine(pen, pt.X, 0, pt.X, bmp.Height);
+                    }
+                }
+                // 開始候補点に十字
+                DrawCrosshair(g, hoverPoint);
+
+                // 物理座標（仮想スクリーン基準）ラベル
+                var phys = new Point(hoverPoint.X + x, hoverPoint.Y + y);
+                if (showSnapGuides)
+                {
+                    DrawLabel(g, $"{phys.X}, {phys.Y}", new Point(hoverPoint.X + 10, hoverPoint.Y + 10));
+                }
+            }
+            pictureBox1.Refresh();
+        }
+
         public void hideWindows()
         {
             foreach (SnapWindow sw in captureArray)
@@ -411,5 +534,33 @@ namespace Kiritori
             // 必要に応じて他の DPI 依存リソースも調整
             // 例: ペンの太さ, PictureBox のサイズモード etc.
         }
+        private void DrawLabel(Graphics g, string text, Point anchor, int pad = 4)
+        {
+            // 文字サイズ計測
+            var sz = g.MeasureString(text, fnt);
+            var rect = new RectangleF(anchor.X, anchor.Y, sz.Width + pad * 2, sz.Height + pad * 2);
+
+            // 背景（半透明白）＋枠線
+            using (var bg = new SolidBrush(Color.FromArgb(180, Color.White)))
+            using (var pen = new Pen(Color.Black))
+            {
+                g.FillRectangle(bg, rect);
+                g.DrawRectangle(pen, Rectangle.Round(rect));
+            }
+
+            // 文字
+            g.DrawString(text, fnt, Brushes.Black, rect.X + pad, rect.Y + pad);
+        }
+
+        private void DrawCrosshair(Graphics g, Point p)
+        {
+            using (var pen = new Pen(Color.Black, 1))
+            {
+                g.DrawLine(pen, p.X - 6, p.Y, p.X + 6, p.Y);
+                g.DrawLine(pen, p.X, p.Y - 6, p.X, p.Y + 6);
+            }
+        }
+
     }
+    
 }

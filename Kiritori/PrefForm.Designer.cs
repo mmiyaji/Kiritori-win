@@ -22,6 +22,78 @@ namespace Kiritori
             base.Dispose(disposing);
         }
 
+                private System.Windows.Forms.TabPage tabInfo;
+        private System.Windows.Forms.Label labelVersion;
+        private System.Windows.Forms.Label labelSign;
+        private System.Windows.Forms.Label labelAppName;
+        private System.Windows.Forms.LinkLabel labelLinkWebsite;
+        private System.Windows.Forms.PictureBox picAppIcon;
+        private System.Windows.Forms.TabControl tabControl;
+        private System.Windows.Forms.TabPage tabPageBasic;
+        private System.Windows.Forms.CheckBox chkAfloat;
+        private System.Windows.Forms.CheckBox chkOverlay;
+        private System.Windows.Forms.CheckBox chkWindowShadow;
+        private System.Windows.Forms.CheckBox chkScreenGuide;
+        private System.Windows.Forms.TrackBar trackbarOpacty;
+        private System.Windows.Forms.Button btnSavestings;
+        private System.Windows.Forms.Label labelOpacity1;
+        private System.Windows.Forms.Label labelOpacity2;
+        private System.Windows.Forms.Label labelOpacityDefault;
+        private System.Windows.Forms.Label labelKiritori;
+        private System.Windows.Forms.TextBox textBoxKiritori;
+        private System.Windows.Forms.Button btnCancelSettings;
+        private System.Windows.Forms.TabPage tabPageShortcuts;
+        private System.Windows.Forms.TextBox textBoxAfloat;
+        private System.Windows.Forms.Label labelAfloat;
+        private System.Windows.Forms.TextBox textBoxDropShadow;
+        private System.Windows.Forms.Label labelDropShadow;
+        private System.Windows.Forms.TextBox textBoxClose;
+        private System.Windows.Forms.Label labelClose;
+        private System.Windows.Forms.TextBox textBoxZoomOut;
+        private System.Windows.Forms.Label labelZoomOff;
+        private System.Windows.Forms.TextBox textBoxZoomOff;
+        private System.Windows.Forms.Label labelZoomOut;
+        private System.Windows.Forms.TextBox textBoxZoomIn;
+        private System.Windows.Forms.Label labelZoomIn;
+        private System.Windows.Forms.TextBox textBoxSave;
+        private System.Windows.Forms.Label labelSave;
+        private System.Windows.Forms.TextBox textBoxCopy;
+        private System.Windows.Forms.Label labelCopy;
+        private System.Windows.Forms.TextBox textbCut;
+        private System.Windows.Forms.Label labelCut;
+        private System.Windows.Forms.TextBox textBoxPrint;
+        private System.Windows.Forms.Label labelPrint;
+        private System.Windows.Forms.TextBox textBoxMinimize;
+        private System.Windows.Forms.Label labelMinimize;
+        private System.Windows.Forms.TextBox textBoxMoveRight;
+        private System.Windows.Forms.Label labelMoveRight;
+        private System.Windows.Forms.TextBox textBoxMoveLeft;
+        private System.Windows.Forms.Label labelMoveLeft;
+        private System.Windows.Forms.TextBox textBoxMoveDown;
+        private System.Windows.Forms.Label labelMoveDown;
+        private System.Windows.Forms.TextBox textBoxMoveUp;
+        private System.Windows.Forms.Label labelMoveUp;
+        private System.Windows.Forms.Label labelStartup;
+        private System.Windows.Forms.Label labelAppearance;
+        private System.Windows.Forms.Label labelStartupInfo;
+        private System.Windows.Forms.Label labelHistory;
+        private System.Windows.Forms.NumericUpDown textBoxHistory;
+        private System.Windows.Forms.Button btnOpenStartupSettings;
+        private System.Windows.Forms.CheckBox chkDoNotShowOnStartup;
+        private System.Windows.Forms.CheckBox chkRunAtStartup;
+        private System.Windows.Forms.Label labelTrayNote;
+        private System.Windows.Forms.Panel descCard;
+        private System.Windows.Forms.Label labelDescHeader;
+        private System.Windows.Forms.Label labelDescription;
+        private System.Windows.Forms.ToolTip toolTip1;
+        private System.Windows.Forms.Label labelScreenGuide;
+        private System.Windows.Forms.TextBox textBoxScreenGuide;
+        private System.Windows.Forms.Label labelScreenSquare;
+        private System.Windows.Forms.TextBox textBoxScreenSquare;
+        private System.Windows.Forms.Label labelScreenSnap;
+        private System.Windows.Forms.TextBox textBoxScreenSnap;
+
+
         #region Windows フォーム デザイナーで生成されたコード
 
         /// <summary>
@@ -59,6 +131,7 @@ namespace Kiritori
             this.chkAfloat = new System.Windows.Forms.CheckBox();
             this.chkOverlay = new System.Windows.Forms.CheckBox();
             this.chkWindowShadow = new System.Windows.Forms.CheckBox();
+            this.chkScreenGuide = new System.Windows.Forms.CheckBox();
             this.trackbarOpacty = new System.Windows.Forms.TrackBar();
             this.tabPageShortcuts = new System.Windows.Forms.TabPage();
             this.textBoxMoveRight = new System.Windows.Forms.TextBox();
@@ -91,6 +164,12 @@ namespace Kiritori
             this.labelAfloat = new System.Windows.Forms.Label();
             this.textBoxDropShadow = new System.Windows.Forms.TextBox();
             this.labelDropShadow = new System.Windows.Forms.Label();
+            this.labelScreenGuide = new System.Windows.Forms.Label();
+            this.labelScreenSnap = new System.Windows.Forms.Label();
+            this.labelScreenSquare = new System.Windows.Forms.Label();
+            this.textBoxScreenGuide = new System.Windows.Forms.TextBox();
+            this.textBoxScreenSnap = new System.Windows.Forms.TextBox();
+            this.textBoxScreenSquare = new System.Windows.Forms.TextBox();
             this.toolTip1 = new System.Windows.Forms.ToolTip();
             this.tabInfo.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.picAppIcon)).BeginInit();
@@ -283,6 +362,7 @@ namespace Kiritori
             this.tabPageBasic.Controls.Add(this.chkAfloat);
             this.tabPageBasic.Controls.Add(this.chkOverlay);
             this.tabPageBasic.Controls.Add(this.chkWindowShadow);
+            this.tabPageBasic.Controls.Add(this.chkScreenGuide);
             this.tabPageBasic.Controls.Add(this.trackbarOpacty);
             this.tabPageBasic.Location = new System.Drawing.Point(4, 22);
             this.tabPageBasic.Name = "tabPageBasic";
@@ -399,12 +479,12 @@ namespace Kiritori
             this.labelKiritori.Name = "labelKiritori";
             this.labelKiritori.Size = new System.Drawing.Size(83, 12);
             this.labelKiritori.TabIndex = 10;
-            this.labelKiritori.Text = "Capture hotkey";
+            this.labelKiritori.Text = "Capture Hotkey";
             // 
             // labelOpacity1
             // 
             this.labelOpacity1.AutoSize = true;
-            this.labelOpacity1.Location = new System.Drawing.Point(221, 164);
+            this.labelOpacity1.Location = new System.Drawing.Point(221, 184);
             this.labelOpacity1.Name = "labelOpacity1";
             this.labelOpacity1.Size = new System.Drawing.Size(23, 12);
             this.labelOpacity1.TabIndex = 7;
@@ -413,7 +493,7 @@ namespace Kiritori
             // labelOpacity2
             // 
             this.labelOpacity2.AutoSize = true;
-            this.labelOpacity2.Location = new System.Drawing.Point(373, 164);
+            this.labelOpacity2.Location = new System.Drawing.Point(373, 184);
             this.labelOpacity2.Name = "labelOpacity2";
             this.labelOpacity2.Size = new System.Drawing.Size(29, 12);
             this.labelOpacity2.TabIndex = 6;
@@ -422,7 +502,7 @@ namespace Kiritori
             // labelOpacityDefault
             // 
             this.labelOpacityDefault.AutoSize = true;
-            this.labelOpacityDefault.Location = new System.Drawing.Point(224, 127);
+            this.labelOpacityDefault.Location = new System.Drawing.Point(224, 147);
             this.labelOpacityDefault.Name = "labelOpacityDefault";
             this.labelOpacityDefault.Size = new System.Drawing.Size(127, 12);
             this.labelOpacityDefault.TabIndex = 5;
@@ -430,7 +510,7 @@ namespace Kiritori
             // 
             // btnSavestings
             // 
-            this.btnSavestings.Location = new System.Drawing.Point(329, 193);
+            this.btnSavestings.Location = new System.Drawing.Point(329, 213);
             this.btnSavestings.Name = "btnSavestings";
             this.btnSavestings.Size = new System.Drawing.Size(75, 23);
             this.btnSavestings.TabIndex = 4;
@@ -440,7 +520,7 @@ namespace Kiritori
             // 
             // btnCancelSettings
             // 
-            this.btnCancelSettings.Location = new System.Drawing.Point(235, 193);
+            this.btnCancelSettings.Location = new System.Drawing.Point(235, 213);
             this.btnCancelSettings.Name = "btnCancelSettings";
             this.btnCancelSettings.Size = new System.Drawing.Size(75, 23);
             this.btnCancelSettings.TabIndex = 3;
@@ -458,7 +538,7 @@ namespace Kiritori
             this.chkAfloat.Name = "chkAfloat";
             this.chkAfloat.Size = new System.Drawing.Size(100, 16);
             this.chkAfloat.TabIndex = 8;
-            this.chkAfloat.Text = "always in front";
+            this.chkAfloat.Text = "Always In Front";
             this.chkAfloat.UseVisualStyleBackColor = true;
             // 
             // chkOverlay
@@ -484,15 +564,28 @@ namespace Kiritori
             this.chkWindowShadow.Name = "chkWindowShadow";
             this.chkWindowShadow.Size = new System.Drawing.Size(103, 16);
             this.chkWindowShadow.TabIndex = 1;
-            this.chkWindowShadow.Text = "window shadow";
+            this.chkWindowShadow.Text = "Window Shadow";
             this.chkWindowShadow.UseVisualStyleBackColor = true;
+            // 
+            // chkScreenGuide
+            // 
+            this.chkScreenGuide.AutoSize = true;
+            this.chkScreenGuide.Checked = global::Kiritori.Properties.Settings.Default.isScreenGuide;
+            this.chkScreenGuide.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chkScreenGuide.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isScreenGuide", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            this.chkScreenGuide.Location = new System.Drawing.Point(226, 120);
+            this.chkScreenGuide.Name = "chkScreenGuide";
+            this.chkScreenGuide.Size = new System.Drawing.Size(103, 16);
+            this.chkScreenGuide.TabIndex = 1;
+            this.chkScreenGuide.Text = "Screen Guide";
+            this.chkScreenGuide.UseVisualStyleBackColor = true;
             // 
             // trackbarOpacty
             // 
             this.trackbarOpacty.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(249)))), ((int)(((byte)(249)))));
             this.trackbarOpacty.DataBindings.Add(new System.Windows.Forms.Binding("Value", global::Kiritori.Properties.Settings.Default, "alpha_value", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
             this.trackbarOpacty.LargeChange = 10;
-            this.trackbarOpacty.Location = new System.Drawing.Point(223, 142);
+            this.trackbarOpacty.Location = new System.Drawing.Point(223, 162);
             this.trackbarOpacty.Maximum = 100;
             this.trackbarOpacty.Minimum = 10;
             this.trackbarOpacty.Name = "trackbarOpacty";
@@ -534,6 +627,12 @@ namespace Kiritori
             this.tabPageShortcuts.Controls.Add(this.labelAfloat);
             this.tabPageShortcuts.Controls.Add(this.textBoxDropShadow);
             this.tabPageShortcuts.Controls.Add(this.labelDropShadow);
+            this.tabPageShortcuts.Controls.Add(this.labelScreenGuide);
+            this.tabPageShortcuts.Controls.Add(this.labelScreenSquare);
+            this.tabPageShortcuts.Controls.Add(this.labelScreenSnap);
+            this.tabPageShortcuts.Controls.Add(this.textBoxScreenGuide);
+            this.tabPageShortcuts.Controls.Add(this.textBoxScreenSquare);
+            this.tabPageShortcuts.Controls.Add(this.textBoxScreenSnap);
             this.tabPageShortcuts.Location = new System.Drawing.Point(4, 22);
             this.tabPageShortcuts.Name = "tabPageShortcuts";
             this.tabPageShortcuts.Padding = new System.Windows.Forms.Padding(3);
@@ -812,6 +911,60 @@ namespace Kiritori
             this.labelPrint.TabIndex = 14;
             this.labelPrint.Text = "print";
             // 
+            // textBoxScreenGuide
+            // 
+            this.textBoxScreenGuide.Enabled = false;
+            this.textBoxScreenGuide.Location = new System.Drawing.Point(304, 170);
+            this.textBoxScreenGuide.Name = "textBoxScreenGuide";
+            this.textBoxScreenGuide.Size = new System.Drawing.Size(100, 19);
+            this.textBoxScreenGuide.TabIndex = 15;
+            this.textBoxScreenGuide.Text = "capture & alt";
+            // 
+            // labelScreenGuide
+            // 
+            this.labelScreenGuide.AutoSize = true;
+            this.labelScreenGuide.Location = new System.Drawing.Point(230, 170);
+            this.labelScreenGuide.Name = "labelScreenGuide";
+            this.labelScreenGuide.Size = new System.Drawing.Size(28, 12);
+            this.labelScreenGuide.TabIndex = 14;
+            this.labelScreenGuide.Text = "Show Guide";
+            // 
+            // textBoxScreenSquare
+            // 
+            this.textBoxScreenSquare.Enabled = false;
+            this.textBoxScreenSquare.Location = new System.Drawing.Point(304, 195);
+            this.textBoxScreenSquare.Name = "textBoxScreenSquare";
+            this.textBoxScreenSquare.Size = new System.Drawing.Size(100, 19);
+            this.textBoxScreenSquare.TabIndex = 15;
+            this.textBoxScreenSquare.Text = "capture & shift";
+            // 
+            // labelScreenSquare
+            // 
+            this.labelScreenSquare.AutoSize = true;
+            this.labelScreenSquare.Location = new System.Drawing.Point(230, 195);
+            this.labelScreenSquare.Name = "labelScreenSquare";
+            this.labelScreenSquare.Size = new System.Drawing.Size(28, 12);
+            this.labelScreenSquare.TabIndex = 14;
+            this.labelScreenSquare.Text = "Square";
+            // 
+            // textBoxScreenSnap
+            // 
+            this.textBoxScreenSnap.Enabled = false;
+            this.textBoxScreenSnap.Location = new System.Drawing.Point(304, 220);
+            this.textBoxScreenSnap.Name = "textBoxScreenSnap";
+            this.textBoxScreenSnap.Size = new System.Drawing.Size(100, 19);
+            this.textBoxScreenSnap.TabIndex = 15;
+            this.textBoxScreenSnap.Text = "capture & ctrl";
+            // 
+            // labelScreenSnap
+            // 
+            this.labelScreenSnap.AutoSize = true;
+            this.labelScreenSnap.Location = new System.Drawing.Point(230, 220);
+            this.labelScreenSnap.Name = "labelScreenSnap";
+            this.labelScreenSnap.Size = new System.Drawing.Size(28, 12);
+            this.labelScreenSnap.TabIndex = 14;
+            this.labelScreenSnap.Text = "Snap Guide";
+            // 
             // PrefForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -839,68 +992,5 @@ namespace Kiritori
 
         #endregion
 
-        private System.Windows.Forms.TabPage tabInfo;
-        private System.Windows.Forms.Label labelVersion;
-        private System.Windows.Forms.Label labelSign;
-        private System.Windows.Forms.Label labelAppName;
-        private System.Windows.Forms.LinkLabel labelLinkWebsite;
-        private System.Windows.Forms.PictureBox picAppIcon;
-        private System.Windows.Forms.TabControl tabControl;
-        private System.Windows.Forms.TabPage tabPageBasic;
-        private System.Windows.Forms.CheckBox chkAfloat;
-        private System.Windows.Forms.CheckBox chkOverlay;
-        private System.Windows.Forms.CheckBox chkWindowShadow;
-        private System.Windows.Forms.TrackBar trackbarOpacty;
-        private System.Windows.Forms.Button btnSavestings;
-        private System.Windows.Forms.Label labelOpacity1;
-        private System.Windows.Forms.Label labelOpacity2;
-        private System.Windows.Forms.Label labelOpacityDefault;
-        private System.Windows.Forms.Label labelKiritori;
-        private System.Windows.Forms.TextBox textBoxKiritori;
-        private System.Windows.Forms.Button btnCancelSettings;
-        private System.Windows.Forms.TabPage tabPageShortcuts;
-        private System.Windows.Forms.TextBox textBoxAfloat;
-        private System.Windows.Forms.Label labelAfloat;
-        private System.Windows.Forms.TextBox textBoxDropShadow;
-        private System.Windows.Forms.Label labelDropShadow;
-        private System.Windows.Forms.TextBox textBoxClose;
-        private System.Windows.Forms.Label labelClose;
-        private System.Windows.Forms.TextBox textBoxZoomOut;
-        private System.Windows.Forms.Label labelZoomOff;
-        private System.Windows.Forms.TextBox textBoxZoomOff;
-        private System.Windows.Forms.Label labelZoomOut;
-        private System.Windows.Forms.TextBox textBoxZoomIn;
-        private System.Windows.Forms.Label labelZoomIn;
-        private System.Windows.Forms.TextBox textBoxSave;
-        private System.Windows.Forms.Label labelSave;
-        private System.Windows.Forms.TextBox textBoxCopy;
-        private System.Windows.Forms.Label labelCopy;
-        private System.Windows.Forms.TextBox textbCut;
-        private System.Windows.Forms.Label labelCut;
-        private System.Windows.Forms.TextBox textBoxPrint;
-        private System.Windows.Forms.Label labelPrint;
-        private System.Windows.Forms.TextBox textBoxMinimize;
-        private System.Windows.Forms.Label labelMinimize;
-        private System.Windows.Forms.TextBox textBoxMoveRight;
-        private System.Windows.Forms.Label labelMoveRight;
-        private System.Windows.Forms.TextBox textBoxMoveLeft;
-        private System.Windows.Forms.Label labelMoveLeft;
-        private System.Windows.Forms.TextBox textBoxMoveDown;
-        private System.Windows.Forms.Label labelMoveDown;
-        private System.Windows.Forms.TextBox textBoxMoveUp;
-        private System.Windows.Forms.Label labelMoveUp;
-        private System.Windows.Forms.Label labelStartup;
-        private System.Windows.Forms.Label labelAppearance;
-        private System.Windows.Forms.Label labelStartupInfo;
-        private System.Windows.Forms.Label labelHistory;
-        private System.Windows.Forms.NumericUpDown textBoxHistory;
-        private System.Windows.Forms.Button btnOpenStartupSettings;
-        private System.Windows.Forms.CheckBox chkDoNotShowOnStartup;
-        private System.Windows.Forms.CheckBox chkRunAtStartup;
-        private System.Windows.Forms.Label labelTrayNote;
-        private System.Windows.Forms.Panel descCard;
-        private System.Windows.Forms.Label labelDescHeader;
-        private System.Windows.Forms.Label labelDescription;
-        private System.Windows.Forms.ToolTip toolTip1;
     }
 }

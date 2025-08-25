@@ -118,5 +118,17 @@ namespace Kiritori.Properties {
                 this["isOverlay"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool isScreenGuide {
+            get {
+                return ((bool)(this["isScreenGuide"]));
+            }
+            set {
+                this["isScreenGuide"] = value;
+            }
+        }
     }
 }
