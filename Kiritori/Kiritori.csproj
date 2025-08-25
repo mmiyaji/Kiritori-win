@@ -120,9 +120,7 @@
     <Compile Include="SnapWindow.Designer.cs">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </Compile>
-    <Compile Include="MainApplication.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="MainApplication.cs" />
     <Compile Include="MainApplication.Designer.cs">
       <DependentUpon>MainApplication.cs</DependentUpon>
     </Compile>

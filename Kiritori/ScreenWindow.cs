@@ -136,8 +136,13 @@ namespace Kiritori
             {
                 SnapWindow sw = new SnapWindow(this.ma);
                 sw.StartPosition = FormStartPosition.CenterScreen;
-                sw.setImageFromBMP((Bitmap)((item.Tag as SnapWindow).main_image));
+        
+                var src = (item.Tag as SnapWindow)?.main_image;
+                if (src == null) return;
+                // sw.setImageFromBMP((Bitmap)((item.Tag as SnapWindow).main_image));
+                sw.setImageFromBMP((Bitmap)src.Clone());
                 sw.Text = (item.Tag as SnapWindow).Text;
+
                 sw.FormClosing +=
                     new FormClosingEventHandler(SW_FormClosing);
                 captureArray.Add(sw);
@@ -152,6 +157,7 @@ namespace Kiritori
         {
             // this.Opacity = 0.61;
             this.Opacity = 1.0;
+            DisposeCaptureSurface();
             // int h, w;
             // //ディスプレイの高さ
             // h = System.Windows.Forms.Screen.GetBounds(this).Height;
@@ -191,6 +197,8 @@ namespace Kiritori
         {
             // this.Opacity = 0.61;
             this.Opacity = 1.0;
+            DisposeCaptureSurface();
+
             this.StartPosition = FormStartPosition.Manual;
             // this.showSnapGuides = Properties.Settings.Default.isScreenGuide;
 
@@ -297,7 +305,7 @@ namespace Kiritori
             }
             rc.X = Math.Min(startPoint.X, cur.X);
             rc.Y = Math.Min(startPoint.Y, cur.Y);
-            rc.Width  = Math.Abs(cur.X - startPoint.X);
+            rc.Width = Math.Abs(cur.X - startPoint.X);
             rc.Height = Math.Abs(cur.Y - startPoint.Y);
             // rc = new Rectangle();
             // // Pen p = new Pen(Color.Black, 10);
@@ -470,6 +478,7 @@ namespace Kiritori
         private void CloseScreen()
         {
             this.isOpen = false;
+            DisposeCaptureSurface();
             this.Hide();
         }
         void SW_FormClosing(object sender, FormClosingEventArgs e)
@@ -559,6 +568,39 @@ namespace Kiritori
                 g.DrawLine(pen, p.X - 6, p.Y, p.X + 6, p.Y);
                 g.DrawLine(pen, p.X, p.Y - 6, p.X, p.Y + 6);
             }
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            DisposeCaptureSurface();
+
+            // DPIフォントの後始末
+            fnt?.Dispose();
+            fnt = null;
+            if (this.Icon != null)
+            {
+                this.Icon.Dispose();
+                this.Icon = null;
+            }
+
+            base.OnFormClosed(e);
+        }
+
+        private void DisposeCaptureSurface()
+        {
+            // PictureBox から切り離してから破棄
+            var pic = pictureBox1?.Image;
+            pictureBox1.Image = null;
+
+            if (bmp != null && !ReferenceEquals(bmp, pic)) { bmp.Dispose(); }
+            if (baseBmp != null && baseBmp != bmp && baseBmp != pic) { baseBmp.Dispose(); }
+            if (pic != null) { pic.Dispose(); }
+
+            bmp = null;
+            baseBmp = null;
+
+            // Graphics フィールドは使い回さない（必ず using で作る）。念のため。
+            g = null;
         }
 
     }

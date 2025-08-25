@@ -59,13 +59,13 @@ namespace Kiritori
                 else
                 {
                     // 非パッケージ：ショートカット有無で判定
-                    string startupDir   = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+                    string startupDir = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
                     string shortcutPath = Path.Combine(startupDir, Application.ProductName + ".lnk");
 
                     chkRunAtStartup.Checked = File.Exists(shortcutPath);
                     chkRunAtStartup.Enabled = true;
 
-                    string appData    = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                    string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
                     string displayDir = startupDir.Replace(appData, "%APPDATA%");
                     labelStartupInfo.Text = "Shortcut: " + Path.Combine(displayDir, Application.ProductName + ".lnk");
                     toolTip1.SetToolTip(labelStartupInfo, shortcutPath);
@@ -205,12 +205,15 @@ namespace Kiritori
             object shortcut = t.InvokeMember("CreateShortcut",
                 System.Reflection.BindingFlags.InvokeMethod, null, shell,
                 new object[] { shortcutPath });
-            try {
+            try
+            {
                 t.InvokeMember("TargetPath", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { targetPath });
                 t.InvokeMember("WorkingDirectory", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { Path.GetDirectoryName(targetPath) });
                 t.InvokeMember("IconLocation", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { targetPath + ",0" });
                 t.InvokeMember("Save", System.Reflection.BindingFlags.InvokeMethod, null, shortcut, null);
-            } finally {
+            }
+            finally
+            {
                 System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shortcut);
                 System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shell);
             }
@@ -374,7 +377,7 @@ namespace Kiritori
 
             // descCardの左上を、labelの親座標系に変換
             var labelParent = this.labelDescHeader.Parent;
-            var cardParent  = this.descCard.Parent;
+            var cardParent = this.descCard.Parent;
 
             Point cardTopLeftInLabelParent;
             if (labelParent == cardParent)
@@ -432,6 +435,16 @@ namespace Kiritori
         private void textBoxKiritori_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
         {
             e.IsInputKey = true;
+        }
+        
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            if (this.Icon != null)
+            {
+                this.Icon.Dispose();
+                this.Icon = null;
+            }
+            base.OnFormClosed(e);
         }
 
     }

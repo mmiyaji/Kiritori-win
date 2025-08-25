@@ -10,17 +10,29 @@ using System.Windows.Forms;
 using System.Runtime.InteropServices;
 //using System.Windows.Forms.Cursor;
 using Kiritori.Properties;
+using System.IO;
+using System.Drawing.Imaging;
+using System.Globalization;
 
 namespace Kiritori
 {
+    internal sealed class HistoryEntry
+    {
+        public string Path;
+        public Bitmap Thumb;
+    }
     public partial class MainApplication : Form
     {
         private const int WM_DPICHANGED = 0x02E0;
         private HotKey hotKey;
         private ScreenWindow s;
+        private static readonly string HistoryTempDir = Path.Combine(Path.GetTempPath(), "Kiritori", "History");
+
         public MainApplication()
         {
             InitializeComponent();
+            notifyIcon1.Icon = Properties.Resources.AppIcon;
+            this.Icon = Properties.Resources.AppIcon;
             hotKey = new HotKey(MOD_KEY.CONTROL | MOD_KEY.SHIFT, Keys.D5);
             hotKey.HotKeyPush += new EventHandler(hotKey_HotKeyPush);
             Application.ApplicationExit += new EventHandler(Application_ApplicationExit);
@@ -109,11 +121,15 @@ namespace Kiritori
         {
             try
             {
-                this.notifyIcon1.Visible = false;
+                ClearHistoryMenu();
+                notifyIcon1.Visible = false;
+                notifyIcon1.Dispose();
+                this.Icon?.Dispose();
                 hotKey.Dispose();
             }
             catch { }
         }
+
         private void Form2_Load(object sender, EventArgs e)
         {
         }
@@ -158,30 +174,75 @@ namespace Kiritori
             }
             s.openImageFromHistory(item);
         }
+
         public void setHistory(SnapWindow sw)
         {
             int limit = Properties.Settings.Default.HistoryLimit;
             if (limit == 0) return;
 
-            ToolStripMenuItem item1 = new ToolStripMenuItem();
-            item1.Image = sw.thumbnail_image;
-            //            item1.Text = sw.Text;
-            // ファイル名が一行表示だと長くなるので、てきとーに改行
-            item1.Text = substringAtCount(sw.Text, 30);
-            item1.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.ImageAndText;
-            item1.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            item1.ImageScaling = ToolStripItemImageScaling.None;
-            item1.Tag = sw;
-            // historyToolStripMenuItem1.DropDownItems.Add(item1);
-            item1.Click += new System.EventHandler(this.historyToolStripMenuItem1_item_Click);
-            historyToolStripMenuItem1.DropDownItems.Insert(0, item1);
+            // 1) 履歴用の実パスを決定（なければ Temp に保存）
+            string path = sw.Text; // 既存はタイトル文字列。ファイルパスのこともある
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+            {
+                // 画像ソースの既知パスが付いていればそれを優先（Tagに入れている場合）
+                // var tagged = sw.pictureBox1?.Image?.Tag as string;
+                var tagged = sw.GetImageSourcePath();
+                if (!string.IsNullOrEmpty(tagged) && File.Exists(tagged))
+                {
+                    path = tagged;
+                }
+                else
+                {
+                    // Temp に確実に保存
+                    Directory.CreateDirectory(HistoryTempDir);
+                    path = Path.Combine(HistoryTempDir, $"{DateTime.Now:yyyyMMdd_HHmmssfff}.png");
+                    using (var clone = (Bitmap)sw.main_image.Clone())
+                    {
+                        clone.Save(path, ImageFormat.Png);
+                    }
+                }
+            }
 
-            // 件数制限を超えていたら古いものを削除
+            // 2) サムネは必ず独立クローン
+            Bitmap thumb = (Bitmap)sw.thumbnail_image.Clone();
+
+            var entry = new HistoryEntry { Path = path, Thumb = thumb };
+
+            var item = new ToolStripMenuItem
+            {
+                Image = thumb,
+                Text = substringAtCount(Path.GetFileName(path), 30),
+                DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
+                ImageAlign = ContentAlignment.MiddleLeft,
+                ImageScaling = ToolStripItemImageScaling.None,
+                Tag = entry
+            };
+            item.Click += historyToolStripMenuItem1_item_Click;
+            historyToolStripMenuItem1.DropDownItems.Insert(0, item);
+
             while (historyToolStripMenuItem1.DropDownItems.Count > limit)
             {
-                historyToolStripMenuItem1.DropDownItems.RemoveAt(historyToolStripMenuItem1.DropDownItems.Count - 1);
+                int lastIdx = historyToolStripMenuItem1.DropDownItems.Count - 1;
+                var last = historyToolStripMenuItem1.DropDownItems[lastIdx] as ToolStripMenuItem;
+
+                // 1) まずコレクションから外す（Countが変わるのはここだけ）
+                historyToolStripMenuItem1.DropDownItems.RemoveAt(lastIdx);
+
+                // 2) その後に後始末（ファイル/Bitmap/Item）
+                if (last != null)
+                {
+                    if (last.Tag is HistoryEntry he)
+                    {
+                        if (IsHistoryTempPath(he.Path)) SafeDelete(he.Path);
+                        he.Thumb?.Dispose();
+                        last.Tag = null;
+                    }
+                    last.Image?.Dispose();
+                    last.Dispose();
+                }
             }
         }
+
         private void hideAllWindowsToolStripMenuItem_Click(object sender, EventArgs e)
         {
             s.hideWindows();
@@ -210,8 +271,17 @@ namespace Kiritori
 
         private void historyToolStripMenuItem1_item_Click(object sender, EventArgs e)
         {
-            ToolStripMenuItem item = (ToolStripMenuItem)sender;
-            this.openImageFromHistory(item);
+            var item = (ToolStripMenuItem)sender;
+            if (item.Tag is HistoryEntry he && File.Exists(he.Path))
+            {
+                var sw = new SnapWindow(this)
+                {
+                    StartPosition = FormStartPosition.CenterScreen,
+                    SuppressHistory = true
+                };
+                sw.setImageFromPath(he.Path);
+                sw.Show();
+            }
         }
 
         private String substringAtCount(string source, int count)
@@ -252,5 +322,50 @@ namespace Kiritori
                 // 右クリックは ContextMenuStrip が出るので、通常は何もしない
             }
         }
+        private void ClearHistoryMenu()
+        {
+            foreach (ToolStripItem tsi in historyToolStripMenuItem1.DropDownItems)
+            {
+                if (tsi is ToolStripMenuItem mi)
+                {
+                    if (mi.Tag is HistoryEntry he)
+                    {
+                        if (IsHistoryTempPath(he.Path)) SafeDelete(he.Path);
+                        he.Thumb?.Dispose();
+                        mi.Tag = null;
+                    }
+                    mi.Image?.Dispose();
+                    mi.Dispose();
+                }
+            }
+            historyToolStripMenuItem1.DropDownItems.Clear();
+        }
+
+
+        private static bool IsHistoryTempPath(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return false;
+            try
+            {
+                string full = Path.GetFullPath(path);
+                string baseDir = Path.GetFullPath(HistoryTempDir)
+                                + Path.DirectorySeparatorChar; // 末尾セパレータで誤一致防止
+                return full.StartsWith(baseDir, StringComparison.OrdinalIgnoreCase);
+            }
+            catch { return false; }
+        }
+
+        private static void SafeDelete(string path)
+        {
+            try
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch
+            {
+                // ロック中などは無視（次回のクリーンアップで再挑戦）
+            }
+        }
     }
+    
 }

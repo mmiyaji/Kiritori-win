@@ -100,6 +100,7 @@ namespace Kiritori
 
         // MSPaint 編集
         private string _paintEditPath;  // 編集ファイルのパス（元ファイル or 一時ファイル）
+        public bool SuppressHistory { get; set; } = false;
 
         #endregion
 
@@ -160,11 +161,20 @@ namespace Kiritori
             this.AutoScaleDimensions = new SizeF(96F, 96F);
         }
 
+        public Bitmap GetMainImage()
+        {
+            return (Bitmap)pictureBox1.Image;
+        }
+        public string GetImageSourcePath()
+        {
+            return pictureBox1.Image?.Tag as string;
+        }
+
         private void Form1_Load(object sender, EventArgs e)
         {
             pictureBox1.MouseDown += new MouseEventHandler(Form1_MouseDown);
             pictureBox1.MouseMove += new MouseEventHandler(Form1_MouseMove);
-            pictureBox1.MouseUp   += new MouseEventHandler(Form1_MouseUp);
+            pictureBox1.MouseUp += new MouseEventHandler(Form1_MouseUp);
         }
 
         #endregion
@@ -260,32 +270,32 @@ namespace Kiritori
 
         #region ===== クリックイベントから呼ばれる関数（イベントハンドラ群） =====
 
-        private void captureToolStripMenuItem_Click(object sender, EventArgs e)         { this.ma.openScreen(); }
-        private void closeESCToolStripMenuItem_Click(object sender, EventArgs e)        { this.Close(); }
-        private void cutCtrlXToolStripMenuItem_Click(object sender, EventArgs e)        { Clipboard.SetImage(this.pictureBox1.Image); this.Close(); }
-        private void copyCtrlCToolStripMenuItem_Click(object sender, EventArgs e)       { Clipboard.SetImage(this.pictureBox1.Image); ShowOverlay($"Copy"); }
-        private void keepAfloatToolStripMenuItem_Click(object sender, EventArgs e)      { this.TopMost = !this.TopMost; ShowOverlay($"Keep Afloat: {this.TopMost}"); }
-        private void saveImageToolStripMenuItem_Click(object sender, EventArgs e)       { saveImage(); }
-        private void openImageToolStripMenuItem_Click(object sender, EventArgs e)       { openImage(); }
-        private void originalSizeToolStripMenuItem_Click(object sender, EventArgs e)    { zoomOff(); }
-        private void zoomInToolStripMenuItem_Click(object sender, EventArgs e)          { zoomIn(); }
-        private void zoomOutToolStripMenuItem_Click(object sender, EventArgs e)         { zoomOut(); }
-        private void size10ToolStripMenuItem_Click(object sender, EventArgs e)          { ZoomToPercent(10); }
-        private void size50ToolStripMenuItem_Click(object sender, EventArgs e)          { ZoomToPercent(50); }
-        private void size100ToolStripMenuItem_Click(object sender, EventArgs e)         { ZoomToPercent(100); }
-        private void size150ToolStripMenuItem_Click(object sender, EventArgs e)         { ZoomToPercent(150); }
-        private void size200ToolStripMenuItem_Click(object sender, EventArgs e)         { ZoomToPercent(200); }
-        private void size500ToolStripMenuItem_Click(object sender, EventArgs e)         { ZoomToPercent(500); }
-        private void dropShadowToolStripMenuItem_Click(object sender, EventArgs e)      { ToggleShadow(!this.isWindowShadow); }
-        private void preferencesToolStripMenuItem_Click(object sender, EventArgs e)     { PrefForm.ShowSingleton(this); }
-        private void printToolStripMenuItem_Click(object sender, EventArgs e)           { printImage(); }
-        private void opacity100toolStripMenuItem_Click(object sender, EventArgs e)      { setAlpha(1.0); ShowOverlay("Opacity: 100%"); }
-        private void opacity90toolStripMenuItem_Click(object sender, EventArgs e)       { setAlpha(0.9); ShowOverlay("Opacity: 90%"); }
-        private void opacity80toolStripMenuItem_Click(object sender, EventArgs e)       { setAlpha(0.8); ShowOverlay("Opacity: 80%"); }
-        private void opacity50toolStripMenuItem_Click(object sender, EventArgs e)       { setAlpha(0.5); ShowOverlay("Opacity: 50%"); }
-        private void opacity30toolStripMenuItem_Click(object sender, EventArgs e)       { setAlpha(0.3); ShowOverlay("Opacity: 30%"); }
-        private void minimizeToolStripMenuItem_Click(object sender, EventArgs e)        { this.minimizeWindow(); }
-        private void exitToolStripMenuItem_Click(object sender, EventArgs e)            { Application.Exit(); }
+        private void captureToolStripMenuItem_Click(object sender, EventArgs e) { this.ma.openScreen(); }
+        private void closeESCToolStripMenuItem_Click(object sender, EventArgs e) { this.Close(); }
+        private void cutCtrlXToolStripMenuItem_Click(object sender, EventArgs e) { Clipboard.SetImage(this.pictureBox1.Image); this.Close(); }
+        private void copyCtrlCToolStripMenuItem_Click(object sender, EventArgs e) { Clipboard.SetImage(this.pictureBox1.Image); ShowOverlay($"Copy"); }
+        private void keepAfloatToolStripMenuItem_Click(object sender, EventArgs e) { this.TopMost = !this.TopMost; ShowOverlay($"Keep Afloat: {this.TopMost}"); }
+        private void saveImageToolStripMenuItem_Click(object sender, EventArgs e) { saveImage(); }
+        private void openImageToolStripMenuItem_Click(object sender, EventArgs e) { openImage(); }
+        private void originalSizeToolStripMenuItem_Click(object sender, EventArgs e) { zoomOff(); }
+        private void zoomInToolStripMenuItem_Click(object sender, EventArgs e) { zoomIn(); }
+        private void zoomOutToolStripMenuItem_Click(object sender, EventArgs e) { zoomOut(); }
+        private void size10ToolStripMenuItem_Click(object sender, EventArgs e) { ZoomToPercent(10); }
+        private void size50ToolStripMenuItem_Click(object sender, EventArgs e) { ZoomToPercent(50); }
+        private void size100ToolStripMenuItem_Click(object sender, EventArgs e) { ZoomToPercent(100); }
+        private void size150ToolStripMenuItem_Click(object sender, EventArgs e) { ZoomToPercent(150); }
+        private void size200ToolStripMenuItem_Click(object sender, EventArgs e) { ZoomToPercent(200); }
+        private void size500ToolStripMenuItem_Click(object sender, EventArgs e) { ZoomToPercent(500); }
+        private void dropShadowToolStripMenuItem_Click(object sender, EventArgs e) { ToggleShadow(!this.isWindowShadow); }
+        private void preferencesToolStripMenuItem_Click(object sender, EventArgs e) { PrefForm.ShowSingleton(this); }
+        private void printToolStripMenuItem_Click(object sender, EventArgs e) { printImage(); }
+        private void opacity100toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(1.0); ShowOverlay("Opacity: 100%"); }
+        private void opacity90toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(0.9); ShowOverlay("Opacity: 90%"); }
+        private void opacity80toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(0.8); ShowOverlay("Opacity: 80%"); }
+        private void opacity50toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(0.5); ShowOverlay("Opacity: 50%"); }
+        private void opacity30toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(0.3); ShowOverlay("Opacity: 30%"); }
+        private void minimizeToolStripMenuItem_Click(object sender, EventArgs e) { this.minimizeWindow(); }
+        private void exitToolStripMenuItem_Click(object sender, EventArgs e) { Application.Exit(); }
 
         // Paint 編集のクリックハンドラ（MSPaint起動→終了で再読込）
         private void editPaintToolStripMenuItem_Click(object sender, EventArgs e)
@@ -468,7 +478,7 @@ namespace Kiritori
             if (_isDragging && (e.Button & MouseButtons.Left) == MouseButtons.Left)
             {
                 this.Left += e.X - mousePoint.X;
-                this.Top  += e.Y - mousePoint.Y;
+                this.Top += e.Y - mousePoint.Y;
                 this.Opacity = this.alpha_value * DRAG_ALPHA;
             }
         }
@@ -505,8 +515,8 @@ namespace Kiritori
 
             this.main_image = bmp;
             this.setThumbnail(bmp);
-            ma.setHistory(this);
-            ShowOverlay($"Kiritori");
+            if (!SuppressHistory) ma.setHistory(this);
+            ShowOverlay("Kiritori");
         }
 
         private void setThumbnail(Bitmap bmp)
@@ -581,7 +591,7 @@ namespace Kiritori
 
                     this.main_image = bmp;
                     this.setThumbnail(bmp);
-                    ma.setHistory(this);
+                    if (!SuppressHistory) ma.setHistory(this);
                     ShowOverlay("Loaded");
                 }
                 else
@@ -626,7 +636,8 @@ namespace Kiritori
 
                 this.main_image = bmp;
                 this.setThumbnail(bmp);
-                ma.setHistory(this);
+                if (!SuppressHistory) ma.setHistory(this);
+                ShowOverlay("Loaded");
             }
             catch
             {
@@ -686,11 +697,13 @@ namespace Kiritori
             e.HasMorePages = false;
         }
 
-        public void minimizeWindow() {
+        public void minimizeWindow()
+        {
             this.WindowState = FormWindowState.Minimized;
             ShowOverlay($"Minimized");
         }
-        public void showWindow() {
+        public void showWindow()
+        {
             this.WindowState = FormWindowState.Normal;
             ShowOverlay($"Show");
         }
@@ -700,13 +713,16 @@ namespace Kiritori
             this.Close();
         }
 
-        public void copyImage(object sender) {
+        public void copyImage(object sender)
+        {
             copyCtrlCToolStripMenuItem_Click(sender, EventArgs.Empty);
         }
-        public void closeImage(object sender) {
+        public void closeImage(object sender)
+        {
             closeESCToolStripMenuItem_Click(sender, EventArgs.Empty);
         }
-        public void afloatImage(object sender) {
+        public void afloatImage(object sender)
+        {
             keepAfloatToolStripMenuItem_Click(sender, EventArgs.Empty);
         }
 
@@ -833,7 +849,7 @@ namespace Kiritori
                 int dx = (this.ClientSize.Width - oldClient.Width) / 2;
                 int dy = (this.ClientSize.Height - oldClient.Height) / 2;
                 this.Left -= dx;
-                this.Top  -= dy;
+                this.Top -= dy;
             }
         }
 
@@ -866,10 +882,19 @@ namespace Kiritori
             int size = (int)Math.Round(20 * scale);
 
             Bitmap bmpNormal = new Bitmap(Properties.Resources.close, new Size(size, size));
-            Bitmap bmpHover  = new Bitmap(Properties.Resources.close_bold, new Size(size, size));
+            Bitmap bmpHover = new Bitmap(Properties.Resources.close_bold, new Size(size, size));
 
             _closeIconCache[key] = (bmpNormal, bmpHover);
             return _closeIconCache[key];
+        }
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            if (this.Icon != null)
+            {
+                this.Icon.Dispose();
+                this.Icon = null;
+            }
+            base.OnFormClosed(e);
         }
 
         #endregion
