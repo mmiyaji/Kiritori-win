@@ -35,6 +35,7 @@ namespace Kiritori
             this.labelTrayNote = new System.Windows.Forms.Label();
             // this.labelDescription = new System.Windows.Forms.Label();
             this.chkDoNotShowOnStartup = new System.Windows.Forms.CheckBox();
+            this.chkRunAtStartup = new System.Windows.Forms.CheckBox();
             this.labelVersion = new System.Windows.Forms.Label();
             this.labelSign = new System.Windows.Forms.Label();
             this.labelAppName = new System.Windows.Forms.Label();
@@ -90,6 +91,7 @@ namespace Kiritori
             this.labelAfloat = new System.Windows.Forms.Label();
             this.textBoxDropShadow = new System.Windows.Forms.TextBox();
             this.labelDropShadow = new System.Windows.Forms.Label();
+            this.toolTip1 = new System.Windows.Forms.ToolTip();
             this.tabInfo.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.picAppIcon)).BeginInit();
             this.tabControl.SuspendLayout();
@@ -266,6 +268,7 @@ namespace Kiritori
             // 
             this.tabPageBasic.Controls.Add(this.labelStartupInfo);
             this.tabPageBasic.Controls.Add(this.btnOpenStartupSettings);
+            this.tabPageBasic.Controls.Add(this.chkRunAtStartup);
             this.tabPageBasic.Controls.Add(this.labelHistory);
             this.tabPageBasic.Controls.Add(this.textBoxHistory);
             this.tabPageBasic.Controls.Add(this.labelStartup);
@@ -291,23 +294,51 @@ namespace Kiritori
             // 
             // labelStartupInfo
             // 
-            this.labelStartupInfo.AutoSize = true;
+            this.labelStartupInfo.AutoSize = false;
             this.labelStartupInfo.ForeColor = System.Drawing.SystemColors.GrayText;
-            this.labelStartupInfo.Location = new System.Drawing.Point(32, 196);
+            this.labelStartupInfo.Location = new System.Drawing.Point(20, 216);
             this.labelStartupInfo.Name = "labelStartupInfo";
-            this.labelStartupInfo.Size = new System.Drawing.Size(320, 30);
+            // this.labelStartupInfo.Size = new System.Drawing.Size(50, 30);
+            this.labelStartupInfo.Width = 200;
             this.labelStartupInfo.TabIndex = 15;
+            this.labelStartupInfo.AutoEllipsis = true;
+            // this.labelStartupInfo.Font = new Font(
+            //     this.labelStartupInfo.Font.FontFamily,
+            //     this.labelStartupInfo.Font.Size - 1
+            // );
             this.labelStartupInfo.Text = "From Settings > Apps > Startup,\r\nyou can enable or disable Kiritori.";
+            this.toolTip1.SetToolTip(labelStartupInfo, this.labelStartupInfo.Text);
             // 
             // btnOpenStartupSettings
             // 
-            this.btnOpenStartupSettings.Location = new System.Drawing.Point(34, 156);
+            this.btnOpenStartupSettings.Location = new System.Drawing.Point(34, 180);
             this.btnOpenStartupSettings.Name = "btnOpenStartupSettings";
             this.btnOpenStartupSettings.Size = new System.Drawing.Size(150, 25);
             this.btnOpenStartupSettings.TabIndex = 14;
             this.btnOpenStartupSettings.Text = "Open Startup settings";
             this.btnOpenStartupSettings.UseVisualStyleBackColor = true;
             this.btnOpenStartupSettings.Click += new System.EventHandler(this.btnOpenStartupSettings_Click);
+            // 
+            // chkRunAtStartup
+            // 
+            this.chkRunAtStartup.AutoSize = true;
+            this.chkRunAtStartup.Location = new System.Drawing.Point(35, 156);
+            this.chkRunAtStartup.Name = "chkRunAtStartup";
+            this.chkRunAtStartup.Size = new System.Drawing.Size(195, 16);
+            this.chkRunAtStartup.TabIndex = 6;
+            this.chkRunAtStartup.Text = "Run at startup";
+            this.chkRunAtStartup.UseVisualStyleBackColor = true;
+            this.chkRunAtStartup.Enabled = false;
+            // this.chkRunAtStartup.DataBindings.Add(
+            //     new Binding("Checked",
+            //         global::Kiritori.Properties.Settings.Default,
+            //         "isStartup",
+            //         true,
+            //         System.Windows.Forms.DataSourceUpdateMode.Never));
+            // this.chkRunAtStartup.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isStartup", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
+            // this.chkRunAtStartup.Checked = global::Kiritori.Properties.Settings.Default.isStartup;
+            // this.chkRunAtStartup.CheckedChanged += new System.EventHandler(this.chkRunAtStartup_CheckedChangedAsync);
+
             // 
             // labelHistory
             // 
@@ -865,9 +896,11 @@ namespace Kiritori
         private System.Windows.Forms.NumericUpDown textBoxHistory;
         private System.Windows.Forms.Button btnOpenStartupSettings;
         private System.Windows.Forms.CheckBox chkDoNotShowOnStartup;
+        private System.Windows.Forms.CheckBox chkRunAtStartup;
         private System.Windows.Forms.Label labelTrayNote;
         private System.Windows.Forms.Panel descCard;
         private System.Windows.Forms.Label labelDescHeader;
         private System.Windows.Forms.Label labelDescription;
+        private System.Windows.Forms.ToolTip toolTip1;
     }
 }

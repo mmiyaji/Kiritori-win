@@ -11,26 +11,102 @@ namespace Kiritori
     public partial class PrefForm : Form
     {
         private static PrefForm _instance;
+        private bool _initStartupToggle = false;
         public PrefForm()
         {
+            _initStartupToggle = true;
             InitializeComponent();
-            this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.AutoScaleDimensions = new SizeF(96F, 96F);
-            this.StartPosition = FormStartPosition.CenterScreen;
 
-            if (!IsInDesignMode())
+        var b = this.chkRunAtStartup.DataBindings["Checked"];
+        if (b != null) this.chkRunAtStartup.DataBindings.Remove(b);
+
+        this.AutoScaleMode = AutoScaleMode.Dpi;
+        this.AutoScaleDimensions = new SizeF(96F, 96F);
+        this.StartPosition = FormStartPosition.CenterScreen;
+
+        if (!IsInDesignMode())
+        {
+            this.Load += PrefForm_LoadAsync;
+            this.tabInfo.Layout += (_, __) => PositionDescHeader();
+            this.descCard.LocationChanged += (_, __) => PositionDescHeader();
+            this.descCard.SizeChanged += (_, __) => PositionDescHeader();
+            this.labelDescHeader.TextChanged += (_, __) => PositionDescHeader();
+            var src = Properties.Resources.icon_128x128;
+            picAppIcon.Image?.Dispose();
+            picAppIcon.Image = ScaleBitmap(src, 120, 120);
+        }
+
+        btnOpenStartupSettings.Text = PackagedHelper.IsPackaged()
+            ? "Open Startup settings"
+            : "Open Startup folder";
+        }
+        private async void PrefForm_LoadAsync(object sender, EventArgs e)
+        {
+            try
             {
-                // 初期配置と、以後の変化を拾う
-                this.Load += (_, __) => PositionDescHeader();
-                this.tabInfo.Layout += (_, __) => PositionDescHeader();
-                this.descCard.LocationChanged += (_, __) => PositionDescHeader();
-                this.descCard.SizeChanged += (_, __) => PositionDescHeader();
-                this.labelDescHeader.TextChanged += (_, __) => PositionDescHeader();
-                var src = Properties.Resources.icon_128x128;
-                picAppIcon.Image?.Dispose(); // 先に破棄（初期画像がある場合）
-                picAppIcon.Image = ScaleBitmap(src, 120, 120);
+                if (PackagedHelper.IsPackaged())
+                {
+                    bool enabled = false;
+                    try { enabled = await StartupManager.IsEnabledAsync(); }
+                    catch { /* 失敗時は false のまま */ }
+
+                    chkRunAtStartup.Checked = enabled;
+                    chkRunAtStartup.Enabled = false;
+
+                    toolTip1.SetToolTip(labelStartupInfo, "Managed by Windows Settings > Apps > Startup");
+                    labelStartupInfo.Text = "Startup is managed by Windows.";
+                }
+                else
+                {
+                    // 非パッケージ：ショートカット有無で判定
+                    string startupDir   = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+                    string shortcutPath = Path.Combine(startupDir, Application.ProductName + ".lnk");
+
+                    chkRunAtStartup.Checked = File.Exists(shortcutPath);
+                    chkRunAtStartup.Enabled = true;
+
+                    string appData    = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                    string displayDir = startupDir.Replace(appData, "%APPDATA%");
+                    labelStartupInfo.Text = "Shortcut: " + Path.Combine(displayDir, Application.ProductName + ".lnk");
+                    toolTip1.SetToolTip(labelStartupInfo, shortcutPath);
+                }
+            }
+            finally
+            {
+                _initStartupToggle = false;
+                chkRunAtStartup.CheckedChanged += chkRunAtStartup_CheckedChangedAsync;
             }
         }
+
+        private async void chkRunAtStartup_CheckedChangedAsync(object sender, EventArgs e)
+        {
+            if (_initStartupToggle) return; // 初期化中は無視
+
+            try
+            {
+                if (PackagedHelper.IsPackaged())
+                {
+                    // 必要なら有効/無効切替を実装（今は表示のみならスキップ）
+                    // bool ok = chkRunAtStartup.Checked ? await StartupManager.EnableAsync() : (await StartupManager.DisableAsync(), false);
+                    // chkRunAtStartup.Checked = await StartupManager.IsEnabledAsync();
+                }
+                else
+                {
+                    SetStartupShortcut(chkRunAtStartup.Checked);
+                }
+
+                Properties.Settings.Default.isStartup = chkRunAtStartup.Checked;
+                Properties.Settings.Default.Save();
+            }
+            catch (Exception ex)
+            {
+                chkRunAtStartup.Checked = false;
+                MessageBox.Show(this, "Unable to update startup setting.\r\n" + ex.Message,
+                    "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+
         private static bool IsInDesignMode()
         {
             // WinFormsのDesignModeはconstructorでは正しく取れないことがあるため二段構え
@@ -103,7 +179,6 @@ namespace Kiritori
         {
             // 設定保存（双方向バインド済みのため Save のみでOK）
             Properties.Settings.Default.Save();
-            // this.Close();
             // 旧：スタートアップのショートカット作成はMSIX配布では不要
             // SetStartupShortcut(Properties.Settings.Default.isStartup);
         }
@@ -121,27 +196,34 @@ namespace Kiritori
         /// </summary>
         private static void SetStartupShortcut(bool enable)
         {
-            // string startupDir = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
-            // string shortcutPath = Path.Combine(startupDir, Application.ProductName + ".lnk");
-            // if (!enable) { if (File.Exists(shortcutPath)) File.Delete(shortcutPath); return; }
-            // string targetPath = Application.ExecutablePath;
-            // Type t = Type.GetTypeFromCLSID(new Guid("72C24DD5-D70A-438B-8A42-98424B88AFB8")); // WScript.Shell
-            // object shell = Activator.CreateInstance(t);
-            // object shortcut = t.InvokeMember("CreateShortcut",
-            //     System.Reflection.BindingFlags.InvokeMethod, null, shell,
-            //     new object[] { shortcutPath });
-            // try {
-            //     t.InvokeMember("TargetPath", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { targetPath });
-            //     t.InvokeMember("WorkingDirectory", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { Path.GetDirectoryName(targetPath) });
-            //     t.InvokeMember("IconLocation", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { targetPath + ",0" });
-            //     t.InvokeMember("Save", System.Reflection.BindingFlags.InvokeMethod, null, shortcut, null);
-            // } finally {
-            //     System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shortcut);
-            //     System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shell);
-            // }
+            string startupDir = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+            string shortcutPath = Path.Combine(startupDir, Application.ProductName + ".lnk");
+            if (!enable) { if (File.Exists(shortcutPath)) File.Delete(shortcutPath); return; }
+            string targetPath = Application.ExecutablePath;
+            Type t = Type.GetTypeFromCLSID(new Guid("72C24DD5-D70A-438B-8A42-98424B88AFB8")); // WScript.Shell
+            object shell = Activator.CreateInstance(t);
+            object shortcut = t.InvokeMember("CreateShortcut",
+                System.Reflection.BindingFlags.InvokeMethod, null, shell,
+                new object[] { shortcutPath });
+            try {
+                t.InvokeMember("TargetPath", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { targetPath });
+                t.InvokeMember("WorkingDirectory", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { Path.GetDirectoryName(targetPath) });
+                t.InvokeMember("IconLocation", System.Reflection.BindingFlags.SetProperty, null, shortcut, new object[] { targetPath + ",0" });
+                t.InvokeMember("Save", System.Reflection.BindingFlags.InvokeMethod, null, shortcut, null);
+            } finally {
+                System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shortcut);
+                System.Runtime.InteropServices.Marshal.FinalReleaseComObject(shell);
+            }
         }
 
         private void btnOpenStartupSettings_Click(object sender, EventArgs e)
+        {
+            if (PackagedHelper.IsPackaged())
+                OpenSettingsStartupApps();
+            else
+                OpenStartupFolderOrSelectLink();
+        }
+        private static void OpenSettingsStartupApps()
         {
             const string uri = "ms-settings:startupapps";
             try
@@ -154,9 +236,9 @@ namespace Kiritori
             }
             catch
             {
+                // 一部環境フォールバック
                 try
                 {
-                    // 一部環境でのフォールバック
                     Process.Start(new ProcessStartInfo
                     {
                         FileName = "explorer.exe",
@@ -171,6 +253,41 @@ namespace Kiritori
                         "Please open 'Settings > Apps > Startup' manually and enable Kiritori.",
                         "Startup Settings", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
+            }
+        }
+
+        private void OpenStartupFolderOrSelectLink()
+        {
+            try
+            {
+                string startupDir = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+                string lnk = Path.Combine(startupDir, Application.ProductName + ".lnk");
+
+                if (File.Exists(lnk))
+                {
+                    // ショートカットがあるなら選択状態で開く
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "explorer.exe",
+                        Arguments = $"/select,\"{lnk}\"",
+                        UseShellExecute = true
+                    });
+                }
+                else
+                {
+                    // フォルダをそのまま開く
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = startupDir,
+                        UseShellExecute = true
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Could not open Startup folder.\n" + ex.Message,
+                    "Startup Folder", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
