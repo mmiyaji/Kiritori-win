@@ -422,18 +422,18 @@ namespace Kiritori
                 var r = pictureBox1.ClientRectangle;
 
                 // ペンの太さ（DPI対応可）
-                float thickness = 3f * this.DeviceDpi / 96f;
+                float thickness = 5f * this.DeviceDpi / 96f;
 
                 // 内側に収めるためにペン幅分だけ縮める
-                int inset = (int)Math.Ceiling(thickness);
-                r.Inflate(-inset, -inset);
+                // int inset = (int)Math.Ceiling(thickness);
+                // r.Inflate(-inset, -inset);
 
                 if (r.Width > 0 && r.Height > 0)
                 {
                     using (var pen = new Pen(Color.DeepSkyBlue, thickness))
                     {
-                        // Insetで「内側だけ」に描く
-                        pen.Alignment = System.Drawing.Drawing2D.PenAlignment.Inset;
+                        // Insetで「内側だけ」に描く Centerで中央に描く
+                        pen.Alignment = System.Drawing.Drawing2D.PenAlignment.Center;
                         e.Graphics.DrawRectangle(pen, r);
                     }
                 }
@@ -457,7 +457,7 @@ namespace Kiritori
                 _closeBtnRect = new Rectangle(x, y, img.Width, img.Height);
 
                 int pad = (int)Math.Round(1 * scale);
-                using (var bg = new SolidBrush(Color.FromArgb(_hoverClose ? 160 : 120, 0, 0, 0)))
+                using (var bg = new SolidBrush(Color.FromArgb(_hoverClose ? 160 : 50, 0, 0, 0)))
                     g.FillEllipse(bg, Rectangle.Inflate(_closeBtnRect, pad, pad));
 
                 g.DrawImage(img, _closeBtnRect);
@@ -530,9 +530,9 @@ namespace Kiritori
             using (Graphics g = Graphics.FromImage(bmp))
             {
                 g.CopyFromScreen(new Point(rc.X, rc.Y),
-                                 new Point(0, 0),
-                                 new Size(rc.Width, rc.Height),
-                                 CopyPixelOperation.SourceCopy);
+                                new Point(0, 0),
+                                new Size(rc.Width, rc.Height),
+                                CopyPixelOperation.SourceCopy);
             }
             this.Size = bmp.Size;
             pictureBox1.Size = bmp.Size;
