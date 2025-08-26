@@ -1,1012 +1,830 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace Kiritori
 {
     partial class PrefForm
     {
-        /// <summary>
-        /// 必要なデザイナー変数です。
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
 
-        /// <summary>
-        /// 使用中のリソースをすべてクリーンアップします。
-        /// </summary>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
-            {
-                components.Dispose();
-            }
+            if (disposing && (components != null)) components.Dispose();
             base.Dispose(disposing);
         }
 
-                private System.Windows.Forms.TabPage tabInfo;
-        private System.Windows.Forms.Label labelVersion;
-        private System.Windows.Forms.Label labelSign;
-        private System.Windows.Forms.Label labelAppName;
-        private System.Windows.Forms.LinkLabel labelLinkWebsite;
-        private System.Windows.Forms.PictureBox picAppIcon;
-        private System.Windows.Forms.TabControl tabControl;
-        private System.Windows.Forms.TabPage tabPageBasic;
-        private System.Windows.Forms.CheckBox chkAfloat;
-        private System.Windows.Forms.CheckBox chkOverlay;
-        private System.Windows.Forms.CheckBox chkWindowShadow;
-        private System.Windows.Forms.CheckBox chkScreenGuide;
-        private System.Windows.Forms.CheckBox chkHighlightOnHover;
-        private System.Windows.Forms.TrackBar trackbarOpacity;
-        private System.Windows.Forms.Button btnSavestings;
-        private System.Windows.Forms.Label labelOpacity1;
-        private System.Windows.Forms.Label labelOpacity2;
-        private System.Windows.Forms.Label labelOpacityDefault;
-        private System.Windows.Forms.Label labelKiritori;
-        private System.Windows.Forms.TextBox textBoxKiritori;
-        private System.Windows.Forms.Button btnCancelSettings;
-        private System.Windows.Forms.TabPage tabPageShortcuts;
-        private System.Windows.Forms.TextBox textBoxAfloat;
-        private System.Windows.Forms.Label labelAfloat;
-        private System.Windows.Forms.TextBox textBoxDropShadow;
-        private System.Windows.Forms.Label labelDropShadow;
-        private System.Windows.Forms.TextBox textBoxClose;
-        private System.Windows.Forms.Label labelClose;
-        private System.Windows.Forms.TextBox textBoxZoomOut;
-        private System.Windows.Forms.Label labelZoomOff;
-        private System.Windows.Forms.TextBox textBoxZoomOff;
-        private System.Windows.Forms.Label labelZoomOut;
-        private System.Windows.Forms.TextBox textBoxZoomIn;
-        private System.Windows.Forms.Label labelZoomIn;
-        private System.Windows.Forms.TextBox textBoxSave;
-        private System.Windows.Forms.Label labelSave;
-        private System.Windows.Forms.TextBox textBoxCopy;
-        private System.Windows.Forms.Label labelCopy;
-        private System.Windows.Forms.TextBox textbCut;
-        private System.Windows.Forms.Label labelCut;
-        private System.Windows.Forms.TextBox textBoxPrint;
-        private System.Windows.Forms.Label labelPrint;
-        private System.Windows.Forms.TextBox textBoxMinimize;
-        private System.Windows.Forms.Label labelMinimize;
-        private System.Windows.Forms.TextBox textBoxMoveRight;
-        private System.Windows.Forms.Label labelMoveRight;
-        private System.Windows.Forms.TextBox textBoxMoveLeft;
-        private System.Windows.Forms.Label labelMoveLeft;
-        private System.Windows.Forms.TextBox textBoxMoveDown;
-        private System.Windows.Forms.Label labelMoveDown;
-        private System.Windows.Forms.TextBox textBoxMoveUp;
-        private System.Windows.Forms.Label labelMoveUp;
-        private System.Windows.Forms.Label labelStartup;
-        private System.Windows.Forms.Label labelAppearance;
-        private System.Windows.Forms.Label labelStartupInfo;
-        private System.Windows.Forms.Label labelHistory;
-        private System.Windows.Forms.NumericUpDown textBoxHistory;
-        private System.Windows.Forms.Button btnOpenStartupSettings;
-        private System.Windows.Forms.CheckBox chkDoNotShowOnStartup;
-        private System.Windows.Forms.CheckBox chkRunAtStartup;
-        private System.Windows.Forms.Label labelTrayNote;
-        private System.Windows.Forms.Panel descCard;
-        private System.Windows.Forms.Label labelDescHeader;
-        private System.Windows.Forms.Label labelDescription;
-        private System.Windows.Forms.ToolTip toolTip1;
-        private System.Windows.Forms.Label labelScreenGuide;
-        private System.Windows.Forms.TextBox textBoxScreenGuide;
-        private System.Windows.Forms.Label labelScreenSquare;
-        private System.Windows.Forms.TextBox textBoxScreenSquare;
-        private System.Windows.Forms.Label labelScreenSnap;
-        private System.Windows.Forms.TextBox textBoxScreenSnap;
+        // ==== Presets for Background / Hover ====
+        private readonly (string Name, Color Color, int Alpha)[] _bgPresets = new[]
+        {
+            ("Transparent (0%)", Color.Black, 0),
+            ("Dark (30%)",       Color.Black, 30),
+            ("Dark (60%)",       Color.Black, 60),
+            ("Light (30%)",      Color.White, 30),
+            ("Light (60%)",      Color.White, 60),
+        };
+
+        private readonly (string Name, Color Color, int Alpha)[] _hoverPresets = new[]
+        {
+            ("Red",     Color.Red,     100),
+            ("Cyan",    Color.Cyan,    100),
+            ("Green",   Color.Lime,    100),
+            ("Yellow",  Color.Yellow,  100),
+            ("Magenta", Color.Magenta, 100),
+            ("Blue",    Color.Blue,    100),
+            ("Orange",  Color.Orange,  100),
+            ("Black",   Color.Black,   100),
+            ("White",   Color.White,   100),
+        };
+        // ロード中ガード
+        private bool _loadingUi = false;
+
+        // 末尾に付ける「カスタム」表示名（お好みで変更可）
+        private const string CustomPresetName = "(Custom)";
 
 
-        #region Windows フォーム デザイナーで生成されたコード
+        // ========= Common ==========
+        private TabControl tabControl;
+        private ToolTip toolTip1;
 
-        /// <summary>
-        /// デザイナー サポートに必要なメソッドです。このメソッドの内容を
-        /// コード エディターで変更しないでください。
-        /// </summary>
+        // ========= General ==========
+        private TabPage tabGeneral;
+
+        // Application Settings
+        private GroupBox grpAppSettings;
+        private Label labelLanguage;
+        private ComboBox cmbLanguage;
+        private Label labelStartup;
+        private CheckBox chkRunAtStartup;
+        private Button btnOpenStartupSettings;
+        private Label labelStartupInfo;
+        private Label labelHistory;
+        private NumericUpDown textBoxHistory;
+
+        // Hotkeys
+        private GroupBox grpHotkey;
+        private Label labelHotkeyCapture;
+        private TextBox textBoxKiritori;            // Capture (existing)
+        private Label labelHotkeyCapturePrev;       // Capture at previous region
+        private TextBox textBoxCapturePrev;
+        private Label labelHotkeyVideo;             // Video capture (disabled)
+        private TextBox textBoxVideo;
+
+        // ========= Appearance ==========
+        private TabPage tabAppearance;
+
+        // Capture settings（簡素化）
+        private GroupBox grpCaptureSettings;
+        private CheckBox chkScreenGuide;   // show guide lines
+        private CheckBox chkTrayNotify;    // notify on capture
+        private CheckBox chkPlaySound;     // play sound on capture
+        private Label labelBgPreset;
+        private ComboBox cmbBgPreset;
+        private AlphaPreviewPanel previewBg;
+
+        // Window settings（プリセット＋不透明度統合）
+        private GroupBox grpWindowSettings;
+        private CheckBox chkWindowShadow;
+        private CheckBox chkAfloat;
+        private CheckBox chkHighlightOnHover;
+        private Label labelHoverPreset;
+        private ComboBox cmbHoverPreset;
+        private Label labelHoverThickness;
+        private NumericUpDown numHoverThickness;
+        private AlphaPreviewPanel previewHover; // 透過は 100% 固定
+        private Label labelDefaultOpacity;
+        private TrackBar trackbarDefaultOpacity;
+        private Label labelDefaultOpacityVal;
+
+        // ========= Shortcuts ==========
+        private TabPage tabShortcuts;
+
+        private GroupBox grpShortcutsWindowOps;
+        private TableLayoutPanel tlpShortcutsWin;
+        private Label labelClose; private TextBox textBoxClose;
+        private Label labelMinimize; private TextBox textBoxMinimize;
+        private Label labelAfloat; private TextBox textBoxAfloat;
+        private Label labelDropShadow; private TextBox textBoxDropShadow;
+        private Label labelMoveUp; private TextBox textBoxMoveUp;
+        private Label labelMoveDown; private TextBox textBoxMoveDown;
+        private Label labelMoveLeft; private TextBox textBoxMoveLeft;
+        private Label labelMoveRight; private TextBox textBoxMoveRight;
+
+        private GroupBox grpShortcutsCaptureOps;
+        private TableLayoutPanel tlpShortcutsCap;
+        private Label labelCopy; private TextBox textBoxCopy;
+        private Label labelSave; private TextBox textBoxSave;
+        private Label labelPrint; private TextBox textBoxPrint;
+        private Label labelZoomIn; private TextBox textBoxZoomIn;
+        private Label labelZoomOut; private TextBox textBoxZoomOut;
+        private Label labelZoomOff; private TextBox textBoxZoomOff;
+        private Label labelScreenGuide; private TextBox textBoxScreenGuide;
+        private Label labelScreenSquare; private TextBox textBoxScreenSquare;
+        private Label labelScreenSnap; private TextBox textBoxScreenSnap;
+
+        // ========= Advanced ==========
+        private TabPage tabAdvanced;
+
+        // ========= Info ==========
+        private TabPage tabInfo;
+        private PictureBox picAppIcon;
+        private Label labelAppName;
+        private Label labelSign;
+        private Label labelVersion;
+        private LinkLabel labelLinkWebsite;
+
+        // Description (re-layout)
+        private Panel descCard;
+        private Label labelDescHeader;
+        private Label labelDescription;
+        private CheckBox chkDoNotShowOnStartup;
+        private Label labelTrayNote;
+
+        // ========= Bottom Buttons ==========
+        private TableLayoutPanel bottomBar;
+        private FlowLayoutPanel rightButtons;
+        private Button btnCancelSettings;
+        private Button btnSavestings;
+        private Button btnExitAppLeft;
+
+        // ========= Initialize =========
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(PrefForm));
-            this.tabInfo = new System.Windows.Forms.TabPage();
-            this.labelTrayNote = new System.Windows.Forms.Label();
-            // this.labelDescription = new System.Windows.Forms.Label();
-            this.chkDoNotShowOnStartup = new System.Windows.Forms.CheckBox();
-            this.chkRunAtStartup = new System.Windows.Forms.CheckBox();
-            this.labelVersion = new System.Windows.Forms.Label();
-            this.labelSign = new System.Windows.Forms.Label();
-            this.labelAppName = new System.Windows.Forms.Label();
-            this.labelLinkWebsite = new System.Windows.Forms.LinkLabel();
-            this.picAppIcon = new System.Windows.Forms.PictureBox();
-            this.tabControl = new System.Windows.Forms.TabControl();
-            this.tabPageBasic = new System.Windows.Forms.TabPage();
-            this.labelStartupInfo = new System.Windows.Forms.Label();
-            this.btnOpenStartupSettings = new System.Windows.Forms.Button();
-            this.labelHistory = new System.Windows.Forms.Label();
-            this.textBoxHistory = new System.Windows.Forms.NumericUpDown();
-            this.labelStartup = new System.Windows.Forms.Label();
-            this.labelAppearance = new System.Windows.Forms.Label();
-            this.textBoxKiritori = new System.Windows.Forms.TextBox();
-            this.labelKiritori = new System.Windows.Forms.Label();
-            this.labelOpacity1 = new System.Windows.Forms.Label();
-            this.labelOpacity2 = new System.Windows.Forms.Label();
-            this.labelOpacityDefault = new System.Windows.Forms.Label();
-            this.btnSavestings = new System.Windows.Forms.Button();
-            this.btnCancelSettings = new System.Windows.Forms.Button();
-            this.chkAfloat = new System.Windows.Forms.CheckBox();
-            this.chkOverlay = new System.Windows.Forms.CheckBox();
-            this.chkWindowShadow = new System.Windows.Forms.CheckBox();
-            this.chkScreenGuide = new System.Windows.Forms.CheckBox();
-            this.chkHighlightOnHover = new System.Windows.Forms.CheckBox();
-            this.trackbarOpacity = new System.Windows.Forms.TrackBar();
-            this.tabPageShortcuts = new System.Windows.Forms.TabPage();
-            this.textBoxMoveRight = new System.Windows.Forms.TextBox();
-            this.labelMoveRight = new System.Windows.Forms.Label();
-            this.textBoxMoveLeft = new System.Windows.Forms.TextBox();
-            this.labelMoveLeft = new System.Windows.Forms.Label();
-            this.textBoxMoveDown = new System.Windows.Forms.TextBox();
-            this.labelMoveDown = new System.Windows.Forms.Label();
-            this.textBoxMoveUp = new System.Windows.Forms.TextBox();
-            this.labelMoveUp = new System.Windows.Forms.Label();
-            this.textBoxMinimize = new System.Windows.Forms.TextBox();
-            this.labelMinimize = new System.Windows.Forms.Label();
-            this.textBoxPrint = new System.Windows.Forms.TextBox();
-            this.labelPrint = new System.Windows.Forms.Label();
-            this.textBoxZoomOff = new System.Windows.Forms.TextBox();
-            this.labelZoomOff = new System.Windows.Forms.Label();
-            this.textBoxZoomOut = new System.Windows.Forms.TextBox();
-            this.labelZoomOut = new System.Windows.Forms.Label();
-            this.textBoxZoomIn = new System.Windows.Forms.TextBox();
-            this.labelZoomIn = new System.Windows.Forms.Label();
-            this.textBoxSave = new System.Windows.Forms.TextBox();
-            this.labelSave = new System.Windows.Forms.Label();
-            this.textBoxCopy = new System.Windows.Forms.TextBox();
-            this.labelCopy = new System.Windows.Forms.Label();
-            this.textbCut = new System.Windows.Forms.TextBox();
-            this.labelCut = new System.Windows.Forms.Label();
-            this.textBoxClose = new System.Windows.Forms.TextBox();
-            this.labelClose = new System.Windows.Forms.Label();
-            this.textBoxAfloat = new System.Windows.Forms.TextBox();
-            this.labelAfloat = new System.Windows.Forms.Label();
-            this.textBoxDropShadow = new System.Windows.Forms.TextBox();
-            this.labelDropShadow = new System.Windows.Forms.Label();
-            this.labelScreenGuide = new System.Windows.Forms.Label();
-            this.labelScreenSnap = new System.Windows.Forms.Label();
-            this.labelScreenSquare = new System.Windows.Forms.Label();
-            this.textBoxScreenGuide = new System.Windows.Forms.TextBox();
-            this.textBoxScreenSnap = new System.Windows.Forms.TextBox();
-            this.textBoxScreenSquare = new System.Windows.Forms.TextBox();
-            this.toolTip1 = new System.Windows.Forms.ToolTip();
-            this.tabInfo.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.picAppIcon)).BeginInit();
-            this.tabControl.SuspendLayout();
-            this.tabPageBasic.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.textBoxHistory)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.trackbarOpacity)).BeginInit();
-            this.tabPageShortcuts.SuspendLayout();
-            this.SuspendLayout();
-            // 
-            // tabControl
-            // 
-            this.tabControl.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-            | System.Windows.Forms.AnchorStyles.Left)
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.tabControl.Controls.Add(this.tabInfo);
-            this.tabControl.Controls.Add(this.tabPageBasic);
-            this.tabControl.Controls.Add(this.tabPageShortcuts);
-            this.tabControl.Location = new System.Drawing.Point(0, 0);
-            this.tabControl.Name = "tabControl";
-            this.tabControl.SelectedIndex = 0;
-            this.tabControl.Size = new System.Drawing.Size(434, 278);
-            this.tabControl.TabIndex = 0;
-            // 
-            // tabInfo
-            // 
-            this.tabInfo.Controls.Add(this.labelTrayNote);
-            this.tabInfo.Controls.Add(this.chkDoNotShowOnStartup);
-            this.tabInfo.Controls.Add(this.labelVersion);
-            this.tabInfo.Controls.Add(this.labelSign);
-            this.tabInfo.Controls.Add(this.labelAppName);
-            this.tabInfo.Controls.Add(this.labelLinkWebsite);
-            this.tabInfo.Controls.Add(this.picAppIcon);
-            this.tabInfo.Location = new System.Drawing.Point(4, 22);
-            this.tabInfo.Name = "tabInfo";
-            this.tabInfo.Padding = new System.Windows.Forms.Padding(3);
-            this.tabInfo.Size = new System.Drawing.Size(426, 252);
-            this.tabInfo.TabIndex = 5;
-            this.tabInfo.Text = "Info";
-            this.tabInfo.UseVisualStyleBackColor = true;
+            this.components = new System.ComponentModel.Container();
+            this.toolTip1 = new ToolTip(this.components);
 
-            // descCard はそのまま
-            this.descCard = new System.Windows.Forms.Panel();
-            this.descCard.Location = new System.Drawing.Point(20, 140);
-            this.descCard.Size = new System.Drawing.Size(390, 60);
-            this.descCard.Padding = new System.Windows.Forms.Padding(14, 12, 14, 12);
-            this.descCard.Anchor = (AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right);
-            this.descCard.BackColor = Color.FromArgb(248, 248, 248);
-            this.descCard.Paint += new System.Windows.Forms.PaintEventHandler(this.descCard_Paint);
-            this.tabInfo.Controls.Add(this.descCard);
+            // ---- Form basics ----
+            this.AutoScaleDimensions = new SizeF(6F, 12F);
+            this.AutoScaleMode = AutoScaleMode.Font;
+            this.ClientSize = new Size(640, 460);
+            this.MinimumSize = new Size(660, 500);
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.Text = "Kiritori - Preferences";
+            try { this.Icon = Properties.Resources.AppIcon; } catch { /* ignore if missing */ }
 
-            // 本文ラベル（カードの中）
-            this.labelDescription = new System.Windows.Forms.Label();
-            this.labelDescription.AutoSize = true;
-            this.labelDescription.MaximumSize = new System.Drawing.Size(360, 0);
-            this.labelDescription.Text =
-            "• Capture any screen region instantly.\n" +
-            "• Shows as a borderless, always-on-top window.\n" +
-            "• Move, zoom, copy, or save the cutout.";
-            this.labelDescription.Dock = DockStyle.Top;
-            this.descCard.Controls.Add(this.labelDescription);
+            // =========================================================
+            // ① TabControl（先に作る）
+            // =========================================================
+            this.tabControl = new TabControl { Dock = DockStyle.Fill };
 
-            // ←ここがポイント：ヘッダーは tabInfo の子にする（descCard ではない）
-            this.labelDescHeader = new System.Windows.Forms.Label();
-            this.labelDescHeader.AutoSize = true;
-            this.labelDescHeader.Font = new Font(this.Font, FontStyle.Bold);
-            this.labelDescHeader.Text = "What Kiritori does";
+            this.tabGeneral = new TabPage("General") { AutoScroll = false };
+            this.tabAppearance = new TabPage("Appearance") { AutoScroll = false };
+            this.tabShortcuts = new TabPage("Shortcuts") { AutoScroll = false };
+            this.tabAdvanced = new TabPage("Advanced") { AutoScroll = false };
+            this.tabInfo = new TabPage("Info") { AutoScroll = true };
 
-            // バッジっぽく見せるための余白と背景
-            this.labelDescHeader.Padding = new Padding(8, 2, 8, 2);
-            // カードの縁を“消す”ためにタブ背景色で塗る
-            this.labelDescHeader.BackColor = this.tabInfo.BackColor;
+            this.tabControl.TabPages.AddRange(new TabPage[]
+            {
+                this.tabGeneral, this.tabAppearance, this.tabShortcuts, this.tabAdvanced, this.tabInfo
+            });
 
-            this.tabInfo.Controls.Add(this.labelDescHeader);
-            // 前面に
-            this.labelDescHeader.BringToFront();
+            // =========================================================
+            // ② Bottom bar（Exit 左 / Cancel & Save 右）
+            // =========================================================
+            this.bottomBar = new TableLayoutPanel
+            {
+                Height = 40,
+                Padding = new Padding(8, 6, 8, 6),
+                ColumnCount = 3,
+                Dock = DockStyle.Fill,
+                AutoSize = false
+            };
+            this.bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            this.bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            this.bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            this.bottomBar.Paint += (s, e) =>
+            {
+                e.Graphics.DrawLine(SystemPens.ControlLight, 0, 0, this.bottomBar.Width, 0);
+            };
 
-            // レイアウト時にカード位置から算出して“半分かぶせる”
-            // this.tabInfo.Layout += (s, e) => PositionDescHeader();
+            this.btnExitAppLeft = new Button
+            {
+                Text = "Exit App",
+                AutoSize = true,
+                Margin = new Padding(0, 6, 6, 6)
+            };
+            this.btnExitAppLeft.Click += new EventHandler(this.btnExitApp_Click);
 
-            // 
-            // labelTrayNote
-            // 
-            this.labelTrayNote.AutoSize = true;
-            this.labelTrayNote.ForeColor = System.Drawing.SystemColors.GrayText;
-            // this.labelTrayNote.Location = new System.Drawing.Point(24, 160);
-            this.labelTrayNote.Location = new System.Drawing.Point(25, 230);
-            this.labelTrayNote.Name = "labelTrayNote";
-            this.labelTrayNote.Size = new System.Drawing.Size(360, 24);
-            this.labelTrayNote.TabIndex = 7;
-            this.labelTrayNote.Text = "Tip: Right-click the tray icon for menu.  Hotkey: Ctrl + Shift + 5";
-            // 
-            // chkDoNotShowOnStartup
-            // 
-            this.chkDoNotShowOnStartup.AutoSize = true;
-            // this.chkDoNotShowOnStartup.Location = new System.Drawing.Point(25, 200);
-            this.chkDoNotShowOnStartup.Location = new System.Drawing.Point(25, 210);
-            this.chkDoNotShowOnStartup.Name = "chkDoNotShowOnStartup";
-            this.chkDoNotShowOnStartup.Size = new System.Drawing.Size(195, 16);
-            this.chkDoNotShowOnStartup.TabIndex = 6;
-            this.chkDoNotShowOnStartup.Text = "Don’t show this screen at startup";
-            this.chkDoNotShowOnStartup.UseVisualStyleBackColor = true;
-            this.chkDoNotShowOnStartup.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "DoNotShowOnStartup", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.chkDoNotShowOnStartup.Checked = global::Kiritori.Properties.Settings.Default.DoNotShowOnStartup;
-            this.chkDoNotShowOnStartup.CheckedChanged += new System.EventHandler(this.chkDoNotShowOnStartup_CheckedChanged);
-            // 
-            // picAppIcon
-            // 
-            this.picAppIcon.Image = global::Kiritori.Properties.Resources.icon_128x128;
-            this.picAppIcon.Location = new System.Drawing.Point(20, 10);
-            this.picAppIcon.Size = new System.Drawing.Size(120, 120); // 表示サイズだけ決める
-            this.picAppIcon.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-            this.picAppIcon.TabIndex = 0;
-            this.picAppIcon.TabStop = false;
-            // 
-            // labelAppName
-            // 
-            this.labelAppName.AutoSize = true;
-            //this.labelAppName.Font = new System.Drawing.Font("MS UI Gothic", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.labelAppName.Font = new Font(
-                this.labelAppName.Font.FontFamily,           // 既存フォントの名前を保持
-                this.labelAppName.Font.Size + 7,             // サイズを拡大
-                FontStyle.Bold                               // 太字
-            );
+            this.rightButtons = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(0),
+                Margin = new Padding(0)
+            };
+            this.btnCancelSettings = new Button
+            {
+                Text = "Cancel",
+                AutoSize = true,
+                Margin = new Padding(6)
+            };
+            this.btnCancelSettings.Click += new EventHandler(this.btnCancelSettings_Click);
+
+            this.btnSavestings = new Button
+            {
+                Text = "Save",
+                AutoSize = true,
+                Margin = new Padding(6, 6, 0, 6)
+            };
+            this.btnSavestings.Click += new EventHandler(this.btnSavestings_Click);
+
+            this.rightButtons.Controls.Add(this.btnCancelSettings);
+            this.rightButtons.Controls.Add(this.btnSavestings);
+
+            var spacer = new Panel { Dock = DockStyle.Fill };
+
+            this.bottomBar.Controls.Add(this.btnExitAppLeft, 0, 0);
+            this.bottomBar.Controls.Add(spacer, 1, 0);
+            this.bottomBar.Controls.Add(this.rightButtons, 2, 0);
+
+            // =========================================================
+            // ③ ルートの shell（フォーム余白はここで持つ）
+            // =========================================================
+            var shell = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 2,
+                Padding = new Padding(12, 0, 12, 5)
+            };
+            shell.RowStyles.Add(new RowStyle(SizeType.Percent, 100F)); // タブ
+            shell.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // ボタンバー
+
+            shell.Controls.Add(this.tabControl, 0, 0);
+            shell.Controls.Add(this.bottomBar, 0, 1);
+
+            // =========================================================
+            // General タブ（縦積みレイアウト）
+            // =========================================================
+            var stackGeneral = NewStack();
+            this.tabGeneral.Controls.Add(stackGeneral);
+
+            // Application Settings
+            this.grpAppSettings = NewGroup("Application Settings");
+            var tlpApp = NewGrid(3, 2);
+
+            this.labelLanguage = NewRightLabel("Language");
+            this.cmbLanguage = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 180 };
+            this.cmbLanguage.Items.AddRange(new object[] { "English (en)", "日本語 (ja)" });
+            this.cmbLanguage.SelectedIndex = 0;
+
+            this.labelStartup = NewRightLabel("Startup");
+            var flowStartup = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false, Dock = DockStyle.Fill };
+            this.chkRunAtStartup = new CheckBox { Text = "Run at startup", AutoSize = true, Enabled = false };
+            this.btnOpenStartupSettings = new Button { Text = "Open Startup settings", AutoSize = true };
+            this.btnOpenStartupSettings.Click += new EventHandler(this.btnOpenStartupSettings_Click);
+            this.labelStartupInfo = new Label { AutoSize = true, ForeColor = SystemColors.GrayText, Text = "Startup is managed by Windows.", Dock = DockStyle.Fill };
+            this.toolTip1.SetToolTip(this.labelStartupInfo, "Settings > Apps > Startup");
+            flowStartup.Controls.Add(this.chkRunAtStartup);
+            flowStartup.Controls.Add(this.btnOpenStartupSettings);
+
+            this.labelHistory = NewRightLabel("History limit");
+            this.textBoxHistory = new NumericUpDown { Minimum = 0, Maximum = 100, Value = 20, Width = 80, Anchor = AnchorStyles.Left };
+
+            tlpApp.Controls.Add(this.labelLanguage, 0, 0);
+            tlpApp.Controls.Add(this.cmbLanguage, 1, 0);
+            tlpApp.Controls.Add(this.labelStartup, 0, 1);
+
+            var flowStack = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, WrapContents = false };
+            flowStack.Controls.Add(flowStartup);
+            flowStack.Controls.Add(this.labelStartupInfo);
+
+            tlpApp.Controls.Add(flowStack, 1, 1);
+            tlpApp.Controls.Add(this.labelHistory, 0, 2);
+            tlpApp.Controls.Add(this.textBoxHistory, 1, 2);
+
+            this.grpAppSettings.Controls.Add(tlpApp);
+
+            // Hotkeys（上マージンで間隔）
+            this.grpHotkey = NewGroup("Hotkeys");
+            this.grpHotkey.Margin = new Padding(0, 8, 0, 0);
+
+            var tlpHot = NewGrid(3, 2);
+            this.labelHotkeyCapture = NewRightLabel("Image capture");
+            this.textBoxKiritori = new TextBox { Enabled = false, Width = 160, Text = "Ctrl + Shift + 5" };
+            this.textBoxKiritori.KeyDown += new KeyEventHandler(this.textBoxKiritori_KeyDown);
+            this.textBoxKiritori.PreviewKeyDown += new PreviewKeyDownEventHandler(this.textBoxKiritori_PreviewKeyDown);
+
+            this.labelHotkeyCapturePrev = NewRightLabel("Capture at previous region");
+            this.textBoxCapturePrev = new TextBox { Enabled = false, Width = 160, Text = "Ctrl + Shift + 4" };
+
+            this.labelHotkeyVideo = NewRightLabel("Video capture");
+            this.textBoxVideo = new TextBox { Enabled = false, Width = 160, Text = "(disabled)" };
+
+            tlpHot.Controls.Add(this.labelHotkeyCapture, 0, 0);
+            tlpHot.Controls.Add(this.textBoxKiritori, 1, 0);
+            tlpHot.Controls.Add(this.labelHotkeyCapturePrev, 0, 1);
+            tlpHot.Controls.Add(this.textBoxCapturePrev, 1, 1);
+            tlpHot.Controls.Add(this.labelHotkeyVideo, 0, 2);
+            tlpHot.Controls.Add(this.textBoxVideo, 1, 2);
+
+            this.grpHotkey.Controls.Add(tlpHot);
+
+            // stack へ追加
+            stackGeneral.Controls.Add(this.grpAppSettings, 0, 0);
+            stackGeneral.Controls.Add(this.grpHotkey, 0, 1);
+
+            // =========================================================
+            // Appearance タブ（1画面に収まるシンプル構成）
+            // =========================================================
+            var stackAppearance = NewStack();
+            this.tabAppearance.Controls.Add(stackAppearance);
+
+            // Capture settings（プリセット＋右プレビュー）
+            this.grpCaptureSettings = NewGroup("Capture Settings");
+            var tlpCap = NewGrid(2, 2);
+
+            this.chkScreenGuide = new CheckBox { Text = "Show guide lines", Checked = true, AutoSize = true };
+            this.chkTrayNotify = new CheckBox { Text = "Notify in tray on capture", AutoSize = true };
+            this.chkPlaySound = new CheckBox { Text = "Play sound on capture", AutoSize = true };
+
+            var flowToggles = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
+            flowToggles.Controls.Add(this.chkScreenGuide);
+            flowToggles.Controls.Add(this.chkTrayNotify);
+            flowToggles.Controls.Add(this.chkPlaySound);
+
+            tlpCap.Controls.Add(new Label { Text = "Options", AutoSize = true, TextAlign = ContentAlignment.MiddleRight, Anchor = AnchorStyles.Right }, 0, 0);
+            tlpCap.Controls.Add(flowToggles, 1, 0);
+
+            this.labelBgPreset = NewRightLabel("Background");
+            this.cmbBgPreset = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
+            this.cmbBgPreset.Items.AddRange(new object[] {
+                "Transparent (0%)",
+                "Dark (30%)",
+                "Dark (60%)",
+                "Light (30%)",
+                "Light (60%)"
+            });
+            this.cmbBgPreset.SelectedIndex = 0;
+
+            this.previewBg = new AlphaPreviewPanel { Height = 24, Width = 180, Anchor = AnchorStyles.Left, RgbColor = Color.Black, AlphaPercent = 0 };
+
+            var flowPreset = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
+            flowPreset.Controls.Add(this.cmbBgPreset);
+            flowPreset.Controls.Add(this.previewBg);
+
+            tlpCap.Controls.Add(this.labelBgPreset, 0, 1);
+            tlpCap.Controls.Add(flowPreset, 1, 1);
+
+            this.grpCaptureSettings.Controls.Add(tlpCap);
+
+            // 背景プリセットのイベント
+            // Background preset -> Settings & Preview
+            this.cmbBgPreset.SelectedIndexChanged += (s, e) =>
+            {
+                var S = Properties.Settings.Default;
+                var sel = this.cmbBgPreset.SelectedItem?.ToString() ?? "";
+                foreach (var p in _bgPresets)
+                {
+                    if (p.Name == sel)
+                    {
+                        S.CaptureBackgroundColor = p.Color;
+                        S.CaptureBackgroundAlphaPercent = p.Alpha;
+                        // バインド済みなのでプレビュー側は自動追従
+                        break;
+                    }
+                }
+            };
+
+
+            // Window settings（プリセット＋太さ＋不透明度）
+            this.grpWindowSettings = NewGroup("Window Settings");
+            this.grpWindowSettings.Margin = new Padding(0, 8, 0, 0);
+
+            var tlpWin = NewGrid(4, 2);
+
+            var flowWinToggles = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
+            this.chkWindowShadow = new CheckBox { Text = "Window shadow", Checked = true, AutoSize = true };
+            this.chkAfloat = new CheckBox { Text = "Always on top", Checked = true, AutoSize = true };
+            this.chkHighlightOnHover = new CheckBox { Text = "Highlight on hover", Checked = true, AutoSize = true };
+            flowWinToggles.Controls.Add(this.chkWindowShadow);
+            flowWinToggles.Controls.Add(this.chkAfloat);
+            flowWinToggles.Controls.Add(this.chkHighlightOnHover);
+
+            tlpWin.Controls.Add(new Label { Text = "Options", AutoSize = true, TextAlign = ContentAlignment.MiddleRight, Anchor = AnchorStyles.Right }, 0, 0);
+            tlpWin.Controls.Add(flowWinToggles, 1, 0);
+
+            // 色プリセット＋右プレビュー（透過 100% 固定）
+            this.labelHoverPreset = NewRightLabel("Highlight color");
+            this.cmbHoverPreset = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
+            this.cmbHoverPreset.Items.AddRange(new object[] {
+                "Red", "Cyan", "Green", "Yellow", "Magenta", "Blue", "Orange", "Black", "White"
+            });
+            this.cmbHoverPreset.SelectedItem = "Red";
+
+            this.previewHover = new AlphaPreviewPanel { Height = 24, Width = 180, Anchor = AnchorStyles.Left, RgbColor = Color.Red, AlphaPercent = 100 };
+
+            var flowHover = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
+            flowHover.Controls.Add(this.cmbHoverPreset);
+            flowHover.Controls.Add(this.previewHover);
+
+            tlpWin.Controls.Add(this.labelHoverPreset, 0, 1);
+            tlpWin.Controls.Add(flowHover, 1, 1);
+
+            // 太さ（残す）
+            this.labelHoverThickness = NewRightLabel("Highlight thickness (px)");
+            this.numHoverThickness = new NumericUpDown { Minimum = 1, Maximum = 10, Value = 2, Width = 60, Anchor = AnchorStyles.Left };
+            tlpWin.Controls.Add(this.labelHoverThickness, 0, 2);
+            tlpWin.Controls.Add(this.numHoverThickness, 1, 2);
+
+            // Default Window Opacity（ここに統合）
+            this.labelDefaultOpacity = NewRightLabel("Default opacity");
+            this.trackbarDefaultOpacity = new TrackBar { Minimum = 10, Maximum = 100, TickFrequency = 10, Value = 100, Width = 240, Anchor = AnchorStyles.Left };
+            this.labelDefaultOpacityVal = new Label { AutoSize = true, Text = "100%", Anchor = AnchorStyles.Left };
+
+            var flowOpacity = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
+            flowOpacity.Controls.Add(this.trackbarDefaultOpacity);
+            flowOpacity.Controls.Add(this.labelDefaultOpacityVal);
+
+            tlpWin.Controls.Add(this.labelDefaultOpacity, 0, 3);
+            tlpWin.Controls.Add(flowOpacity, 1, 3);
+
+            this.grpWindowSettings.Controls.Add(tlpWin);
+
+            // イベント：色プリセット変更
+            this.cmbHoverPreset.SelectedIndexChanged += (s, e) =>
+            {
+                Color c = Color.Red;
+                switch ((this.cmbHoverPreset.SelectedItem ?? "").ToString())
+                {
+                    case "Red": c = Color.Red; break;
+                    case "Cyan": c = Color.Cyan; break;
+                    case "Green": c = Color.Lime; break;
+                    case "Yellow": c = Color.Yellow; break;
+                    case "Magenta": c = Color.Magenta; break;
+                    case "Blue": c = Color.Blue; break;
+                    case "Orange": c = Color.Orange; break;
+                    case "Black": c = Color.Black; break;
+                    case "White": c = Color.White; break;
+                }
+                this.previewHover.RgbColor = c;
+                this.previewHover.AlphaPercent = 100; // 透過なし
+                this.previewHover.Invalidate();
+            };
+
+            // イベント：不透明度表示
+            this.trackbarDefaultOpacity.Scroll += (s, e) =>
+            {
+                this.labelDefaultOpacityVal.Text = this.trackbarDefaultOpacity.Value + "%";
+            };
+
+            // stack へ追加（2グループのみ）
+            stackAppearance.Controls.Add(this.grpCaptureSettings, 0, 0);
+            stackAppearance.Controls.Add(this.grpWindowSettings, 0, 1);
+
+            // =========================================================
+            // Shortcuts タブ（縦積み）
+            // =========================================================
+            var stackShort = NewStack();
+            this.tabShortcuts.Controls.Add(stackShort);
+
+            this.grpShortcutsWindowOps = NewGroup("Window operations");
+            this.tlpShortcutsWin = NewGrid(8, 2);
+            AddShortcutRow(this.tlpShortcutsWin, 0, "Close", out this.labelClose, out this.textBoxClose, "Ctrl + w, ESC");
+            AddShortcutRow(this.tlpShortcutsWin, 1, "Minimize", out this.labelMinimize, out this.textBoxMinimize, "Ctrl + h");
+            AddShortcutRow(this.tlpShortcutsWin, 2, "Always on top", out this.labelAfloat, out this.textBoxAfloat, "Ctrl + a");
+            AddShortcutRow(this.tlpShortcutsWin, 3, "Drop shadow", out this.labelDropShadow, out this.textBoxDropShadow, "Ctrl + d");
+            AddShortcutRow(this.tlpShortcutsWin, 4, "Move up", out this.labelMoveUp, out this.textBoxMoveUp, "up");
+            AddShortcutRow(this.tlpShortcutsWin, 5, "Move down", out this.labelMoveDown, out this.textBoxMoveDown, "down");
+            AddShortcutRow(this.tlpShortcutsWin, 6, "Move left", out this.labelMoveLeft, out this.textBoxMoveLeft, "left");
+            AddShortcutRow(this.tlpShortcutsWin, 7, "Move right", out this.labelMoveRight, out this.textBoxMoveRight, "right");
+            this.grpShortcutsWindowOps.Controls.Add(this.tlpShortcutsWin);
+
+            this.grpShortcutsCaptureOps = NewGroup("Capture operations");
+            this.grpShortcutsCaptureOps.Margin = new Padding(0, 8, 0, 0);
+            this.tlpShortcutsCap = NewGrid(9, 2);
+            AddShortcutRow(this.tlpShortcutsCap, 0, "Copy", out this.labelCopy, out this.textBoxCopy, "Ctrl + c");
+            AddShortcutRow(this.tlpShortcutsCap, 1, "Save", out this.labelSave, out this.textBoxSave, "Ctrl + s");
+            AddShortcutRow(this.tlpShortcutsCap, 2, "Print", out this.labelPrint, out this.textBoxPrint, "Ctrl + p");
+            AddShortcutRow(this.tlpShortcutsCap, 3, "Zoom in", out this.labelZoomIn, out this.textBoxZoomIn, "Ctrl + +");
+            AddShortcutRow(this.tlpShortcutsCap, 4, "Zoom out", out this.labelZoomOut, out this.textBoxZoomOut, "Ctrl + -");
+            AddShortcutRow(this.tlpShortcutsCap, 5, "Zoom reset", out this.labelZoomOff, out this.textBoxZoomOff, "Ctrl + 0");
+            AddShortcutRow(this.tlpShortcutsCap, 6, "Toggle guide lines", out this.labelScreenGuide, out this.textBoxScreenGuide, "capture & alt");
+            AddShortcutRow(this.tlpShortcutsCap, 7, "Square crop", out this.labelScreenSquare, out this.textBoxScreenSquare, "capture & shift");
+            AddShortcutRow(this.tlpShortcutsCap, 8, "Snap", out this.labelScreenSnap, out this.textBoxScreenSnap, "capture & ctrl");
+            this.grpShortcutsCaptureOps.Controls.Add(this.tlpShortcutsCap);
+
+            stackShort.Controls.Add(this.grpShortcutsWindowOps, 0, 0);
+            stackShort.Controls.Add(this.grpShortcutsCaptureOps, 0, 1);
+
+            // =========================================================
+            // Advanced タブ（プレースホルダ）
+            // =========================================================
+            var lblAdv = new Label { Text = "Advanced settings will appear here.", AutoSize = true, Padding = new Padding(12) };
+            this.tabAdvanced.Controls.Add(lblAdv);
+
+            // =========================================================
+            // Info タブ
+            // =========================================================
+            var tlpInfo = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Padding = new Padding(12) };
+            tlpInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+            tlpInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+            this.picAppIcon = new PictureBox { Size = new Size(120, 120), SizeMode = PictureBoxSizeMode.Zoom, Anchor = AnchorStyles.Top };
+            try { this.picAppIcon.Image = global::Kiritori.Properties.Resources.icon_128x128; } catch { }
+
+            var infoRight = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, Dock = DockStyle.Fill, AutoSize = true, WrapContents = false };
+            this.labelAppName = new Label { Text = "\"Kiritori\" for Windows", AutoSize = true };
             this.labelAppName.Font = new Font(this.labelAppName.Font, FontStyle.Bold);
-            this.labelAppName.Location = new System.Drawing.Point(155, 13);
-            this.labelAppName.Name = "labelAppName";
-            this.labelAppName.Size = new System.Drawing.Size(156, 16);
-            this.labelAppName.TabIndex = 2;
-            this.labelAppName.Text = "\"Kiritori\" for windows";
-            // 
-            // labelVersion
-            // 
-            this.labelVersion.AutoSize = true;
-            this.labelVersion.Location = new System.Drawing.Point(170, 50);
-            this.labelVersion.Name = "labelVersion";
-            this.labelVersion.Size = new System.Drawing.Size(195, 12);
-            this.labelVersion.TabIndex = 4;
-            this.labelVersion.Text = "Version - last updated at (on load)";
-            // 
-            // labelSign
-            // 
-            this.labelSign.AutoSize = true;
-            this.labelSign.Location = new System.Drawing.Point(170, 75);
-            this.labelSign.Name = "labelSign";
-            this.labelSign.Size = new System.Drawing.Size(216, 12);
-            this.labelSign.TabIndex = 3;
-            this.labelSign.Text = "Developed by mmiyaji";
-            // 
-            // labelLinkWebsite
-            // 
-            this.labelLinkWebsite.AutoSize = true;
-            this.labelLinkWebsite.Location = new System.Drawing.Point(170, 100);
-            this.labelLinkWebsite.Name = "labelLinkWebsite";
-            this.labelLinkWebsite.Size = new System.Drawing.Size(260, 12);
-            this.labelLinkWebsite.TabIndex = 1;
-            this.labelLinkWebsite.TabStop = true;
-            this.labelLinkWebsite.Text = "HomePage - https://kiritori.ruhenheim.org";
-            this.labelLinkWebsite.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel1_LinkClicked);
-            // // labelDescription
-            // this.labelDescription = new System.Windows.Forms.Label();
-            // this.labelDescription.AutoSize = true;
-            // this.labelDescription.Location = new System.Drawing.Point(25, 155);
-            // this.labelDescription.MaximumSize = new System.Drawing.Size(360, 0); // 幅で折返し
-            // this.labelDescription.Name = "labelDescription";
-            // this.labelDescription.TabIndex = 8;
-            // this.labelDescription.Text =
-            //     "\'Kiritori\' is a lightweight screen capture tool. " +
-            //     "Select any region of the screen and it instantly appears as a " +
-            //     "borderless, always-on-top window that you can move, zoom, copy, or save.";
-            // this.tabInfo.Controls.Add(this.labelDescription);
+            this.labelVersion = new Label { Text = "Version - built at (on load)", AutoSize = true };
+            this.labelSign = new Label { Text = "Developed by mmiyaji", AutoSize = true };
+            this.labelLinkWebsite = new LinkLabel { Text = "HomePage - https://kiritori.ruhenheim.org", AutoSize = true };
+            this.labelLinkWebsite.LinkClicked += new LinkLabelLinkClickedEventHandler(this.linkLabel1_LinkClicked);
 
-            // 
-            // tabPageBasic
-            // 
-            this.tabPageBasic.Controls.Add(this.labelStartupInfo);
-            this.tabPageBasic.Controls.Add(this.btnOpenStartupSettings);
-            this.tabPageBasic.Controls.Add(this.chkRunAtStartup);
-            this.tabPageBasic.Controls.Add(this.labelHistory);
-            this.tabPageBasic.Controls.Add(this.textBoxHistory);
-            this.tabPageBasic.Controls.Add(this.labelStartup);
-            this.tabPageBasic.Controls.Add(this.labelAppearance);
-            this.tabPageBasic.Controls.Add(this.textBoxKiritori);
-            this.tabPageBasic.Controls.Add(this.labelKiritori);
-            this.tabPageBasic.Controls.Add(this.labelOpacity1);
-            this.tabPageBasic.Controls.Add(this.labelOpacity2);
-            this.tabPageBasic.Controls.Add(this.labelOpacityDefault);
-            this.tabPageBasic.Controls.Add(this.btnSavestings);
-            this.tabPageBasic.Controls.Add(this.btnCancelSettings);
-            this.tabPageBasic.Controls.Add(this.chkAfloat);
-            this.tabPageBasic.Controls.Add(this.chkOverlay);
-            this.tabPageBasic.Controls.Add(this.chkWindowShadow);
-            this.tabPageBasic.Controls.Add(this.chkScreenGuide);
-            this.tabPageBasic.Controls.Add(this.chkHighlightOnHover);
-            this.tabPageBasic.Controls.Add(this.trackbarOpacity);
-            this.tabPageBasic.Location = new System.Drawing.Point(4, 22);
-            this.tabPageBasic.Name = "tabPageBasic";
-            this.tabPageBasic.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageBasic.Size = new System.Drawing.Size(426, 247);
-            this.tabPageBasic.TabIndex = 6;
-            this.tabPageBasic.Text = "Basic";
-            this.tabPageBasic.UseVisualStyleBackColor = true;
-            // 
-            // labelStartupInfo
-            // 
-            this.labelStartupInfo.AutoSize = false;
-            this.labelStartupInfo.ForeColor = System.Drawing.SystemColors.GrayText;
-            this.labelStartupInfo.Location = new System.Drawing.Point(20, 216);
-            this.labelStartupInfo.Name = "labelStartupInfo";
-            // this.labelStartupInfo.Size = new System.Drawing.Size(50, 30);
-            this.labelStartupInfo.Width = 200;
-            this.labelStartupInfo.TabIndex = 15;
-            this.labelStartupInfo.AutoEllipsis = true;
-            // this.labelStartupInfo.Font = new Font(
-            //     this.labelStartupInfo.Font.FontFamily,
-            //     this.labelStartupInfo.Font.Size - 1
-            // );
-            this.labelStartupInfo.Text = "From Settings > Apps > Startup,\r\nyou can enable or disable Kiritori.";
-            this.toolTip1.SetToolTip(labelStartupInfo, this.labelStartupInfo.Text);
-            // 
-            // btnOpenStartupSettings
-            // 
-            this.btnOpenStartupSettings.Location = new System.Drawing.Point(34, 180);
-            this.btnOpenStartupSettings.Name = "btnOpenStartupSettings";
-            this.btnOpenStartupSettings.Size = new System.Drawing.Size(150, 25);
-            this.btnOpenStartupSettings.TabIndex = 14;
-            this.btnOpenStartupSettings.Text = "Open Startup settings";
-            this.btnOpenStartupSettings.UseVisualStyleBackColor = true;
-            this.btnOpenStartupSettings.Click += new System.EventHandler(this.btnOpenStartupSettings_Click);
-            // 
-            // chkRunAtStartup
-            // 
-            this.chkRunAtStartup.AutoSize = true;
-            this.chkRunAtStartup.Location = new System.Drawing.Point(35, 156);
-            this.chkRunAtStartup.Name = "chkRunAtStartup";
-            this.chkRunAtStartup.Size = new System.Drawing.Size(195, 16);
-            this.chkRunAtStartup.TabIndex = 6;
-            this.chkRunAtStartup.Text = "Run at startup";
-            this.chkRunAtStartup.UseVisualStyleBackColor = true;
-            this.chkRunAtStartup.Enabled = false;
-            // this.chkRunAtStartup.DataBindings.Add(
-            //     new Binding("Checked",
-            //         global::Kiritori.Properties.Settings.Default,
-            //         "isStartup",
-            //         true,
-            //         System.Windows.Forms.DataSourceUpdateMode.Never));
-            // this.chkRunAtStartup.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isStartup", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            // this.chkRunAtStartup.Checked = global::Kiritori.Properties.Settings.Default.isStartup;
-            // this.chkRunAtStartup.CheckedChanged += new System.EventHandler(this.chkRunAtStartup_CheckedChangedAsync);
+            infoRight.Controls.Add(this.labelAppName);
+            infoRight.Controls.Add(this.labelVersion);
+            infoRight.Controls.Add(this.labelSign);
+            infoRight.Controls.Add(this.labelLinkWebsite);
 
-            // 
-            // labelHistory
-            // 
-            this.labelHistory.AutoSize = true;
-            this.labelHistory.Location = new System.Drawing.Point(24, 77);
-            this.labelHistory.Name = "labelHistory";
-            this.labelHistory.Size = new System.Drawing.Size(41, 12);
-            this.labelHistory.TabIndex = 13;
-            this.labelHistory.Text = "History";
-            // 
-            // textBoxHistory
-            // 
-            this.textBoxHistory.DataBindings.Add(new System.Windows.Forms.Binding("Value", global::Kiritori.Properties.Settings.Default, "HistoryLimit", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.textBoxHistory.Enabled = true;
-            this.textBoxHistory.Increment = new decimal(new int[] { 1, 0, 0, 0 });
-            this.textBoxHistory.Location = new System.Drawing.Point(35, 97);
-            this.textBoxHistory.Maximum = new decimal(new int[] { 100, 0, 0, 0 });
-            this.textBoxHistory.Minimum = new decimal(new int[] { 0, 0, 0, 0 });
-            this.textBoxHistory.Name = "textBoxHistory";
-            this.textBoxHistory.Size = new System.Drawing.Size(100, 19);
-            this.textBoxHistory.TabIndex = 16;
-            this.textBoxHistory.Value = global::Kiritori.Properties.Settings.Default.HistoryLimit;
-            // 
-            // labelStartup
-            // 
-            this.labelStartup.AutoSize = true;
-            this.labelStartup.Location = new System.Drawing.Point(24, 133);
-            this.labelStartup.Name = "labelStartup";
-            this.labelStartup.Size = new System.Drawing.Size(42, 12);
-            this.labelStartup.TabIndex = 13;
-            this.labelStartup.Text = "Startup";
-            // 
-            // labelAppearance
-            // 
-            this.labelAppearance.AutoSize = true;
-            this.labelAppearance.Location = new System.Drawing.Point(211, 21);
-            this.labelAppearance.Name = "labelAppearance";
-            this.labelAppearance.Size = new System.Drawing.Size(65, 12);
-            this.labelAppearance.TabIndex = 12;
-            this.labelAppearance.Text = "Appearance";
-            // 
-            // textBoxKiritori
-            // 
-            this.textBoxKiritori.Enabled = false;
-            // this.textBoxKiritori.ReadOnly = true;
-            this.textBoxKiritori.Location = new System.Drawing.Point(35, 48);
-            this.textBoxKiritori.Name = "textBoxKiritori";
-            this.textBoxKiritori.Size = new System.Drawing.Size(100, 19);
-            this.textBoxKiritori.TabIndex = 11;
-            this.textBoxKiritori.Text = "Ctrl + Shift + 5";
-            this.textBoxKiritori.KeyDown += textBoxKiritori_KeyDown;
-            this.textBoxKiritori.PreviewKeyDown += textBoxKiritori_PreviewKeyDown;
-            // 
-            // labelKiritori
-            // 
-            this.labelKiritori.AutoSize = true;
-            this.labelKiritori.Location = new System.Drawing.Point(24, 21);
-            this.labelKiritori.Name = "labelKiritori";
-            this.labelKiritori.Size = new System.Drawing.Size(83, 12);
-            this.labelKiritori.TabIndex = 10;
-            this.labelKiritori.Text = "Capture Hotkey";
-            // 
-            // btnSavestings
-            // 
-            this.btnSavestings.Location = new System.Drawing.Point(329, 213);
-            this.btnSavestings.Name = "btnSavestings";
-            this.btnSavestings.Size = new System.Drawing.Size(75, 23);
-            this.btnSavestings.TabIndex = 4;
-            this.btnSavestings.Text = "Save";
-            this.btnSavestings.UseVisualStyleBackColor = true;
-            this.btnSavestings.Click += new System.EventHandler(this.btnSavestings_Click);
-            // 
-            // btnCancelSettings
-            // 
-            this.btnCancelSettings.Location = new System.Drawing.Point(235, 213);
-            this.btnCancelSettings.Name = "btnCancelSettings";
-            this.btnCancelSettings.Size = new System.Drawing.Size(75, 23);
-            this.btnCancelSettings.TabIndex = 3;
-            this.btnCancelSettings.Text = "ExitApp";
-            this.btnCancelSettings.UseVisualStyleBackColor = true;
-            this.btnCancelSettings.Click += new System.EventHandler(this.btnExitApp_Click);
-            // 
-            // chkWindowShadow
-            // 
-            this.chkWindowShadow.AutoSize = true;
-            this.chkWindowShadow.Checked = global::Kiritori.Properties.Settings.Default.isWindowShadow;
-            this.chkWindowShadow.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chkWindowShadow.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isWindowShadow", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.chkWindowShadow.Location = new System.Drawing.Point(226, 40);
-            this.chkWindowShadow.Name = "chkWindowShadow";
-            this.chkWindowShadow.Size = new System.Drawing.Size(103, 16);
-            this.chkWindowShadow.TabIndex = 1;
-            this.chkWindowShadow.Text = "Window Shadow";
-            this.chkWindowShadow.UseVisualStyleBackColor = true;
-            // 
-            // chkAfloat
-            // 
-            this.chkAfloat.AutoSize = true;
-            this.chkAfloat.Checked = global::Kiritori.Properties.Settings.Default.isAfloatWindow;
-            this.chkAfloat.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chkAfloat.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isAfloatWindow", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.chkAfloat.Location = new System.Drawing.Point(226, 60);
-            this.chkAfloat.Name = "chkAfloat";
-            this.chkAfloat.Size = new System.Drawing.Size(100, 16);
-            this.chkAfloat.TabIndex = 8;
-            this.chkAfloat.Text = "Always In Front";
-            this.chkAfloat.UseVisualStyleBackColor = true;
-            // 
-            // chkOverlay
-            // 
-            this.chkOverlay.AutoSize = true;
-            this.chkOverlay.Checked = global::Kiritori.Properties.Settings.Default.isOverlay;
-            this.chkOverlay.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chkOverlay.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isOverlay", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.chkOverlay.Location = new System.Drawing.Point(226, 80);
-            this.chkOverlay.Name = "chkOverlay";
-            this.chkOverlay.Size = new System.Drawing.Size(100, 16);
-            this.chkOverlay.TabIndex = 2;
-            this.chkOverlay.Text = "Text Overlay";
-            this.chkOverlay.UseVisualStyleBackColor = true;
-            // 
-            // chkScreenGuide
-            // 
-            this.chkScreenGuide.AutoSize = true;
-            this.chkScreenGuide.Checked = global::Kiritori.Properties.Settings.Default.isScreenGuide;
-            this.chkScreenGuide.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chkScreenGuide.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isScreenGuide", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.chkScreenGuide.Location = new System.Drawing.Point(226, 100);
-            this.chkScreenGuide.Name = "chkScreenGuide";
-            this.chkScreenGuide.Size = new System.Drawing.Size(103, 16);
-            this.chkScreenGuide.TabIndex = 1;
-            this.chkScreenGuide.Text = "Screen Guide";
-            this.chkScreenGuide.UseVisualStyleBackColor = true;
-            // 
-            // chkHighlightOnHover
-            // 
-            this.chkHighlightOnHover.AutoSize = true;
-            this.chkHighlightOnHover.Checked = global::Kiritori.Properties.Settings.Default.isHighlightWindowOnHover;
-            this.chkHighlightOnHover.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chkHighlightOnHover.DataBindings.Add(new System.Windows.Forms.Binding("Checked", global::Kiritori.Properties.Settings.Default, "isHighlightWindowOnHover", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.chkHighlightOnHover.Location = new System.Drawing.Point(226, 120);
-            this.chkHighlightOnHover.Name = "chkHighlightOnHover";
-            this.chkHighlightOnHover.Size = new System.Drawing.Size(103, 16);
-            this.chkHighlightOnHover.TabIndex = 1;
-            this.chkHighlightOnHover.Text = "Highlight on Hover";
-            this.chkHighlightOnHover.UseVisualStyleBackColor = true;
-            // 
-            // trackbarOpacity
-            // 
-            this.trackbarOpacity.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(249)))), ((int)(((byte)(249)))), ((int)(((byte)(249)))));
-            this.trackbarOpacity.DataBindings.Add(new System.Windows.Forms.Binding("Value", global::Kiritori.Properties.Settings.Default, "alpha_value", true, System.Windows.Forms.DataSourceUpdateMode.OnPropertyChanged));
-            this.trackbarOpacity.LargeChange = 10;
-            this.trackbarOpacity.Location = new System.Drawing.Point(223, 162);
-            this.trackbarOpacity.Maximum = 100;
-            this.trackbarOpacity.Minimum = 10;
-            this.trackbarOpacity.Name = "trackbarOpacity";
-            this.trackbarOpacity.Size = new System.Drawing.Size(186, 45);
-            this.trackbarOpacity.SmallChange = 5;
-            this.trackbarOpacity.TabIndex = 0;
-            this.trackbarOpacity.TickFrequency = 10;
-            this.trackbarOpacity.Value = global::Kiritori.Properties.Settings.Default.alpha_value;
-            // 
-            // labelOpacity1
-            // 
-            this.labelOpacity1.AutoSize = true;
-            this.labelOpacity1.Location = new System.Drawing.Point(221, 190);
-            this.labelOpacity1.Name = "labelOpacity1";
-            this.labelOpacity1.Size = new System.Drawing.Size(23, 12);
-            this.labelOpacity1.TabIndex = 7;
-            this.labelOpacity1.Text = "10%";
-            // 
-            // labelOpacity2
-            // 
-            this.labelOpacity2.AutoSize = true;
-            this.labelOpacity2.Location = new System.Drawing.Point(373, 190);
-            this.labelOpacity2.Name = "labelOpacity2";
-            this.labelOpacity2.Size = new System.Drawing.Size(29, 12);
-            this.labelOpacity2.TabIndex = 6;
-            this.labelOpacity2.Text = "100%";
-            // 
-            // labelOpacityDefault
-            // 
-            this.labelOpacityDefault.AutoSize = true;
-            this.labelOpacityDefault.Location = new System.Drawing.Point(224, 147);
-            this.labelOpacityDefault.Name = "labelOpacityDefault";
-            this.labelOpacityDefault.Size = new System.Drawing.Size(127, 12);
-            this.labelOpacityDefault.TabIndex = 5;
-            this.labelOpacityDefault.Text = "Default Window Opacity";
-            // 
-            // tabPageShortcuts
-            // 
-            this.tabPageShortcuts.Controls.Add(this.textBoxMoveRight);
-            this.tabPageShortcuts.Controls.Add(this.labelMoveRight);
-            this.tabPageShortcuts.Controls.Add(this.textBoxMoveLeft);
-            this.tabPageShortcuts.Controls.Add(this.labelMoveLeft);
-            this.tabPageShortcuts.Controls.Add(this.textBoxMoveDown);
-            this.tabPageShortcuts.Controls.Add(this.labelMoveDown);
-            this.tabPageShortcuts.Controls.Add(this.textBoxMoveUp);
-            this.tabPageShortcuts.Controls.Add(this.labelMoveUp);
-            this.tabPageShortcuts.Controls.Add(this.textBoxMinimize);
-            this.tabPageShortcuts.Controls.Add(this.labelMinimize);
-            this.tabPageShortcuts.Controls.Add(this.textBoxPrint);
-            this.tabPageShortcuts.Controls.Add(this.labelPrint);
-            this.tabPageShortcuts.Controls.Add(this.labelZoomOff);
-            this.tabPageShortcuts.Controls.Add(this.textBoxZoomOff);
-            this.tabPageShortcuts.Controls.Add(this.textBoxZoomOut);
-            this.tabPageShortcuts.Controls.Add(this.labelZoomOut);
-            this.tabPageShortcuts.Controls.Add(this.textBoxZoomIn);
-            this.tabPageShortcuts.Controls.Add(this.labelZoomIn);
-            this.tabPageShortcuts.Controls.Add(this.textBoxSave);
-            this.tabPageShortcuts.Controls.Add(this.labelSave);
-            this.tabPageShortcuts.Controls.Add(this.textBoxCopy);
-            this.tabPageShortcuts.Controls.Add(this.labelCopy);
-            this.tabPageShortcuts.Controls.Add(this.textbCut);
-            this.tabPageShortcuts.Controls.Add(this.labelCut);
-            this.tabPageShortcuts.Controls.Add(this.textBoxClose);
-            this.tabPageShortcuts.Controls.Add(this.labelClose);
-            this.tabPageShortcuts.Controls.Add(this.textBoxAfloat);
-            this.tabPageShortcuts.Controls.Add(this.labelAfloat);
-            this.tabPageShortcuts.Controls.Add(this.textBoxDropShadow);
-            this.tabPageShortcuts.Controls.Add(this.labelDropShadow);
-            this.tabPageShortcuts.Controls.Add(this.labelScreenGuide);
-            this.tabPageShortcuts.Controls.Add(this.labelScreenSquare);
-            this.tabPageShortcuts.Controls.Add(this.labelScreenSnap);
-            this.tabPageShortcuts.Controls.Add(this.textBoxScreenGuide);
-            this.tabPageShortcuts.Controls.Add(this.textBoxScreenSquare);
-            this.tabPageShortcuts.Controls.Add(this.textBoxScreenSnap);
-            this.tabPageShortcuts.Location = new System.Drawing.Point(4, 22);
-            this.tabPageShortcuts.Name = "tabPageShortcuts";
-            this.tabPageShortcuts.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPageShortcuts.Size = new System.Drawing.Size(426, 247);
-            this.tabPageShortcuts.TabIndex = 7;
-            this.tabPageShortcuts.Text = "Shortcuts";
-            this.tabPageShortcuts.UseVisualStyleBackColor = true;
-            // 
-            // textBoxMoveRight
-            // 
-            this.textBoxMoveRight.Enabled = false;
-            this.textBoxMoveRight.Location = new System.Drawing.Point(304, 120);
-            this.textBoxMoveRight.Name = "textBoxMoveRight";
-            this.textBoxMoveRight.Size = new System.Drawing.Size(100, 19);
-            this.textBoxMoveRight.TabIndex = 25;
-            this.textBoxMoveRight.Text = "right";
-            // 
-            // labelMoveRight
-            // 
-            this.labelMoveRight.AutoSize = true;
-            this.labelMoveRight.Location = new System.Drawing.Point(230, 120);
-            this.labelMoveRight.Name = "labelMoveRight";
-            this.labelMoveRight.Size = new System.Drawing.Size(59, 12);
-            this.labelMoveRight.TabIndex = 24;
-            this.labelMoveRight.Text = "move right";
-            // 
-            // textBoxMoveLeft
-            // 
-            this.textBoxMoveLeft.Enabled = false;
-            this.textBoxMoveLeft.Location = new System.Drawing.Point(304, 95);
-            this.textBoxMoveLeft.Name = "textBoxMoveLeft";
-            this.textBoxMoveLeft.Size = new System.Drawing.Size(100, 19);
-            this.textBoxMoveLeft.TabIndex = 23;
-            this.textBoxMoveLeft.Text = "left";
-            // 
-            // labelMoveLeft
-            // 
-            this.labelMoveLeft.AutoSize = true;
-            this.labelMoveLeft.Location = new System.Drawing.Point(230, 95);
-            this.labelMoveLeft.Name = "labelMoveLeft";
-            this.labelMoveLeft.Size = new System.Drawing.Size(53, 12);
-            this.labelMoveLeft.TabIndex = 22;
-            this.labelMoveLeft.Text = "move left";
-            // 
-            // textBoxMoveDown
-            // 
-            this.textBoxMoveDown.Enabled = false;
-            this.textBoxMoveDown.Location = new System.Drawing.Point(304, 70);
-            this.textBoxMoveDown.Name = "textBoxMoveDown";
-            this.textBoxMoveDown.Size = new System.Drawing.Size(100, 19);
-            this.textBoxMoveDown.TabIndex = 21;
-            this.textBoxMoveDown.Text = "down";
-            // 
-            // labelMoveDown
-            // 
-            this.labelMoveDown.AutoSize = true;
-            this.labelMoveDown.Location = new System.Drawing.Point(230, 70);
-            this.labelMoveDown.Name = "labelMoveDown";
-            this.labelMoveDown.Size = new System.Drawing.Size(62, 12);
-            this.labelMoveDown.TabIndex = 20;
-            this.labelMoveDown.Text = "move down";
-            // 
-            // textBoxMoveUp
-            // 
-            this.textBoxMoveUp.Enabled = false;
-            this.textBoxMoveUp.Location = new System.Drawing.Point(304, 45);
-            this.textBoxMoveUp.Name = "textBoxMoveUp";
-            this.textBoxMoveUp.Size = new System.Drawing.Size(100, 19);
-            this.textBoxMoveUp.TabIndex = 19;
-            this.textBoxMoveUp.Text = "up";
-            // 
-            // labelMoveUp
-            // 
-            this.labelMoveUp.AutoSize = true;
-            this.labelMoveUp.Location = new System.Drawing.Point(230, 45);
-            this.labelMoveUp.Name = "labelMoveUp";
-            this.labelMoveUp.Size = new System.Drawing.Size(48, 12);
-            this.labelMoveUp.TabIndex = 18;
-            this.labelMoveUp.Text = "move up";
-            // 
-            // textBoxMinimize
-            // 
-            this.textBoxMinimize.Enabled = false;
-            this.textBoxMinimize.Location = new System.Drawing.Point(304, 20);
-            this.textBoxMinimize.Name = "textBoxMinimize";
-            this.textBoxMinimize.Size = new System.Drawing.Size(100, 19);
-            this.textBoxMinimize.TabIndex = 17;
-            this.textBoxMinimize.Text = "Ctrl + h";
-            // 
-            // labelMinimize
-            // 
-            this.labelMinimize.AutoSize = true;
-            this.labelMinimize.Location = new System.Drawing.Point(230, 20);
-            this.labelMinimize.Name = "labelMinimize";
-            this.labelMinimize.Size = new System.Drawing.Size(49, 12);
-            this.labelMinimize.TabIndex = 16;
-            this.labelMinimize.Text = "minimize";
-            // 
-            // textBoxZoomOff
-            // 
-            this.textBoxZoomOff.Enabled = false;
-            this.textBoxZoomOff.Location = new System.Drawing.Point(98, 170);
-            this.textBoxZoomOff.Name = "textBoxZoomOff";
-            this.textBoxZoomOff.Size = new System.Drawing.Size(100, 19);
-            this.textBoxZoomOff.TabIndex = 26;
-            this.textBoxZoomOff.Text = "Ctrl + 0";
-            // 
-            // textBoxZoomOut
-            // 
-            this.textBoxZoomOut.Enabled = false;
-            this.textBoxZoomOut.Location = new System.Drawing.Point(98, 145);
-            this.textBoxZoomOut.Name = "textBoxZoomOut";
-            this.textBoxZoomOut.Size = new System.Drawing.Size(100, 19);
-            this.textBoxZoomOut.TabIndex = 13;
-            this.textBoxZoomOut.Text = "Ctrl + -";
-            // 
-            // labelZoomOff
-            // 
-            this.labelZoomOff.AutoSize = true;
-            this.labelZoomOff.Location = new System.Drawing.Point(24, 170);
-            this.labelZoomOff.Name = "labelZoomOff";
-            this.labelZoomOff.Size = new System.Drawing.Size(51, 12);
-            this.labelZoomOff.TabIndex = 27;
-            this.labelZoomOff.Text = "zoom off";
-            // 
-            // labelZoomOut
-            // 
-            this.labelZoomOut.AutoSize = true;
-            this.labelZoomOut.Location = new System.Drawing.Point(24, 145);
-            this.labelZoomOut.Name = "labelZoomOut";
-            this.labelZoomOut.Size = new System.Drawing.Size(51, 12);
-            this.labelZoomOut.TabIndex = 12;
-            this.labelZoomOut.Text = "zoom out";
-            // 
-            // textBoxZoomIn
-            // 
-            this.textBoxZoomIn.Enabled = false;
-            this.textBoxZoomIn.Location = new System.Drawing.Point(98, 120);
-            this.textBoxZoomIn.Name = "textBoxZoomIn";
-            this.textBoxZoomIn.Size = new System.Drawing.Size(100, 19);
-            this.textBoxZoomIn.TabIndex = 11;
-            this.textBoxZoomIn.Text = "Ctrl + +";
-            // 
-            // labelZoomIn
-            // 
-            this.labelZoomIn.AutoSize = true;
-            this.labelZoomIn.Location = new System.Drawing.Point(24, 120);
-            this.labelZoomIn.Name = "labelZoomIn";
-            this.labelZoomIn.Size = new System.Drawing.Size(44, 12);
-            this.labelZoomIn.TabIndex = 10;
-            this.labelZoomIn.Text = "zoom in";
-            // 
-            // textBoxSave
-            // 
-            this.textBoxSave.Enabled = false;
-            this.textBoxSave.Location = new System.Drawing.Point(98, 95);
-            this.textBoxSave.Name = "textBoxSave";
-            this.textBoxSave.Size = new System.Drawing.Size(100, 19);
-            this.textBoxSave.TabIndex = 9;
-            this.textBoxSave.Text = "Ctrl + s";
-            // 
-            // labelSave
-            // 
-            this.labelSave.AutoSize = true;
-            this.labelSave.Location = new System.Drawing.Point(24, 95);
-            this.labelSave.Name = "labelSave";
-            this.labelSave.Size = new System.Drawing.Size(29, 12);
-            this.labelSave.TabIndex = 8;
-            this.labelSave.Text = "save";
-            // 
-            // textBoxCopy
-            // 
-            this.textBoxCopy.Enabled = false;
-            this.textBoxCopy.Location = new System.Drawing.Point(98, 70);
-            this.textBoxCopy.Name = "textBoxCopy";
-            this.textBoxCopy.Size = new System.Drawing.Size(100, 19);
-            this.textBoxCopy.TabIndex = 7;
-            this.textBoxCopy.Text = "Ctrl + c";
-            // 
-            // labelCopy
-            // 
-            this.labelCopy.AutoSize = true;
-            this.labelCopy.Location = new System.Drawing.Point(24, 70);
-            this.labelCopy.Name = "labelCopy";
-            this.labelCopy.Size = new System.Drawing.Size(29, 12);
-            this.labelCopy.TabIndex = 6;
-            this.labelCopy.Text = "copy";
-            // 
-            // textbCut
-            // 
-            this.textbCut.Enabled = false;
-            this.textbCut.Location = new System.Drawing.Point(98, 45);
-            this.textbCut.Name = "textbCut";
-            this.textbCut.Size = new System.Drawing.Size(100, 19);
-            this.textbCut.TabIndex = 5;
-            this.textbCut.Text = "Ctrl + x";
-            // 
-            // labelCut
-            // 
-            this.labelCut.AutoSize = true;
-            this.labelCut.Location = new System.Drawing.Point(24, 45);
-            this.labelCut.Name = "labelCut";
-            this.labelCut.Size = new System.Drawing.Size(21, 12);
-            this.labelCut.TabIndex = 4;
-            this.labelCut.Text = "cut";
-            // 
-            // textBoxClose
-            // 
-            this.textBoxClose.Enabled = false;
-            this.textBoxClose.Location = new System.Drawing.Point(98, 20);
-            this.textBoxClose.Name = "textBoxClose";
-            this.textBoxClose.Size = new System.Drawing.Size(100, 19);
-            this.textBoxClose.TabIndex = 3;
-            this.textBoxClose.Text = "Ctrl + w, ESC";
-            // 
-            // labelClose
-            // 
-            this.labelClose.AutoSize = true;
-            this.labelClose.Location = new System.Drawing.Point(24, 20);
-            this.labelClose.Name = "labelClose";
-            this.labelClose.Size = new System.Drawing.Size(32, 12);
-            this.labelClose.TabIndex = 2;
-            this.labelClose.Text = "close";
-            // 
-            // textBoxAfloat
-            // 
-            this.textBoxAfloat.Enabled = false;
-            this.textBoxAfloat.Location = new System.Drawing.Point(98, 195);
-            this.textBoxAfloat.Name = "textBoxAfloat";
-            this.textBoxAfloat.Size = new System.Drawing.Size(100, 19);
-            this.textBoxAfloat.TabIndex = 1;
-            this.textBoxAfloat.Text = "Ctrl + a";
-            // 
-            // labelAfloat
-            // 
-            this.labelAfloat.AutoSize = true;
-            this.labelAfloat.Location = new System.Drawing.Point(22, 195);
-            this.labelAfloat.Name = "labelAfloat";
-            this.labelAfloat.Size = new System.Drawing.Size(69, 12);
-            this.labelAfloat.TabIndex = 0;
-            this.labelAfloat.Text = "afloat";
-            // 
-            // textBoxDropShadow
-            // 
-            this.textBoxDropShadow.Enabled = false;
-            this.textBoxDropShadow.Location = new System.Drawing.Point(98, 220);
-            this.textBoxDropShadow.Name = "textBoxDropShadow";
-            this.textBoxDropShadow.Size = new System.Drawing.Size(100, 19);
-            this.textBoxDropShadow.TabIndex = 1;
-            this.textBoxDropShadow.Text = "Ctrl + d";
-            // 
-            // labelDropShadow
-            // 
-            this.labelDropShadow.AutoSize = true;
-            this.labelDropShadow.Location = new System.Drawing.Point(22, 220);
-            this.labelDropShadow.Name = "labelDropShadow";
-            this.labelDropShadow.Size = new System.Drawing.Size(69, 12);
-            this.labelDropShadow.TabIndex = 0;
-            this.labelDropShadow.Text = "drop shadow";
-            // 
-            // textBoxPrint
-            // 
-            this.textBoxPrint.Enabled = false;
-            this.textBoxPrint.Location = new System.Drawing.Point(304, 145);
-            this.textBoxPrint.Name = "textBoxPrint";
-            this.textBoxPrint.Size = new System.Drawing.Size(100, 19);
-            this.textBoxPrint.TabIndex = 15;
-            this.textBoxPrint.Text = "Ctrl + p";
-            // 
-            // labelPrint
-            // 
-            this.labelPrint.AutoSize = true;
-            this.labelPrint.Location = new System.Drawing.Point(230, 145);
-            this.labelPrint.Name = "labelPrint";
-            this.labelPrint.Size = new System.Drawing.Size(28, 12);
-            this.labelPrint.TabIndex = 14;
-            this.labelPrint.Text = "print";
-            // 
-            // textBoxScreenGuide
-            // 
-            this.textBoxScreenGuide.Enabled = false;
-            this.textBoxScreenGuide.Location = new System.Drawing.Point(304, 170);
-            this.textBoxScreenGuide.Name = "textBoxScreenGuide";
-            this.textBoxScreenGuide.Size = new System.Drawing.Size(100, 19);
-            this.textBoxScreenGuide.TabIndex = 15;
-            this.textBoxScreenGuide.Text = "capture & alt";
-            // 
-            // labelScreenGuide
-            // 
-            this.labelScreenGuide.AutoSize = true;
-            this.labelScreenGuide.Location = new System.Drawing.Point(230, 170);
-            this.labelScreenGuide.Name = "labelScreenGuide";
-            this.labelScreenGuide.Size = new System.Drawing.Size(28, 12);
-            this.labelScreenGuide.TabIndex = 14;
-            this.labelScreenGuide.Text = "Show Guide";
-            // 
-            // textBoxScreenSquare
-            // 
-            this.textBoxScreenSquare.Enabled = false;
-            this.textBoxScreenSquare.Location = new System.Drawing.Point(304, 195);
-            this.textBoxScreenSquare.Name = "textBoxScreenSquare";
-            this.textBoxScreenSquare.Size = new System.Drawing.Size(100, 19);
-            this.textBoxScreenSquare.TabIndex = 15;
-            this.textBoxScreenSquare.Text = "capture & shift";
-            // 
-            // labelScreenSquare
-            // 
-            this.labelScreenSquare.AutoSize = true;
-            this.labelScreenSquare.Location = new System.Drawing.Point(230, 195);
-            this.labelScreenSquare.Name = "labelScreenSquare";
-            this.labelScreenSquare.Size = new System.Drawing.Size(28, 12);
-            this.labelScreenSquare.TabIndex = 14;
-            this.labelScreenSquare.Text = "Square";
-            // 
-            // textBoxScreenSnap
-            // 
-            this.textBoxScreenSnap.Enabled = false;
-            this.textBoxScreenSnap.Location = new System.Drawing.Point(304, 220);
-            this.textBoxScreenSnap.Name = "textBoxScreenSnap";
-            this.textBoxScreenSnap.Size = new System.Drawing.Size(100, 19);
-            this.textBoxScreenSnap.TabIndex = 15;
-            this.textBoxScreenSnap.Text = "capture & ctrl";
-            // 
-            // labelScreenSnap
-            // 
-            this.labelScreenSnap.AutoSize = true;
-            this.labelScreenSnap.Location = new System.Drawing.Point(230, 220);
-            this.labelScreenSnap.Name = "labelScreenSnap";
-            this.labelScreenSnap.Size = new System.Drawing.Size(28, 12);
-            this.labelScreenSnap.TabIndex = 14;
-            this.labelScreenSnap.Text = "Snap Guide";
-            // 
-            // PrefForm
-            // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(434, 262);
-            this.Controls.Add(this.tabControl);
-            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-            this.MinimumSize = new System.Drawing.Size(450, 320);
-            this.Name = "PrefForm";
-            this.Text = "Kiritori - Main / Preferences";
-            this.Load += new System.EventHandler(this.PrefForm_Load);
-            this.tabInfo.ResumeLayout(false);
-            this.tabInfo.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.picAppIcon)).EndInit();
-            this.tabControl.ResumeLayout(false);
-            this.tabPageBasic.ResumeLayout(false);
-            this.tabPageBasic.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.textBoxHistory)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.trackbarOpacity)).EndInit();
-            this.tabPageShortcuts.ResumeLayout(false);
-            this.tabPageShortcuts.PerformLayout();
-            this.ResumeLayout(false);
+            tlpInfo.Controls.Add(this.picAppIcon, 0, 0);
+            tlpInfo.Controls.Add(infoRight, 1, 0);
 
+            var infoBottom = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 12, 0, 0) };
+            this.descCard = new Panel { BackColor = Color.FromArgb(248, 248, 248), Padding = new Padding(14, 12, 14, 12), Dock = DockStyle.Top, Height = 90 };
+            this.descCard.Paint += new PaintEventHandler(this.descCard_Paint);
+            this.labelDescHeader = new Label { Text = "What Kiritori does", AutoSize = true, Font = new Font(this.Font, FontStyle.Bold) };
+            this.labelDescription = new Label
+            {
+                AutoSize = true,
+                MaximumSize = new Size(600, 0),
+                Text = "• Capture any screen region instantly.\n• Shows as a borderless, always-on-top window.\n• Move, zoom, copy, or save the cutout."
+            };
+            var cardStack = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, WrapContents = false, Dock = DockStyle.Fill };
+            cardStack.Controls.Add(this.labelDescHeader);
+            cardStack.Controls.Add(this.labelDescription);
+            this.descCard.Controls.Add(cardStack);
+
+            var infoMinor = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, WrapContents = false, Dock = DockStyle.Top, Padding = new Padding(0, 8, 0, 0) };
+            this.chkDoNotShowOnStartup = new CheckBox { Text = "Don’t show this screen at startup", AutoSize = true };
+            this.chkDoNotShowOnStartup.CheckedChanged += new EventHandler(this.chkDoNotShowOnStartup_CheckedChanged);
+            this.labelTrayNote = new Label { Text = "Tip: Right-click the tray icon for menu.  Hotkey: Ctrl + Shift + 5", AutoSize = true, ForeColor = SystemColors.GrayText };
+            infoMinor.Controls.Add(this.chkDoNotShowOnStartup);
+            infoMinor.Controls.Add(this.labelTrayNote);
+
+            infoBottom.Controls.Add(this.descCard);
+            infoBottom.Controls.Add(infoMinor);
+
+            tlpInfo.SetColumnSpan(infoBottom, 2);
+            tlpInfo.Controls.Add(infoBottom, 0, 1);
+
+            this.tabInfo.Controls.Add(tlpInfo);
+
+            // ---- add to Form（※必ず最後に shell を追加）----
+            this.Controls.Add(shell);
         }
 
-        #endregion
+        // ========= helpers =========
+        private static TableLayoutPanel NewGrid(int rows, int cols)
+        {
+            var tlp = new TableLayoutPanel
+            {
+                ColumnCount = cols,
+                RowCount = rows,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Top,
+                Padding = new Padding(2)
+            };
+            for (int c = 0; c < cols; c++)
+                tlp.ColumnStyles.Add(new ColumnStyle(c == 0 ? SizeType.AutoSize : SizeType.Percent, c == 0 ? 0 : 100));
+            for (int r = 0; r < rows; r++)
+                tlp.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tlp.GrowStyle = TableLayoutPanelGrowStyle.AddRows;
+            return tlp;
+        }
+
+        // ← 縦積み用 1 列レイアウト（Margin を確実に効かせる）
+        private static TableLayoutPanel NewStack()
+        {
+            var tlp = new TableLayoutPanel
+            {
+                ColumnCount = 1,
+                RowCount = 0,
+                Dock = DockStyle.Fill,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(10)
+            };
+            tlp.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            return tlp;
+        }
+
+        // AutoSize の GroupBox を簡単に作る
+        private static GroupBox NewGroup(string title)
+        {
+            return new GroupBox
+            {
+                Text = title,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Top,
+                Padding = new Padding(10)
+            };
+        }
+
+        private static Label NewRightLabel(string text)
+        {
+            return new Label
+            {
+                Text = text,
+                AutoSize = true,
+                TextAlign = ContentAlignment.MiddleRight,
+                Anchor = AnchorStyles.Right
+            };
+        }
+
+        private static void AddShortcutRow(TableLayoutPanel tlp, int rowIndex, string label, out Label lbl, out TextBox tb, string text)
+        {
+            lbl = new Label
+            {
+                Text = label,
+                AutoSize = true,
+                TextAlign = ContentAlignment.MiddleRight,
+                Anchor = AnchorStyles.Right
+            };
+            tb = new TextBox { Enabled = false, Text = text, Width = 140, Anchor = AnchorStyles.Left };
+            tlp.Controls.Add(lbl, 0, rowIndex);
+            tlp.Controls.Add(tb, 1, rowIndex);
+        }
+        private void SelectPresetComboFromSettings()
+        {
+            var S = Properties.Settings.Default;
+
+            // Hover
+            if (cmbHoverPreset != null)
+            {
+                int idx = FindHoverPresetIndex(S.HoverHighlightColor, S.HoverHighlightAlphaPercent);
+                if (idx >= 0) cmbHoverPreset.SelectedIndex = idx;
+                else cmbHoverPreset.SelectedItem = CustomPresetName;
+            }
+
+            // Background
+            if (cmbBgPreset != null)
+            {
+                int idx = FindBgPresetIndex(S.CaptureBackgroundColor, S.CaptureBackgroundAlphaPercent);
+                if (idx >= 0) cmbBgPreset.SelectedIndex = idx;
+                else cmbBgPreset.SelectedItem = CustomPresetName;
+            }
+        }
+
+        private int FindHoverPresetIndex(Color c, int alpha)
+        {
+            for (int i = 0; i < _hoverPresets.Length; i++)
+            {
+                // アルファを 0–100 で厳密一致（必要なら±誤差許容に）
+                if (_hoverPresets[i].Color.ToArgb() == c.ToArgb() &&
+                    _hoverPresets[i].Alpha == alpha)
+                    return i;
+            }
+            return -1;
+        }
+
+        private int FindBgPresetIndex(Color c, int alpha)
+        {
+            for (int i = 0; i < _bgPresets.Length; i++)
+            {
+                if (_bgPresets[i].Color.ToArgb() == c.ToArgb() &&
+                    _bgPresets[i].Alpha == alpha)
+                    return i;
+            }
+            return -1;
+        }
+
+
+        private void WireUpDataBindings()
+        {
+            var S = Properties.Settings.Default;
+
+            // --- Background preview <-> Settings ---
+            // 色
+            this.previewBg.DataBindings.Add(
+                new Binding("RgbColor", S, nameof(S.CaptureBackgroundColor),
+                    true, DataSourceUpdateMode.OnPropertyChanged));
+            // アルファ（%）
+            this.previewBg.DataBindings.Add(
+                new Binding("AlphaPercent", S, nameof(S.CaptureBackgroundAlphaPercent),
+                    true, DataSourceUpdateMode.OnPropertyChanged));
+
+            // --- Hover preview <-> Settings ---
+            this.previewHover.DataBindings.Add(
+                new Binding("RgbColor", S, nameof(S.HoverHighlightColor),
+                    true, DataSourceUpdateMode.OnPropertyChanged));
+            this.previewHover.DataBindings.Add(
+                new Binding("AlphaPercent", S, nameof(S.HoverHighlightAlphaPercent),
+                    true, DataSourceUpdateMode.OnPropertyChanged));
+
+            // --- その他（例） ---
+            this.chkWindowShadow.DataBindings.Add(
+                new Binding("Checked", S, nameof(S.isWindowShadow), true, DataSourceUpdateMode.OnPropertyChanged));
+            this.chkAfloat.DataBindings.Add(
+                new Binding("Checked", S, nameof(S.isAfloatWindow), true, DataSourceUpdateMode.OnPropertyChanged));
+            this.chkHighlightOnHover.DataBindings.Add(
+                new Binding("Checked", S, nameof(S.isHighlightWindowOnHover), true, DataSourceUpdateMode.OnPropertyChanged));
+            this.numHoverThickness.DataBindings.Add(
+                new Binding("Value", S, nameof(S.HoverHighlightThickness), true, DataSourceUpdateMode.OnPropertyChanged));
+            this.chkScreenGuide.DataBindings.Add(
+                new Binding("Checked", S, nameof(S.isScreenGuide), true, DataSourceUpdateMode.OnPropertyChanged));
+            this.trackbarDefaultOpacity.DataBindings.Add(
+                new Binding("Value", S, nameof(S.alpha_value), true, DataSourceUpdateMode.OnPropertyChanged));
+
+            var lblOpacityBinding = new Binding("Text", S, nameof(S.alpha_value), true, DataSourceUpdateMode.Never);
+            lblOpacityBinding.Format += (o, e) => e.Value = $"{e.Value}%";
+            this.labelDefaultOpacityVal.DataBindings.Add(lblOpacityBinding);
+
+            // Run at startup は OS 処理が絡むため表示だけ同期＋既存ハンドラで処理
+            this.chkRunAtStartup.Checked = S.isStartup;
+            this.chkRunAtStartup.CheckedChanged += (s, e) =>
+            {
+                if (_initStartupToggle) return;
+                S.isStartup = chkRunAtStartup.Checked;
+            };
+        }
+        private void HookRuntimeEvents()
+        {
+            if (cmbHoverPreset != null)
+                cmbHoverPreset.SelectedIndexChanged += CmbHoverPreset_SelectedIndexChanged;
+
+            if (cmbBgPreset != null)
+                cmbBgPreset.SelectedIndexChanged += CmbBgPreset_SelectedIndexChanged;
+        }
+        private void PopulatePresetCombos()
+        {
+            // Hover
+            if (cmbHoverPreset != null)
+            {
+                cmbHoverPreset.BeginUpdate();
+                cmbHoverPreset.Items.Clear();
+                foreach (var p in _hoverPresets) cmbHoverPreset.Items.Add(p.Name);
+                cmbHoverPreset.Items.Add(CustomPresetName);
+                cmbHoverPreset.EndUpdate();
+            }
+
+            // Background
+            if (cmbBgPreset != null)
+            {
+                cmbBgPreset.BeginUpdate();
+                cmbBgPreset.Items.Clear();
+                foreach (var p in _bgPresets) cmbBgPreset.Items.Add(p.Name);
+                cmbBgPreset.Items.Add(CustomPresetName);
+                cmbBgPreset.EndUpdate();
+            }
+        }
+
+        // ---- 安全なハンドラ（nullガード付き） ----
+        private void CmbHoverPreset_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_loadingUi) return;
+            var S = Properties.Settings.Default;
+
+            // SelectedItem → string（null安全）
+            string sel = null;
+            if (cmbHoverPreset != null && cmbHoverPreset.SelectedItem != null)
+                sel = cmbHoverPreset.SelectedItem as string ?? cmbHoverPreset.SelectedItem.ToString();
+
+            if (string.IsNullOrEmpty(sel)) return;
+            if (sel == CustomPresetName) return;
+            // _hoverPresets から一致を探す（ValueTuple でも struct/class でも可）
+            Color color = Color.Red;
+
+            foreach (var p in _hoverPresets)
+            {
+                if (p.Name == sel)
+                {
+                    S.HoverHighlightColor = p.Color;
+                    S.HoverHighlightAlphaPercent = p.Alpha;
+                    // バインドで previewHover は自動更新。保険で下記入れてもOK:
+                    // previewHover.RgbColor = p.Color;
+                    // previewHover.AlphaPercent = p.Alpha;
+                    break;
+                }
+            }
+        }
+
+        private void CmbBgPreset_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (_loadingUi) return;
+
+            var S = Properties.Settings.Default;
+            var sel = (cmbBgPreset?.SelectedItem as string) ?? cmbBgPreset?.SelectedItem?.ToString();
+            if (string.IsNullOrEmpty(sel)) return;
+
+            foreach (var p in _bgPresets)
+            {
+                if (p.Name == sel)
+                {
+                    S.CaptureBackgroundColor = p.Color;
+                    S.CaptureBackgroundAlphaPercent = p.Alpha;
+
+                    // フォールバックの即時反映（バインドが効いていれば不要）
+                    // previewBg.RgbColor = p.Color;
+                    // previewBg.AlphaPercent = p.Alpha;
+                    break;
+                }
+            }
+        }
 
     }
 }

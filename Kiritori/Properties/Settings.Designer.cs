@@ -142,5 +142,77 @@ namespace Kiritori.Properties {
                 this["isHighlightWindowOnHover"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Cyan")]
+        public global::System.Drawing.Color HoverHighlightColor {
+            get {
+                return ((global::System.Drawing.Color)(this["HoverHighlightColor"]));
+            }
+            set {
+                this["HoverHighlightColor"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("60")]
+        public int HoverHighlightAlphaPercent {
+            get {
+                return ((int)(this["HoverHighlightAlphaPercent"]));
+            }
+            set {
+                this["HoverHighlightAlphaPercent"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("5")]
+        public int HoverHighlightThickness {
+            get {
+                return ((int)(this["HoverHighlightThickness"]));
+            }
+            set {
+                this["HoverHighlightThickness"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Black")]
+        public global::System.Drawing.Color CaptureBackgroundColor {
+            get {
+                return ((global::System.Drawing.Color)(this["CaptureBackgroundColor"]));
+            }
+            set {
+                this["CaptureBackgroundColor"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("60")]
+        public int CaptureBackgroundAlphaPercent {
+            get {
+                return ((int)(this["CaptureBackgroundAlphaPercent"]));
+            }
+            set {
+                this["CaptureBackgroundAlphaPercent"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool isScreenSnap {
+            get {
+                return ((bool)(this["isScreenSnap"]));
+            }
+            set {
+                this["isScreenSnap"] = value;
+            }
+        }
     }
 }

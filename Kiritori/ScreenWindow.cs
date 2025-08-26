@@ -1,20 +1,22 @@
 using System;
-using System.Collections.Generic;
+using System.Collections;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
-using System.Collections;
-//using System.Threading.Tasks;
+// using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
+using System.Drawing.Drawing2D;
 
 namespace Kiritori
 {
     public partial class ScreenWindow : Form
     {
+        // ====== 既存フィールド ======
         private readonly Func<int> getHostDpi;
+        int x = 0, y = 0, h = 0, w = 0;
         private Graphics g;
         private Bitmap bmp;
         private Bitmap baseBmp; // キャプチャ原本
@@ -23,41 +25,111 @@ namespace Kiritori
         private Font fnt = new Font("Segoe UI", 10);
         private MainApplication ma;
         private int currentDpi = 96;
+
+        // スナップ関連の既定（Settings が無い場合のフォールバック）
         private int snapGrid = 50;      // グリッド間隔(px)
         private int edgeSnapTol = 6;    // 端スナップの許容距離(px)
         private bool showSnapGuides = true; // Alt中にガイド線を描くか
+
+        private MagnifierLiveWindow _live;
+        private LiveRegionWindow_GDI _liveRegion;
+
+        // ====== 設定をキャッシュして描画に使うフィールド ======
+        private Color _bgColor;               // CaptureBackgroundColor
+        private int   _bgAlphaPercent;        // CaptureBackgroundAlphaPercent (0-100)
+        private Color _hoverColor;            // HoverHighlightColor
+        private int   _hoverAlphaPercent;     // HoverHighlightAlphaPercent (0-100)
+        private int   _hoverThicknessPx;      // HoverHighlightThickness (px)
+
+        // 任意の拡張（Settings があれば拾う。無ければ既存値を使用）
+        private int   _snapGridPx;            // SnapGridPx
+        private int   _edgeSnapTolPx;         // EdgeSnapTolerancePx
+
+        // ====== コンストラクタ ======
         public ScreenWindow(MainApplication mainapp, Func<int> getHostDpi = null)
         {
             this.ma = mainapp;
-            this.getHostDpi = getHostDpi ?? (() =>
+            this.getHostDpi = getHostDpi ?? (Func<int>)(() =>
             {
                 try { return GetDpiForWindow(this.Handle); } catch { return 96; }
             });
             captureArray = new ArrayList();
             isOpen = true;
+
             InitializeComponent();
+
             this.DoubleBuffered = true;
             this.AutoScaleMode = AutoScaleMode.Dpi;
             this.AutoScaleDimensions = new SizeF(96F, 96F);
+
+            // 設定を反映 & 設定変更のライブ反映
+            ApplySettingsFromPreferences();
+            HookSettingsChanged();
+
             try { OnHostDpiChanged(this.getHostDpi()); } catch { }
         }
-        public Boolean isScreenOpen()
-        {
-            return this.isOpen;
-        }
+
+        // ====== 公開API ======
+        public Boolean isScreenOpen() { return this.isOpen; }
+
+        // ====== ロード時のイベント ======
         private void Screen_Load(object sender, EventArgs e)
         {
-            pictureBox1.MouseDown +=
-                    new MouseEventHandler(ScreenWindow_MouseDown);
-            pictureBox1.MouseMove +=
-                    new MouseEventHandler(ScreenWindow_MouseMove);
-            pictureBox1.MouseUp +=
-                    new MouseEventHandler(ScreenWindow_MouseUp);
+            pictureBox1.MouseDown += new MouseEventHandler(ScreenWindow_MouseDown);
+            pictureBox1.MouseMove += new MouseEventHandler(ScreenWindow_MouseMove);
+            pictureBox1.MouseUp   += new MouseEventHandler(ScreenWindow_MouseUp);
         }
+
+        // ====== 設定読み込み・監視 ======
+        private void ApplySettingsFromPreferences()
+        {
+            var S = Properties.Settings.Default;
+
+            // --- Background mask ---
+            _bgColor        = S.CaptureBackgroundColor;
+            _bgAlphaPercent = Clamp01to100(S.CaptureBackgroundAlphaPercent);
+
+            // --- Hover highlight ---
+            _hoverColor         = S.HoverHighlightColor;
+            _hoverAlphaPercent  = Clamp01to100(S.HoverHighlightAlphaPercent);
+            _hoverThicknessPx   = Math.Max(1, S.HoverHighlightThickness);
+
+            // --- Snap grid / tolerance（存在すれば上書き） ---
+            _snapGridPx    = snapGrid;
+            _edgeSnapTolPx = edgeSnapTol;
+            try { object v = S["SnapGridPx"]; if (v != null) _snapGridPx = Math.Max(5, Convert.ToInt32(v)); } catch { }
+            try { object v = S["EdgeSnapTolerancePx"]; if (v != null) _edgeSnapTolPx = Math.Max(1, Convert.ToInt32(v)); } catch { }
+
+            // 既存フィールドへ反映
+            snapGrid    = _snapGridPx;
+            edgeSnapTol = _edgeSnapTolPx;
+        }
+
+        private void HookSettingsChanged()
+        {
+            Properties.Settings.Default.PropertyChanged += (s, e) =>
+            {
+                // 必要なキーで再読込
+                if (e.PropertyName == nameof(Properties.Settings.Default.CaptureBackgroundColor) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.CaptureBackgroundAlphaPercent) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightColor) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightAlphaPercent) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightThickness) ||
+                    e.PropertyName == "SnapGridPx" || e.PropertyName == "EdgeSnapTolerancePx" ||
+                    e.PropertyName == nameof(Properties.Settings.Default.isScreenGuide))
+                {
+                    ApplySettingsFromPreferences();
+                    if (bmp != null) pictureBox1.Refresh();
+                }
+            };
+        }
+
+        // ====== 入力状態（修飾キー） ======
         private bool IsAltDown() => (ModifierKeys & Keys.Alt) == Keys.Alt;
+
         private bool IsGuidesEnabled()
         {
-            // Altで反転
+            // Alt で反転（既定は Settings）
             bool baseVal = Properties.Settings.Default.isScreenGuide;
             if ((ModifierKeys & Keys.Alt) != 0) return !baseVal;
             return baseVal;
@@ -65,16 +137,29 @@ namespace Kiritori
 
         private bool IsSnapEnabled()
         {
-            // Ctrlで反転
+            // Ctrl で反転（既定は Settings に isScreenSnap があれば使用、無ければ false）
             bool baseVal = false;
+            try
+            {
+                object v = Properties.Settings.Default["isScreenSnap"];
+                if (v != null) baseVal = Convert.ToBoolean(v);
+            }
+            catch { }
             if ((ModifierKeys & Keys.Control) != 0) return !baseVal;
             return baseVal;
         }
 
-        private bool IsSquareConstraint()
+        private bool IsSquareConstraint() { return (ModifierKeys & Keys.Shift) != 0; }
+
+        // DPI スケールした線幅
+        private float HoverThicknessDpi()
         {
-            return (ModifierKeys & Keys.Shift) != 0;
+            float scaled = _hoverThicknessPx * (currentDpi / 96f);
+            if (scaled < 1f) scaled = 1f;
+            return scaled;
         }
+
+        // ====== スナップ ======
         private Point SnapPoint(Point p)
         {
             if (bmp == null) return p;
@@ -86,173 +171,85 @@ namespace Kiritori
 
             // 2) 画像端にスナップ（許容距離内なら吸着）
             int W = bmp.Width, H = bmp.Height;
-            if (Math.Abs(p.X - 0) <= edgeSnapTol) p.X = 0;
-            if (Math.Abs(p.Y - 0) <= edgeSnapTol) p.Y = 0;
+            if (Math.Abs(p.X - 0)       <= edgeSnapTol) p.X = 0;
+            if (Math.Abs(p.Y - 0)       <= edgeSnapTol) p.Y = 0;
             if (Math.Abs(p.X - (W - 1)) <= edgeSnapTol) p.X = W - 1;
             if (Math.Abs(p.Y - (H - 1)) <= edgeSnapTol) p.Y = H - 1;
 
             return p;
         }
+
+        // ====== 画像オープン関連（既存） ======
         public void openImage()
         {
             try
             {
                 OpenFileDialog openFileDialog1 = new OpenFileDialog();
                 openFileDialog1.Title = "Open Image";
-
-                // ファイルのフィルタを設定する
                 openFileDialog1.Filter = "Image|*.png;*.PNG;*.jpg;*.JPG;*.jpeg;*.JPEG;*.gif;*.GIF;*.bmp;*.BMP|すべてのファイル|*.*";
                 openFileDialog1.FilterIndex = 1;
-
-                // 有効な Win32 ファイル名だけを受け入れるようにする (初期値 true)
                 openFileDialog1.ValidateNames = false;
 
-                // ダイアログを表示し、戻り値が [OK] の場合は、選択したファイルを表示する
                 if (openFileDialog1.ShowDialog() == DialogResult.OK)
                 {
-                    // 不要になった時点で破棄する (正しくは オブジェクトの破棄を保証する を参照)
                     openFileDialog1.Dispose();
 
                     SnapWindow sw = new SnapWindow(this.ma);
                     sw.StartPosition = FormStartPosition.CenterScreen;
                     sw.setImageFromPath(openFileDialog1.FileName);
-                    sw.FormClosing +=
-                        new FormClosingEventHandler(SW_FormClosing);
+                    sw.FormClosing += new FormClosingEventHandler(SW_FormClosing);
                     captureArray.Add(sw);
                     sw.Show();
                 }
             }
-            catch
-            {
-            }
+            catch { }
         }
+
         public SnapWindow getSW(int i)
         {
             return (SnapWindow)captureArray[i];
         }
+
         public void openImageFromHistory(ToolStripMenuItem item)
         {
             try
             {
                 SnapWindow sw = new SnapWindow(this.ma);
                 sw.StartPosition = FormStartPosition.CenterScreen;
-        
+
                 var src = (item.Tag as SnapWindow)?.main_image;
                 if (src == null) return;
-                // sw.setImageFromBMP((Bitmap)((item.Tag as SnapWindow).main_image));
                 sw.setImageFromBMP((Bitmap)src.Clone());
                 sw.Text = (item.Tag as SnapWindow).Text;
 
-                sw.FormClosing +=
-                    new FormClosingEventHandler(SW_FormClosing);
+                sw.FormClosing += new FormClosingEventHandler(SW_FormClosing);
                 captureArray.Add(sw);
                 sw.Show();
             }
-            catch
-            {
-            }
+            catch { }
         }
 
-        public void showScreen()
-        {
-            // this.Opacity = 0.61;
-            this.Opacity = 1.0;
-            DisposeCaptureSurface();
-            // int h, w;
-            // //ディスプレイの高さ
-            // h = System.Windows.Forms.Screen.GetBounds(this).Height;
-            // //ディスプレイの幅
-            // w = System.Windows.Forms.Screen.GetBounds(this).Width;
-            // this.SetBounds(0, 0, w, h);
-            // bmp = new Bitmap(w, h);
-            var vs = GetVirtualScreenPhysical();
-            int w = vs.W, h = vs.H;
-            this.SetBounds(vs.X, vs.Y, w, h);
-            bmp = new Bitmap(w, h);
-            using (g = Graphics.FromImage(bmp))
-            {
-                // g.Clear(Color.White);
-                // g.CopyFromScreen(
-                //     new Point(0, 0),
-                //     new Point(w, h), bmp.Size
-                // );
-                g.CopyFromScreen(new Point(vs.X, vs.Y), new Point(0, 0), bmp.Size);
-            }
-            baseBmp = (Bitmap)bmp.Clone();
-            // 全体をうっすら白く
-            using (g = Graphics.FromImage(bmp))
-            using (var mask = new SolidBrush(Color.FromArgb(80, Color.White))) // 濃さは80～120で調整
-                g.FillRectangle(mask, new Rectangle(0, 0, w, h));
-
-            pictureBox1.SetBounds(0, 0, w, h);
-            pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
-            pictureBox1.Image = bmp;
-            pictureBox1.Refresh();
-            this.TopLevel = true;
-            this.Show();
-            // Console.WriteLine(h + "," + w);
-        }
-        int x = 0, y = 0, h = 0, w = 0;
+        // ====== 画面表示 ======
         public void showScreenAll()
         {
-            // this.Opacity = 0.61;
             this.Opacity = 1.0;
             DisposeCaptureSurface();
 
             this.StartPosition = FormStartPosition.Manual;
-            // this.showSnapGuides = Properties.Settings.Default.isScreenGuide;
 
-            // int index;
-            // int upperBound;
-            // x = 0;
-            // y = 0;
-            // h = 0;
-            // w = 0;
-            // // 接続しているすべてのディスプレイを取得
-            // Screen[] screens = Screen.AllScreens;
-            // upperBound = screens.GetUpperBound(0);
-            // // すべてのディスプレイにおける基準点（左上）とサイズを計算
-            // for (index = 0; index <= upperBound; index++)
-            // {
-            //     if (x > screens[index].Bounds.X)
-            //     {
-            //         x = screens[index].Bounds.X;
-            //     }
-            //     if (y > screens[index].Bounds.Y)
-            //     {
-            //         y = screens[index].Bounds.Y;
-            //     }
-            //     if (w < screens[index].Bounds.Width + screens[index].Bounds.X)
-            //     {
-            //         w = screens[index].Bounds.Width + screens[index].Bounds.X;
-            //     }
-            //     if (h < screens[index].Bounds.Height + screens[index].Bounds.Y)
-            //     {
-            //         h = screens[index].Bounds.Height + screens[index].Bounds.Y;
-            //     }
-            // }
-            // // 複数ディスプレイ時にメインより左上のディスプレイの基準点がマイナスになるため、座標系を補正
-            // w = Math.Abs(x) + Math.Abs(w);
-            // h = Math.Abs(y) + Math.Abs(h);
-            // 物理ピクセルで仮想スクリーンを取得（負座標も含む）
             var vs = GetVirtualScreenPhysical();
             x = vs.X; y = vs.Y; w = vs.W; h = vs.H;
 
-            // ディスプレイ全体に白幕（スクリーン）を描画
             this.SetBounds(x, y, w, h);
             bmp = new Bitmap(w, h);
             using (g = Graphics.FromImage(bmp))
             {
-                // g.Clear(Color.White);
-                // g.CopyFromScreen(
-                //     new Point(x, y),
-                //     new Point(w, h), bmp.Size
-                // );
                 g.CopyFromScreen(new Point(x, y), new Point(0, 0), bmp.Size);
             }
             baseBmp = (Bitmap)bmp.Clone();
+
             using (g = Graphics.FromImage(bmp))
-            using (var mask = new SolidBrush(Color.FromArgb(40, Color.White)))
+            using (var mask = MakeBackgroundMaskBrush())
                 g.FillRectangle(mask, new Rectangle(0, 0, w, h));
 
             pictureBox1.SetBounds(0, 0, w, h);
@@ -261,10 +258,9 @@ namespace Kiritori
             pictureBox1.Refresh();
             this.TopLevel = true;
             this.Show();
-
-            //Console.WriteLine(x + ":" + y + " " + h + "," + w + "@" + upperBound);
         }
-        //マウスのクリック位置を記憶
+
+        // ====== 選択操作 ======
         private Point startPoint;
         private Point startPointPhys;
         private Point hoverPoint = Point.Empty;
@@ -272,21 +268,18 @@ namespace Kiritori
         private Point endPoint;
         private Rectangle rc;
         private Boolean isPressed = false;
-        //マウスのボタンが押されたとき
-        private void ScreenWindow_MouseDown(object sender,
-            System.Windows.Forms.MouseEventArgs e)
+
+        private void ScreenWindow_MouseDown(object sender, MouseEventArgs e)
         {
             if ((e.Button & MouseButtons.Left) == MouseButtons.Left)
             {
-                //位置を記憶する
                 startPoint = new Point(e.X, e.Y);
                 startPointPhys = new Point(e.X + x, e.Y + y);
                 isPressed = true;
             }
         }
-        //マウスが動いたとき
-        private void ScreenWindow_MouseMove(object sender,
-            System.Windows.Forms.MouseEventArgs e)
+
+        private void ScreenWindow_MouseMove(object sender, MouseEventArgs e)
         {
             hoverPoint = new Point(e.X, e.Y);
 
@@ -298,117 +291,88 @@ namespace Kiritori
                 }
                 return;
             }
+
             Point cur = new Point(e.X, e.Y);
             if (IsSnapEnabled())
             {
                 cur = SnapPoint(cur);
             }
+
             rc.X = Math.Min(startPoint.X, cur.X);
             rc.Y = Math.Min(startPoint.Y, cur.Y);
-            rc.Width = Math.Abs(cur.X - startPoint.X);
+            rc.Width  = Math.Abs(cur.X - startPoint.X);
             rc.Height = Math.Abs(cur.Y - startPoint.Y);
-            // rc = new Rectangle();
-            // // Pen p = new Pen(Color.Black, 10);
-            // if (startPoint.X < e.X)
-            // {
-            //     rc.X = startPoint.X;
-            //     rc.Width = e.X - startPoint.X;
-            // }
-            // else
-            // {
-            //     rc.X = e.X;
-            //     rc.Width = startPoint.X - e.X;
-            // }
-            // if (startPoint.Y < e.Y)
-            // {
-            //     rc.Y = startPoint.Y;
-            //     rc.Height = e.Y - startPoint.Y;
-            // }
-            // else
-            // {
-            //     rc.Y = e.Y;
-            //     rc.Height = startPoint.Y - e.Y;
-            // }
-            // {
-            //     Pen blackPen = new Pen(Color.Black);
-            //     using (g = Graphics.FromImage(bmp))
-            //     {
-            //         blackPen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
-            //         blackPen.Width = 1;
-            //         g.Clear(SystemColors.Control);
-            //         g.DrawRectangle(blackPen, rc);
-            //         g.DrawString(rc.Width.ToString() + "x" + rc.Height.ToString(),
-            //             fnt, Brushes.Black, e.X + 5, e.Y + 10);
-            //     }
-            //     pictureBox1.Refresh();
-            // }
+
             if (IsSquareConstraint())
             {
                 int size = Math.Min(rc.Width, rc.Height);
                 rc.Width = rc.Height = size;
             }
+
             using (g = Graphics.FromImage(bmp))
             {
-                // 原本から毎回描き直し
+                // 原本から描き直し
                 g.DrawImage(baseBmp, Point.Empty);
 
-                // 外側だけに半透明白マスクをかける
-                using (var mask = new SolidBrush(Color.FromArgb(40, Color.White)))
+                // 外側だけに背景マスク
+                using (var mask = MakeBackgroundMaskBrush())
                 using (var outside = new Region(new Rectangle(0, 0, bmp.Width, bmp.Height)))
                 {
-                    outside.Exclude(rc);           // 選択範囲は除外（＝透けない）
-                    g.FillRegion(mask, outside);   // 外側だけ白っぽく
+                    outside.Exclude(rc);
+                    g.FillRegion(mask, outside);
                 }
 
-                using (var blackPen = new Pen(Color.Black) { Width = 1, DashStyle = System.Drawing.Drawing2D.DashStyle.Dash })
+                // 選択枠（設定色＋太さ、破線）
+                using (var pen = MakeGuidePen())
                 {
-                    g.DrawRectangle(blackPen, rc); // 破線枠
+                    pen.DashStyle = DashStyle.Dash;
+                    g.DrawRectangle(pen, rc);
                 }
 
                 if (IsGuidesEnabled())
                 {
                     // 1) 選択サイズ
-                    DrawLabel(g, $"{rc.Width} x {rc.Height}", new Point(e.X + 12, e.Y + 12));
+                    DrawLabel(g, string.Format("{0} x {1}", rc.Width, rc.Height), new Point(e.X + 12, e.Y + 12));
 
                     // 2) 開始点の十字マーカー
                     DrawCrosshair(g, startPoint);
 
-                    // 3) 開始点の“物理座標”ラベル（開始点のすぐ右下に表示）
-                    DrawLabel(g, $"{startPointPhys.X}, {startPointPhys.Y}", new Point(startPoint.X + 10, startPoint.Y + 10));
-                    using (var pen = new Pen(Color.FromArgb(120, Color.Black)))
+                    // 3) 開始点の物理座標
+                    DrawLabel(g, string.Format("{0}, {1}", startPointPhys.X, startPointPhys.Y),
+                            new Point(startPoint.X + 10, startPoint.Y + 10));
+
+                    using (var pen = MakeGuidePen())
                     {
                         g.DrawLine(pen, 0, cur.Y, bmp.Width, cur.Y);
                         g.DrawLine(pen, cur.X, 0, cur.X, bmp.Height);
                     }
                 }
 
-                // g.DrawString($"{rc.Width}x{rc.Height}", fnt, Brushes.Black, e.X + 5, e.Y + 10);
                 pictureBox1.Refresh();
             }
         }
-        //マウスのボタンが離されたとき
-        private void ScreenWindow_MouseUp(object sender,
-            System.Windows.Forms.MouseEventArgs e)
+
+        private void ScreenWindow_MouseUp(object sender, MouseEventArgs e)
         {
             if (isPressed)
             {
                 endPoint = new Point(e.X, e.Y);
                 isPressed = false;
                 this.CloseScreen();
+
                 if (rc.Width != 0 || rc.Height != 0)
                 {
                     SnapWindow sw = new SnapWindow(this.ma);
                     sw.StartPosition = FormStartPosition.Manual;
                     sw.capture(new Rectangle(rc.X + x, rc.Y + y, rc.Width, rc.Height));
                     sw.SetBounds(rc.X + x, rc.Y + y, 0, 0);
-                    sw.FormClosing +=
-                        new FormClosingEventHandler(SW_FormClosing);
+                    sw.FormClosing += new FormClosingEventHandler(SW_FormClosing);
                     captureArray.Add(sw);
                     sw.Show();
-                    //                    Console.WriteLine(rc.X +";"+ x);
                 }
             }
         }
+
         private void RedrawHoverOnly()
         {
             if (!showHover || bmp == null || baseBmp == null) return;
@@ -422,13 +386,13 @@ namespace Kiritori
                 // 原本から描き直し
                 g.DrawImage(baseBmp, Point.Empty);
 
-                // 全体を薄く白（選択前のスクリーン状態）
-                using (var mask = new SolidBrush(Color.FromArgb(40, Color.White)))
+                // 全体に背景マスク
+                using (var mask = MakeBackgroundMaskBrush())
                     g.FillRectangle(mask, new Rectangle(0, 0, bmp.Width, bmp.Height));
 
                 if (showSnapGuides && IsAltDown())
                 {
-                    using (var pen = new Pen(Color.FromArgb(120, Color.Black)))
+                    using (var pen = MakeGuidePen())
                     {
                         g.DrawLine(pen, 0, pt.Y, bmp.Width, pt.Y);
                         g.DrawLine(pen, pt.X, 0, pt.X, bmp.Height);
@@ -437,16 +401,18 @@ namespace Kiritori
                 // 開始候補点に十字
                 DrawCrosshair(g, hoverPoint);
 
-                // 物理座標（仮想スクリーン基準）ラベル
+                // 物理座標（仮想スクリーン基準）
                 var phys = new Point(hoverPoint.X + x, hoverPoint.Y + y);
                 if (showSnapGuides)
                 {
-                    DrawLabel(g, $"{phys.X}, {phys.Y}", new Point(hoverPoint.X + 10, hoverPoint.Y + 10));
+                    DrawLabel(g, string.Format("{0}, {1}", phys.X, phys.Y),
+                              new Point(hoverPoint.X + 10, hoverPoint.Y + 10));
                 }
             }
             pictureBox1.Refresh();
         }
 
+        // ====== 複数ウィンドウ管理（既存） ======
         public void hideWindows()
         {
             foreach (SnapWindow sw in captureArray)
@@ -463,7 +429,6 @@ namespace Kiritori
         }
         public void closeWindows()
         {
-            // 現在の内容で固定した配列を作ってから閉じる
             var snapshot = captureArray.Cast<SnapWindow>().ToArray();
             foreach (var sw in snapshot)
             {
@@ -472,19 +437,23 @@ namespace Kiritori
                     if (sw != null && !sw.IsDisposed)
                         sw.closeWindow();
                 }
-                catch { /* 必要ならログ */ }
+                catch { }
             }
         }
+
         private void CloseScreen()
         {
             this.isOpen = false;
             DisposeCaptureSurface();
             this.Hide();
         }
+
         void SW_FormClosing(object sender, FormClosingEventArgs e)
         {
             captureArray.Remove(sender);
         }
+
+        // ====== キー処理 ======
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
             switch ((int)keyData)
@@ -499,7 +468,7 @@ namespace Kiritori
             return true;
         }
 
-        // --- DPI/スクリーン関連 ---
+        // ====== DPI/スクリーン ======
         [DllImport("user32.dll")] private static extern int GetDpiForWindow(IntPtr hWnd); // Win10+
         [DllImport("user32.dll")] private static extern int GetSystemMetrics(int nIndex);
         [DllImport("user32.dll")] private static extern int GetSystemMetricsForDpi(int nIndex, uint dpi); // Win10+
@@ -519,14 +488,13 @@ namespace Kiritori
             }
             catch
             {
-                // フォールバック（プロセスが PM 対応ならこれも物理ピクセル）
                 var vs = SystemInformation.VirtualScreen;
                 return new PhysVS { X = vs.X, Y = vs.Y, W = vs.Width, H = vs.Height };
             }
         }
+
         /// <summary>
-        /// ホスト側(MainApplication)や自分自身で DPI が変わったときに呼び出す。
-        /// フォント・線幅など DPI 依存のリソースを作り直す。
+        /// DPI 変更時にフォント等を作り直す
         /// </summary>
         public void OnHostDpiChanged(int newDpi)
         {
@@ -534,22 +502,18 @@ namespace Kiritori
             if (newDpi == currentDpi) return;
             currentDpi = newDpi;
 
-            // フォントを DPI に合わせて再生成
             fnt?.Dispose();
-            int basePt = 10; // 元が 96dpi のとき 10pt 相当
+            int basePt = 10; // 96dpi で 10pt
             float scaledPt = basePt * (currentDpi / 96f);
             fnt = new Font("Segoe UI", scaledPt, GraphicsUnit.Point);
-
-            // 必要に応じて他の DPI 依存リソースも調整
-            // 例: ペンの太さ, PictureBox のサイズモード etc.
         }
+
+        // ====== 描画ユーティリティ ======
         private void DrawLabel(Graphics g, string text, Point anchor, int pad = 4)
         {
-            // 文字サイズ計測
             var sz = g.MeasureString(text, fnt);
             var rect = new RectangleF(anchor.X, anchor.Y, sz.Width + pad * 2, sz.Height + pad * 2);
 
-            // 背景（半透明白）＋枠線
             using (var bg = new SolidBrush(Color.FromArgb(180, Color.White)))
             using (var pen = new Pen(Color.Black))
             {
@@ -557,7 +521,6 @@ namespace Kiritori
                 g.DrawRectangle(pen, Rectangle.Round(rect));
             }
 
-            // 文字
             g.DrawString(text, fnt, Brushes.Black, rect.X + pad, rect.Y + pad);
         }
 
@@ -570,11 +533,49 @@ namespace Kiritori
             }
         }
 
+        private SolidBrush MakeBackgroundMaskBrush()
+        {
+            int a = (int)Math.Round(_bgAlphaPercent * 2.55); // 0..100 → 0..255
+            var c = Color.FromArgb(a, _bgColor);
+            return new SolidBrush(c);
+        }
+
+        private Pen MakeGuidePen()
+        {
+            var baseColor = GetOppositeColor(_bgColor, _bgAlphaPercent);
+            var c = Color.FromArgb(120, baseColor); // 半透明で薄く
+            var pen = new Pen(c, 1f);
+            pen.DashStyle = DashStyle.Solid;
+            return pen;
+        }
+        private Color GetOppositeColor(Color bg, int alphaPercent)
+        {
+            // Transparent のときは黒を返す
+            if (alphaPercent == 0)
+                return Color.Black;
+
+            // 明るさ判定（輝度で計算）
+            double brightness = bg.GetBrightness(); // 0=黒, 1=白
+            if (brightness < 0.5)
+            {
+                // 背景が Dark 系（黒〜グレー） → Light 系に
+                return Color.White;
+            }
+            else
+            {
+                // 背景が Light 系（白〜グレー） → Dark 系に
+                return Color.Black;
+            }
+        }
+
+
+        private static int Clamp01to100(int v) { return Math.Max(0, Math.Min(100, v)); }
+
+        // ====== 終了処理 ======
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             DisposeCaptureSurface();
 
-            // DPIフォントの後始末
             fnt?.Dispose();
             fnt = null;
             if (this.Icon != null)
@@ -588,9 +589,8 @@ namespace Kiritori
 
         private void DisposeCaptureSurface()
         {
-            // PictureBox から切り離してから破棄
-            var pic = pictureBox1?.Image;
-            pictureBox1.Image = null;
+            var pic = pictureBox1 != null ? pictureBox1.Image : null;
+            if (pictureBox1 != null) pictureBox1.Image = null;
 
             if (bmp != null && !ReferenceEquals(bmp, pic)) { bmp.Dispose(); }
             if (baseBmp != null && baseBmp != bmp && baseBmp != pic) { baseBmp.Dispose(); }
@@ -598,11 +598,39 @@ namespace Kiritori
 
             bmp = null;
             baseBmp = null;
-
-            // Graphics フィールドは使い回さない（必ず using で作る）。念のため。
             g = null;
         }
 
+        // ====== ライブ表示サンプル（既存） ======
+        private void StartLiveFromSelection1(Rectangle rect)
+        {
+            var viewerSize = rect.Size;
+            var screenBounds = Screen.PrimaryScreen.WorkingArea;
+            var viewerLoc = new Point(
+                Math.Max(0, screenBounds.Right - viewerSize.Width - 20),
+                Math.Max(0, screenBounds.Bottom - viewerSize.Height - 20)
+            );
+
+            _live?.Close();
+            _live = new MagnifierLiveWindow();
+            _live.StartLive(rect, viewerLoc, viewerSize, scale: 1.0f, clickThrough: false);
+        }
+
+        private void StopLive1()
+        {
+            _live?.Close();
+            _live = null;
+        }
+
+        private void StartLiveFromSelection(Rectangle selectedLogicalRect)
+        {
+            _liveRegion?.StopLive();
+            _liveRegion = new LiveRegionWindow_GDI();
+
+            Rectangle? viewer = null; // 例: new Rectangle(100, 100, 400, 300);
+            _liveRegion.StartLive(selectedLogicalRect, viewer);
+        }
+
+        private void StopLive() { if (_liveRegion != null) _liveRegion.StopLive(); }
     }
-    
 }

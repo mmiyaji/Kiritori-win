@@ -9,6 +9,7 @@ using System.Windows.Forms;
 using System.Diagnostics;
 using System.IO;
 using System.Drawing.Imaging;
+using System.Drawing.Drawing2D;
 
 namespace Kiritori
 {
@@ -103,10 +104,14 @@ namespace Kiritori
         public bool SuppressHistory { get; set; } = false;
 
         private bool isHighlightOnHover = true;
-        // 線の太さや余白
-        private const int HOVER_BORDER_THICKNESS = 3;
-        private const int HOVER_INNER_LINE_THICKNESS = 1;
-        private const int HOVER_MARGIN = 3;   // 画像の内側に寄せる分
+
+        // ===== 設定反映（ホバー枠） =====
+        private Color _hoverColor;            // HoverHighlightColor
+        private int   _hoverAlphaPercent;     // HoverHighlightAlphaPercent (0-100)
+        private int   _hoverThicknessPx;      // HoverHighlightThickness (px)
+        private PropertyChangedEventHandler _settingsHandler;
+        private bool _isApplyingSettings = false;
+
         #endregion
 
         #region ===== Win32/プロパティ =====
@@ -131,12 +136,9 @@ namespace Kiritori
         public SnapWindow(MainApplication mainapp)
         {
             this.ma = mainapp;
-            this.isWindowShadow = Properties.Settings.Default.isWindowShadow;
-            this.isAfloatWindow = Properties.Settings.Default.isAfloatWindow;
-            this.isOverlay = Properties.Settings.Default.isOverlay;
-            this.alpha_value = Properties.Settings.Default.alpha_value / 100.0;
-            this.isHighlightOnHover = Properties.Settings.Default.isHighlightWindowOnHover;
-            this.MinimumSize = Size.Empty;
+
+            // 設定の初期読み込み（ハンドル未作成でもOKな形に）
+            ReadSettingsIntoFieldsWithFallback();
 
             _overlayTimer = new Timer { Interval = 33 }; // ~30fps
             _overlayTimer.Tick += (s, e) =>
@@ -156,31 +158,162 @@ namespace Kiritori
 
             InitializeComponent();
 
+            // ハンドル作成後に UI へ反映
+            ApplyUiFromFields();
+
+            // 設定変更の監視
+            HookSettingsChanged();
+
             this.pictureBox1.Paint += PictureBox1_Paint;
             this.pictureBox1.MouseMove += PictureBox1_MouseMove_Icon;
             this.pictureBox1.MouseClick += PictureBox1_MouseClick_Icon;
-            this.pictureBox1.MouseEnter += (_, __) => { _hoverWindow = true; pictureBox1.Invalidate(); };
-            this.pictureBox1.MouseLeave += (_, __) => { _hoverWindow = false; _hoverClose = false; pictureBox1.Invalidate(); };
+            this.pictureBox1.MouseEnter += delegate { _hoverWindow = true; pictureBox1.Invalidate(); };
+            this.pictureBox1.MouseLeave += delegate { _hoverWindow = false; _hoverClose = false; pictureBox1.Invalidate(); };
 
             this.DoubleBuffered = true;
             this.AutoScaleMode = AutoScaleMode.Dpi;
             this.AutoScaleDimensions = new SizeF(96F, 96F);
         }
 
-        public Bitmap GetMainImage()
-        {
-            return (Bitmap)pictureBox1.Image;
-        }
-        public string GetImageSourcePath()
-        {
-            return pictureBox1.Image?.Tag as string;
-        }
+        public Bitmap GetMainImage() => (Bitmap)pictureBox1.Image;
+        public string GetImageSourcePath() => pictureBox1.Image?.Tag as string;
 
         private void Form1_Load(object sender, EventArgs e)
         {
             pictureBox1.MouseDown += new MouseEventHandler(Form1_MouseDown);
             pictureBox1.MouseMove += new MouseEventHandler(Form1_MouseMove);
             pictureBox1.MouseUp += new MouseEventHandler(Form1_MouseUp);
+        }
+
+        #endregion
+
+        #region ===== 設定読み込み / 監視 =====
+
+        /// <summary>
+        /// Settings を読み取り、内部フィールドに格納（Color/Alpha/Thickness は Empty/0 なら既定値へ）
+        /// ハンドル未作成でも安全。
+        /// </summary>
+        private void ReadSettingsIntoFieldsWithFallback()
+        {
+            var S = Properties.Settings.Default;
+
+            // 汎用（UIに直接触らない）
+            isWindowShadow     = S.isWindowShadow;
+            isAfloatWindow     = S.isAfloatWindow;
+            isOverlay          = S.isOverlay;
+            alpha_value        = S.alpha_value / 100.0;
+            isHighlightOnHover = S.isHighlightWindowOnHover;
+
+            // ハイライト系（フォールバック）
+            var c = S.HoverHighlightColor;
+            int a = S.HoverHighlightAlphaPercent;
+            int t = S.HoverHighlightThickness;
+
+            if (c.IsEmpty) c = Color.Red;
+            if (a <= 0) a = 60;     // 既定: 60%
+            if (t <= 0) t = 2;      // 既定: 2px
+
+            _hoverColor        = c;
+            _hoverAlphaPercent = Math.Max(0, Math.Min(100, a));
+            _hoverThicknessPx  = Math.Max(1, t);
+        }
+
+        /// <summary>
+        /// 内部フィールドの値を UI（TopMost, Opacity など）へ反映
+        /// </summary>
+        private void ApplyUiFromFields()
+        {
+            if (!this.IsHandleCreated) return;
+            try
+            {
+                this.TopMost = isAfloatWindow;
+                this.Opacity = alpha_value;
+                // 影変更は必要な時のみ（ここではハンドル再作成を避ける）
+            }
+            catch { /* 破棄競合などは無視 */ }
+        }
+
+        private void SafeApplySettings()
+        {
+            if (_isApplyingSettings) return;
+            _isApplyingSettings = true;
+            try
+            {
+                if (this.IsDisposed || this.Disposing) return;
+
+                // 設定→フィールド（常に実施、フォールバック込み）
+                ReadSettingsIntoFieldsWithFallback();
+
+                // フィールド→UI（ハンドルがある時だけ）
+                ApplyUiFromFields();
+
+                pictureBox1?.Invalidate();
+            }
+            finally
+            {
+                _isApplyingSettings = false;
+            }
+        }
+
+        private void HookSettingsChanged()
+        {
+            // 多重購読防止
+            if (_settingsHandler != null)
+                Properties.Settings.Default.PropertyChanged -= _settingsHandler;
+
+            _settingsHandler = (s, e) =>
+            {
+                if (this.IsDisposed || this.Disposing) return;
+
+                if (this.InvokeRequired)
+                {
+                    try { this.BeginInvoke(_settingsHandler, s, e); } catch { }
+                    return;
+                }
+
+                // 設定変更 → 反映（Settings への書き戻しはしない）
+                if (e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightColor) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightAlphaPercent) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightThickness) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.isHighlightWindowOnHover) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.isWindowShadow) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.isAfloatWindow) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.isOverlay) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.alpha_value) ||
+                    string.IsNullOrEmpty(e.PropertyName))
+                {
+                    SafeApplySettings();
+                }
+            };
+
+            Properties.Settings.Default.PropertyChanged += _settingsHandler;
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            // ハンドル作成直後に UI へ反映
+            ApplyUiFromFields();
+        }
+
+        // DPI に合わせた線幅
+        private float HoverThicknessDpi()
+        {
+            float t = _hoverThicknessPx * (this.DeviceDpi / 96f);
+            return (t < 1f) ? 1f : t;
+        }
+
+        // ホバー枠のペン（設定色＋アルファ＋太さ）
+        private Pen MakeHoverPen()
+        {
+            int a = Math.Max(0, Math.Min(255, (int)Math.Round(_hoverAlphaPercent * 2.55))); // 0..100 -> 0..255
+            float w = HoverThicknessDpi();
+            Color c = Color.FromArgb(a, _hoverColor);
+            var pen = new Pen(c, w)
+            {
+                Alignment = PenAlignment.Inset // 外にはみ出さない
+            };
+            return pen;
         }
 
         #endregion
@@ -279,8 +412,14 @@ namespace Kiritori
         private void captureToolStripMenuItem_Click(object sender, EventArgs e) { this.ma.openScreen(); }
         private void closeESCToolStripMenuItem_Click(object sender, EventArgs e) { this.Close(); }
         private void cutCtrlXToolStripMenuItem_Click(object sender, EventArgs e) { Clipboard.SetImage(this.pictureBox1.Image); this.Close(); }
-        private void copyCtrlCToolStripMenuItem_Click(object sender, EventArgs e) { Clipboard.SetImage(this.pictureBox1.Image); ShowOverlay($"Copy"); }
-        private void keepAfloatToolStripMenuItem_Click(object sender, EventArgs e) { this.TopMost = !this.TopMost; ShowOverlay($"Keep Afloat: {this.TopMost}"); }
+        private void copyCtrlCToolStripMenuItem_Click(object sender, EventArgs e) { Clipboard.SetImage(this.pictureBox1.Image); ShowOverlay("Copy"); }
+        private void keepAfloatToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.TopMost = !this.TopMost;
+            ShowOverlay("Keep Afloat: " + this.TopMost);
+            // 保存は不要のため Settings へは書かない
+            this.isAfloatWindow = this.TopMost;
+        }
         private void saveImageToolStripMenuItem_Click(object sender, EventArgs e) { saveImage(); }
         private void openImageToolStripMenuItem_Click(object sender, EventArgs e) { openImage(); }
         private void originalSizeToolStripMenuItem_Click(object sender, EventArgs e) { zoomOff(); }
@@ -303,7 +442,7 @@ namespace Kiritori
         private void minimizeToolStripMenuItem_Click(object sender, EventArgs e) { this.minimizeWindow(); }
         private void exitToolStripMenuItem_Click(object sender, EventArgs e) { Application.Exit(); }
 
-        // Paint 編集のクリックハンドラ（MSPaint起動→終了で再読込）
+        // Paint 編集（MSPaint起動→終了で再読込）
         private void editPaintToolStripMenuItem_Click(object sender, EventArgs e)
         {
             try
@@ -382,9 +521,9 @@ namespace Kiritori
         private void PictureBox1_Paint(object sender, PaintEventArgs e)
         {
             var g = e.Graphics;
-            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
             if (!string.IsNullOrEmpty(_overlayText))
             {
@@ -397,8 +536,8 @@ namespace Kiritori
                     if (alpha < 0) alpha = 0;
                 }
 
-                var padding = (int)(10 * (_dpi / 96f));
-                var ts = g.MeasureString(_overlayText, _overlayFont);
+                int padding = (int)(10 * (_dpi / 96f));
+                SizeF ts = g.MeasureString(_overlayText, _overlayFont);
                 int w = (int)Math.Ceiling(ts.Width) + padding * 2;
                 int h = (int)Math.Ceiling(ts.Height) + padding * 2;
 
@@ -406,7 +545,7 @@ namespace Kiritori
                 int x = pictureBox1.ClientSize.Width - w - margin;
                 int y = pictureBox1.ClientSize.Height - h - margin;
 
-                using (var path = RoundedRect(new Rectangle(x, y, w, h), radius: (int)(8 * (_dpi / 96f))))
+                using (var path = RoundedRect(new Rectangle(x, y, w, h), (int)(8 * (_dpi / 96f))))
                 using (var bg = new SolidBrush(Color.FromArgb(alpha, 0, 0, 0)))
                 using (var pen = new Pen(Color.FromArgb(Math.Max(80, alpha), 255, 255, 255), 1f))
                 using (var txt = new SolidBrush(Color.FromArgb(Math.Max(180, alpha), 255, 255, 255)))
@@ -416,30 +555,22 @@ namespace Kiritori
                     g.DrawString(_overlayText, _overlayFont, txt, x + padding, y + padding);
                 }
             }
-            // --- マウスホバー中の内枠強調 ---
-            if (isHighlightOnHover && _hoverWindow)
+
+            // --- マウスホバー中の内枠強調（Settings 反映） ---
+            if (isHighlightOnHover && _hoverWindow && _hoverAlphaPercent > 0 && _hoverThicknessPx > 0)
             {
-                var r = pictureBox1.ClientRectangle;
-
-                // ペンの太さ（DPI対応可）
-                float thickness = 5f * this.DeviceDpi / 96f;
-
-                // 内側に収めるためにペン幅分だけ縮める
-                // int inset = (int)Math.Ceiling(thickness);
-                // r.Inflate(-inset, -inset);
-
-                if (r.Width > 0 && r.Height > 0)
+                using (var pen = MakeHoverPen())
                 {
-                    using (var pen = new Pen(Color.DeepSkyBlue, thickness))
+                    var r = pictureBox1.ClientRectangle;
+                    // int inset = (int)Math.Ceiling(pen.Width / 2f);
+                    // if (inset > 0) r = Rectangle.Inflate(r, -inset, -inset);
+                    if (r.Width > 0 && r.Height > 0)
                     {
-                        // Insetで「内側だけ」に描く Centerで中央に描く
                         pen.Alignment = System.Drawing.Drawing2D.PenAlignment.Center;
-                        e.Graphics.DrawRectangle(pen, r);
+                        g.DrawRectangle(pen, r);
                     }
                 }
             }
-
-
 
             if (_hoverWindow &&
                 pictureBox1.ClientSize.Width >= MIN_WIDTH &&
@@ -525,7 +656,7 @@ namespace Kiritori
 
         public void capture(Rectangle rc)
         {
-            Debug.WriteLine($"Capturing: {rc}");
+            Debug.WriteLine("Capturing: " + rc);
             Bitmap bmp = new Bitmap(rc.Width, rc.Height);
             using (Graphics g = Graphics.FromImage(bmp))
             {
@@ -558,7 +689,7 @@ namespace Kiritori
                 int resizeHeight = (int)(bmp.Height * ((double)resizeWidth / (double)bmp.Width));
                 Bitmap resizeBmp = new Bitmap(resizeWidth, resizeHeight);
                 Graphics g = Graphics.FromImage(resizeBmp);
-                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 g.DrawImage(bmp, 0, 0, resizeWidth, resizeHeight);
                 g.Dispose();
                 this.thumbnail_image = resizeBmp;
@@ -635,10 +766,7 @@ namespace Kiritori
             }
         }
 
-        public void openImage()
-        {
-            this.ma.openImage();
-        }
+        public void openImage() => this.ma.openImage();
 
         public void setImageFromPath(string fname)
         {
@@ -730,36 +858,27 @@ namespace Kiritori
         public void minimizeWindow()
         {
             this.WindowState = FormWindowState.Minimized;
-            ShowOverlay($"Minimized");
+            ShowOverlay("Minimized");
         }
         public void showWindow()
         {
             this.WindowState = FormWindowState.Normal;
-            ShowOverlay($"Show");
+            ShowOverlay("Show");
         }
         public void closeWindow()
         {
-            ShowOverlay($"Close");
+            ShowOverlay("Close");
             this.Close();
         }
 
-        public void copyImage(object sender)
-        {
-            copyCtrlCToolStripMenuItem_Click(sender, EventArgs.Empty);
-        }
-        public void closeImage(object sender)
-        {
-            closeESCToolStripMenuItem_Click(sender, EventArgs.Empty);
-        }
-        public void afloatImage(object sender)
-        {
-            keepAfloatToolStripMenuItem_Click(sender, EventArgs.Empty);
-        }
+        public void copyImage(object sender) => copyCtrlCToolStripMenuItem_Click(sender, EventArgs.Empty);
+        public void closeImage(object sender) => closeESCToolStripMenuItem_Click(sender, EventArgs.Empty);
+        public void afloatImage(object sender) => keepAfloatToolStripMenuItem_Click(sender, EventArgs.Empty);
 
         public void editInMSPaint(object sender)
         {
             editPaintToolStripMenuItem_Click(sender, EventArgs.Empty);
-            ShowOverlay($"Edit");
+            ShowOverlay("Edit");
         }
 
         public void setAlpha(double alpha)
@@ -771,14 +890,10 @@ namespace Kiritori
         public void ShowOverlay(string text)
         {
             if (!this.isOverlay) return;
-            const int MIN_WIDTH = 100;
-            const int MIN_HEIGHT = 50;
-            if (this.ClientSize.Width < MIN_WIDTH || this.ClientSize.Height < MIN_HEIGHT)
-            {
-                Debug.WriteLine($"Overlay suppressed (too small): {this.ClientSize.Width}x{this.ClientSize.Height}");
-                return;
-            }
-            Debug.WriteLine($"Overlay: {text}");
+            const int MIN_W = 100;
+            const int MIN_H = 50;
+            if (this.ClientSize.Width < MIN_W || this.ClientSize.Height < MIN_H) return;
+
             _overlayText = text;
             _overlayStart = DateTime.Now;
             _overlayTimer.Start();
@@ -791,23 +906,23 @@ namespace Kiritori
         {
             _zoomStep++;
             UpdateScaleFromStep();
-            ApplyZoom(redrawOnly: false);
-            ShowOverlay($"Zoom {(int)Math.Round(_scale * 100)}%");
+            ApplyZoom(false);
+            ShowOverlay("Zoom " + (int)Math.Round(_scale * 100) + "%");
         }
 
         public void zoomOut()
         {
             _zoomStep--;
             UpdateScaleFromStep();
-            ApplyZoom(redrawOnly: false);
-            ShowOverlay($"Zoom {(int)Math.Round(_scale * 100)}%");
+            ApplyZoom(false);
+            ShowOverlay("Zoom " + (int)Math.Round(_scale * 100) + "%");
         }
 
         public void zoomOff()
         {
             _zoomStep = 0;
             UpdateScaleFromStep();
-            ApplyZoom(redrawOnly: false);
+            ApplyZoom(false);
             ShowOverlay("Zoom 100%");
         }
 
@@ -815,8 +930,8 @@ namespace Kiritori
         {
             _zoomStep = (int)Math.Round((percent - 100) / (STEP_LINEAR * 100f));
             UpdateScaleFromStep();
-            ApplyZoom(redrawOnly: false);
-            ShowOverlay($"Zoom {percent}%");
+            ApplyZoom(false);
+            ShowOverlay("Zoom " + percent + "%");
         }
 
         private void UpdateScaleFromStep()
@@ -841,7 +956,7 @@ namespace Kiritori
 
             _scale = 1f;
             pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
-            ApplyZoom(redrawOnly: false);
+            ApplyZoom(false);
         }
 
         private void ApplyZoom(bool redrawOnly)
@@ -856,11 +971,11 @@ namespace Kiritori
             Bitmap bmp = new Bitmap(newW, newH);
             using (Graphics g = Graphics.FromImage(bmp))
             {
-                g.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceOver;
-                g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                g.CompositingMode = CompositingMode.SourceOver;
+                g.CompositingQuality = CompositingQuality.HighQuality;
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.SmoothingMode = SmoothingMode.HighQuality;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
                 g.DrawImage(_originalImage, 0, 0, newW, newH);
             }
@@ -891,10 +1006,10 @@ namespace Kiritori
         }
 
         // ヘルパー
-        private static System.Drawing.Drawing2D.GraphicsPath RoundedRect(Rectangle r, int radius)
+        private static GraphicsPath RoundedRect(Rectangle r, int radius)
         {
             int d = radius * 2;
-            var path = new System.Drawing.Drawing2D.GraphicsPath();
+            var path = new GraphicsPath();
             path.AddArc(r.X, r.Y, d, d, 180, 90);
             path.AddArc(r.Right - d, r.Y, d, d, 270, 90);
             path.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
@@ -917,13 +1032,16 @@ namespace Kiritori
             _closeIconCache[key] = (bmpNormal, bmpHover);
             return _closeIconCache[key];
         }
+
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            if (this.Icon != null)
+            if (_settingsHandler != null)
             {
-                this.Icon.Dispose();
-                this.Icon = null;
+                try { Properties.Settings.Default.PropertyChanged -= _settingsHandler; } catch { }
+                _settingsHandler = null;
             }
+
+            if (this.Icon != null) { this.Icon.Dispose(); this.Icon = null; }
             base.OnFormClosed(e);
         }
 
