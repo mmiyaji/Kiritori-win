@@ -39,6 +39,14 @@ namespace Kiritori
             s = new ScreenWindow(this);
             this.AutoScaleMode = AutoScaleMode.Dpi;
             this.AutoScaleDimensions = new SizeF(96F, 96F);
+
+            ApplyTrayLocalization();
+            SR.CultureChanged += () =>
+            {
+                Localizer.Apply(this);
+                ApplyTrayLocalization();
+            };
+
             ApplyDpiToUi(GetDpiForWindowSafe(this.Handle));
             MaybeShowPreferencesOnStartup();
         }
@@ -366,6 +374,35 @@ namespace Kiritori
                 // ロック中などは無視（次回のクリーンアップで再挑戦）
             }
         }
+        private void ApplyTrayLocalization()
+        {
+            // メニュー（Tagベースで一括）
+            if (contextMenuStrip1 != null)
+                ApplyToolStripLocalization(contextMenuStrip1.Items);
+
+            // トレイアイコンのヒント
+            if (notifyIcon1 != null)
+                notifyIcon1.Text = SR.T("Tray.TrayIcon");  // 文字数は63字以内推奨
+        }
+                // ToolStrip / ContextMenuStrip 用のローカライズ適用
+        private static void ApplyToolStripLocalization(ToolStripItemCollection items)
+        {
+            foreach (ToolStripItem it in items)
+            {
+                // 自分自身
+                if (it.Tag is string tag && tag.StartsWith("loc:", StringComparison.Ordinal))
+                {
+                    it.Text = SR.T(tag.Substring(4));
+                }
+
+                // サブメニューを再帰
+                if (it is ToolStripDropDownItem dd)
+                {
+                    ApplyToolStripLocalization(dd.DropDownItems);
+                }
+            }
+        }
+
     }
     
 }

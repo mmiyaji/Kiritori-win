@@ -145,6 +145,7 @@ namespace Kiritori
             this.fileParentMenu.Name = "fileParentMenu";
             this.fileParentMenu.Size = new System.Drawing.Size(231, 22);
             this.fileParentMenu.Text = "&File";
+            this.fileParentMenu.Tag = "loc:Menu.File";
             // 
             // editParentMenu
             // 
@@ -156,6 +157,7 @@ namespace Kiritori
             this.editParentMenu.Name = "editParentMenu";
             this.editParentMenu.Size = new System.Drawing.Size(231, 22);
             this.editParentMenu.Text = "&Edit";
+            this.editParentMenu.Tag = "loc:Menu.Edit";
             // 
             // viewParentMenu
             // 
@@ -172,6 +174,7 @@ namespace Kiritori
             this.viewParentMenu.Name = "viewParentMenu";
             this.viewParentMenu.Size = new System.Drawing.Size(231, 22);
             this.viewParentMenu.Text = "&View";
+            this.viewParentMenu.Tag = "loc:Menu.View";
             // 
             // windowParentMenu
             // 
@@ -183,6 +186,7 @@ namespace Kiritori
             this.windowParentMenu.Name = "windowParentMenu";
             this.windowParentMenu.Size = new System.Drawing.Size(231, 22);
             this.windowParentMenu.Text = "&Window";
+            this.windowParentMenu.Tag = "loc:Menu.Window";
             // 
             // zoomParentMenu
             // 
@@ -197,6 +201,7 @@ namespace Kiritori
             this.zoomParentMenu.Name = "zoomParentMenu";
             this.zoomParentMenu.Size = new System.Drawing.Size(231, 22);
             this.zoomParentMenu.Text = "Zoom(%)";
+            this.zoomParentMenu.Tag = "loc:Menu.Zoom";
             // 
             // captureToolStripMenuItem
             // 
@@ -205,6 +210,7 @@ namespace Kiritori
             | System.Windows.Forms.Keys.D5)));
             this.captureToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.captureToolStripMenuItem.Text = "Capture";
+            this.captureToolStripMenuItem.Tag = "loc:Menu.Capture";
             this.captureToolStripMenuItem.Click += new System.EventHandler(this.captureToolStripMenuItem_Click);
             // 
             // closeESCToolStripMenuItem
@@ -213,6 +219,7 @@ namespace Kiritori
             this.closeESCToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.W)));
             this.closeESCToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.closeESCToolStripMenuItem.Text = "Close Window";
+            this.closeESCToolStripMenuItem.Tag = "loc:Menu.CloseWindow";
             this.closeESCToolStripMenuItem.Click += new System.EventHandler(this.closeESCToolStripMenuItem_Click);
             // 
             // cutCtrlXToolStripMenuItem
@@ -221,6 +228,7 @@ namespace Kiritori
             this.cutCtrlXToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.X)));
             this.cutCtrlXToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.cutCtrlXToolStripMenuItem.Text = "Cut";
+            this.cutCtrlXToolStripMenuItem.Tag = "loc:Menu.Cut";
             this.cutCtrlXToolStripMenuItem.Click += new System.EventHandler(this.cutCtrlXToolStripMenuItem_Click);
             // 
             // copyCtrlXToolStripMenuItem
@@ -229,6 +237,7 @@ namespace Kiritori
             this.copyCtrlXToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.C)));
             this.copyCtrlXToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.copyCtrlXToolStripMenuItem.Text = "Copy";
+            this.copyCtrlXToolStripMenuItem.Tag = "loc:Menu.Copy";
             this.copyCtrlXToolStripMenuItem.Click += new System.EventHandler(this.copyCtrlCToolStripMenuItem_Click);
             // 
             // editPaintToolStripMenuItem
@@ -237,6 +246,7 @@ namespace Kiritori
             this.editPaintToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.E)));
             this.editPaintToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.editPaintToolStripMenuItem.Text = "Edit Paint";
+            this.editPaintToolStripMenuItem.Tag = "loc:Menu.EditPaint";
             this.editPaintToolStripMenuItem.Click += new System.EventHandler(this.editPaintToolStripMenuItem_Click);
             // 
             // saveImageToolStripMenuItem
@@ -245,6 +255,7 @@ namespace Kiritori
             this.saveImageToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.S)));
             this.saveImageToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.saveImageToolStripMenuItem.Text = "Save Image";
+            this.saveImageToolStripMenuItem.Tag = "loc:Menu.SaveImage";
             this.saveImageToolStripMenuItem.Click += new System.EventHandler(this.saveImageToolStripMenuItem_Click);
             // 
             // openImageToolStripMenuItem
@@ -253,6 +264,7 @@ namespace Kiritori
             this.openImageToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.O)));
             this.openImageToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.openImageToolStripMenuItem.Text = "Open Image";
+            this.openImageToolStripMenuItem.Tag = "loc:Menu.OpenImage";
             this.openImageToolStripMenuItem.Click += new System.EventHandler(this.openImageToolStripMenuItem_Click);
             // 
             // originalSizeToolStripMenuItem
@@ -260,6 +272,7 @@ namespace Kiritori
             this.originalSizeToolStripMenuItem.Name = "originalSizeToolStripMenuItem";
             this.originalSizeToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.originalSizeToolStripMenuItem.Text = "Original Size";
+            this.originalSizeToolStripMenuItem.Tag = "loc:Menu.OriginalSize";
             this.originalSizeToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.NumPad0)));
             this.originalSizeToolStripMenuItem.ShortcutKeyDisplayString = "Ctrl+0";
             this.originalSizeToolStripMenuItem.Click += new System.EventHandler(this.originalSizeToolStripMenuItem_Click);
@@ -267,6 +280,7 @@ namespace Kiritori
             this.zoomInToolStripMenuItem.Name = "zoomInToolStripMenuItem";
             this.zoomInToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.zoomInToolStripMenuItem.Text = "Zoom In(+10%)";
+            this.zoomInToolStripMenuItem.Tag = "loc:Menu.ZoomIn";
             this.zoomInToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.Oemplus)));
             this.zoomInToolStripMenuItem.ShortcutKeyDisplayString = "Ctrl+'+'";
             this.zoomInToolStripMenuItem.Click += new System.EventHandler(this.zoomInToolStripMenuItem_Click);
@@ -275,6 +289,7 @@ namespace Kiritori
             this.zoomOutToolStripMenuItem.Name = "zoomOutToolStripMenuItem";
             this.zoomOutToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.zoomOutToolStripMenuItem.Text = "Zoom Out(-10%)";
+            this.zoomOutToolStripMenuItem.Tag = "loc:Menu.ZoomOut";
             this.zoomOutToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.OemMinus)));
             this.zoomOutToolStripMenuItem.ShortcutKeyDisplayString = "Ctrl+'-'";
             this.zoomOutToolStripMenuItem.Click += new System.EventHandler(this.zoomOutToolStripMenuItem_Click);
@@ -284,6 +299,7 @@ namespace Kiritori
             this.size10ToolStripMenuItem.Name = "size10ToolStripMenuItem";
             this.size10ToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.size10ToolStripMenuItem.Text = "Size 10%";
+            this.size10ToolStripMenuItem.Tag = "loc:Menu.Size10";
             this.size10ToolStripMenuItem.Click += new System.EventHandler(this.size10ToolStripMenuItem_Click);
             // 
             // size50ToolStripMenuItem
@@ -291,6 +307,7 @@ namespace Kiritori
             this.size50ToolStripMenuItem.Name = "size50ToolStripMenuItem";
             this.size50ToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.size50ToolStripMenuItem.Text = "Size 50%";
+            this.size50ToolStripMenuItem.Tag = "loc:Menu.Size50";
             this.size50ToolStripMenuItem.Click += new System.EventHandler(this.size50ToolStripMenuItem_Click);
             // 
             // size100ToolStripMenuItem
@@ -298,6 +315,7 @@ namespace Kiritori
             this.size100ToolStripMenuItem.Name = "size100ToolStripMenuItem";
             this.size100ToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.size100ToolStripMenuItem.Text = "Size 100%";
+            this.size100ToolStripMenuItem.Tag = "loc:Menu.Size100";
             this.size100ToolStripMenuItem.Click += new System.EventHandler(this.size100ToolStripMenuItem_Click);
             // 
             // size150ToolStripMenuItem
@@ -305,6 +323,7 @@ namespace Kiritori
             this.size150ToolStripMenuItem.Name = "size150ToolStripMenuItem";
             this.size150ToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.size150ToolStripMenuItem.Text = "Size 150%";
+            this.size150ToolStripMenuItem.Tag = "loc:Menu.Size150";
             this.size150ToolStripMenuItem.Click += new System.EventHandler(this.size150ToolStripMenuItem_Click);
             // 
             // size200ToolStripMenuItem
@@ -312,6 +331,7 @@ namespace Kiritori
             this.size200ToolStripMenuItem.Name = "size200ToolStripMenuItem";
             this.size200ToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.size200ToolStripMenuItem.Text = "Size 200%";
+            this.size200ToolStripMenuItem.Tag = "loc:Menu.Size200";
             this.size200ToolStripMenuItem.Click += new System.EventHandler(this.size200ToolStripMenuItem_Click);
             // 
             // size500ToolStripMenuItem
@@ -319,6 +339,7 @@ namespace Kiritori
             this.size500ToolStripMenuItem.Name = "size500ToolStripMenuItem";
             this.size500ToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.size500ToolStripMenuItem.Text = "Size 500%";
+            this.size500ToolStripMenuItem.Tag = "loc:Menu.Size500";
             this.size500ToolStripMenuItem.Click += new System.EventHandler(this.size500ToolStripMenuItem_Click);
             // 
             // keepAfloatToolStripMenuItem
@@ -326,7 +347,8 @@ namespace Kiritori
             this.keepAfloatToolStripMenuItem.Name = "keepAfloatToolStripMenuItem";
             this.keepAfloatToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.A)));
             this.keepAfloatToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
-            this.keepAfloatToolStripMenuItem.Text = "Toggle Keep Afloat";
+            this.keepAfloatToolStripMenuItem.Text = "Toggle Always on top";
+            this.keepAfloatToolStripMenuItem.Tag = "loc:Menu.AlwaysOnTop";
             this.keepAfloatToolStripMenuItem.Click += new System.EventHandler(this.keepAfloatToolStripMenuItem_Click);
             // 
             // dropShadowToolStripMenuItem
@@ -335,6 +357,7 @@ namespace Kiritori
             this.dropShadowToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.D)));
             this.dropShadowToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.dropShadowToolStripMenuItem.Text = "Toggle Drop Shadow";
+            this.dropShadowToolStripMenuItem.Tag = "loc:Menu.DropShadow";
             this.dropShadowToolStripMenuItem.Click += new System.EventHandler(this.dropShadowToolStripMenuItem_Click);
             // 
             // minimizeToolStripMenuItem
@@ -343,6 +366,7 @@ namespace Kiritori
             this.minimizeToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.H)));
             this.minimizeToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.minimizeToolStripMenuItem.Text = "Minimize";
+            this.minimizeToolStripMenuItem.Tag = "loc:Menu.Minimize";
             this.minimizeToolStripMenuItem.Click += new System.EventHandler(this.minimizeToolStripMenuItem_Click);
             // 
             // opacityParentMenu
@@ -357,6 +381,7 @@ namespace Kiritori
             this.opacityParentMenu.Name = "opacityParentMenu";
             this.opacityParentMenu.Size = new System.Drawing.Size(231, 22);
             this.opacityParentMenu.Text = "Opacity";
+            this.opacityParentMenu.Tag = "loc:Menu.Opacity";
             // 
             // opacity100toolStripMenuItem
             // 
@@ -398,6 +423,7 @@ namespace Kiritori
             this.preferencesToolStripMenuItem.Name = "preferencesToolStripMenuItem";
             this.preferencesToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.preferencesToolStripMenuItem.Text = "Preferences";
+            this.preferencesToolStripMenuItem.Tag = "loc:Menu.Preferences";
             this.preferencesToolStripMenuItem.Click += new System.EventHandler(this.preferencesToolStripMenuItem_Click);
             // 
             // printToolStripMenuItem
@@ -406,6 +432,7 @@ namespace Kiritori
             this.printToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.P)));
             this.printToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.printToolStripMenuItem.Text = "Print";
+            this.printToolStripMenuItem.Tag = "loc:Menu.Print";
             this.printToolStripMenuItem.Click += new System.EventHandler(this.printToolStripMenuItem_Click);
             // 
             // exitToolStripMenuItem
@@ -413,6 +440,7 @@ namespace Kiritori
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
             this.exitToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
             this.exitToolStripMenuItem.Text = "Exit Kiritori";
+            this.exitToolStripMenuItem.Tag = "loc:Menu.Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
             // SnapWindow
@@ -431,7 +459,7 @@ namespace Kiritori
             this.MinimizeBox = false;
             this.Name = "SnapWindow";
             this.ShowInTaskbar = false;
-            this.Text = "Form1";
+            this.Text = "Kiritori - Snap";
             this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.contextMenuStrip1.ResumeLayout(false);

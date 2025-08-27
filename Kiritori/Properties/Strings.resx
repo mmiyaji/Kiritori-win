@@ -1,0 +1,391 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+		Microsoft ResX Schema
+
+		Version 1.3
+
+		The primary goals of this format is to allow a simple XML format 
+		that is mostly human readable. The generation and parsing of the 
+		various data types are done through the TypeConverter classes 
+		associated with the data types.
+
+		Example:
+
+		... ado.net/XML headers & schema ...
+		<resheader name="resmimetype">text/microsoft-resx</resheader>
+		<resheader name="version">1.3</resheader>
+		<resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+		<resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+		<data name="Name1">this is my long string</data>
+		<data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+		<data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+			[base64 mime encoded serialized .NET Framework object]
+		</data>
+		<data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+			[base64 mime encoded string representing a byte array form of the .NET Framework object]
+		</data>
+
+		There are any number of "resheader" rows that contain simple 
+		name/value pairs.
+
+		Each data row contains a name, and value. The row also contains a 
+		type or mimetype. Type corresponds to a .NET class that support 
+		text/value conversion through the TypeConverter architecture. 
+		Classes that don't support this are serialized and stored with the 
+		mimetype set.
+
+		The mimetype is used for serialized objects, and tells the 
+		ResXResourceReader how to depersist the object. This is currently not 
+		extensible. For a given mimetype the value must be set accordingly:
+
+		Note - application/x-microsoft.net.object.binary.base64 is the format 
+		that the ResXResourceWriter will generate, however the reader can 
+		read any of the formats listed below.
+
+		mimetype: application/x-microsoft.net.object.binary.base64
+		value   : The object must be serialized with 
+			: System.Serialization.Formatters.Binary.BinaryFormatter
+			: and then encoded with base64 encoding.
+
+		mimetype: application/x-microsoft.net.object.soap.base64
+		value   : The object must be serialized with 
+			: System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+			: and then encoded with base64 encoding.
+
+		mimetype: application/x-microsoft.net.object.bytearray.base64
+		value   : The object must be serialized into a byte array 
+			: using a System.ComponentModel.TypeConverter
+			: and then encoded with base64 encoding.
+	-->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="App.Name" xml:space="preserve">
+    <value>Kiritori</value>
+  </data>
+  <data name="PrefForm.Title" xml:space="preserve">
+    <value>Preferences</value>
+  </data>
+  <data name="Tab.General" xml:space="preserve">
+    <value>Genral</value>
+  </data>
+  <data name="Tab.Appearance" xml:space="preserve">
+    <value>Appearance</value>
+  </data>
+  <data name="Tab.Shortcut" xml:space="preserve">
+    <value>Shortcut</value>
+  </data>
+  <data name="Tab.Advanced" xml:space="preserve">
+    <value>Advanced</value>
+  </data>
+  <data name="Tab.Info" xml:space="preserve">
+    <value>Info</value>
+  </data>
+  <data name="Text.AppSetting" xml:space="preserve">
+    <value>Application Settings</value>
+  </data>
+  <data name="Text.Language" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Text.Startup" xml:space="preserve">
+    <value>Startup</value>
+  </data>
+  <data name="Text.Runatstartup" xml:space="preserve">
+    <value>Run at Startup</value>
+  </data>
+  <data name="Text.BtnStartupFolder" xml:space="preserve">
+    <value>Open Startup folder</value>
+  </data>
+  <data name="Text.HistoryLimit" xml:space="preserve">
+    <value>History limit</value>
+  </data>
+  <data name="Text.Hotkeys" xml:space="preserve">
+    <value>Hotkeys</value>
+  </data>
+  <data name="Text.ImageCapture" xml:space="preserve">
+    <value>Image Capture</value>
+  </data>
+  <data name="Text.PreviousCapture" xml:space="preserve">
+    <value>Capture at previous region</value>
+  </data>
+  <data name="Text.VideoCapture" xml:space="preserve">
+    <value>Video Capture</value>
+  </data>
+  <data name="Text.BtnExit" xml:space="preserve">
+    <value>Exit Kiritori</value>
+  </data>
+  <data name="Text.BtnSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Text.BtnCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Text.CaptureSetting" xml:space="preserve">
+    <value>Capture Settings</value>
+  </data>
+  <data name="Text.Option" xml:space="preserve">
+    <value>Options</value>
+  </data>
+  <data name="Text.ShowGuide" xml:space="preserve">
+    <value>Show guide lines</value>
+  </data>
+  <data name="Text.NotifyTray" xml:space="preserve">
+    <value>Notify in tray on capture</value>
+  </data>
+  <data name="Text.Background" xml:space="preserve">
+    <value>Background</value>
+  </data>
+  <data name="Text.WindowSetting" xml:space="preserve">
+    <value>Window Settings</value>
+  </data>
+  <data name="Text.DropShadow" xml:space="preserve">
+    <value>Drop shadow</value>
+  </data>
+  <data name="Text.AlwaysOnTop" xml:space="preserve">
+    <value>Always on top</value>
+  </data>
+  <data name="Text.HighlightOnHover" xml:space="preserve">
+    <value>Highlight on hover</value>
+  </data>
+  <data name="Text.HighlightColor" xml:space="preserve">
+    <value>Highlight color</value>
+  </data>
+  <data name="Text.HighlightThickness" xml:space="preserve">
+    <value>Highlignt thickness(px)</value>
+  </data>
+  <data name="Text.WindowOpacity" xml:space="preserve">
+    <value>Default opacity</value>
+  </data>
+  <data name="Text.WindowOperation" xml:space="preserve">
+    <value>Window Operations</value>
+  </data>
+  <data name="Text.Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Text.Minimize" xml:space="preserve">
+    <value>Minimize</value>
+  </data>
+  <data name="Text.Move" xml:space="preserve">
+    <value>Move</value>
+  </data>
+  <data name="Text.Copy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="Text.Print" xml:space="preserve">
+    <value>Print</value>
+  </data>
+  <data name="Text.ZoomIn" xml:space="preserve">
+    <value>Zoom in</value>
+  </data>
+  <data name="Text.ZoomOut" xml:space="preserve">
+    <value>Zoom out</value>
+  </data>
+  <data name="Text.ZoomReset" xml:space="preserve">
+    <value>Zoom reset</value>
+  </data>
+  <data name="Text.SquareCrop" xml:space="preserve">
+    <value>Square crop</value>
+  </data>
+  <data name="Text.Snap" xml:space="preserve">
+    <value>Snap</value>
+  </data>
+  <data name="Text.ShowScreen" xml:space="preserve">
+    <value>Don't show this Menu at startup</value>
+  </data>
+  <data name="Text.TipTasktray" xml:space="preserve">
+    <value>Tip: It minimizes to the taskbar. Right-clicking the icon displays a menu.</value>
+  </data>
+  <data name="Text.WhatIs1" xml:space="preserve">
+    <value>What Kiritori does</value>
+  </data>
+  <data name="Text.WhatIs2" xml:space="preserve">
+    <value>• Capture any screen region instantly\n• Shows as a borderless, always-on-top window\n• Move, zoom, copy, or save the cutout</value>
+  </data>
+  <data name="Text.BtnStartupSetting" xml:space="preserve">
+    <value>Open Startup Setting</value>
+  </data>
+  <data name="Text.PlaySound" xml:space="preserve">
+    <value>Play sound on capture</value>
+  </data>
+  <data name="Text.StartupManaged" xml:space="preserve">
+    <value>Startup is managed by Windows</value>
+  </data>
+  <data name="Text.StartupManagedTip" xml:space="preserve">
+    <value>Settings &gt; Apps &gt; Startup</value>
+  </data>
+  <data name="Text.UnableSetStartup" xml:space="preserve">
+    <value>Unable to update startup setting</value>
+  </data>
+  <data name="Text.ConfirmExit" xml:space="preserve">
+    <value>Are you sure you want to exit the application?</value>
+  </data>
+  <data name="Text.ConfirmExitTitle" xml:space="preserve">
+    <value>Confirm Exit Kiritori</value>
+  </data>
+  <data name="Text.Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Text.AndMore" xml:space="preserve">
+    <value>and more. See Shortcuts tab</value>
+  </data>
+  <data name="Text.StartCapture" xml:space="preserve">
+    <value>Start capture</value>
+  </data>
+  <data name="Text.CloseWindow" xml:space="preserve">
+    <value>Close window</value>
+  </data>
+  <data name="Text.CopyToClipboard" xml:space="preserve">
+    <value>Copy to clipboard</value>
+  </data>
+  <data name="Text.SaveImage" xml:space="preserve">
+    <value>Save image</value>
+  </data>
+  <data name="Tray.TrayIcon" xml:space="preserve">
+    <value>Kiritori - minimized to tray (click to open)</value>
+  </data>
+  <data name="Text.OpenImageFile" xml:space="preserve">
+    <value>Open Image File</value>
+  </data>
+  <data name="Text.HideAllWindows" xml:space="preserve">
+    <value>Hide All Windows</value>
+  </data>
+  <data name="Text.ShowAllWindows" xml:space="preserve">
+    <value>Show All Windows</value>
+  </data>
+  <data name="Text.CloseAllWindows" xml:space="preserve">
+    <value>Close All Windows</value>
+  </data>
+  <data name="Text.MainPreferences" xml:space="preserve">
+    <value>MainMenu / Preferences</value>
+  </data>
+  <data name="Text.History" xml:space="preserve">
+    <value>History</value>
+  </data>
+  <data name="Menu.File" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="Menu.Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Menu.View" xml:space="preserve">
+    <value>View</value>
+  </data>
+  <data name="Menu.Window" xml:space="preserve">
+    <value>Window</value>
+  </data>
+  <data name="Menu.Zoom" xml:space="preserve">
+    <value>Zoom(%)</value>
+  </data>
+  <data name="Menu.Capture" xml:space="preserve">
+    <value>Image Capture</value>
+  </data>
+  <data name="Menu.CloseWindow" xml:space="preserve">
+    <value>Close Window</value>
+  </data>
+  <data name="Menu.Cut" xml:space="preserve">
+    <value>Cut(copy and close)</value>
+  </data>
+  <data name="Menu.Copy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="Menu.EditPaint" xml:space="preserve">
+    <value>Edit Paint</value>
+  </data>
+  <data name="Menu.SaveImage" xml:space="preserve">
+    <value>Save Image</value>
+  </data>
+  <data name="Menu.OpenImage" xml:space="preserve">
+    <value>Open Image</value>
+  </data>
+  <data name="Menu.OriginalSize" xml:space="preserve">
+    <value>Original Size</value>
+  </data>
+  <data name="Menu.ZoomIn" xml:space="preserve">
+    <value>Zoom In(+10%)</value>
+  </data>
+  <data name="Menu.ZoomOut" xml:space="preserve">
+    <value>Zoom Out(-10%)</value>
+  </data>
+  <data name="Menu.Size10" xml:space="preserve">
+    <value>Size 10%</value>
+  </data>
+  <data name="Menu.Size50" xml:space="preserve">
+    <value>Size 50%</value>
+  </data>
+  <data name="Menu.Size100" xml:space="preserve">
+    <value>Size 100%</value>
+  </data>
+  <data name="Menu.Size150" xml:space="preserve">
+    <value>Size 150%</value>
+  </data>
+  <data name="Menu.Size200" xml:space="preserve">
+    <value>Size 200%</value>
+  </data>
+  <data name="Menu.Size500" xml:space="preserve">
+    <value>Size 500%</value>
+  </data>
+  <data name="Menu.AlwaysOnTop" xml:space="preserve">
+    <value>Toggle Always on top</value>
+  </data>
+  <data name="Menu.DropShadow" xml:space="preserve">
+    <value>Toggle Drop Shadow</value>
+  </data>
+  <data name="Menu.Minimize" xml:space="preserve">
+    <value>Minimize</value>
+  </data>
+  <data name="Menu.Opacity" xml:space="preserve">
+    <value>Opacity</value>
+  </data>
+  <data name="Menu.Preferences" xml:space="preserve">
+    <value>MainMenu / Preferences</value>
+  </data>
+  <data name="Menu.Print" xml:space="preserve">
+    <value>Print</value>
+  </data>
+  <data name="Menu.Exit" xml:space="preserve">
+    <value>Exit Kiritori</value>
+  </data>
+  <data name="Text.ToggleGuide" xml:space="preserve">
+    <value>Toggle guide lines</value>
+  </data>
+  <data name="Text.CaptureOptionSetting" xml:space="preserve">
+    <value>Capture Settings(press key duaring capture)</value>
+  </data>
+</root>

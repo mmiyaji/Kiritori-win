@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace Kiritori
@@ -16,6 +17,7 @@ namespace Kiritori
         // =========================================================
         private static PrefForm _instance;
         private bool _initStartupToggle = false;
+        private bool _initLang = false;
 
         // =========================================================
         // ==================== Constructor ========================
@@ -23,6 +25,8 @@ namespace Kiritori
         public PrefForm()
         {
             _initStartupToggle = true;
+            _initLang = true;
+
             InitializeComponent();
             PopulatePresetCombos();
             WireUpDataBindings();
@@ -40,12 +44,23 @@ namespace Kiritori
             if (!IsInDesignMode())
             {
                 this.Load += PrefForm_LoadAsync;
-
+                this.Load += (_, __) =>
+                {
+                    Localizer.Apply(this);
+                    ApplyDynamicTexts();
+                    LayoutInfoTabResponsive();
+                };
+                SR.CultureChanged += () =>
+                {
+                    Localizer.Apply(this);
+                    ApplyDynamicTexts();
+                    LayoutInfoTabResponsive();
+                };
                 // 見出し位置調整のためのレイアウトトリガ
-                this.tabInfo.Layout += (_, __) => PositionDescHeader();
-                this.descCard.LocationChanged += (_, __) => PositionDescHeader();
-                this.descCard.SizeChanged += (_, __) => PositionDescHeader();
-                this.labelDescHeader.TextChanged += (_, __) => PositionDescHeader();
+                // this.tabInfo.Layout += (_, __) => PositionDescHeader();
+                // this.descCard.LocationChanged += (_, __) => PositionDescHeader();
+                // this.descCard.SizeChanged += (_, __) => PositionDescHeader();
+                // this.labelDescHeader.TextChanged += (_, __) => PositionDescHeader();
 
                 // アプリアイコンのスケーリング
                 var src = Properties.Resources.icon_128x128;
@@ -53,9 +68,8 @@ namespace Kiritori
                 picAppIcon.Image = ScaleBitmap(src, 120, 120);
             }
 
-            btnOpenStartupSettings.Text = PackagedHelper.IsPackaged()
-                ? "Open Startup settings"
-                : "Open Startup folder";
+            // Language コンボの初期化と保存値の復元
+            InitLanguageCombo();
         }
 
         // =========================================================
@@ -165,7 +179,7 @@ namespace Kiritori
             catch (Exception ex)
             {
                 chkRunAtStartup.Checked = false;
-                MessageBox.Show(this, "Unable to update startup setting.\r\n" + ex.Message,
+                MessageBox.Show(this, SR.F("Text.UnableSetStartup", ex.Message),
                     "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
@@ -185,8 +199,8 @@ namespace Kiritori
         {
             Debug.WriteLine("Exit button clicked");
             var result = MessageBox.Show(
-                "Are you sure you want to exit the application?",
-                "Confirm Exit",
+                SR.T("Text.ConfirmExit"),
+                SR.T("Text.ConfirmExitTitle"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question
             );
@@ -209,7 +223,7 @@ namespace Kiritori
 
         private void chkDoNotShowOnStartup_CheckedChanged(object sender, EventArgs e)
         {
-            Properties.Settings.Default.DoNotShowOnStartup = chkDoNotShowOnStartup.Checked;
+            //Properties.Settings.Default.DoNotShowOnStartup = chkDoNotShowOnStartup.Checked;
             Properties.Settings.Default.Save();
         }
 
@@ -234,124 +248,169 @@ namespace Kiritori
                 {
                     this.previewBg.RgbColor = cd.Color;   // バインドで Settings にも入る
                     this.previewBg.Invalidate();
-
-                    // プリセット名は一致しない可能性が高いので「カスタム」扱いにするならこうする：
-                    // this.cmbBgPreset.SelectedIndex = -1;
                 }
             }
         }
 
-        private void descCard_Paint(object sender, PaintEventArgs e)
+        // private void descCard_Paint(object sender, PaintEventArgs e)
+        // {
+        //     var p = (Panel)sender;
+        //     var g = e.Graphics;
+
+        //     var rect = new Rectangle(0, 0, p.Width - 1, p.Height - 1);
+        //     int radius = 8;
+
+        //     using (var path = RoundRect(rect, radius))
+        //     using (var border = new Pen(Color.FromArgb(210, 215, 220), 1f))
+        //     using (var accent = new SolidBrush(SystemColors.Highlight))
+        //     {
+        //         var state = g.Save();
+        //         g.SetClip(path, System.Drawing.Drawing2D.CombineMode.Replace);
+
+        //         const int inset = 1;
+        //         const int barW = 4;
+        //         var bar = new Rectangle(rect.X + inset, rect.Y + inset, barW, rect.Height - inset * 2);
+
+        //         g.FillRectangle(accent, bar);
+        //         g.Restore(state);
+        //         g.DrawPath(border, path);
+        //     }
+        // }
+
+        // Language ComboBox 選択変更
+        private void cmbLanguage_SelectedIndexChanged(object sender, EventArgs e)
         {
-            var p = (Panel)sender;
-            var g = e.Graphics;
+            if (_initLang) return;
 
-            var rect = new Rectangle(0, 0, p.Width - 1, p.Height - 1);
-            int radius = 8;
+            var item = cmbLanguage.SelectedItem;
+            var valProp = item?.GetType().GetProperty("Value");
+            var culture = valProp?.GetValue(item)?.ToString() ?? "en";
+            Properties.Settings.Default.UICulture = culture;
+            Properties.Settings.Default.Save();
 
-            using (var path = RoundRect(rect, radius))
-            using (var border = new Pen(Color.FromArgb(210, 215, 220), 1f))
-            using (var accent = new SolidBrush(SystemColors.Highlight))
-            {
-                // 1) カード内だけにバーを塗る
-                var state = g.Save();
-                g.SetClip(path, System.Drawing.Drawing2D.CombineMode.Replace);
-
-                const int inset = 1;
-                const int barW = 4;
-                var bar = new Rectangle(rect.X + inset, rect.Y + inset, barW, rect.Height - inset * 2);
-
-                var oldSmooth = g.SmoothingMode;
-                var oldPixel = g.PixelOffsetMode;
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
-                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Default;
-
-                g.FillRectangle(accent, bar);
-
-                g.SmoothingMode = oldSmooth;
-                g.PixelOffsetMode = oldPixel;
-                g.Restore(state);
-
-                // 3) 枠線
-                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                g.DrawPath(border, path);
-            }
-        }
-
-        // キー入力（ホットキー用テキスト）
-        private void textBoxKiritori_KeyDown(object sender, KeyEventArgs e)
-        {
-            string modifier = "";
-            if (e.Control) modifier += "Ctrl + ";
-            if (e.Shift)  modifier += "Shift + ";
-            if (e.Alt)    modifier += "Alt + ";
-
-            var key = e.KeyCode;
-
-            if (key == Keys.ControlKey || key == Keys.ShiftKey || key == Keys.Menu)
-                return;
-
-            this.textBoxKiritori.Text = modifier + key.ToString();
-
-            e.SuppressKeyPress = true;
-        }
-
-        private void textBoxKiritori_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
-        {
-            e.IsInputKey = true;
+            SR.SetCulture(culture);
         }
 
         // =========================================================
         // ================= Layout / Painting =====================
         // =========================================================
-        private void PositionDescHeader()
+        /// <summary>
+        /// Infoタブのレイアウトをウィンドウ幅に応じて最適化（2カラム⇄1カラム、アイコンサイズ）
+        /// </summary>
+        private void LayoutInfoTabResponsive()
         {
-            if (IsInDesignMode()) return;
-            if (this.IsDisposed || !this.IsHandleCreated) return;
-            if (this.labelDescHeader == null || this.descCard == null) return;
-            if (this.labelDescHeader.Parent == null || this.descCard.Parent == null) return;
+            if (this.tlpInfoHeader == null || this.picAppIcon == null) return;
 
-            var labelParent = this.labelDescHeader.Parent;
-            var cardParent = this.descCard.Parent;
+            // フォームの表示領域に対する閾値
+            int w = this.tabInfo.ClientSize.Width;
+            bool narrow = w < 560; // 狭いときは1カラムに折り返す
 
-            Point cardTopLeftInLabelParent;
-            if (labelParent == cardParent)
+            // カラム切替
+            this.tlpInfoHeader.SuspendLayout();
+            if (narrow)
             {
-                cardTopLeftInLabelParent = this.descCard.Location;
+                // 1カラム：アイコン→テキストの縦並び
+                this.tlpInfoHeader.ColumnCount = 1;
+                this.tlpInfoHeader.ColumnStyles.Clear();
+                this.tlpInfoHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+                // 再配置
+                if (this.tlpInfoHeader.GetControlFromPosition(0, 0) != this.picAppIcon)
+                {
+                    this.tlpInfoHeader.Controls.Clear();
+                    this.tlpInfoHeader.Controls.Add(this.picAppIcon, 0, 0);
+                    // 右側のパネル（FlowLayoutPanel）は再取得せず既存参照を使う
+                    var rightPanel = this.labelAppName.Parent;
+                    this.tlpInfoHeader.Controls.Add(rightPanel, 0, 1);
+                }
             }
             else
             {
-                var screenPt = cardParent.PointToScreen(this.descCard.Location);
-                cardTopLeftInLabelParent = labelParent.PointToClient(screenPt);
+                // 2カラム：左アイコン / 右テキスト
+                this.tlpInfoHeader.ColumnCount = 2;
+                this.tlpInfoHeader.ColumnStyles.Clear();
+                this.tlpInfoHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140));
+                this.tlpInfoHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+                // 再配置（列0/列1へ）
+                var rightPanel = this.labelAppName.Parent;
+                if (this.tlpInfoHeader.GetControlFromPosition(0, 0) != this.picAppIcon ||
+                    this.tlpInfoHeader.GetControlFromPosition(1, 0) != rightPanel)
+                {
+                    this.tlpInfoHeader.Controls.Clear();
+                    this.tlpInfoHeader.Controls.Add(this.picAppIcon, 0, 0);
+                    this.tlpInfoHeader.Controls.Add(rightPanel, 1, 0);
+                }
+            }
+            this.tlpInfoHeader.ResumeLayout(true);
+
+            // アイコンのスケール（小さい幅では96、大きい幅では120）
+            int target = narrow ? 96 : 120;
+            if (this.picAppIcon.Size.Width != target)
+            {
+                try
+                {
+                    var src = global::Kiritori.Properties.Resources.icon_128x128;
+                    picAppIcon.Image?.Dispose();
+                    picAppIcon.Image = ScaleBitmap(src, target, target);
+                    picAppIcon.Size = new Size(target, target);
+                }
+                catch { /* ignore */ }
             }
 
-            labelParent.SuspendLayout();
-            try
+            // テキストの最大幅（改行の自然発生を促す）
+            var infoRight = this.labelAppName.Parent as FlowLayoutPanel;
+            if (infoRight != null)
             {
-                this.labelDescHeader.AutoSize = true;
-
-                int x = cardTopLeftInLabelParent.X + 8;
-                int y = cardTopLeftInLabelParent.Y - (this.labelDescHeader.Height / 2);
-                if (y < 8) y = 8;
-
-                this.labelDescHeader.Location = new Point(x, y);
-                this.labelDescHeader.BringToFront();
-            }
-            finally
-            {
-                labelParent.ResumeLayout();
+                int padding = 24;
+                int maxw = Math.Max(200, this.tlpInfoHeader.ClientSize.Width - (narrow ? 0 : (picAppIcon.Width + padding)));
+                foreach (Control c in infoRight.Controls)
+                {
+                    c.MaximumSize = new Size(maxw, 0);
+                    c.Anchor = AnchorStyles.Left | AnchorStyles.Top;
+                }
             }
         }
+
 
         // =========================================================
         // =================== Helpers (UI) ========================
         // =========================================================
+        private void InitLanguageCombo()
+        {
+            _initLang = true;
+
+            this.cmbLanguage.DisplayMember = "Text";
+            this.cmbLanguage.ValueMember = "Value";
+            this.cmbLanguage.Items.Clear();
+            this.cmbLanguage.Items.Add(new { Text = "English (en)", Value = "en" });
+            this.cmbLanguage.Items.Add(new { Text = "日本語 (ja)", Value = "ja" });
+
+            var saved = Properties.Settings.Default.UICulture;
+            if (string.IsNullOrWhiteSpace(saved))
+                saved = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+
+            int index = 0;
+            for (int i = 0; i < cmbLanguage.Items.Count; i++)
+            {
+                var item = cmbLanguage.Items[i];
+                var valProp = item.GetType().GetProperty("Value");
+                var val = valProp?.GetValue(item)?.ToString();
+                if (val != null && val.Equals(saved, StringComparison.OrdinalIgnoreCase))
+                {
+                    index = i;
+                    break;
+                }
+            }
+            this.cmbLanguage.SelectedIndex = index;
+
+            this.cmbLanguage.SelectedIndexChanged += cmbLanguage_SelectedIndexChanged;
+            _initLang = false;
+        }
+
         private void UpdateVersionLabel()
         {
             var asm = Assembly.GetExecutingAssembly();
             var ver = asm.GetName().Version;
 
-            // 以前の実装を保持（必要なら buildDate へ変更）
             this.labelVersion.Text = string.Format(
                 CultureInfo.InvariantCulture,
                 "Version {0} Build Date: {1:dd MMM, yyyy}",
@@ -421,9 +480,6 @@ namespace Kiritori
             }
         }
 
-        /// <summary>
-        /// 非 MSIX の場合のスタートアップショートカット作成/削除
-        /// </summary>
         private static void SetStartupShortcut(bool enable)
         {
             string startupDir = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
@@ -457,8 +513,8 @@ namespace Kiritori
         {
             if (LicenseManager.UsageMode == LicenseUsageMode.Designtime) return true;
             var exe = Application.ExecutablePath ?? string.Empty;
-            return exe.EndsWith("devenv.exe", StringComparison.OrdinalIgnoreCase)   // VS
-                || exe.EndsWith("Blend.exe", StringComparison.OrdinalIgnoreCase);  // Blend
+            return exe.EndsWith("devenv.exe", StringComparison.OrdinalIgnoreCase)
+                || exe.EndsWith("Blend.exe", StringComparison.OrdinalIgnoreCase);
         }
 
         private static Bitmap ScaleBitmap(Image src, int w, int h)
@@ -487,40 +543,67 @@ namespace Kiritori
             path.CloseFigure();
             return path;
         }
+        private void ApplyDynamicTexts()
+        {
+            // タイトル合成（App.Name と PrefForm.Title を resx に用意）
+            this.Text = $"{SR.T("App.Name")} - {SR.T("PrefForm.Title")}";
 
+            // MSIX/非MSIXで変わるボタン
+            btnOpenStartupSettings.Text = PackagedHelper.IsPackaged()
+                ? SR.T("Text.BtnStartupSetting")
+                : SR.T("Text.BtnStartupFolder");
+
+            // // 起動管理説明＆ツールチップ（必要に応じてキーを追加）
+            if (PackagedHelper.IsPackaged())
+            {
+                labelStartupInfo.Text = SR.T("Text.StartupManaged"); // 例: "Startup is managed by Windows."
+                toolTip1.SetToolTip(labelStartupInfo, SR.T("Text.StartupManagedTip")); // 例: "Settings > Apps > Startup"
+            }
+            // else
+            // {
+            //     string startupDir = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+            //     string shortcutPath = Path.Combine(startupDir, Application.ProductName + ".lnk");
+            //     string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            //     string displayDir = startupDir.Replace(appData, "%APPDATA%");
+            //     labelStartupInfo.Text = SR.F("Text.ShortcutPathFmt", Path.Combine(displayDir, Application.ProductName + ".lnk"));
+            //     toolTip1.SetToolTip(labelStartupInfo, shortcutPath);
+            // }
+            var asm = Assembly.GetExecutingAssembly();
+            var ver = asm.GetName().Version;
+            this.labelVersion.Text = string.Format(
+                CultureInfo.InvariantCulture,
+                "Version {0} Build Date: {1:dd MMM, yyyy}",
+                ver,
+                DateTime.Now
+            );
+            this.labelCopyRight.Text = "© 2013–" + DateTime.Now.Year;
+
+            // 最後にレイアウト最適化
+            LayoutInfoTabResponsive();
+        }
         // =========================================================
         // ================== Nested UI Controls ===================
         // =========================================================
-        /// <summary>
-        /// 透過チェッカー上に合成結果を描く簡易プレビュー
-        /// </summary>
         public class AlphaPreviewPanel : Panel
         {
             private Color _rgbColor = Color.Red;
-            private int _alphaPercent = 60; // 0-100
+            private int _alphaPercent = 60;
 
-            [System.ComponentModel.Bindable(true)]
+            [Bindable(true)]
             public Color RgbColor
             {
                 get => _rgbColor;
-                set
-                {
-                    if (_rgbColor == value) return;
-                    _rgbColor = value;
-                    Invalidate(); // ★ バインド経由でも即再描画
-                }
+                set { if (_rgbColor != value) { _rgbColor = value; Invalidate(); } }
             }
 
-            [System.ComponentModel.Bindable(true)]
+            [Bindable(true)]
             public int AlphaPercent
             {
                 get => _alphaPercent;
                 set
                 {
                     var v = Math.Max(0, Math.Min(100, value));
-                    if (_alphaPercent == v) return;
-                    _alphaPercent = v;
-                    Invalidate(); // ★ バインド経由でも即再描画
+                    if (_alphaPercent != v) { _alphaPercent = v; Invalidate(); }
                 }
             }
 
@@ -538,27 +621,55 @@ namespace Kiritori
             {
                 base.OnPaint(e);
                 var g = e.Graphics;
-
-                // チェッカーボード
                 int sz = 6;
                 using (var brushDark = new SolidBrush(Color.LightGray))
                 using (var brushLight = new SolidBrush(Color.White))
                 {
                     for (int y = 0; y < Height; y += sz)
-                    {
                         for (int x = 0; x < Width; x += sz)
-                        {
-                            bool dark = ((x / sz) + (y / sz)) % 2 == 0;
-                            g.FillRectangle(dark ? brushDark : brushLight, x, y, sz, sz);
-                        }
-                    }
+                            g.FillRectangle((((x / sz) + (y / sz)) % 2 == 0) ? brushDark : brushLight, x, y, sz, sz);
                 }
 
-                // 合成色
-                int alpha = (int)Math.Round(_alphaPercent * 2.55); // 0–100 → 0–255
+                int alpha = (int)Math.Round(_alphaPercent * 2.55);
                 using (var overlay = new SolidBrush(Color.FromArgb(alpha, _rgbColor)))
                 {
                     g.FillRectangle(overlay, ClientRectangle);
+                }
+            }
+        }
+        public class Separator : Control
+        {
+            public Separator()
+            {
+                this.Height = 1;
+                this.Dock = DockStyle.Top;
+                this.Margin = new Padding(0, 6, 0, 6);
+            }
+
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                base.OnPaint(e);
+                using (var p = new Pen(SystemColors.ControlLight))
+                {
+                    e.Graphics.DrawLine(p, 0, this.Height / 2, this.Width, this.Height / 2);
+                }
+            }
+        }
+        // ToolStrip / ContextMenuStrip 用のローカライズ適用
+        private static void ApplyToolStripLocalization(ToolStripItemCollection items)
+        {
+            foreach (ToolStripItem it in items)
+            {
+                // 自分自身
+                if (it.Tag is string tag && tag.StartsWith("loc:", StringComparison.Ordinal))
+                {
+                    it.Text = SR.T(tag.Substring(4));
+                }
+
+                // サブメニューを再帰
+                if (it is ToolStripDropDownItem dd)
+                {
+                    ApplyToolStripLocalization(dd.DropDownItems);
                 }
             }
         }

@@ -238,5 +238,17 @@ namespace Kiritori.Properties {
                 this["isShowNotify"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("en")]
+        public string UICulture {
+            get {
+                return ((string)(this["UICulture"]));
+            }
+            set {
+                this["UICulture"] = value;
+            }
+        }
     }
 }

@@ -49,6 +49,7 @@
             this.notifyIcon1.MouseClick += NotifyIcon1_MouseClick;
             // this.notifyIcon1.Icon = ((System.Drawing.Icon)(resources.GetObject("notifyIcon1.Icon")));
             this.notifyIcon1.Text = "Kiritori — minimized to tray (click to open)";
+            this.notifyIcon1.Tag = "loc:Tray.TrayIcon";
             this.notifyIcon1.Visible = true;
             // 
             // contextMenuStrip1
@@ -71,7 +72,8 @@
             this.captureToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
             | System.Windows.Forms.Keys.D5)));
             this.captureToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
-            this.captureToolStripMenuItem.Text = "Capture";
+            this.captureToolStripMenuItem.Text = "Image Capture";
+            this.captureToolStripMenuItem.Tag = "loc:Text.ImageCapture";
             this.captureToolStripMenuItem.Click += new System.EventHandler(this.captureToolStripMenuItem_Click);
             // 
             // openToolStripMenuItem
@@ -79,6 +81,7 @@
             this.openToolStripMenuItem.Name = "openToolStripMenuItem";
             this.openToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.openToolStripMenuItem.Text = "Open Image File";
+            this.openToolStripMenuItem.Tag = "loc:Text.OpenImageFile";
             this.openToolStripMenuItem.Click += new System.EventHandler(this.openToolStripMenuItem_Click);
             // 
             // hideAllWindowsToolStripMenuItem
@@ -86,6 +89,7 @@
             this.hideAllWindowsToolStripMenuItem.Name = "hideAllWindowsToolStripMenuItem";
             this.hideAllWindowsToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.hideAllWindowsToolStripMenuItem.Text = "Hide All Windows";
+            this.hideAllWindowsToolStripMenuItem.Tag = "loc:Text.HideAllWindows";
             this.hideAllWindowsToolStripMenuItem.Click += new System.EventHandler(this.hideAllWindowsToolStripMenuItem_Click);
             // 
             // showAllWindowsToolStripMenuItem
@@ -93,6 +97,7 @@
             this.showAllWindowsToolStripMenuItem.Name = "showAllWindowsToolStripMenuItem";
             this.showAllWindowsToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.showAllWindowsToolStripMenuItem.Text = "Show All Windows";
+            this.showAllWindowsToolStripMenuItem.Tag = "loc:Text.ShowAllWindows";
             this.showAllWindowsToolStripMenuItem.Click += new System.EventHandler(this.showAllWindowsToolStripMenuItem_Click);
             // 
             // closeAllWindowsToolStripMenuItem
@@ -100,6 +105,7 @@
             this.closeAllWindowsToolStripMenuItem.Name = "closeAllWindowsToolStripMenuItem";
             this.closeAllWindowsToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.closeAllWindowsToolStripMenuItem.Text = "Close All Windows";
+            this.closeAllWindowsToolStripMenuItem.Tag = "loc:Text.CloseAllWindows";
             this.closeAllWindowsToolStripMenuItem.Click += new System.EventHandler(this.closeAllWindowsToolStripMenuItem_Click);
             // 
             // preferencesToolStripMenuItem
@@ -107,6 +113,7 @@
             this.preferencesToolStripMenuItem.Name = "preferencesToolStripMenuItem";
             this.preferencesToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.preferencesToolStripMenuItem.Text = "Main / Preferences";
+            this.preferencesToolStripMenuItem.Tag = "loc:Text.MainPreferences";
             this.preferencesToolStripMenuItem.Click += new System.EventHandler(this.preferencesToolStripMenuItem_Click);
             // 
             // exitToolStripMenuItem
@@ -114,6 +121,7 @@
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
             this.exitToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.exitToolStripMenuItem.Text = "Exit";
+            this.exitToolStripMenuItem.Tag = "loc:Text.BtnExit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
             // historyToolStripMenuItem1
@@ -121,6 +129,7 @@
             this.historyToolStripMenuItem1.Name = "historyToolStripMenuItem1";
             this.historyToolStripMenuItem1.Size = new System.Drawing.Size(202, 22);
             this.historyToolStripMenuItem1.Text = "History";
+            this.historyToolStripMenuItem1.Tag = "loc:Text.History";
             // 
             // MainApplication
             // 
@@ -128,7 +137,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(284, 262);
             this.Name = "MainApplication";
-            this.Text = "Form2";
+            this.Text = "Kiritori - Main";
             this.Load += new System.EventHandler(this.Form2_Load);
             this.contextMenuStrip1.ResumeLayout(false);
             this.ResumeLayout(false);

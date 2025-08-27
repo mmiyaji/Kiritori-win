@@ -5,14 +5,20 @@ REM  Kiritori リリースパッケージ作成バッチ
 REM  使い方:  release.bat 1.1.1
 REM  出力:   dist\Kiritori-1.1.1\ (exe, README.md, exeのハッシュ)
 REM          dist\Kiritori-1.1.1.zip  （フォルダごとZIP）
+REM  引数なしなら対話的に入力
 REM ============================================================
 
 if "%~1"=="" (
-  echo [ERROR] バージョンを指定してください。例: release.bat 1.1.1
-  exit /b 1
+  echo バージョン番号を入力してください（例: 1.1.1）:
+  set /p VERSION=Version: 
+  if "%VERSION%"=="" (
+    echo [ERROR] バージョンが指定されませんでした。
+    exit /b 1
+  )
+) else (
+  set "VERSION=%~1"
 )
-
-set "VERSION=%~1"
+echo [INFO] バージョン: %VERSION%
 set "ROOT=%~dp0"
 set "EXE=%ROOT%Kiritori\bin\Release\Kiritori.exe"
 set "README=%ROOT%README.md"

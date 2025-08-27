@@ -107,8 +107,8 @@ namespace Kiritori
 
         // ===== 設定反映（ホバー枠） =====
         private Color _hoverColor;            // HoverHighlightColor
-        private int   _hoverAlphaPercent;     // HoverHighlightAlphaPercent (0-100)
-        private int   _hoverThicknessPx;      // HoverHighlightThickness (px)
+        private int _hoverAlphaPercent;     // HoverHighlightAlphaPercent (0-100)
+        private int _hoverThicknessPx;      // HoverHighlightThickness (px)
         private PropertyChangedEventHandler _settingsHandler;
         private bool _isApplyingSettings = false;
 
@@ -157,9 +157,19 @@ namespace Kiritori
             };
 
             InitializeComponent();
+            Localizer.Apply(this);            // 通常コントロール（Tag=loc:...）
+            ApplyAllContextMenusLocalization(); // 右クリック等のメニュー（Tag=loc:...）
 
+            // 言語切替イベントで追従
+            SR.CultureChanged += () =>
+            {
+                if (this.IsDisposed) return;
+                Localizer.Apply(this);
+                ApplyAllContextMenusLocalization();
+            };
             // ハンドル作成後に UI へ反映
             ApplyUiFromFields();
+            
 
             // 設定変更の監視
             HookSettingsChanged();
@@ -198,10 +208,10 @@ namespace Kiritori
             var S = Properties.Settings.Default;
 
             // 汎用（UIに直接触らない）
-            isWindowShadow     = S.isWindowShadow;
-            isAfloatWindow     = S.isAfloatWindow;
-            isOverlay          = S.isOverlay;
-            alpha_value        = S.alpha_value / 100.0;
+            isWindowShadow = S.isWindowShadow;
+            isAfloatWindow = S.isAfloatWindow;
+            isOverlay = S.isOverlay;
+            alpha_value = S.alpha_value / 100.0;
             isHighlightOnHover = S.isHighlightWindowOnHover;
 
             // ハイライト系（フォールバック）
@@ -213,9 +223,9 @@ namespace Kiritori
             if (a <= 0) a = 60;     // 既定: 60%
             if (t <= 0) t = 2;      // 既定: 2px
 
-            _hoverColor        = c;
+            _hoverColor = c;
             _hoverAlphaPercent = Math.Max(0, Math.Min(100, a));
-            _hoverThicknessPx  = Math.Max(1, t);
+            _hoverThicknessPx = Math.Max(1, t);
         }
 
         /// <summary>
@@ -1043,6 +1053,43 @@ namespace Kiritori
 
             if (this.Icon != null) { this.Icon.Dispose(); this.Icon = null; }
             base.OnFormClosed(e);
+        }
+
+        private static void ApplyToolStripLocalization(ToolStripItemCollection items)
+        {
+            if (items == null) return;
+            foreach (ToolStripItem it in items)
+            {
+                if (it.Tag is string tag && tag.StartsWith("loc:", StringComparison.Ordinal))
+                {
+                    it.Text = SR.T(tag.Substring(4));
+                }
+                if (it is ToolStripDropDownItem dd)
+                {
+                    ApplyToolStripLocalization(dd.DropDownItems);
+                }
+            }
+        }
+        private void ApplyAllContextMenusLocalization()
+        {
+            // フォーム自身に ContextMenuStrip がある場合
+            if (this.ContextMenuStrip != null)
+                ApplyToolStripLocalization(this.ContextMenuStrip.Items);
+
+            // 子コントロールツリーを走査
+            void Walk(Control c)
+            {
+                if (c.ContextMenuStrip != null)
+                    ApplyToolStripLocalization(c.ContextMenuStrip.Items);
+
+                // MenuStrip が置かれている場合（フォームに貼るタイプ）
+                if (c is MenuStrip ms)
+                    ApplyToolStripLocalization(ms.Items);
+
+                foreach (Control child in c.Controls)
+                    Walk(child);
+            }
+            Walk(this);
         }
 
         #endregion

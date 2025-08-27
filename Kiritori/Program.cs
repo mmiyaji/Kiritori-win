@@ -5,6 +5,8 @@ using System.Linq;
 using System.Windows.Forms;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Globalization;
 namespace Kiritori
 {
     static class Program
@@ -37,7 +39,11 @@ namespace Kiritori
         [STAThread]
         static void Main()
         {
-// ===== DPI Awareness を可能な限り高く設定 =====
+            try
+            {
+                Thread.CurrentThread.CurrentUICulture = new CultureInfo(Properties.Settings.Default.UICulture);
+            }catch { }
+            // ===== DPI Awareness を可能な限り高く設定 =====
             bool dpiSet = false;
             try
             {
