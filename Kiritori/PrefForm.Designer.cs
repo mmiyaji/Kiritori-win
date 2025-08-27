@@ -107,9 +107,9 @@ namespace Kiritori
         private Label labelAfloat; private TextBox textBoxAfloat;
         private Label labelDropShadow; private TextBox textBoxDropShadow;
         private Label labelMoveUp; private TextBox textBoxMoveUp;
-        private Label labelMoveDown; private TextBox textBoxMoveDown;
-        private Label labelMoveLeft; private TextBox textBoxMoveLeft;
-        private Label labelMoveRight; private TextBox textBoxMoveRight;
+        //private Label labelMoveDown; private TextBox textBoxMoveDown;
+        //private Label labelMoveLeft; private TextBox textBoxMoveLeft;
+        //private Label labelMoveRight; private TextBox textBoxMoveRight;
 
         private GroupBox grpShortcutsCaptureOps;
         private TableLayoutPanel tlpShortcutsCap;
@@ -338,8 +338,8 @@ namespace Kiritori
             var tlpCap = NewGrid(2, 2);
 
             this.chkScreenGuide = new CheckBox { Text = "Show guide lines", Checked = true, AutoSize = true };
-            this.chkTrayNotify = new CheckBox { Text = "Notify in tray on capture", AutoSize = true };
-            this.chkPlaySound = new CheckBox { Text = "Play sound on capture", AutoSize = true };
+            this.chkTrayNotify = new CheckBox { Text = "Notify in tray on capture", AutoSize = true, Enabled = false };
+            this.chkPlaySound = new CheckBox { Text = "Play sound on capture", AutoSize = true, Enabled = false };
 
             var flowToggles = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
             flowToggles.Controls.Add(this.chkScreenGuide);
@@ -482,29 +482,70 @@ namespace Kiritori
             this.tabShortcuts.Controls.Add(stackShort);
 
             this.grpShortcutsWindowOps = NewGroup("Window operations");
-            this.tlpShortcutsWin = NewGrid(8, 2);
-            AddShortcutRow(this.tlpShortcutsWin, 0, "Close", out this.labelClose, out this.textBoxClose, "Ctrl + w, ESC");
-            AddShortcutRow(this.tlpShortcutsWin, 1, "Minimize", out this.labelMinimize, out this.textBoxMinimize, "Ctrl + h");
-            AddShortcutRow(this.tlpShortcutsWin, 2, "Always on top", out this.labelAfloat, out this.textBoxAfloat, "Ctrl + a");
-            AddShortcutRow(this.tlpShortcutsWin, 3, "Drop shadow", out this.labelDropShadow, out this.textBoxDropShadow, "Ctrl + d");
-            AddShortcutRow(this.tlpShortcutsWin, 4, "Move up", out this.labelMoveUp, out this.textBoxMoveUp, "up");
-            AddShortcutRow(this.tlpShortcutsWin, 5, "Move down", out this.labelMoveDown, out this.textBoxMoveDown, "down");
-            AddShortcutRow(this.tlpShortcutsWin, 6, "Move left", out this.labelMoveLeft, out this.textBoxMoveLeft, "left");
-            AddShortcutRow(this.tlpShortcutsWin, 7, "Move right", out this.labelMoveRight, out this.textBoxMoveRight, "right");
+
+            // 4行 × 5列 (左2列 + 仕切り + 右2列)
+            this.tlpShortcutsWin = new TableLayoutPanel();
+            this.tlpShortcutsWin.ColumnCount = 5;
+            this.tlpShortcutsWin.RowCount = 6;
+            this.tlpShortcutsWin.Dock = DockStyle.Fill;
+            this.tlpShortcutsWin.AutoSize = true;
+            this.tlpShortcutsWin.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+
+            // 列スタイル
+            this.tlpShortcutsWin.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); // 左ラベル
+            this.tlpShortcutsWin.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f)); // 左テキスト
+            this.tlpShortcutsWin.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 12f));
+            this.tlpShortcutsWin.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize)); // 右ラベル
+            this.tlpShortcutsWin.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f)); // 右テキスト
+
+
+            // セパレータ本体
+            var sepPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Width = 1
+            };
+            sepPanel.Paint += (s, e) =>
+            {
+                e.Graphics.Clear(sepPanel.BackColor);
+                using (var p = new Pen(Color.LightGray))
+                {
+                    int x = sepPanel.Width / 2;  // 真ん中に線を描画
+                    e.Graphics.DrawLine(p, x, 0, x, sepPanel.Height);
+                }
+            };
+
+            // 追加して全行に跨らせる
+            this.tlpShortcutsWin.Controls.Add(sepPanel, 2, 0);
+            this.tlpShortcutsWin.SetRowSpan(sepPanel, this.tlpShortcutsWin.RowCount);
+            // 左段
+            AddShortcutRow(this.tlpShortcutsWin, 0, "Close",        out this.labelClose,      out this.textBoxClose,      "Ctrl + w, ESC", colOffset: 0);
+            AddShortcutRow(this.tlpShortcutsWin, 1, "Minimize",     out this.labelMinimize,   out this.textBoxMinimize,   "Ctrl + h",      colOffset: 0);
+            AddShortcutRow(this.tlpShortcutsWin, 2, "Always on top",out this.labelAfloat,     out this.textBoxAfloat,     "Ctrl + a",      colOffset: 0);
+            AddShortcutRow(this.tlpShortcutsWin, 3, "Drop shadow",  out this.labelDropShadow, out this.textBoxDropShadow, "Ctrl + d",      colOffset: 0);
+            AddShortcutRow(this.tlpShortcutsWin, 4, "Move",         out this.labelMoveUp,     out this.textBoxMoveUp,     "up/down/left/right",colOffset: 0);
+
+            // 右段 (colOffset = 3 → ラベルが列3, TextBoxが列4)
+            AddShortcutRow(this.tlpShortcutsWin, 0, "Copy",             out this.labelCopy,        out this.textBoxCopy,        "Ctrl + c", colOffset: 3);
+            AddShortcutRow(this.tlpShortcutsWin, 1, "Save",             out this.labelSave,        out this.textBoxSave,        "Ctrl + s", colOffset: 3);
+            AddShortcutRow(this.tlpShortcutsWin, 2, "Print",            out this.labelPrint,       out this.textBoxPrint,       "Ctrl + p", colOffset: 3);
+            AddShortcutRow(this.tlpShortcutsWin, 3, "Zoom in",          out this.labelZoomIn,      out this.textBoxZoomIn,      "Ctrl + +", colOffset: 3);
+            AddShortcutRow(this.tlpShortcutsWin, 4, "Zoom out",         out this.labelZoomOut,     out this.textBoxZoomOut,     "Ctrl + -", colOffset: 3);
+            AddShortcutRow(this.tlpShortcutsWin, 5, "Zoom reset",       out this.labelZoomOff,     out this.textBoxZoomOff,     "Ctrl + 0", colOffset: 3);
+
             this.grpShortcutsWindowOps.Controls.Add(this.tlpShortcutsWin);
 
             this.grpShortcutsCaptureOps = NewGroup("Capture operations");
             this.grpShortcutsCaptureOps.Margin = new Padding(0, 8, 0, 0);
-            this.tlpShortcutsCap = NewGrid(9, 2);
-            AddShortcutRow(this.tlpShortcutsCap, 0, "Copy", out this.labelCopy, out this.textBoxCopy, "Ctrl + c");
-            AddShortcutRow(this.tlpShortcutsCap, 1, "Save", out this.labelSave, out this.textBoxSave, "Ctrl + s");
-            AddShortcutRow(this.tlpShortcutsCap, 2, "Print", out this.labelPrint, out this.textBoxPrint, "Ctrl + p");
-            AddShortcutRow(this.tlpShortcutsCap, 3, "Zoom in", out this.labelZoomIn, out this.textBoxZoomIn, "Ctrl + +");
-            AddShortcutRow(this.tlpShortcutsCap, 4, "Zoom out", out this.labelZoomOut, out this.textBoxZoomOut, "Ctrl + -");
-            AddShortcutRow(this.tlpShortcutsCap, 5, "Zoom reset", out this.labelZoomOff, out this.textBoxZoomOff, "Ctrl + 0");
-            AddShortcutRow(this.tlpShortcutsCap, 6, "Toggle guide lines", out this.labelScreenGuide, out this.textBoxScreenGuide, "capture & alt");
-            AddShortcutRow(this.tlpShortcutsCap, 7, "Square crop", out this.labelScreenSquare, out this.textBoxScreenSquare, "capture & shift");
-            AddShortcutRow(this.tlpShortcutsCap, 8, "Snap", out this.labelScreenSnap, out this.textBoxScreenSnap, "capture & ctrl");
+
+            // 5行×4列 (左2列 + 右2列)
+            this.tlpShortcutsCap = NewGrid(2, 3);
+
+            // 左段
+            AddShortcutRow(this.tlpShortcutsCap, 0, "Toggle guide lines",out this.labelScreenGuide,out this.textBoxScreenGuide, "capture & alt", colOffset: 0);
+            AddShortcutRow(this.tlpShortcutsCap, 1, "Square crop",      out this.labelScreenSquare,out this.textBoxScreenSquare,"capture & shift",colOffset: 0);
+            AddShortcutRow(this.tlpShortcutsCap, 2, "Snap",             out this.labelScreenSnap,  out this.textBoxScreenSnap,  "capture & ctrl", colOffset: 0);
+
             this.grpShortcutsCaptureOps.Controls.Add(this.tlpShortcutsCap);
 
             stackShort.Controls.Add(this.grpShortcutsWindowOps, 0, 0);
@@ -525,13 +566,16 @@ namespace Kiritori
 
             this.picAppIcon = new PictureBox { Size = new Size(120, 120), SizeMode = PictureBoxSizeMode.Zoom, Anchor = AnchorStyles.Top };
             try { this.picAppIcon.Image = global::Kiritori.Properties.Resources.icon_128x128; } catch { }
-
             var infoRight = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, Dock = DockStyle.Fill, AutoSize = true, WrapContents = false };
-            this.labelAppName = new Label { Text = "\"Kiritori\" for Windows", AutoSize = true };
-            this.labelAppName.Font = new Font(this.labelAppName.Font, FontStyle.Bold);
-            this.labelVersion = new Label { Text = "Version - built at (on load)", AutoSize = true };
-            this.labelSign = new Label { Text = "Developed by mmiyaji", AutoSize = true };
-            this.labelLinkWebsite = new LinkLabel { Text = "HomePage - https://kiritori.ruhenheim.org", AutoSize = true };
+            this.labelAppName = new Label { Text = "\"Kiritori\" for Windows", AutoSize = true, Margin = new Padding(0, 0, 0, 15) };
+            this.labelAppName.Font = new Font(
+                this.labelAppName.Font.FontFamily,
+                this.labelAppName.Font.Size + 7,
+                FontStyle.Bold
+            );
+            this.labelVersion = new Label { Text = "Version - built at (on load)", AutoSize = true, Margin = new Padding(10, 0, 0, 10) };
+            this.labelSign = new Label { Text = "Developed by mmiyaji", AutoSize = true, Margin = new Padding(10, 0, 0, 10) };
+            this.labelLinkWebsite = new LinkLabel { Text = "HomePage - https://kiritori.ruhenheim.org", AutoSize = true, Margin = new Padding(10, 0, 0, 10) };
             this.labelLinkWebsite.LinkClicked += new LinkLabelLinkClickedEventHandler(this.linkLabel1_LinkClicked);
 
             infoRight.Controls.Add(this.labelAppName);
@@ -543,7 +587,7 @@ namespace Kiritori
             tlpInfo.Controls.Add(infoRight, 1, 0);
 
             var infoBottom = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 12, 0, 0) };
-            this.descCard = new Panel { BackColor = Color.FromArgb(248, 248, 248), Padding = new Padding(14, 12, 14, 12), Dock = DockStyle.Top, Height = 90 };
+            this.descCard = new Panel { BackColor = Color.FromArgb(248, 248, 248), Padding = new Padding(14, 12, 14, 12), Dock = DockStyle.Top, Height = 70 };
             this.descCard.Paint += new PaintEventHandler(this.descCard_Paint);
             this.labelDescHeader = new Label { Text = "What Kiritori does", AutoSize = true, Font = new Font(this.Font, FontStyle.Bold) };
             this.labelDescription = new Label
@@ -560,7 +604,13 @@ namespace Kiritori
             var infoMinor = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, WrapContents = false, Dock = DockStyle.Top, Padding = new Padding(0, 8, 0, 0) };
             this.chkDoNotShowOnStartup = new CheckBox { Text = "Don’t show this screen at startup", AutoSize = true };
             this.chkDoNotShowOnStartup.CheckedChanged += new EventHandler(this.chkDoNotShowOnStartup_CheckedChanged);
-            this.labelTrayNote = new Label { Text = "Tip: Right-click the tray icon for menu.  Hotkey: Ctrl + Shift + 5", AutoSize = true, ForeColor = SystemColors.GrayText };
+            this.labelTrayNote = new Label
+            {
+                Text = "Tip: Right-click the tray icon for menu.  Hotkey: Ctrl + Shift + 5",
+                AutoSize = true,
+                ForeColor = SystemColors.GrayText,
+                Margin = new Padding(0, 0, 0, 20)
+            };
             infoMinor.Controls.Add(this.chkDoNotShowOnStartup);
             infoMinor.Controls.Add(this.labelTrayNote);
 
@@ -636,19 +686,34 @@ namespace Kiritori
             };
         }
 
-        private static void AddShortcutRow(TableLayoutPanel tlp, int rowIndex, string label, out Label lbl, out TextBox tb, string text)
+        private void AddShortcutRow(
+            TableLayoutPanel tlp,
+            int row,
+            string labelText,
+            out Label label,
+            out TextBox textBox,
+            string placeholder,
+            int colOffset)
         {
-            lbl = new Label
+            label = new Label
             {
-                Text = label,
+                Text = labelText,
                 AutoSize = true,
-                TextAlign = ContentAlignment.MiddleRight,
-                Anchor = AnchorStyles.Right
+                Anchor = AnchorStyles.Left,
+                Margin = new Padding(3, 6, 3, 6)
             };
-            tb = new TextBox { Enabled = false, Text = text, Width = 140, Anchor = AnchorStyles.Left };
-            tlp.Controls.Add(lbl, 0, rowIndex);
-            tlp.Controls.Add(tb, 1, rowIndex);
+            textBox = new TextBox
+            {
+                Text = placeholder,
+                ReadOnly = true,
+                Dock = DockStyle.Fill,
+                Margin = new Padding(3, 3, 3, 3)
+            };
+
+            tlp.Controls.Add(label, colOffset + 0, row);
+            tlp.Controls.Add(textBox, colOffset + 1, row);
         }
+
         private void SelectPresetComboFromSettings()
         {
             var S = Properties.Settings.Default;

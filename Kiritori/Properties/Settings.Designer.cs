@@ -214,5 +214,29 @@ namespace Kiritori.Properties {
                 this["isScreenSnap"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool isPlaySound {
+            get {
+                return ((bool)(this["isPlaySound"]));
+            }
+            set {
+                this["isPlaySound"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool isShowNotify {
+            get {
+                return ((bool)(this["isShowNotify"]));
+            }
+            set {
+                this["isShowNotify"] = value;
+            }
+        }
     }
 }
