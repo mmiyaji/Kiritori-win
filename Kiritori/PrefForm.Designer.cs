@@ -106,10 +106,7 @@ namespace Kiritori
         private Label labelMinimize; private TextBox textBoxMinimize;
         private Label labelAfloat; private TextBox textBoxAfloat;
         private Label labelDropShadow; private TextBox textBoxDropShadow;
-        private Label labelMoveUp; private TextBox textBoxMoveUp;
-        //private Label labelMoveDown; private TextBox textBoxMoveDown;
-        //private Label labelMoveLeft; private TextBox textBoxMoveLeft;
-        //private Label labelMoveRight; private TextBox textBoxMoveRight;
+        private Label labelMove; private TextBox textBoxMove;
 
         private GroupBox grpShortcutsCaptureOps;
         private TableLayoutPanel tlpShortcutsCap;
@@ -350,7 +347,7 @@ namespace Kiritori
             tlpCap.Controls.Add(flowToggles, 1, 0);
 
             this.labelBgPreset = NewRightLabel("Background");
-            this.cmbBgPreset = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
+            this.cmbBgPreset = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150 };
             this.cmbBgPreset.Items.AddRange(new object[] {
                 "Transparent (0%)",
                 "Dark (30%)",
@@ -360,7 +357,7 @@ namespace Kiritori
             });
             this.cmbBgPreset.SelectedIndex = 0;
 
-            this.previewBg = new AlphaPreviewPanel { Height = 24, Width = 180, Anchor = AnchorStyles.Left, RgbColor = Color.Black, AlphaPercent = 0 };
+            this.previewBg = new AlphaPreviewPanel { Height = 20, Width = 50, Anchor = AnchorStyles.Left, RgbColor = Color.Black, AlphaPercent = 0 };
 
             var flowPreset = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
             flowPreset.Controls.Add(this.cmbBgPreset);
@@ -409,13 +406,13 @@ namespace Kiritori
 
             // 色プリセット＋右プレビュー（透過 100% 固定）
             this.labelHoverPreset = NewRightLabel("Highlight color");
-            this.cmbHoverPreset = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 200 };
+            this.cmbHoverPreset = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150 };
             this.cmbHoverPreset.Items.AddRange(new object[] {
                 "Red", "Cyan", "Green", "Yellow", "Magenta", "Blue", "Orange", "Black", "White"
             });
             this.cmbHoverPreset.SelectedItem = "Red";
 
-            this.previewHover = new AlphaPreviewPanel { Height = 24, Width = 180, Anchor = AnchorStyles.Left, RgbColor = Color.Red, AlphaPercent = 100 };
+            this.previewHover = new AlphaPreviewPanel { Height = 20, Width = 50, Anchor = AnchorStyles.Left, RgbColor = Color.Red, AlphaPercent = 100 };
 
             var flowHover = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
             flowHover.Controls.Add(this.cmbHoverPreset);
@@ -523,7 +520,7 @@ namespace Kiritori
             AddShortcutRow(this.tlpShortcutsWin, 1, "Minimize",     out this.labelMinimize,   out this.textBoxMinimize,   "Ctrl + h",      colOffset: 0);
             AddShortcutRow(this.tlpShortcutsWin, 2, "Always on top",out this.labelAfloat,     out this.textBoxAfloat,     "Ctrl + a",      colOffset: 0);
             AddShortcutRow(this.tlpShortcutsWin, 3, "Drop shadow",  out this.labelDropShadow, out this.textBoxDropShadow, "Ctrl + d",      colOffset: 0);
-            AddShortcutRow(this.tlpShortcutsWin, 4, "Move",         out this.labelMoveUp,     out this.textBoxMoveUp,     "up/down/left/right",colOffset: 0);
+            AddShortcutRow(this.tlpShortcutsWin, 4, "Move",         out this.labelMove,       out this.textBoxMove,       "up/down/left/right",colOffset: 0);
 
             // 右段 (colOffset = 3 → ラベルが列3, TextBoxが列4)
             AddShortcutRow(this.tlpShortcutsWin, 0, "Copy",             out this.labelCopy,        out this.textBoxCopy,        "Ctrl + c", colOffset: 3);
@@ -721,17 +718,32 @@ namespace Kiritori
             // Hover
             if (cmbHoverPreset != null)
             {
+                RemoveCustomIfExists(cmbHoverPreset);
                 int idx = FindHoverPresetIndex(S.HoverHighlightColor, S.HoverHighlightAlphaPercent);
-                if (idx >= 0) cmbHoverPreset.SelectedIndex = idx;
-                else cmbHoverPreset.SelectedItem = CustomPresetName;
+                bool valid = IsAlphaValid(S.HoverHighlightAlphaPercent);
+                if (idx >= 0 && valid)
+                {
+                    cmbHoverPreset.SelectedIndex = idx;
+                }
+                else
+                {
+                    AddCustomAndSelect(cmbHoverPreset);
+                }
             }
 
             // Background
             if (cmbBgPreset != null)
             {
                 int idx = FindBgPresetIndex(S.CaptureBackgroundColor, S.CaptureBackgroundAlphaPercent);
-                if (idx >= 0) cmbBgPreset.SelectedIndex = idx;
-                else cmbBgPreset.SelectedItem = CustomPresetName;
+                bool valid = IsAlphaValid(S.CaptureBackgroundAlphaPercent);
+                if (idx >= 0 && valid)
+                {
+                    cmbBgPreset.SelectedIndex = idx;
+                }
+                else
+                {
+                    AddCustomAndSelect(cmbBgPreset);
+                }
             }
         }
 
@@ -823,7 +835,7 @@ namespace Kiritori
                 cmbHoverPreset.BeginUpdate();
                 cmbHoverPreset.Items.Clear();
                 foreach (var p in _hoverPresets) cmbHoverPreset.Items.Add(p.Name);
-                cmbHoverPreset.Items.Add(CustomPresetName);
+                // cmbHoverPreset.Items.Add(CustomPresetName);
                 cmbHoverPreset.EndUpdate();
             }
 
@@ -833,7 +845,7 @@ namespace Kiritori
                 cmbBgPreset.BeginUpdate();
                 cmbBgPreset.Items.Clear();
                 foreach (var p in _bgPresets) cmbBgPreset.Items.Add(p.Name);
-                cmbBgPreset.Items.Add(CustomPresetName);
+                // cmbBgPreset.Items.Add(CustomPresetName);
                 cmbBgPreset.EndUpdate();
             }
         }
@@ -890,6 +902,34 @@ namespace Kiritori
                 }
             }
         }
+        // --- ComboBox 用ユーティリティ ---
+        private static void AddCustomAndSelect(ComboBox cmb)
+        {
+            if (cmb == null) return;
+            // 既にあるなら追加しない
+            if (!cmb.Items.Cast<object>().Any(x => string.Equals(x?.ToString(), CustomPresetName, StringComparison.Ordinal)))
+                cmb.Items.Add(CustomPresetName);
+
+            // 選択（発火を避けたい場合は呼び出し側で _loadingUi true に）
+            cmb.SelectedItem = CustomPresetName;
+        }
+
+        private static void RemoveCustomIfExists(ComboBox cmb)
+        {
+            if (cmb == null) return;
+            int idx = -1;
+            for (int i = 0; i < cmb.Items.Count; i++)
+            {
+                if (string.Equals(cmb.Items[i]?.ToString(), CustomPresetName, StringComparison.Ordinal))
+                {
+                    idx = i; break;
+                }
+            }
+            if (idx >= 0) cmb.Items.RemoveAt(idx);
+        }
+
+        // 値の妥当性チェック（アルファは 0–100、色は任意）
+        private static bool IsAlphaValid(int alpha) => alpha >= 0 && alpha <= 100;
 
     }
 }

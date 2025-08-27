@@ -399,14 +399,14 @@ namespace Kiritori
                     }
                 }
                 // 開始候補点に十字
-                DrawCrosshair(g, hoverPoint);
+                // DrawCrosshair(g, hoverPoint);
 
                 // 物理座標（仮想スクリーン基準）
                 var phys = new Point(hoverPoint.X + x, hoverPoint.Y + y);
                 if (showSnapGuides)
                 {
                     DrawLabel(g, string.Format("{0}, {1}", phys.X, phys.Y),
-                              new Point(hoverPoint.X + 10, hoverPoint.Y + 10));
+                                new Point(hoverPoint.X + 10, hoverPoint.Y + 10));
                 }
             }
             pictureBox1.Refresh();
@@ -526,7 +526,8 @@ namespace Kiritori
 
         private void DrawCrosshair(Graphics g, Point p)
         {
-            using (var pen = new Pen(Color.Black, 1))
+            var baseColor = GetOppositeColor(_bgColor, _bgAlphaPercent);
+            using (var pen = new Pen(baseColor, 1))
             {
                 g.DrawLine(pen, p.X - 6, p.Y, p.X + 6, p.Y);
                 g.DrawLine(pen, p.X, p.Y - 6, p.X, p.Y + 6);
