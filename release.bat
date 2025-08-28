@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 REM ============================================================
 REM  Kiritori リリースパッケージ作成
 REM  使い方:
@@ -13,7 +13,7 @@ set "PAUSE_AT_END="
 if "%~1"=="" (
   echo バージョン番号を入力してください（例: 1.1.3）:
   set /p VERSION=Version: 
-  rem ← 遅延展開でチェック
+  REM
   if "!VERSION!"=="" (
     echo [ERROR] バージョンが指定されませんでした。
     set "PAUSE_AT_END=1"
@@ -30,9 +30,8 @@ if /I "%~2"=="--no-pause"  set "PAUSE_AT_END="
 
 REM ---- パス
 set "ROOT=%~dp0"
-set "BIN=%ROOT%Kiritori\bin\Release"
+set "BIN=%ROOT%KiritoriPackage\bin\AnyCPU\Release\Kiritori"
 set "EXE=%BIN%\Kiritori.exe"
-set "EXE_CFG=%BIN%\Kiritori.exe.config"
 set "SAT_JA_DIR=%BIN%\ja"
 
 set "README=%ROOT%README.md"
@@ -58,16 +57,33 @@ if exist "%OUTDIR%" rd /s /q "%OUTDIR%" >nul 2>&1
 mkdir "%OUTDIR%" || goto :end_fail
 
 REM ---- ファイル配置
+REM 1) EXE
 copy /y "%EXE%" "%OUTDIR%\Kiritori.exe" >nul || goto :end_fail
-if exist "%EXE_CFG%" copy /y "%EXE_CFG%" "%OUTDIR%\Kiritori.exe.config" >nul
 
+REM 2) EXE.config（あれば）
+if exist "%EXE%.config" (
+  copy /y "%EXE%.config" "%OUTDIR%\Kiritori.exe.config" >nul
+  echo [INFO] EXE.config を同梱しました。
+)
+
+REM 2) DLL（BIN 直下の *.dll をすべて同梱。*.pdb / *.config はそもそも対象外）
+REM    robocopy の戻り値は 0-7 を成功とみなす
+robocopy "%BIN%" "%OUTDIR%" *.dll /R:0 /W:0 /NFL /NDL /NJH /NJS /NP >nul
+if errorlevel 8 (
+  echo [ERROR] DLL コピーに失敗しました。
+  goto :end_fail
+) else (
+  echo [INFO] DLL を同梱しました（BIN 直下の *.dll）。
+)
+
+REM 3) README（あれば）
 if exist "%README%" (
   copy /y "%README%" "%OUTDIR%\README.md" >nul
 ) else (
   echo [WARN ] README.md が見つかりませんでした（同梱スキップ）。
 )
 
-REM ---- サテライトDLL(ja) 同梱
+REM 4) サテライト DLL(ja) 同梱
 if exist "%SAT_JA_DIR%\" (
   mkdir "%OUTDIR%\ja" >nul 2>&1
   xcopy /y /q "%SAT_JA_DIR%\*.resources.dll" "%OUTDIR%\ja\" >nul

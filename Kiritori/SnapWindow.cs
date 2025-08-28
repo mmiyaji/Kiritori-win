@@ -11,6 +11,9 @@ using System.Linq;
 using System.Security.Principal;
 using System.Text;
 using System.Windows.Forms;
+using CommunityToolkit.WinUI.Notifications;
+using Kiritori.Services.Ocr;
+using Windows.UI.Notifications;
 
 namespace Kiritori
 {
@@ -39,6 +42,7 @@ namespace Kiritori
         ESCAPE      = Keys.Escape,
         COPY        = Keys.Control | Keys.C,
         CUT         = Keys.Control | Keys.X,
+        OCR         = Keys.Control | Keys.T,
         PRINT       = Keys.Control | Keys.P,
         MINIMIZE    = Keys.Control | Keys.H
     }
@@ -114,6 +118,9 @@ namespace Kiritori
         private PropertyChangedEventHandler _settingsHandler;
         private bool _isApplyingSettings = false;
 
+        // OCR 処理中フラグ
+        private bool _ocrBusy = false;
+
         #endregion
 
         #region ===== Win32/プロパティ =====
@@ -184,7 +191,7 @@ namespace Kiritori
 
             this.DoubleBuffered = true;
             this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.AutoScaleDimensions = new SizeF(96F, 96F);            
+            this.AutoScaleDimensions = new SizeF(96F, 96F);
         }
 
         public Bitmap GetMainImage() => (Bitmap)pictureBox1.Image;
@@ -406,7 +413,9 @@ namespace Kiritori
                 case (int)HOTS.CUT:
                     closeImage(this);
                     break;
-
+                case (int)HOTS.OCR:
+                    RunOcrOnCurrentImage();
+                    break;
                 case (int)HOTS.PRINT:
                     printImage();
                     break;
@@ -1167,6 +1176,109 @@ namespace Kiritori
             }
             Walk(this);
         }
+
+        private async void RunOcrOnCurrentImage()
+        {
+            if (_ocrBusy) return;
+            if (this.pictureBox1.Image == null)
+            {
+                ShowOverlay("No image");
+                return;
+            }
+
+            _ocrBusy = true;
+            try
+            {
+                // Bitmap を安全にクローン（UI と競合させない）
+                using (var clone = new Bitmap(this.pictureBox1.Image))
+                {
+                    var ocrService = new OcrService();
+                    var provider = ocrService.Get(null); // 既定(Windows OCR)。設定値があれば渡す
+
+                    var opt = new OcrOptions
+                    {
+                        LanguageTag = "ja",   // TODO: 設定と連動させる
+                        Preprocess = true,
+                        CopyToClipboard = true
+                    };
+
+                    var result = await provider.RecognizeAsync(clone, opt).ConfigureAwait(true);
+
+                    if (!string.IsNullOrEmpty(result.Text))
+                    {
+                        try { Clipboard.SetText(result.Text); } catch { }
+                        ShowOverlay("OCR copied");
+
+                    }
+                    else
+                    {
+                        ShowOverlay("OCR no text");
+                    }
+                    ShowOcrToast(result.Text ?? "");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("RunOcrOnCurrentImage error: " + ex.Message);
+                ShowOverlay("OCR failed");
+            }
+            finally
+            {
+                _ocrBusy = false;
+            }
+        }
+
+        private static DateTime _lastToastAt = DateTime.MinValue;
+        private void ShowOcrToast(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+
+            // 表示しやすいように一部だけプレビュー
+            string snippet = text;
+            if (snippet.Length > 180) snippet = snippet.Substring(0, 180) + "…";
+
+            // 直前の連打を抑止（例: 500ms 以内は捨てる）
+            var now = DateTime.Now;
+            if ((now - _lastToastAt).TotalMilliseconds < 500) return;
+            _lastToastAt = now;
+
+            try
+            {
+                var builder = new ToastContentBuilder()
+                    .AddArgument("action", "open")
+                    .AddText("Kiritori - OCR")
+                    .AddText(snippet);
+
+                if (PackagedHelper.IsPackaged())
+                {
+                    // パッケージアプリ: そのまま送る
+                    builder.Show(t =>
+                    {
+                        t.Tag = "kiritori-ocr";
+                        t.Group = "kiritori";
+                    });
+                }
+                else
+                {
+                    // 非パッケージの場合：ToastNotificationManager（Compatじゃない方）で AUMID を指定
+                    var xml = builder.GetToastContent().GetXml();
+                    var toast = new ToastNotification(xml) { Tag = "kiritori-ocr", Group = "kiritori" };
+
+                    // ★ ここで AUMID（Startメニューのショートカットと一致するID）を指定
+                    ToastNotificationManager.CreateToastNotifier("Kiritori.App").Show(toast);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine("[Toast] Show() failed: " + ex);
+                var main = Application.OpenForms["MainApplication"] as Kiritori.MainApplication;
+                main?.NotifyIcon?.ShowBalloonTip(2500, "Kiritori - OCR", snippet, ToolTipIcon.None);
+            }
+        }
+
 
         #endregion
     }

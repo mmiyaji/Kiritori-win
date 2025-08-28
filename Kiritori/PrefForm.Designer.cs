@@ -111,6 +111,7 @@ namespace Kiritori
 
         private GroupBox grpShortcutsCaptureOps;
         private TableLayoutPanel tlpShortcutsCap;
+        private Label labelOCR; private TextBox textBoxOCR;
         private Label labelCopy; private TextBox textBoxCopy;
         private Label labelSave; private TextBox textBoxSave;
         private Label labelPrint; private TextBox textBoxPrint;
@@ -507,7 +508,7 @@ namespace Kiritori
             // 4行 × 5列 (左2列 + 仕切り + 右2列)
             this.tlpShortcutsWin = new TableLayoutPanel();
             this.tlpShortcutsWin.ColumnCount = 5;
-            this.tlpShortcutsWin.RowCount = 6;
+            this.tlpShortcutsWin.RowCount = 7;
             this.tlpShortcutsWin.Dock = DockStyle.Fill;
             this.tlpShortcutsWin.AutoSize = true;
             this.tlpShortcutsWin.AutoSizeMode = AutoSizeMode.GrowAndShrink;
@@ -548,12 +549,13 @@ namespace Kiritori
             AddShortcutRow(this.tlpShortcutsWin, 5, "Move", out this.labelMove, out this.textBoxMove, "up/down/left/right", colOffset: 0, tagKey: "Text.Move");
 
             // 右段 (colOffset = 3 → ラベルが列3, TextBoxが列4)
-            AddShortcutRow(this.tlpShortcutsWin, 0, "Copy", out this.labelCopy, out this.textBoxCopy, "Ctrl + c", colOffset: 3, tagKey: "Text.Copy");
-            AddShortcutRow(this.tlpShortcutsWin, 1, "Save", out this.labelSave, out this.textBoxSave, "Ctrl + s", colOffset: 3, tagKey: "Text.Save");
-            AddShortcutRow(this.tlpShortcutsWin, 2, "Print", out this.labelPrint, out this.textBoxPrint, "Ctrl + p", colOffset: 3, tagKey: "Text.Print");
-            AddShortcutRow(this.tlpShortcutsWin, 3, "Zoom in", out this.labelZoomIn, out this.textBoxZoomIn, "Ctrl + +", colOffset: 3, tagKey: "Text.ZoomIn");
-            AddShortcutRow(this.tlpShortcutsWin, 4, "Zoom out", out this.labelZoomOut, out this.textBoxZoomOut, "Ctrl + -", colOffset: 3, tagKey: "Text.ZoomOut");
-            AddShortcutRow(this.tlpShortcutsWin, 5, "Zoom reset", out this.labelZoomOff, out this.textBoxZoomOff, "Ctrl + 0", colOffset: 3, tagKey: "Text.ZoomReset");
+            AddShortcutRow(this.tlpShortcutsWin, 0, "Run OCR", out this.labelOCR, out this.textBoxOCR, "Ctrl + t", colOffset: 3, tagKey: "Text.RunOCR");
+            AddShortcutRow(this.tlpShortcutsWin, 1, "Copy", out this.labelCopy, out this.textBoxCopy, "Ctrl + c", colOffset: 3, tagKey: "Text.Copy");
+            AddShortcutRow(this.tlpShortcutsWin, 2, "Save", out this.labelSave, out this.textBoxSave, "Ctrl + s", colOffset: 3, tagKey: "Text.Save");
+            AddShortcutRow(this.tlpShortcutsWin, 3, "Print", out this.labelPrint, out this.textBoxPrint, "Ctrl + p", colOffset: 3, tagKey: "Text.Print");
+            AddShortcutRow(this.tlpShortcutsWin, 4, "Zoom in", out this.labelZoomIn, out this.textBoxZoomIn, "Ctrl + +", colOffset: 3, tagKey: "Text.ZoomIn");
+            AddShortcutRow(this.tlpShortcutsWin, 5, "Zoom out", out this.labelZoomOut, out this.textBoxZoomOut, "Ctrl + -", colOffset: 3, tagKey: "Text.ZoomOut");
+            AddShortcutRow(this.tlpShortcutsWin, 6, "Zoom reset", out this.labelZoomOff, out this.textBoxZoomOff, "Ctrl + 0", colOffset: 3, tagKey: "Text.ZoomReset");
 
             this.grpShortcutsWindowOps.Controls.Add(this.tlpShortcutsWin);
 
@@ -704,7 +706,8 @@ namespace Kiritori
             AddShortcutInfo(tlpShortcutsInfo, "Ctrl + Shift + 5", "Start capture", tagKey: "Text.StartCapture");
             AddShortcutInfo(tlpShortcutsInfo, "Ctrl + W, ESC",    "Close window", tagKey: "Text.CloseWindow");
             AddShortcutInfo(tlpShortcutsInfo, "Ctrl + C",         "Copy to clipboard", tagKey: "Text.CopyToClipboard");
-            AddShortcutInfo(tlpShortcutsInfo, "Ctrl + S",         "Save image", tagKey: "Text.SaveImage");
+            // AddShortcutInfo(tlpShortcutsInfo, "Ctrl + S",         "Save image", tagKey: "Text.SaveImage");
+            AddShortcutInfo(tlpShortcutsInfo, "Ctrl + T",         "Run OCR (copy result / show toast)", tagKey: "Text.RunOCRDesc");
             AddShortcutInfo(tlpShortcutsInfo, "", "");
             AddShortcutInfo(tlpShortcutsInfo, "", "...and more. See Shortcuts", tagKey: "Text.AndMore");
             this.grpShortcuts.Controls.Clear();

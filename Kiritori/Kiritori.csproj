@@ -14,6 +14,8 @@
     <IsWebBootstrapper>true</IsWebBootstrapper>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
     <PublishUrl>C:\Users\mail\Documents\publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Web</InstallFrom>
@@ -28,12 +30,10 @@
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
     <WebPage>publish.htm</WebPage>
     <ApplicationRevision>0</ApplicationRevision>
-    <ApplicationVersion>1.1.3.%2a</ApplicationVersion>
+    <ApplicationVersion>1.1.4.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
     <BootstrapperEnabled>true</BootstrapperEnabled>
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -111,6 +111,11 @@
     <Compile Include="MagnifierLiveWindow.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Services\Ocr\IOcrProvider.cs" />
+    <Compile Include="Services\Ocr\OcrOptions.cs" />
+    <Compile Include="Services\Ocr\OcrResult.cs" />
+    <Compile Include="Services\Ocr\OcrService.cs" />
+    <Compile Include="Services\Ocr\WindowsOcrProvider.cs" />
     <Compile Include="PackageHelper.cs" />
     <Compile Include="PrefForm.cs">
       <SubType>Form</SubType>

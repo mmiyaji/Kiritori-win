@@ -952,6 +952,24 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Run OCR に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_RunOCR {
+            get {
+                return ResourceManager.GetString("Text.RunOCR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Run OCR (copy result) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_RunOCRDesc {
+            get {
+                return ResourceManager.GetString("Text.RunOCRDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Save に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_Save {

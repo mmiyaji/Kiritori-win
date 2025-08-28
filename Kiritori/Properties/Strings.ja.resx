@@ -495,4 +495,10 @@
   <data name="Toast.Captured" xml:space="preserve">
     <value>キャプチャーしました</value>
   </data>
+  <data name="Text.RunOCR" xml:space="preserve">
+    <value>OCR実行</value>
+  </data>
+  <data name="Text.RunOCRDesc" xml:space="preserve">
+    <value>OCR実行(結果をクリップボードコピー)</value>
+  </data>
 </root>
