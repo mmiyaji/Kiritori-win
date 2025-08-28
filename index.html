@@ -71,7 +71,7 @@
     .dl-row strong { font-size: 15px; }
     .btn-primary { display:inline-flex; align-items:center; gap:10px; padding: 12px 16px; border-radius: 12px; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: white; font-weight:700; box-shadow: var(--shadow); cursor:pointer; }
     .btn-ghost { display:inline-flex; align-items:center; gap:10px; padding: 10px 12px; border-radius: 12px; border:1px solid var(--border); background:transparent; color: var(--text); cursor: not-allowed; opacity:.55; }
-
+    .btn-disabled { pointer-events: none; opacity: 0.2; cursor: not-allowed; }
     .section { padding: 48px 0; }
     .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
     .card { background: var(--panel); border:1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
@@ -299,16 +299,32 @@
     (async function(){
       try {
         const repo = 'mmiyaji/Kiritori-win';
-        const r = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, { headers: { 'Accept': 'application/vnd.github+json' } });
+        const r = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
+          headers: { 'Accept': 'application/vnd.github+json' }
+        });
         if (!r.ok) return;
         const j = await r.json();
         const tag = j.tag_name || j.name || '';
         document.getElementById('latestVersion').textContent = tag || 'latest';
+
         const assets = j.assets || [];
         const zip = assets.find(a => /\.zip$/i.test(a.name));
         const exe = assets.find(a => /\.exe$/i.test(a.name));
-        if (zip) document.getElementById('dlWinZip').href = zip.browser_download_url;
-        if (exe) document.getElementById('dlWinExe').href = exe.browser_download_url;
+
+        if (zip) {
+          document.getElementById('dlWinZip').href = zip.browser_download_url;
+        }
+
+        const exeBtn = document.getElementById('dlWinExe');
+        if (exe) {
+          exeBtn.href = exe.browser_download_url;
+          exeBtn.removeAttribute('aria-disabled');
+          exeBtn.classList.remove('btn-disabled');
+        } else {
+          exeBtn.removeAttribute('href'); // クリック無効
+          exeBtn.setAttribute('aria-disabled', 'true');
+          exeBtn.classList.add('btn-disabled'); // CSSで見た目をグレーアウトなど
+        }
       } catch(e) { /* ignore */ }
     })();
     document.querySelectorAll('.feature-img').forEach(img => {
