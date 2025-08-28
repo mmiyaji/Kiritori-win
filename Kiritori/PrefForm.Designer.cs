@@ -106,6 +106,7 @@ namespace Kiritori
         private Label labelMinimize; private TextBox textBoxMinimize;
         private Label labelAfloat; private TextBox textBoxAfloat;
         private Label labelDropShadow; private TextBox textBoxDropShadow;
+        private Label labelHoverHighlight; private TextBox textBoxHoverHighlight;
         private Label labelMove; private TextBox textBoxMove;
 
         private GroupBox grpShortcutsCaptureOps;
@@ -543,7 +544,8 @@ namespace Kiritori
             AddShortcutRow(this.tlpShortcutsWin, 1, "Minimize", out this.labelMinimize, out this.textBoxMinimize, "Ctrl + h", colOffset: 0, tagKey: "Text.Minimize");
             AddShortcutRow(this.tlpShortcutsWin, 2, "Always on top", out this.labelAfloat, out this.textBoxAfloat, "Ctrl + a", colOffset: 0, tagKey: "Text.AlwaysOnTop");
             AddShortcutRow(this.tlpShortcutsWin, 3, "Drop shadow", out this.labelDropShadow, out this.textBoxDropShadow, "Ctrl + d", colOffset: 0, tagKey: "Text.DropShadow");
-            AddShortcutRow(this.tlpShortcutsWin, 4, "Move", out this.labelMove, out this.textBoxMove, "up/down/left/right", colOffset: 0, tagKey: "Text.Move");
+            AddShortcutRow(this.tlpShortcutsWin, 4, "Hover highlight", out this.labelHoverHighlight, out this.textBoxHoverHighlight, "Ctrl + f", colOffset: 0, tagKey: "Text.HighlightOnHover");
+            AddShortcutRow(this.tlpShortcutsWin, 5, "Move", out this.labelMove, out this.textBoxMove, "up/down/left/right", colOffset: 0, tagKey: "Text.Move");
 
             // 右段 (colOffset = 3 → ラベルが列3, TextBoxが列4)
             AddShortcutRow(this.tlpShortcutsWin, 0, "Copy", out this.labelCopy, out this.textBoxCopy, "Ctrl + c", colOffset: 3, tagKey: "Text.Copy");

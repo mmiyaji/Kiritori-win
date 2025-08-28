@@ -26,6 +26,7 @@ namespace Kiritori
         SHIFT_MOVE_DOWN  = Keys.Down  | Keys.Shift,
         FLOAT       = Keys.Control | Keys.A,
         SHADOW      = Keys.Control | Keys.D,
+        HOVER      = Keys.Control | Keys.F,
         SAVE        = Keys.Control | Keys.S,
         LOAD        = Keys.Control | Keys.O,
         OPEN        = Keys.Control | Keys.N,
@@ -365,6 +366,9 @@ namespace Kiritori
                     break;
                 case (int)HOTS.FLOAT:
                     afloatImage(this);
+                    break;
+                case (int)HOTS.HOVER:
+                    ToggleHoverHighlight(!this.isHighlightOnHover);
                     break;
 
                 case (int)HOTS.ESCAPE:
@@ -1082,6 +1086,11 @@ namespace Kiritori
             ShowOverlay(this.isWindowShadow ? "Shadow: ON" : "Shadow: OFF");
         }
 
+        public void ToggleHoverHighlight(bool enable)
+        {
+            this.isHighlightOnHover = enable;
+            ShowOverlay(this.isHighlightOnHover ? "Hover Highlight: ON" : "Hover Highlight: OFF");
+        }
         // ヘルパー
         private static GraphicsPath RoundedRect(Rectangle r, int radius)
         {
