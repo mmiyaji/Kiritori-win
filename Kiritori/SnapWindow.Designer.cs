@@ -144,7 +144,7 @@ namespace Kiritori
             });
             this.fileParentMenu.Name = "fileParentMenu";
             this.fileParentMenu.Size = new System.Drawing.Size(231, 22);
-            this.fileParentMenu.Text = "&File";
+            this.fileParentMenu.Text = "File";
             this.fileParentMenu.Tag = "loc:Menu.File";
             // 
             // editParentMenu
@@ -156,7 +156,7 @@ namespace Kiritori
             });
             this.editParentMenu.Name = "editParentMenu";
             this.editParentMenu.Size = new System.Drawing.Size(231, 22);
-            this.editParentMenu.Text = "&Edit";
+            this.editParentMenu.Text = "Edit";
             this.editParentMenu.Tag = "loc:Menu.Edit";
             // 
             // viewParentMenu
@@ -168,24 +168,24 @@ namespace Kiritori
                 this.zoomParentMenu,
                 new ToolStripSeparator(),
                 this.opacityParentMenu,
-                new ToolStripSeparator(),
-                this.dropShadowToolStripMenuItem,
             });
             this.viewParentMenu.Name = "viewParentMenu";
             this.viewParentMenu.Size = new System.Drawing.Size(231, 22);
-            this.viewParentMenu.Text = "&View";
+            this.viewParentMenu.Text = "View";
             this.viewParentMenu.Tag = "loc:Menu.View";
             // 
             // windowParentMenu
             // 
             this.windowParentMenu.DropDownItems.AddRange(new ToolStripItem[] {
                 this.keepAfloatToolStripMenuItem,
+                this.dropShadowToolStripMenuItem,
+                new ToolStripSeparator(),
                 this.minimizeToolStripMenuItem,
                 // this.closeESCToolStripMenuItem,
             });
             this.windowParentMenu.Name = "windowParentMenu";
             this.windowParentMenu.Size = new System.Drawing.Size(231, 22);
-            this.windowParentMenu.Text = "&Window";
+            this.windowParentMenu.Text = "Window";
             this.windowParentMenu.Tag = "loc:Menu.Window";
             // 
             // zoomParentMenu

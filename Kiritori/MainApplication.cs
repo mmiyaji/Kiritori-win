@@ -82,17 +82,14 @@ namespace Kiritori
         private void MaybeShowPreferencesOnStartup()
         {
             // 初回だけは強制表示
-            if (!Settings.Default.FirstRunShown)
+            if (!Settings.Default.isFirstRunShown)
             {
                 PrefForm.ShowSingleton(this);
-                Settings.Default.FirstRunShown = true;
+                Settings.Default.isFirstRunShown = true;
                 Settings.Default.Save(); // 記録
                 return;
             }
-
-            // 2回目以降は、「表示しない」がOFF（= false）のときだけ表示
-            // DoNotShowOnStartup == true のときは出さない
-            if (!Settings.Default.DoNotShowOnStartup)
+            if (Settings.Default.isOpenMenuOnAppStart)
             {
                 PrefForm.ShowSingleton(this);
             }

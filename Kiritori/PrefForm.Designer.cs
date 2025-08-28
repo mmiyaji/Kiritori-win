@@ -127,14 +127,16 @@ namespace Kiritori
         private TabPage tabInfo;
         private TableLayoutPanel tlpInfoRoot;
         private TableLayoutPanel tlpInfoHeader;
+        private GroupBox grpOnAppLaunch;
         private PictureBox picAppIcon;
         private Label labelAppName;
         private Label labelVersion;
         private Label labelSign;
         private Label labelCopyRight;
         private LinkLabel labelLinkWebsite;
-
         private GroupBox grpShortcuts;
+        private CheckBox chkOpenMenuOnAppStart;
+
 
         // ========= Bottom Buttons ==========
         private TableLayoutPanel bottomBar;
@@ -430,7 +432,7 @@ namespace Kiritori
             });
             this.cmbHoverPreset.SelectedItem = "Cyan";
 
-            this.previewHover = new AlphaPreviewPanel { Height = 20, Width = 50, Anchor = AnchorStyles.Left, RgbColor = Color.Cyan, AlphaPercent = 100 };
+            this.previewHover = new AlphaPreviewPanel { Height = 20, Width = 50, Anchor = AnchorStyles.Left, RgbColor = Color.Cyan, AlphaPercent = 60 };
 
             var flowHover = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
             flowHover.Controls.Add(this.cmbHoverPreset);
@@ -583,13 +585,14 @@ namespace Kiritori
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
-                RowCount = 2,
+                RowCount = 3,
                 Padding = new Padding(12),
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
-            this.tlpInfoRoot.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            this.tlpInfoRoot.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            this.tlpInfoRoot.RowStyles.Add(new RowStyle(SizeType.AutoSize));         // 0: ヘッダ
+            this.tlpInfoRoot.RowStyles.Add(new RowStyle(SizeType.AutoSize));         // 1: ショートカット
+            this.tlpInfoRoot.RowStyles.Add(new RowStyle(SizeType.AutoSize));         // 2: 起動時カード
 
             // --- 上段：名刺レイアウト ---
             this.tlpInfoHeader = new TableLayoutPanel
@@ -682,7 +685,7 @@ namespace Kiritori
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Dock = DockStyle.Top,
-                Tag = "loc:Text.Hotkeys"
+                Tag = "loc:Text.Shortcuts",
             };
 
             var tlpShortcutsInfo = new TableLayoutPanel
@@ -705,16 +708,67 @@ namespace Kiritori
             this.grpShortcuts.Controls.Clear();
             this.grpShortcuts.Controls.Add(tlpShortcutsInfo);
 
+            // ==== 起動時カード(GroupBox) ====
+            this.grpOnAppLaunch = new GroupBox
+            {
+                Text = "On app launch",
+                Tag  = "loc:Text.OnAppLaunch",
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Dock = DockStyle.Top,
+                // Margin = new Padding(0, 8, 0, 8)
+            };
+
+            // 本文レイアウト
+            var tlpOnAppLaunch = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(8)
+            };
+
+            // チェックボックス
+            this.chkOpenMenuOnAppStart = new CheckBox
+            {
+                AutoSize = true,
+                Text = "Open this menu on app start",
+                Tag  = "loc:Text.OpenMenuOnAppStart"
+            };
+
+            // 補足ラベル
+            var lblDesc = new Label
+            {
+                AutoSize = true,
+                ForeColor = SystemColors.GrayText,
+                Margin = new Padding(0, 4, 0, 0),
+                MaximumSize = new Size(1, 0),
+                UseMnemonic = false,
+                Text = "Automatically shows this settings window when the app starts.\r\nWindows startup (launch at sign-in) is configured in the General tab.",
+                Tag = "loc:Text.OpenMenuOnAppStart.Desc"
+            };
+
+            // 追加
+            tlpOnAppLaunch.Controls.Add(this.chkOpenMenuOnAppStart);
+            tlpOnAppLaunch.Controls.Add(lblDesc);
+            this.grpOnAppLaunch.Controls.Add(tlpOnAppLaunch);
 
             // ルートに配置
-            this.tlpInfoRoot.Controls.Add(this.tlpInfoHeader, 0, 0);
-            this.tlpInfoRoot.Controls.Add(this.grpShortcuts, 0, 1);
+            this.tlpInfoRoot.Controls.Add(this.tlpInfoHeader,  0, 0); // 上段：名刺ヘッダ
+            this.tlpInfoRoot.Controls.Add(this.grpShortcuts,   0, 1); // 中段：ショートカット
+            this.tlpInfoRoot.Controls.Add(this.grpOnAppLaunch, 0, 2); // 下段：起動時カード
 
             // タブに追加
             this.tabInfo.Controls.Clear();
             this.tabInfo.Controls.Add(this.tlpInfoRoot);
 
             // リサイズでレスポンシブ調整
+            tlpOnAppLaunch.SizeChanged += (_, __) =>
+            {                
+                var pad = tlpOnAppLaunch.Padding.Left + tlpOnAppLaunch.Padding.Right;
+                lblDesc.MaximumSize = new Size(Math.Max(100, tlpOnAppLaunch.ClientSize.Width - pad), 0);
+            };
             this.tabInfo.Resize += (_, __) => LayoutInfoTabResponsive();
             this.Resize += (_, __) => LayoutInfoTabResponsive();
             this.Controls.Add(shell);
@@ -861,7 +915,8 @@ namespace Kiritori
             if (cmbHoverPreset != null)
             {
                 RemoveCustomIfExists(cmbHoverPreset);
-                int idx = FindHoverPresetIndex(S.HoverHighlightColor, S.HoverHighlightAlphaPercent);
+                // int idx = FindHoverPresetIndex(S.HoverHighlightColor, S.HoverHighlightAlphaPercent);
+                int idx = FindHoverPresetIndex(S.HoverHighlightColor, 60);
                 bool valid = IsAlphaValid(S.HoverHighlightAlphaPercent);
                 if (idx >= 0 && valid)
                 {
@@ -894,8 +949,8 @@ namespace Kiritori
             for (int i = 0; i < _hoverPresets.Length; i++)
             {
                 // アルファを 0–100 で厳密一致（必要なら±誤差許容に）
-                if (_hoverPresets[i].Color.ToArgb() == c.ToArgb() &&
-                    _hoverPresets[i].Alpha == alpha)
+                if (_hoverPresets[i].Color.ToArgb() == c.ToArgb())
+                //  && _hoverPresets[i].Alpha == alpha)
                     return i;
             }
             return -1;
@@ -947,9 +1002,9 @@ namespace Kiritori
             this.chkScreenGuide.DataBindings.Add(
                 new Binding("Checked", S, nameof(S.isScreenGuide), true, DataSourceUpdateMode.OnPropertyChanged));
             this.trackbarDefaultOpacity.DataBindings.Add(
-                new Binding("Value", S, nameof(S.alpha_value), true, DataSourceUpdateMode.OnPropertyChanged));
+                new Binding("Value", S, nameof(S.WindowAlphaPercent), true, DataSourceUpdateMode.OnPropertyChanged));
 
-            var lblOpacityBinding = new Binding("Text", S, nameof(S.alpha_value), true, DataSourceUpdateMode.Never);
+            var lblOpacityBinding = new Binding("Text", S, nameof(S.WindowAlphaPercent), true, DataSourceUpdateMode.Never);
             lblOpacityBinding.Format += (o, e) => e.Value = $"{e.Value}%";
             this.labelDefaultOpacityVal.DataBindings.Add(lblOpacityBinding);
 
@@ -960,6 +1015,8 @@ namespace Kiritori
                 if (_initStartupToggle) return;
                 S.isStartup = chkRunAtStartup.Checked;
             };
+            this.chkOpenMenuOnAppStart.DataBindings.Add(
+                new Binding("Checked", S, nameof(S.isOpenMenuOnAppStart), true, DataSourceUpdateMode.OnPropertyChanged));
         }
         private void HookRuntimeEvents()
         {

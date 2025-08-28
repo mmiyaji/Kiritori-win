@@ -50,12 +50,12 @@ namespace Kiritori.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("100")]
-        public int alpha_value {
+        public int WindowAlphaPercent {
             get {
-                return ((int)(this["alpha_value"]));
+                return ((int)(this["WindowAlphaPercent"]));
             }
             set {
-                this["alpha_value"] = value;
+                this["WindowAlphaPercent"] = value;
             }
         }
         
@@ -86,24 +86,24 @@ namespace Kiritori.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool FirstRunShown {
+        public bool isFirstRunShown {
             get {
-                return ((bool)(this["FirstRunShown"]));
+                return ((bool)(this["isFirstRunShown"]));
             }
             set {
-                this["FirstRunShown"] = value;
+                this["isFirstRunShown"] = value;
             }
         }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool DoNotShowOnStartup {
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool isOpenMenuOnAppStart {
             get {
-                return ((bool)(this["DoNotShowOnStartup"]));
+                return ((bool)(this["isOpenMenuOnAppStart"]));
             }
             set {
-                this["DoNotShowOnStartup"] = value;
+                this["isOpenMenuOnAppStart"] = value;
             }
         }
         

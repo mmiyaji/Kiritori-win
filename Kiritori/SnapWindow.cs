@@ -56,7 +56,7 @@ namespace Kiritori
         private bool _isDragging = false;
 
         // 透明度関連
-        private double alpha_value;
+        private double WindowAlphaPercent;
         private const double DRAG_ALPHA = 0.3;
         private const double MIN_ALPHA = 0.1;
 
@@ -211,7 +211,7 @@ namespace Kiritori
             isWindowShadow = S.isWindowShadow;
             isAfloatWindow = S.isAfloatWindow;
             isOverlay = S.isOverlay;
-            alpha_value = S.alpha_value / 100.0;
+            WindowAlphaPercent = S.WindowAlphaPercent / 100.0;
             isHighlightOnHover = S.isHighlightWindowOnHover;
 
             // ハイライト系（フォールバック）
@@ -237,7 +237,7 @@ namespace Kiritori
             try
             {
                 this.TopMost = isAfloatWindow;
-                this.Opacity = alpha_value;
+                this.Opacity = WindowAlphaPercent;
                 // 影変更は必要な時のみ（ここではハンドル再作成を避ける）
             }
             catch { /* 破棄競合などは無視 */ }
@@ -289,7 +289,7 @@ namespace Kiritori
                     e.PropertyName == nameof(Properties.Settings.Default.isWindowShadow) ||
                     e.PropertyName == nameof(Properties.Settings.Default.isAfloatWindow) ||
                     e.PropertyName == nameof(Properties.Settings.Default.isOverlay) ||
-                    e.PropertyName == nameof(Properties.Settings.Default.alpha_value) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.WindowAlphaPercent) ||
                     string.IsNullOrEmpty(e.PropertyName))
                 {
                     SafeApplySettings();
@@ -650,14 +650,14 @@ namespace Kiritori
             {
                 this.Left += e.X - mousePoint.X;
                 this.Top += e.Y - mousePoint.Y;
-                this.Opacity = this.alpha_value * DRAG_ALPHA;
+                this.Opacity = this.WindowAlphaPercent * DRAG_ALPHA;
             }
         }
 
         private void Form1_MouseUp(object sender, MouseEventArgs e)
         {
             _isDragging = false;
-            this.Opacity = this.alpha_value;
+            this.Opacity = this.WindowAlphaPercent;
         }
 
         #endregion
@@ -682,7 +682,7 @@ namespace Kiritori
             date = DateTime.Now;
             this.Text = date.ToString("yyyyMMdd-HHmmss") + ".png";
             this.TopMost = this.isAfloatWindow;
-            this.Opacity = this.alpha_value;
+            this.Opacity = this.WindowAlphaPercent;
 
             this.main_image = bmp;
             this.setThumbnail(bmp);
@@ -797,7 +797,7 @@ namespace Kiritori
                 pictureBox1.Image = bmp;
                 this.Text = fname;
                 this.TopMost = this.isAfloatWindow;
-                this.Opacity = this.alpha_value;
+                this.Opacity = this.WindowAlphaPercent;
                 this.StartPosition = FormStartPosition.CenterScreen;
                 this.SetDesktopLocation(this.DesktopLocation.X - (int)(this.Size.Width / 2.0),
                                         this.DesktopLocation.Y - (int)(this.Size.Height / 2.0));
@@ -830,7 +830,7 @@ namespace Kiritori
                 SetImageAndResetZoom(bmp);
                 pictureBox1.Image = bmp;
                 this.TopMost = this.isAfloatWindow;
-                this.Opacity = this.alpha_value;
+                this.Opacity = this.WindowAlphaPercent;
                 this.StartPosition = FormStartPosition.CenterScreen;
                 this.SetDesktopLocation(this.DesktopLocation.X - (int)(this.Size.Width / 2.0),
                                         this.DesktopLocation.Y - (int)(this.Size.Height / 2.0));
@@ -894,7 +894,7 @@ namespace Kiritori
         public void setAlpha(double alpha)
         {
             this.Opacity = alpha;
-            this.alpha_value = alpha;
+            this.WindowAlphaPercent = alpha;
         }
 
         public void ShowOverlay(string text)

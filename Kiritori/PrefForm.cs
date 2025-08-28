@@ -1,10 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Configuration;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -18,6 +22,27 @@ namespace Kiritori
         private static PrefForm _instance;
         private bool _initStartupToggle = false;
         private bool _initLang = false;
+
+        private bool _isDirty = false;          // 何か設定が変わった
+        private int _suppressDirty = 0;        // 内部処理中は Dirty を抑制（Save/Reload 中など）
+        private string _baselineHash = "";      // 保存済み（またはロード直後）の基準ハッシュ
+        private System.Collections.Generic.Dictionary<string, string> _baselineMap =
+                    new System.Collections.Generic.Dictionary<string, string>();
+        private static readonly Dictionary<string, string> SettingDisplayNames =
+                    new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        { "isStartup", "Run at Startup" },
+                        { "isOpenMenuOnAppStart", "Open Menu on App Start" },
+                        { "isScreenGuide", "Show Screen Guide" },
+                        { "isHighlightWindowOnHover", "Highlight Window on Hover" },
+                        { "HoverHighlightColor", "Hover Highlight Color" },
+                        { "HoverHighlightAlphaPercent", "Hover Highlight Transparency" },
+                        { "HoverHighlightThickness", "Hover Highlight Thickness" },
+                        { "CaptureBackgroundColor", "Capture Background Color" },
+                        { "CaptureBackgroundAlphaPercent", "Capture Background Transparency" },
+                        { "HistoryLimit", "History Limit" },
+                        { "UICulture", "Language" },
+                    };
 
         // =========================================================
         // ==================== Constructor ========================
@@ -57,6 +82,9 @@ namespace Kiritori
 
             // Language コンボの初期化と保存値の復元（SelectedIndexChanged が走ってもガードできるように）
             InitLanguageCombo();
+
+            // ※ ここでは PropertyChanged を購読しない（初期化で発火するため）
+            // 基準ハッシュの初期化も Load 完了後に行う
         }
 
         // =========================================================
@@ -129,6 +157,23 @@ namespace Kiritori
             {
                 _initStartupToggle = false;
                 chkRunAtStartup.CheckedChanged += ChkRunAtStartup_CheckedChanged;
+
+                // 初期化がすべて終わってから基準を撮る
+                using (SuppressDirtyScope())
+                {
+                    _baselineHash = ComputeSettingsHash();
+                    _baselineMap = BuildSettingsSnapshotMap();
+                    _isDirty = false;
+                    UpdateDirtyUI();
+                }
+                // ここで初めて購読する（以後の変更だけ拾う）
+                Properties.Settings.Default.PropertyChanged += (_, __) =>
+                {
+                    if (_suppressDirty > 0) return;
+                    var now = ComputeSettingsHash();
+                    _isDirty = (now != _baselineHash);
+                    UpdateDirtyUI();
+                };
             }
         }
 
@@ -149,53 +194,114 @@ namespace Kiritori
         {
             if (_initStartupToggle) return; // 初期化中は無視
 
-            try
+            // “設定に反映” は同値代入を避ける
+            var want = chkRunAtStartup.Checked;
+            if (Properties.Settings.Default.isStartup != want)
             {
-                if (PackagedHelper.IsPackaged())
-                {
-                    // ここで StartupManager.Enable/Disable を呼ぶ実装に拡張可
-                }
-                else
-                {
-                    SetStartupShortcut(chkRunAtStartup.Checked);
-                }
-
-                Properties.Settings.Default.isStartup = chkRunAtStartup.Checked;
-                Properties.Settings.Default.Save();
+                Properties.Settings.Default.isStartup = want;
             }
-            catch (Exception ex)
+
+            // システム側のショートカット操作は Dirty 判定に影響させない
+            using (SuppressDirtyScope())
             {
-                chkRunAtStartup.Checked = false;
-                MessageBox.Show(this, SR.F("Text.UnableSetStartup", ex.Message),
-                    "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                try
+                {
+                    if (PackagedHelper.IsPackaged())
+                    {
+                        // ここで StartupManager.Enable/Disable を呼ぶ実装に拡張可
+                    }
+                    else
+                    {
+                        SetStartupShortcut(want);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    chkRunAtStartup.Checked = false;
+                    MessageBox.Show(this, SR.F("Text.UnableSetStartup", ex.Message),
+                        "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
         }
 
         private void btnSavestings_Click(object sender, EventArgs e)
         {
-            Properties.Settings.Default.Save();
+            using (SuppressDirtyScope())
+            {
+                Properties.Settings.Default.Save();
+                _baselineHash = ComputeSettingsHash();
+                _baselineMap = BuildSettingsSnapshotMap();
+                _isDirty = false;
+                UpdateDirtyUI();
+            }
         }
 
         private void btnCancelSettings_Click(object sender, EventArgs e)
         {
-            Properties.Settings.Default.Reload();
+            using (SuppressDirtyScope())
+            {
+                Properties.Settings.Default.Reload();
+                _baselineHash = ComputeSettingsHash();
+                _baselineMap = BuildSettingsSnapshotMap();
+                _isDirty = false;
+                UpdateDirtyUI();
+            }
             this.Close();
         }
 
         private void btnExitApp_Click(object sender, EventArgs e)
         {
             Debug.WriteLine("Exit button clicked");
+
+            if (_isDirty)
+            {
+                int total;
+                string diff = FormatSettingsDiff(6, out total);
+                string msg = TSafe("Text.ExitWithUnsavedChanges", "Do you want to save the changes?")
+                        + Environment.NewLine + Environment.NewLine
+                        + diff + (diff.Length > 0 ? Environment.NewLine : "")
+                        + TSafe("Text.ExitWithUnsavedChangesTail",
+                                "Yes: Save and Exit / No: Discard and Exit / Cancel: Stay in the app");
+
+                var r = MessageBox.Show(
+                    msg,
+                    TSafe("Text.UnsavedChangesTitle", "Unsaved Changes"),
+                    MessageBoxButtons.YesNoCancel,
+                    MessageBoxIcon.Warning
+                );
+
+                if (r == DialogResult.Cancel) return;
+
+                using (SuppressDirtyScope())
+                {
+                    if (r == DialogResult.Yes)
+                    {
+                        Properties.Settings.Default.Save();
+                    }
+                    else if (r == DialogResult.No)
+                    {
+                        Properties.Settings.Default.Reload();
+                    }
+                    _baselineHash = ComputeSettingsHash();
+                    _baselineMap = BuildSettingsSnapshotMap();
+                    _isDirty = false;
+                    UpdateDirtyUI();
+                }
+                AppShutdown.ExitConfirmed = true;
+                Application.Exit();
+                return;
+            }
+
+            // 通常の終了確認（1回だけ）
             var result = MessageBox.Show(
-                SR.T("Text.ConfirmExit"),
-                SR.T("Text.ConfirmExitTitle"),
+                TSafe("Text.ConfirmExit", "Do you want to exit the application?"),
+                TSafe("Text.ConfirmExitTitle", "Confirm Exit Kiritori"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question
             );
-            Debug.WriteLine(result);
-
             if (result == DialogResult.Yes)
             {
-                Properties.Settings.Default.Reload();
+                AppShutdown.ExitConfirmed = true;
                 Application.Exit();
             }
         }
@@ -206,12 +312,6 @@ namespace Kiritori
                 OpenSettingsStartupApps();
             else
                 OpenStartupFolderOrSelectLink();
-        }
-
-        private void chkDoNotShowOnStartup_CheckedChanged(object sender, EventArgs e)
-        {
-            //Properties.Settings.Default.DoNotShowOnStartup = chkDoNotShowOnStartup.Checked;
-            Properties.Settings.Default.Save();
         }
 
         private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
@@ -227,6 +327,7 @@ namespace Kiritori
             }
             catch { /* 失敗時は無視 */ }
         }
+
         private void btnBgCustomColor_Click(object sender, System.EventArgs e)
         {
             using (var cd = new ColorDialog { Color = this.previewBg.RgbColor, FullOpen = true })
@@ -239,31 +340,6 @@ namespace Kiritori
             }
         }
 
-        // private void descCard_Paint(object sender, PaintEventArgs e)
-        // {
-        //     var p = (Panel)sender;
-        //     var g = e.Graphics;
-
-        //     var rect = new Rectangle(0, 0, p.Width - 1, p.Height - 1);
-        //     int radius = 8;
-
-        //     using (var path = RoundRect(rect, radius))
-        //     using (var border = new Pen(Color.FromArgb(210, 215, 220), 1f))
-        //     using (var accent = new SolidBrush(SystemColors.Highlight))
-        //     {
-        //         var state = g.Save();
-        //         g.SetClip(path, System.Drawing.Drawing2D.CombineMode.Replace);
-
-        //         const int inset = 1;
-        //         const int barW = 4;
-        //         var bar = new Rectangle(rect.X + inset, rect.Y + inset, barW, rect.Height - inset * 2);
-
-        //         g.FillRectangle(accent, bar);
-        //         g.Restore(state);
-        //         g.DrawPath(border, path);
-        //     }
-        // }
-
         // Language ComboBox 選択変更
         private void cmbLanguage_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -272,10 +348,14 @@ namespace Kiritori
             var item = cmbLanguage.SelectedItem;
             var valProp = item?.GetType().GetProperty("Value");
             var culture = valProp?.GetValue(item)?.ToString() ?? "en";
-            Properties.Settings.Default.UICulture = culture;
-            Properties.Settings.Default.Save();
 
-            SR.SetCulture(culture);
+            var cur = Properties.Settings.Default.UICulture ?? "";
+            if (!string.Equals(cur, culture, StringComparison.OrdinalIgnoreCase))
+            {
+                Properties.Settings.Default.UICulture = culture; // 変わる時だけセット
+                // ここでは Save しない（Save ボタンで保存）
+                SR.SetCulture(culture);
+            }
         }
 
         // =========================================================
@@ -356,6 +436,7 @@ namespace Kiritori
                 }
             }
         }
+
         private void SafeApplyTextsAndLayout()
         {
             // 破棄/未作成中は抜ける
@@ -377,7 +458,6 @@ namespace Kiritori
             }
             catch { /* ここで握りつぶすよりログに出す方がよければ適宜 */ }
         }
-
 
         // =========================================================
         // =================== Helpers (UI) ========================
@@ -514,6 +594,57 @@ namespace Kiritori
             }
         }
 
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            // 最初にスキップ判定（ここで終わればダイアログは出ない）
+            if (AppShutdown.ExitConfirmed)
+            {
+                base.OnFormClosing(e);
+                return;
+            }
+            if (e.CloseReason == CloseReason.WindowsShutDown)
+            {
+                base.OnFormClosing(e);
+                return;
+            }
+
+            if (_isDirty)
+            {
+                var r = MessageBox.Show(
+                    TSafe("Text.ConfirmSaveChanges", "Do you want to save the changes?"),
+                    TSafe("Text.ConfirmSaveChangesTitle", "Unsaved Changes"),
+                    MessageBoxButtons.YesNoCancel,
+                    MessageBoxIcon.Question
+                );
+
+                if (r == DialogResult.Cancel)
+                {
+                    e.Cancel = true;
+                    return; // baseは呼ばない
+                }
+
+                using (SuppressDirtyScope())
+                {
+                    if (r == DialogResult.Yes)
+                    {
+                        Properties.Settings.Default.Save();
+                    }
+                    else // No = 破棄
+                    {
+                        Properties.Settings.Default.Reload();
+                    }
+                    _baselineHash = ComputeSettingsHash();
+                    _baselineMap = BuildSettingsSnapshotMap();
+                    _isDirty = false;
+                    UpdateDirtyUI();
+                }
+                // ここまで来たら継続して閉じる
+            }
+
+            base.OnFormClosing(e);
+        }
+
+
         // =========================================================
         // =================== Helpers (General) ===================
         // =========================================================
@@ -551,6 +682,7 @@ namespace Kiritori
             path.CloseFigure();
             return path;
         }
+
         private void ApplyDynamicTextsSafe()
         {
             // 破棄・ハンドル未作成は何もしない
@@ -560,12 +692,13 @@ namespace Kiritori
             if (InvokeRequired) { try { BeginInvoke((Action)ApplyDynamicTextsSafe); } catch { } return; }
 
             // 翻訳キーが無い/例外でも落ちないようフォールバック
-            string T(string key, string fallback) {
+            string T(string key, string fallback)
+            {
                 try { return SR.T(key); } catch { return fallback; }
             }
 
             // タイトル
-            Text = $"{T("App.Name", "Kiritori")} - {T("PrefForm.Title", "Preferences")}";
+            Text = string.Format("{0} - {1}", T("App.Name", "Kiritori"), T("PrefForm.Title", "Preferences"));
 
             // MSIX/非MSIXで変わるボタン
             if (btnOpenStartupSettings != null && !btnOpenStartupSettings.IsDisposed)
@@ -597,10 +730,47 @@ namespace Kiritori
                     "Version {0}  Build Date: {1:dd MMM, yyyy}", infoVer, buildDate);
 
             if (labelCopyRight != null && !labelCopyRight.IsDisposed)
-                labelCopyRight.Text = $"© 2013–{DateTime.Now.Year}";
+                labelCopyRight.Text = "© 2013–" + DateTime.Now.Year.ToString(CultureInfo.InvariantCulture);
 
             // 最後にレイアウト
             LayoutInfoTabResponsiveSafe();
+            UpdateDirtyUI();
+        }
+
+        // Dirty 設定を抑制するスコープヘルパ
+        private IDisposable SuppressDirtyScope()
+        {
+            _suppressDirty++;
+            return new ActionOnDispose(delegate { _suppressDirty--; });
+        }
+
+        private sealed class ActionOnDispose : IDisposable
+        {
+            private readonly Action _a; public ActionOnDispose(Action a) { _a = a; }
+            public void Dispose() { if (_a != null) _a(); }
+        }
+
+        private void UpdateDirtyUI()
+        {
+            if (IsDisposed) return;
+
+            bool hasMark = Text.EndsWith(" *", StringComparison.Ordinal);
+
+            if (_isDirty)
+            {
+                if (!hasMark)
+                {
+                    Text = Text + " *";
+                }
+            }
+            else
+            {
+                if (hasMark)
+                {
+                    // 末尾の " *" を外す
+                    Text = Text.Substring(0, Text.Length - 2);
+                }
+            }
         }
 
         private static DateTime GetAssemblyWriteTime(Assembly asm)
@@ -616,6 +786,146 @@ namespace Kiritori
 
             LayoutInfoTabResponsive();
         }
+
+        // PrefForm 内に追加：フォールバック付き翻訳
+        private static string TSafe(string key, string fallback)
+        {
+            try
+            {
+                var s = SR.T(key); // 既存の単一引数版だけを前提
+                return string.IsNullOrEmpty(s) ? fallback : s;
+            }
+            catch
+            {
+                return fallback;
+            }
+        }
+
+        // === Settings のスナップショット（ハッシュ）を作る ===
+        private static string ComputeSettingsHash()
+        {
+            var s = Properties.Settings.Default;
+            var sb = new StringBuilder(256);
+            foreach (SettingsProperty p in s.Properties)
+            {
+                object v = s[p.Name];
+                string str;
+                try
+                {
+                    var tc = TypeDescriptor.GetConverter(p.PropertyType);
+                    str = (tc != null && tc.CanConvertTo(typeof(string)))
+                        ? (tc.ConvertToInvariantString(v) ?? "")
+                        : (v != null ? v.ToString() : "");
+                }
+                catch
+                {
+                    str = (v != null ? v.ToString() : "");
+                }
+                sb.Append(p.Name).Append('=').Append(str).Append('\n');
+            }
+            using (var sha = SHA256.Create())
+            {
+                var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+                var hash = sha.ComputeHash(bytes);
+                return BitConverter.ToString(hash).Replace("-", "");
+            }
+        }
+
+        private static Dictionary<string, string> BuildSettingsSnapshotMap()
+        {
+            var s = Properties.Settings.Default;
+            var map = new Dictionary<string, string>(StringComparer.Ordinal);
+
+            foreach (SettingsProperty p in s.Properties)
+            {
+                object v = s[p.Name];
+                string str;
+                try
+                {
+                    var tc = TypeDescriptor.GetConverter(p.PropertyType);
+                    str = (tc != null && tc.CanConvertTo(typeof(string)))
+                        ? (tc.ConvertToInvariantString(v) ?? "")
+                        : (v != null ? v.ToString() : "");
+                }
+                catch
+                {
+                    str = (v != null ? v.ToString() : "");
+                }
+                map[p.Name] = str;
+            }
+            return map;
+        }
+
+        private string FormatSettingsDiff(int maxLines, out int totalChanges)
+        {
+            var now = BuildSettingsSnapshotMap();
+            var lines = new System.Collections.Generic.List<string>();
+            totalChanges = 0;
+
+            foreach (var kv in now)
+            {
+                var key = kv.Key;
+                var cur = kv.Value ?? "";
+                string old;
+                _baselineMap.TryGetValue(key, out old);
+                old = old ?? "";
+
+                if (!string.Equals(old, cur, StringComparison.Ordinal))
+                {
+                    totalChanges++;
+                    if (lines.Count < maxLines)
+                    {
+                        var displayKey = DisplayNameFor(key);
+                        var oldV = FormatValueForDisplay(old, key);
+                        var newV = FormatValueForDisplay(cur, key);
+
+                        // 1行フォーマット（多言語）。既定: "{0}: {1} -> {2}"
+                        var line = string.Format(
+                            TSafe("Text.DiffLine", "{0}: {1} -> {2}"),
+                            displayKey, oldV, newV
+                        );
+                        lines.Add(line);
+                    }
+                }
+            }
+
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < lines.Count; i++)
+            {
+                sb.Append("• ").Append(lines[i]).Append(Environment.NewLine);
+            }
+            if (totalChanges > lines.Count)
+            {
+                // 既定: "…and {0} more"
+                sb.Append(string.Format(TSafe("Text.AndMoreNum", "…and {0} more"), totalChanges - lines.Count));
+            }
+            return sb.ToString();
+        }
+
+
+        private static string FormatValueForDisplay(string raw, string key)
+        {
+            if (string.IsNullOrEmpty(raw)) return TSafe("Common.Empty", "(empty)");
+
+            // bool → On/Off（多言語）
+            if (string.Equals(raw, "True",  StringComparison.OrdinalIgnoreCase)) return TSafe("Common.On",  "On");
+            if (string.Equals(raw, "False", StringComparison.OrdinalIgnoreCase)) return TSafe("Common.Off", "Off");
+
+            // Color [Cyan] → Cyan
+            if (raw.StartsWith("Color [", StringComparison.Ordinal) && raw.EndsWith("]", StringComparison.Ordinal))
+                return raw.Substring(7, raw.Length - 8);
+
+            // 数値系に単位を付けたい場合（キー名で判断）
+            if (key.EndsWith("AlphaPercent", StringComparison.Ordinal)) return raw + TSafe("Common.PercentSuffix", "%");
+            if (key.EndsWith("Thickness",    StringComparison.Ordinal)) return raw + TSafe("Common.PixelSuffix",   " px");
+
+            return raw;
+        }
+        private static string DisplayNameFor(string key)
+        {
+            // 見つからなければキー名をそのまま出す
+            return TSafe("Setting.Display." + key, key);
+        }
         // =========================================================
         // ================== Nested UI Controls ===================
         // =========================================================
@@ -627,14 +937,14 @@ namespace Kiritori
             [Bindable(true)]
             public Color RgbColor
             {
-                get => _rgbColor;
+                get { return _rgbColor; }
                 set { if (_rgbColor != value) { _rgbColor = value; Invalidate(); } }
             }
 
             [Bindable(true)]
             public int AlphaPercent
             {
-                get => _alphaPercent;
+                get { return _alphaPercent; }
                 set
                 {
                     var v = Math.Max(0, Math.Min(100, value));
@@ -672,6 +982,7 @@ namespace Kiritori
                 }
             }
         }
+
         public class Separator : Control
         {
             public Separator()
@@ -690,6 +1001,9 @@ namespace Kiritori
                 }
             }
         }
-
+        internal static class AppShutdown
+        {
+            public static bool ExitConfirmed; // 終了確認/未保存処理は済んだ
+        }
     }
 }

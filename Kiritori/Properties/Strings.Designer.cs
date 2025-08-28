@@ -70,6 +70,51 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   (empty) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Common_Empty {
+            get {
+                return ResourceManager.GetString("Common.Empty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Off に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Common_Off {
+            get {
+                return ResourceManager.GetString("Common.Off", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   On に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Common_On {
+            get {
+                return ResourceManager.GetString("Common.On", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   % に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Common_PercentSuffix {
+            get {
+                return ResourceManager.GetString("Common.PercentSuffix", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   px に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Common_PixelSuffix {
+            get {
+                return ResourceManager.GetString("Common.PixelSuffix", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Toggle Always on top に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_AlwaysOnTop {
@@ -331,6 +376,105 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Capture Background Transparency (%) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_CaptureBackgroundAlphaPercent {
+            get {
+                return ResourceManager.GetString("Setting.Display.CaptureBackgroundAlphaPercent", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Capture Background Color に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_CaptureBackgroundColor {
+            get {
+                return ResourceManager.GetString("Setting.Display.CaptureBackgroundColor", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   History Limit に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_HistoryLimit {
+            get {
+                return ResourceManager.GetString("Setting.Display.HistoryLimit", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Hover Highlight Transparency (%) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_HoverHighlightAlphaPercent {
+            get {
+                return ResourceManager.GetString("Setting.Display.HoverHighlightAlphaPercent", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Hover Highlight Color に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_HoverHighlightColor {
+            get {
+                return ResourceManager.GetString("Setting.Display.HoverHighlightColor", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Hover Highlight Thickness (px) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_HoverHighlightThickness {
+            get {
+                return ResourceManager.GetString("Setting.Display.HoverHighlightThickness", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Highlight Window on Hover に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_isHighlightWindowOnHover {
+            get {
+                return ResourceManager.GetString("Setting.Display.isHighlightWindowOnHover", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Open Menu on App Start に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_isOpenMenuOnAppStart {
+            get {
+                return ResourceManager.GetString("Setting.Display.isOpenMenuOnAppStart", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Show Screen Guide に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_isScreenGuide {
+            get {
+                return ResourceManager.GetString("Setting.Display.isScreenGuide", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Run at Startup に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_isStartup {
+            get {
+                return ResourceManager.GetString("Setting.Display.isStartup", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Language に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_UICulture {
+            get {
+                return ResourceManager.GetString("Setting.Display.UICulture", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Advanced に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Tab_Advanced {
@@ -367,7 +511,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Shortcut に類似しているローカライズされた文字列を検索します。
+        ///   Shortcuts に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Tab_Shortcut {
             get {
@@ -390,6 +534,15 @@ namespace Kiritori.Properties {
         internal static string Text_AndMore {
             get {
                 return ResourceManager.GetString("Text.AndMore", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   …and {0} more に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_AndMoreNum {
+            get {
+                return ResourceManager.GetString("Text.AndMoreNum", resourceCulture);
             }
         }
         
@@ -502,7 +655,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Are you sure you want to exit the application? に類似しているローカライズされた文字列を検索します。
+        ///   Do you want to exit the application? に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_ConfirmExit {
             get {
@@ -516,6 +669,24 @@ namespace Kiritori.Properties {
         internal static string Text_ConfirmExitTitle {
             get {
                 return ResourceManager.GetString("Text.ConfirmExitTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Do you want to save the changes? に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_ConfirmSaveChanges {
+            get {
+                return ResourceManager.GetString("Text.ConfirmSaveChanges", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Unsaved Changes に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_ConfirmSaveChangesTitle {
+            get {
+                return ResourceManager.GetString("Text.ConfirmSaveChangesTitle", resourceCulture);
             }
         }
         
@@ -538,11 +709,38 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   {0}: {1} -&gt; {2} に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_DiffLine {
+            get {
+                return ResourceManager.GetString("Text.DiffLine", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Drop shadow に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_DropShadow {
             get {
                 return ResourceManager.GetString("Text.DropShadow", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   You have unsaved changes. What would you like to do? に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_ExitWithUnsavedChanges {
+            get {
+                return ResourceManager.GetString("Text.ExitWithUnsavedChanges", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Yes: Save and Exit / No: Discard and Exit / Cancel: Stay in the app に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_ExitWithUnsavedChangesTail {
+            get {
+                return ResourceManager.GetString("Text.ExitWithUnsavedChangesTail", resourceCulture);
             }
         }
         
@@ -664,11 +862,38 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   On app launch に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_OnAppLaunch {
+            get {
+                return ResourceManager.GetString("Text.OnAppLaunch", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Open Image File に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_OpenImageFile {
             get {
                 return ResourceManager.GetString("Text.OpenImageFile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Open this menu on app start に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_OpenMenuOnAppStart {
+            get {
+                return ResourceManager.GetString("Text.OpenMenuOnAppStart", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Automatically shows this settings window when the app starts. Windows startup (launch at sign-in) is configured in the General tab. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_OpenMenuOnAppStart_Desc {
+            get {
+                return ResourceManager.GetString("Text.OpenMenuOnAppStart.Desc", resourceCulture);
             }
         }
         
@@ -732,6 +957,15 @@ namespace Kiritori.Properties {
         internal static string Text_SaveImage {
             get {
                 return ResourceManager.GetString("Text.SaveImage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Shortcuts に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_Shortcuts {
+            get {
+                return ResourceManager.GetString("Text.Shortcuts", resourceCulture);
             }
         }
         
@@ -840,6 +1074,15 @@ namespace Kiritori.Properties {
         internal static string Text_UnableSetStartup {
             get {
                 return ResourceManager.GetString("Text.UnableSetStartup", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Unsaved Changes に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_UnsavedChangesTitle {
+            get {
+                return ResourceManager.GetString("Text.UnsavedChangesTitle", resourceCulture);
             }
         }
         

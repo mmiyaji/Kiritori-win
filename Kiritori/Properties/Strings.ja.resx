@@ -154,7 +154,7 @@
     <value>スタートアップフォルダーを開く</value>
   </data>
   <data name="Text.HistoryLimit" xml:space="preserve">
-    <value>履歴件数</value>
+    <value>履歴の保存件数</value>
   </data>
   <data name="Text.Hotkeys" xml:space="preserve">
     <value>ホットキー</value>
@@ -264,11 +264,11 @@
   <data name="Text.PlaySound" xml:space="preserve">
     <value>キャプチャー時に音を鳴らす</value>
   </data>
-  <data name="Text.StartupManagedTip" xml:space="preserve">
-    <value>設定 &gt; アプリ &gt; スタートアップ</value>
-  </data>
   <data name="Text.StartupManaged" xml:space="preserve">
     <value>スタートアップはWindowsによって管理されます</value>
+  </data>
+  <data name="Text.StartupManagedTip" xml:space="preserve">
+    <value>設定 &gt; アプリ &gt; スタートアップ</value>
   </data>
   <data name="Text.UnableSetStartup" xml:space="preserve">
     <value>スタートアップ設定が更新できませんでした</value>
@@ -407,5 +407,86 @@
   </data>
   <data name="Text.CaptureOptionSetting" xml:space="preserve">
     <value>キャプチャー設定(キャプチャー中にキー押下)</value>
+  </data>
+  <data name="Text.OpenMenuOnAppStart" xml:space="preserve">
+    <value>このメニュー画面を起動時に開く</value>
+  </data>
+  <data name="Text.OnAppLaunch" xml:space="preserve">
+    <value>アプリ起動時設定</value>
+  </data>
+  <data name="Text.OpenMenuOnAppStart.Desc" xml:space="preserve">
+    <value>アプリ起動時に自動的にこの設定ウィンドウを表示します。Windows起動時（サインイン時の起動）の設定は「全般」タブで行います。</value>
+  </data>
+  <data name="Text.Shortcuts" xml:space="preserve">
+    <value>ショートカット</value>
+  </data>
+  <data name="Text.ConfirmSaveChanges" xml:space="preserve">
+    <value>設定が保存されていません。保存しますか？</value>
+  </data>
+  <data name="Text.ConfirmSaveChangesTitle" xml:space="preserve">
+    <value>変更の確認</value>
+  </data>
+  <data name="Text.ExitWithUnsavedChanges" xml:space="preserve">
+    <value>未保存の変更があります。どうしますか？</value>
+  </data>
+  <data name="Text.ExitWithUnsavedChangesTail" xml:space="preserve">
+    <value>「はい」で保存して終了 / 「いいえ」で破棄して終了 / 「キャンセル」で戻る</value>
+  </data>
+  <data name="Text.UnsavedChangesTitle" xml:space="preserve">
+    <value>未保存の変更</value>
+  </data>
+  <data name="Common.On" xml:space="preserve">
+    <value>オン</value>
+  </data>
+  <data name="Common.Off" xml:space="preserve">
+    <value>オフ</value>
+  </data>
+  <data name="Common.Empty" xml:space="preserve">
+    <value>(空)</value>
+  </data>
+  <data name="Common.PercentSuffix" xml:space="preserve">
+    <value>%</value>
+  </data>
+  <data name="Common.PixelSuffix" xml:space="preserve">
+    <value>px</value>
+  </data>
+  <data name="Text.DiffLine" xml:space="preserve">
+    <value>{0}: {1} -&gt; {2}</value>
+  </data>
+  <data name="Text.AndMoreNum" xml:space="preserve">
+    <value>…他 {0} 件</value>
+  </data>
+  <data name="Setting.Display.isStartup" xml:space="preserve">
+    <value>Windows サインイン時に起動</value>
+  </data>
+  <data name="Setting.Display.isOpenMenuOnAppStart" xml:space="preserve">
+    <value>アプリ起動時にメニューを開く</value>
+  </data>
+  <data name="Setting.Display.isScreenGuide" xml:space="preserve">
+    <value>ガイドラインを表示</value>
+  </data>
+  <data name="Setting.Display.isHighlightWindowOnHover" xml:space="preserve">
+    <value>ホバーでウィンドウを強調表示</value>
+  </data>
+  <data name="Setting.Display.HoverHighlightColor" xml:space="preserve">
+    <value>ホバー強調色</value>
+  </data>
+  <data name="Setting.Display.HoverHighlightAlphaPercent" xml:space="preserve">
+    <value>ホバー強調の透明度 (%)</value>
+  </data>
+  <data name="Setting.Display.HoverHighlightThickness" xml:space="preserve">
+    <value>ホバー強調の線の太さ (px)</value>
+  </data>
+  <data name="Setting.Display.CaptureBackgroundColor" xml:space="preserve">
+    <value>キャプチャ背景色</value>
+  </data>
+  <data name="Setting.Display.CaptureBackgroundAlphaPercent" xml:space="preserve">
+    <value>キャプチャ背景の透明度 (%)</value>
+  </data>
+  <data name="Setting.Display.HistoryLimit" xml:space="preserve">
+    <value>履歴の保存件数</value>
+  </data>
+  <data name="Setting.Display.UICulture" xml:space="preserve">
+    <value>表示言語</value>
   </data>
 </root>
