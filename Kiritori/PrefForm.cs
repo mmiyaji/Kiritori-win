@@ -44,23 +44,10 @@ namespace Kiritori
             if (!IsInDesignMode())
             {
                 this.Load += PrefForm_LoadAsync;
-                this.Load += (_, __) =>
-                {
-                    Localizer.Apply(this);
-                    ApplyDynamicTexts();
-                    LayoutInfoTabResponsive();
-                };
-                SR.CultureChanged += () =>
-                {
-                    Localizer.Apply(this);
-                    ApplyDynamicTexts();
-                    LayoutInfoTabResponsive();
-                };
-                // 見出し位置調整のためのレイアウトトリガ
-                // this.tabInfo.Layout += (_, __) => PositionDescHeader();
-                // this.descCard.LocationChanged += (_, __) => PositionDescHeader();
-                // this.descCard.SizeChanged += (_, __) => PositionDescHeader();
-                // this.labelDescHeader.TextChanged += (_, __) => PositionDescHeader();
+
+                // ← 共通ハンドラに寄せる
+                this.Load += (_, __) => SafeApplyTextsAndLayout();
+                SR.CultureChanged += () => SafeApplyTextsAndLayout();
 
                 // アプリアイコンのスケーリング
                 var src = Properties.Resources.icon_128x128;
@@ -68,7 +55,7 @@ namespace Kiritori
                 picAppIcon.Image = ScaleBitmap(src, 120, 120);
             }
 
-            // Language コンボの初期化と保存値の復元
+            // Language コンボの初期化と保存値の復元（SelectedIndexChanged が走ってもガードできるように）
             InitLanguageCombo();
         }
 
@@ -369,6 +356,27 @@ namespace Kiritori
                 }
             }
         }
+        private void SafeApplyTextsAndLayout()
+        {
+            // 破棄/未作成中は抜ける
+            if (this.IsDisposed || !this.IsHandleCreated) return;
+
+            // UI スレッドに移送（CultureChanged は別スレッド発火の可能性がある）
+            if (this.InvokeRequired)
+            {
+                try { this.BeginInvoke((Action)SafeApplyTextsAndLayout); } catch { }
+                return;
+            }
+
+            try
+            {
+                // ここまで来れば UI は出来上がっている
+                Localizer.Apply(this);
+                ApplyDynamicTextsSafe();
+                LayoutInfoTabResponsiveSafe();
+            }
+            catch { /* ここで握りつぶすよりログに出す方がよければ適宜 */ }
+        }
 
 
         // =========================================================
@@ -543,42 +551,69 @@ namespace Kiritori
             path.CloseFigure();
             return path;
         }
-        private void ApplyDynamicTexts()
+        private void ApplyDynamicTextsSafe()
         {
-            // タイトル合成（App.Name と PrefForm.Title を resx に用意）
-            this.Text = $"{SR.T("App.Name")} - {SR.T("PrefForm.Title")}";
+            // 破棄・ハンドル未作成は何もしない
+            if (IsDisposed || !IsHandleCreated) return;
+
+            // 別スレッド発火（CultureChanged など）に備えて UI スレッドへ
+            if (InvokeRequired) { try { BeginInvoke((Action)ApplyDynamicTextsSafe); } catch { } return; }
+
+            // 翻訳キーが無い/例外でも落ちないようフォールバック
+            string T(string key, string fallback) {
+                try { return SR.T(key); } catch { return fallback; }
+            }
+
+            // タイトル
+            Text = $"{T("App.Name", "Kiritori")} - {T("PrefForm.Title", "Preferences")}";
 
             // MSIX/非MSIXで変わるボタン
-            btnOpenStartupSettings.Text = PackagedHelper.IsPackaged()
-                ? SR.T("Text.BtnStartupSetting")
-                : SR.T("Text.BtnStartupFolder");
-
-            // // 起動管理説明＆ツールチップ（必要に応じてキーを追加）
-            if (PackagedHelper.IsPackaged())
+            if (btnOpenStartupSettings != null && !btnOpenStartupSettings.IsDisposed)
             {
-                labelStartupInfo.Text = SR.T("Text.StartupManaged"); // 例: "Startup is managed by Windows."
-                toolTip1.SetToolTip(labelStartupInfo, SR.T("Text.StartupManagedTip")); // 例: "Settings > Apps > Startup"
+                btnOpenStartupSettings.Text = PackagedHelper.IsPackaged()
+                    ? T("Text.BtnStartupSetting", "Startup settings")
+                    : T("Text.BtnStartupFolder", "Open Startup folder");
             }
-            // else
-            // {
-            //     string startupDir = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
-            //     string shortcutPath = Path.Combine(startupDir, Application.ProductName + ".lnk");
-            //     string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            //     string displayDir = startupDir.Replace(appData, "%APPDATA%");
-            //     labelStartupInfo.Text = SR.F("Text.ShortcutPathFmt", Path.Combine(displayDir, Application.ProductName + ".lnk"));
-            //     toolTip1.SetToolTip(labelStartupInfo, shortcutPath);
-            // }
-            var asm = Assembly.GetExecutingAssembly();
-            var ver = asm.GetName().Version;
-            this.labelVersion.Text = string.Format(
-                CultureInfo.InvariantCulture,
-                "Version {0} Build Date: {1:dd MMM, yyyy}",
-                ver,
-                DateTime.Now
-            );
-            this.labelCopyRight.Text = "© 2013–" + DateTime.Now.Year;
 
-            // 最後にレイアウト最適化
+            // 起動管理の説明＆ツールチップ（あれば）
+            if (labelStartupInfo != null && !labelStartupInfo.IsDisposed && toolTip1 != null)
+            {
+                if (PackagedHelper.IsPackaged())
+                {
+                    labelStartupInfo.Text = T("Text.StartupManaged", "Startup is managed by Windows.");
+                    toolTip1.SetToolTip(labelStartupInfo, T("Text.StartupManagedTip", "Settings > Apps > Startup"));
+                }
+                // 非 MSIX側の表示は必要ならここに
+            }
+
+            // バージョン/ビルド日（ファイルの更新時刻を採用：再現性◎）
+            var asm = Assembly.GetExecutingAssembly();
+            var infoVer = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+                        ?? Application.ProductVersion;
+            var buildDate = GetAssemblyWriteTime(asm);
+
+            if (labelVersion != null && !labelVersion.IsDisposed)
+                labelVersion.Text = string.Format(CultureInfo.InvariantCulture,
+                    "Version {0}  Build Date: {1:dd MMM, yyyy}", infoVer, buildDate);
+
+            if (labelCopyRight != null && !labelCopyRight.IsDisposed)
+                labelCopyRight.Text = $"© 2013–{DateTime.Now.Year}";
+
+            // 最後にレイアウト
+            LayoutInfoTabResponsiveSafe();
+        }
+
+        private static DateTime GetAssemblyWriteTime(Assembly asm)
+        {
+            try { return File.GetLastWriteTime(asm.Location); }
+            catch { return DateTime.Now; }
+        }
+
+        private void LayoutInfoTabResponsiveSafe()
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            if (InvokeRequired) { try { BeginInvoke((Action)LayoutInfoTabResponsiveSafe); } catch { } return; }
+
             LayoutInfoTabResponsive();
         }
         // =========================================================
@@ -652,24 +687,6 @@ namespace Kiritori
                 using (var p = new Pen(SystemColors.ControlLight))
                 {
                     e.Graphics.DrawLine(p, 0, this.Height / 2, this.Width, this.Height / 2);
-                }
-            }
-        }
-        // ToolStrip / ContextMenuStrip 用のローカライズ適用
-        private static void ApplyToolStripLocalization(ToolStripItemCollection items)
-        {
-            foreach (ToolStripItem it in items)
-            {
-                // 自分自身
-                if (it.Tag is string tag && tag.StartsWith("loc:", StringComparison.Ordinal))
-                {
-                    it.Text = SR.T(tag.Substring(4));
-                }
-
-                // サブメニューを再帰
-                if (it is ToolStripDropDownItem dd)
-                {
-                    ApplyToolStripLocalization(dd.DropDownItems);
                 }
             }
         }

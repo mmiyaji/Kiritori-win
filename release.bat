@@ -13,7 +13,8 @@ set "PAUSE_AT_END="
 if "%~1"=="" (
   echo バージョン番号を入力してください（例: 1.1.3）:
   set /p VERSION=Version: 
-  if "%VERSION%"=="" (
+  rem ← 遅延展開でチェック
+  if "!VERSION!"=="" (
     echo [ERROR] バージョンが指定されませんでした。
     set "PAUSE_AT_END=1"
     goto :end_fail
