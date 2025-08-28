@@ -376,7 +376,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Capture Background Transparency (%) に類似しているローカライズされた文字列を検索します。
+        ///   Capture Background Opacity (%) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Setting_Display_CaptureBackgroundAlphaPercent {
             get {
@@ -403,7 +403,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Hover Highlight Transparency (%) に類似しているローカライズされた文字列を検索します。
+        ///   Hover Highlight Opacity (%) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Setting_Display_HoverHighlightAlphaPercent {
             get {
@@ -426,6 +426,15 @@ namespace Kiritori.Properties {
         internal static string Setting_Display_HoverHighlightThickness {
             get {
                 return ResourceManager.GetString("Setting.Display.HoverHighlightThickness", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Initial Startup State Management に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_isFirstRunShown {
+            get {
+                return ResourceManager.GetString("Setting.Display.isFirstRunShown", resourceCulture);
             }
         }
         
@@ -1164,6 +1173,15 @@ namespace Kiritori.Properties {
         internal static string Text_ZoomReset {
             get {
                 return ResourceManager.GetString("Text.ZoomReset", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Captured に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Toast_Captured {
+            get {
+                return ResourceManager.GetString("Toast.Captured", resourceCulture);
             }
         }
         

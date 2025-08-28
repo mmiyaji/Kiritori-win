@@ -22,27 +22,12 @@ namespace Kiritori
         private static PrefForm _instance;
         private bool _initStartupToggle = false;
         private bool _initLang = false;
-
+        // private bool _loadingUi = false;
         private bool _isDirty = false;          // 何か設定が変わった
         private int _suppressDirty = 0;        // 内部処理中は Dirty を抑制（Save/Reload 中など）
         private string _baselineHash = "";      // 保存済み（またはロード直後）の基準ハッシュ
         private System.Collections.Generic.Dictionary<string, string> _baselineMap =
                     new System.Collections.Generic.Dictionary<string, string>();
-        private static readonly Dictionary<string, string> SettingDisplayNames =
-                    new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                    {
-                        { "isStartup", "Run at Startup" },
-                        { "isOpenMenuOnAppStart", "Open Menu on App Start" },
-                        { "isScreenGuide", "Show Screen Guide" },
-                        { "isHighlightWindowOnHover", "Highlight Window on Hover" },
-                        { "HoverHighlightColor", "Hover Highlight Color" },
-                        { "HoverHighlightAlphaPercent", "Hover Highlight Transparency" },
-                        { "HoverHighlightThickness", "Hover Highlight Thickness" },
-                        { "CaptureBackgroundColor", "Capture Background Color" },
-                        { "CaptureBackgroundAlphaPercent", "Capture Background Transparency" },
-                        { "HistoryLimit", "History Limit" },
-                        { "UICulture", "Language" },
-                    };
 
         // =========================================================
         // ==================== Constructor ========================
@@ -53,10 +38,11 @@ namespace Kiritori
             _initLang = true;
 
             InitializeComponent();
+            _loadingUi = true;
+
             PopulatePresetCombos();
             WireUpDataBindings();
             SelectPresetComboFromSettings();
-            HookRuntimeEvents();
 
             // デザイナの勝手なバインディングを解除
             var b = this.chkRunAtStartup.DataBindings["Checked"];
@@ -83,8 +69,13 @@ namespace Kiritori
             // Language コンボの初期化と保存値の復元（SelectedIndexChanged が走ってもガードできるように）
             InitLanguageCombo();
 
+            _loadingUi = false;
+            HookRuntimeEvents();
+
             // ※ ここでは PropertyChanged を購読しない（初期化で発火するため）
             // 基準ハッシュの初期化も Load 完了後に行う
+            // DumpSettingsKeys();
+            // DumpControlBindings(this);
         }
 
         // =========================================================
@@ -704,8 +695,8 @@ namespace Kiritori
             if (btnOpenStartupSettings != null && !btnOpenStartupSettings.IsDisposed)
             {
                 btnOpenStartupSettings.Text = PackagedHelper.IsPackaged()
-                    ? T("Text.BtnStartupSetting", "Startup settings")
-                    : T("Text.BtnStartupFolder", "Open Startup folder");
+                    ? TSafe("Text.BtnStartupSetting", "Startup settings")
+                    : TSafe("Text.BtnStartupFolder", "Open Startup folder");
             }
 
             // 起動管理の説明＆ツールチップ（あれば）
@@ -713,8 +704,8 @@ namespace Kiritori
             {
                 if (PackagedHelper.IsPackaged())
                 {
-                    labelStartupInfo.Text = T("Text.StartupManaged", "Startup is managed by Windows.");
-                    toolTip1.SetToolTip(labelStartupInfo, T("Text.StartupManagedTip", "Settings > Apps > Startup"));
+                    labelStartupInfo.Text = TSafe("Text.StartupManaged", "Startup is managed by Windows.");
+                    toolTip1.SetToolTip(labelStartupInfo, TSafe("Text.StartupManagedTip", "Settings > Apps > Startup"));
                 }
                 // 非 MSIX側の表示は必要ならここに
             }
@@ -925,6 +916,30 @@ namespace Kiritori
         {
             // 見つからなければキー名をそのまま出す
             return TSafe("Setting.Display." + key, key);
+        }
+        static void DumpSettingsKeys()
+        {
+            Debug.WriteLine("=== Settings.Keys ===");
+            foreach (SettingsProperty p in Kiritori.Properties.Settings.Default.Properties)
+                Debug.WriteLine($"- {p.Name} : {p.PropertyType}");
+        }
+        
+        static void DumpControlBindings(Form f)
+        {
+            Debug.WriteLine("=== Control Bindings to Settings ===");
+            void Walk(Control c)
+            {
+                foreach (Binding b in c.DataBindings)
+                {
+                    if (object.ReferenceEquals(b.DataSource, Kiritori.Properties.Settings.Default))
+                        Debug.WriteLine($"- {c.Name}.{b.PropertyName} <= {b.BindingMemberInfo.BindingField}");
+                }
+                foreach (Control child in c.Controls) Walk(child);
+                if (f.MainMenuStrip != null)
+                    foreach (ToolStripItem it in f.MainMenuStrip.Items)
+                        ; // （メニューに設定バインドしてなければスキップでOK）
+            }
+            Walk(f);
         }
         // =========================================================
         // ================== Nested UI Controls ===================

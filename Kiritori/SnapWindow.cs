@@ -2,14 +2,15 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
+using System.Security.Principal;
 using System.Text;
 using System.Windows.Forms;
-using System.Diagnostics;
-using System.IO;
-using System.Drawing.Imaging;
-using System.Drawing.Drawing2D;
 
 namespace Kiritori
 {
@@ -169,7 +170,7 @@ namespace Kiritori
             };
             // ハンドル作成後に UI へ反映
             ApplyUiFromFields();
-            
+
 
             // 設定変更の監視
             HookSettingsChanged();
@@ -182,7 +183,7 @@ namespace Kiritori
 
             this.DoubleBuffered = true;
             this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.AutoScaleDimensions = new SizeF(96F, 96F);
+            this.AutoScaleDimensions = new SizeF(96F, 96F);            
         }
 
         public Bitmap GetMainImage() => (Bitmap)pictureBox1.Image;
@@ -688,6 +689,72 @@ namespace Kiritori
             this.setThumbnail(bmp);
             if (!SuppressHistory) ma.setHistory(this);
             ShowOverlay("Kiritori");
+        }
+        public void CaptureFromBitmap(Bitmap source, Rectangle crop, Point desiredScreenPos)
+        {
+            // 1) 安全にトリミング
+            Rectangle safe = Rectangle.Intersect(crop, new Rectangle(0, 0, source.Width, source.Height));
+            if (safe.Width <= 0 || safe.Height <= 0) return;
+
+            // 2) Cloneで切り出し（sourceは呼び出し元が管理）
+            Bitmap cropped = source.Clone(safe, source.PixelFormat);
+
+            // 3) 共通適用
+            ApplyBitmap(cropped);
+
+            // 4) クライアント左上を物理座標 desired に合わせる（枠・DPI差を補正）
+            AlignClientTopLeftToScreen(desiredScreenPos);
+        }
+
+        private void ApplyBitmap(Bitmap bmp)
+        {
+            // 既存画像の破棄（リーク防止）
+            if (pictureBox1.Image != null && !ReferenceEquals(pictureBox1.Image, bmp))
+            {
+                try { pictureBox1.Image.Dispose(); } catch { }
+            }
+            if (main_image != null && !ReferenceEquals(main_image, bmp))
+            {
+                try { main_image.Dispose(); } catch { }
+            }
+
+            // UI適用
+            this.Size = bmp.Size;
+            pictureBox1.Size = bmp.Size;
+
+            // 既存のズーム管理があるなら使う
+            SetImageAndResetZoom(bmp);
+            pictureBox1.Image = bmp;
+
+            // メタ・状態
+            date = DateTime.Now;
+            this.Text = date.ToString("yyyyMMdd-HHmmss") + ".png";
+            this.TopMost = this.isAfloatWindow;
+            this.Opacity = this.WindowAlphaPercent;
+
+            // 所有を明確に
+            this.main_image = bmp;
+            this.setThumbnail(bmp);
+            if (!SuppressHistory) ma.setHistory(this);
+            ShowOverlay("Kiritori");
+        }
+
+        /// <summary>
+        /// ウィンドウのクライアント左上（0,0）を、指定スクリーン座標に合わせる
+        /// （枠/タイトルバー/DPI差によるズレを実測で補正）
+        /// </summary>
+        public void AlignClientTopLeftToScreen(Point targetScreenPoint)
+        {
+            if (!this.IsHandleCreated) this.CreateControl();
+            if (!this.Visible) this.Show();
+
+            var clientTopLeftOnScreen = this.PointToScreen(Point.Empty);
+            var dx = targetScreenPoint.X - clientTopLeftOnScreen.X;
+            var dy = targetScreenPoint.Y - clientTopLeftOnScreen.Y;
+            if (dx != 0 || dy != 0)
+            {
+                this.Location = new Point(this.Location.X + dx, this.Location.Y + dy);
+            }
         }
 
         private void setThumbnail(Bitmap bmp)

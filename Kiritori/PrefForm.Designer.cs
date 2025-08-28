@@ -352,7 +352,7 @@ namespace Kiritori
             var tlpCap = NewGrid(2, 2);
 
             this.chkScreenGuide = new CheckBox { Text = "Show guide lines", Checked = true, AutoSize = true, Tag = "loc:Text.ShowGuide" };
-            this.chkTrayNotify = new CheckBox { Text = "Notify in tray on capture", AutoSize = true, Enabled = false, Tag = "loc:Text.NotifyTray" };
+            this.chkTrayNotify = new CheckBox { Text = "Notify in tray on capture", AutoSize = true, Tag = "loc:Text.NotifyTray" };
             this.chkPlaySound = new CheckBox { Text = "Play sound on capture", AutoSize = true, Enabled = false, Tag = "loc:Text.PlaySound" };
 
             var flowToggles = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
@@ -971,6 +971,8 @@ namespace Kiritori
         private void WireUpDataBindings()
         {
             var S = Properties.Settings.Default;
+            this.trackbarDefaultOpacity.DataBindings.Clear();
+            this.labelDefaultOpacityVal.DataBindings.Clear();
 
             // --- Background preview <-> Settings ---
             // 色
@@ -1001,11 +1003,32 @@ namespace Kiritori
                 new Binding("Value", S, nameof(S.HoverHighlightThickness), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkScreenGuide.DataBindings.Add(
                 new Binding("Checked", S, nameof(S.isScreenGuide), true, DataSourceUpdateMode.OnPropertyChanged));
-            this.trackbarDefaultOpacity.DataBindings.Add(
-                new Binding("Value", S, nameof(S.WindowAlphaPercent), true, DataSourceUpdateMode.OnPropertyChanged));
+            this.chkTrayNotify.DataBindings.Add(
+                new Binding("Checked", S, nameof(S.isShowNotify), true, DataSourceUpdateMode.OnPropertyChanged));
 
-            var lblOpacityBinding = new Binding("Text", S, nameof(S.WindowAlphaPercent), true, DataSourceUpdateMode.Never);
-            lblOpacityBinding.Format += (o, e) => e.Value = $"{e.Value}%";
+            if (S.WindowAlphaPercent < this.trackbarDefaultOpacity.Minimum)
+                S.WindowAlphaPercent = this.trackbarDefaultOpacity.Minimum;
+            if (S.WindowAlphaPercent > this.trackbarDefaultOpacity.Maximum)
+                S.WindowAlphaPercent = this.trackbarDefaultOpacity.Maximum;
+
+            this.trackbarDefaultOpacity.DataBindings.Add(
+                new Binding("Value", S, nameof(S.WindowAlphaPercent),
+                    /* formattingEnabled */ true,
+                    DataSourceUpdateMode.OnPropertyChanged));
+
+            // 4) ラベルは表示専用（int → "NN%" に変換）
+            var lblOpacityBinding = new Binding(
+                "Text", S, nameof(S.WindowAlphaPercent),
+                /* formattingEnabled */ true,
+                DataSourceUpdateMode.Never);
+            lblOpacityBinding.Format += (o, e) =>
+            {
+                // e.Value は int（または boxed int）を想定
+                int v;
+                if (e.Value is int iv) v = iv;
+                else int.TryParse(e.Value?.ToString(), out v);
+                e.Value = v + "%";
+            };
             this.labelDefaultOpacityVal.DataBindings.Add(lblOpacityBinding);
 
             // Run at startup は OS 処理が絡むため表示だけ同期＋既存ハンドラで処理

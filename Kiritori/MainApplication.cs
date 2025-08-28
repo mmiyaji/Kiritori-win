@@ -84,9 +84,9 @@ namespace Kiritori
             // 初回だけは強制表示
             if (!Settings.Default.isFirstRunShown)
             {
-                PrefForm.ShowSingleton(this);
                 Settings.Default.isFirstRunShown = true;
                 Settings.Default.Save(); // 記録
+                PrefForm.ShowSingleton(this);
                 return;
             }
             if (Settings.Default.isOpenMenuOnAppStart)
@@ -399,7 +399,10 @@ namespace Kiritori
                 }
             }
         }
+        public NotifyIcon NotifyIcon
+        {
+            get { return this.notifyIcon1; }
+        }    
 
     }
-    
 }

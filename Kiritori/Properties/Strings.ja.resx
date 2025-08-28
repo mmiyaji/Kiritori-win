@@ -124,7 +124,7 @@
     <value>設定メニュー</value>
   </data>
   <data name="Tab.General" xml:space="preserve">
-    <value>一般</value>
+    <value>全般</value>
   </data>
   <data name="Tab.Appearance" xml:space="preserve">
     <value>表示</value>
@@ -472,7 +472,7 @@
     <value>ホバー強調色</value>
   </data>
   <data name="Setting.Display.HoverHighlightAlphaPercent" xml:space="preserve">
-    <value>ホバー強調の透明度 (%)</value>
+    <value>ホバー強調の不透明度 (%)</value>
   </data>
   <data name="Setting.Display.HoverHighlightThickness" xml:space="preserve">
     <value>ホバー強調の線の太さ (px)</value>
@@ -481,12 +481,18 @@
     <value>キャプチャ背景色</value>
   </data>
   <data name="Setting.Display.CaptureBackgroundAlphaPercent" xml:space="preserve">
-    <value>キャプチャ背景の透明度 (%)</value>
+    <value>キャプチャ背景の不透明度 (%)</value>
   </data>
   <data name="Setting.Display.HistoryLimit" xml:space="preserve">
     <value>履歴の保存件数</value>
   </data>
   <data name="Setting.Display.UICulture" xml:space="preserve">
     <value>表示言語</value>
+  </data>
+  <data name="Setting.Display.isFirstRunShown" xml:space="preserve">
+    <value>初回起動状態管理</value>
+  </data>
+  <data name="Toast.Captured" xml:space="preserve">
+    <value>キャプチャーしました</value>
   </data>
 </root>

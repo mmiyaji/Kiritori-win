@@ -157,7 +157,7 @@ namespace Kiritori.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("60")]
+        [global::System.Configuration.DefaultSettingValueAttribute("80")]
         public int HoverHighlightAlphaPercent {
             get {
                 return ((int)(this["HoverHighlightAlphaPercent"]));
@@ -169,7 +169,7 @@ namespace Kiritori.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("5")]
+        [global::System.Configuration.DefaultSettingValueAttribute("6")]
         public int HoverHighlightThickness {
             get {
                 return ((int)(this["HoverHighlightThickness"]));

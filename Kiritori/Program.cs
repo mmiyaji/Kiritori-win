@@ -1,12 +1,17 @@
-﻿using System;
+﻿using CommunityToolkit.WinUI.Notifications;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-//using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.Diagnostics;
+using System.Drawing;
+using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Globalization;
+//using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Configuration;
+
 namespace Kiritori
 {
     static class Program
@@ -39,10 +44,16 @@ namespace Kiritori
         [STAThread]
         static void Main()
         {
+            // try
+            // {
+            //     HealUserConfig();
+            // }
+            // catch {  }
             try
             {
                 Thread.CurrentThread.CurrentUICulture = new CultureInfo(Properties.Settings.Default.UICulture);
-            }catch { }
+            }
+            catch { }
             // ===== DPI Awareness を可能な限り高く設定 =====
             bool dpiSet = false;
             try
@@ -81,6 +92,63 @@ namespace Kiritori
                 System.Diagnostics.Debug.WriteLine($"[DPI] Awareness={v}");
             }
             catch { }
+            if (!PackagedHelper.IsPackaged())
+            {
+                DesktopNotificationManagerCompat.RegisterAumidAndComServer<MyToastActivator>("Kiritori.Desktop");
+                DesktopNotificationManagerCompat.RegisterActivator<MyToastActivator>();
+            }
+            ToastNotificationManagerCompat.OnActivated += e =>
+            {
+                try
+                {
+                    var ta = ToastArguments.Parse(e.Argument ?? string.Empty);
+
+                    string action = null;
+                    string path = null;
+                    ta.TryGetValue("action", out action);
+                    ta.TryGetValue("path", out path);
+
+                    // 既定動作（本文クリックで引数が無い場合の保険）
+                    if (string.IsNullOrEmpty(action)) action = "open";
+
+                    // UI スレッドへ
+                    var anyForm = System.Windows.Forms.Application.OpenForms.Count > 0
+                                ? System.Windows.Forms.Application.OpenForms[0]
+                                : null;
+
+                    void RunOnUI(Action act)
+                    {
+                        if (anyForm != null && anyForm.IsHandleCreated)
+                            anyForm.BeginInvoke(act);
+                        else
+                        {
+                            // 念のため単発 STA スレッドでも対応
+                            var t = new System.Threading.Thread(() => act());
+                            t.SetApartmentState(System.Threading.ApartmentState.STA);
+                            t.Start();
+                        }
+                    }
+
+                    if (action == "copy" && !string.IsNullOrEmpty(path) && System.IO.File.Exists(path))
+                    {
+                        RunOnUI(() => CopyImageToClipboardSafe(path));
+                    }
+                    else if (action == "open" && !string.IsNullOrEmpty(path) && System.IO.File.Exists(path))
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
+                    }
+                    else if (action == "openFolder")
+                    {
+                        var dir = System.IO.Directory.Exists(path) ? path : System.IO.Path.GetDirectoryName(path);
+                        if (!string.IsNullOrEmpty(dir))
+                            System.Diagnostics.Process.Start("explorer.exe", "/select,\"" + path + "\"");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("[Toast OnActivated] " + ex);
+                }
+            };
 
             Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
             Application.EnableVisualStyles();
@@ -88,5 +156,67 @@ namespace Kiritori
             new MainApplication();
             Application.Run();
         }
+        static void CopyImageToClipboardSafe(string path)
+        {
+            try
+            {
+                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var img = Image.FromStream(fs)) // ここでの img はストリームに依存
+                using (var bmp = new Bitmap(img))      // 独立したコピーを作る（ファイルロック回避）
+                {
+                    // クリップボード競合に備えて軽くリトライ（任意）
+                    const int maxTry = 3;
+                    for (int i = 0; i < maxTry; i++)
+                    {
+                        try
+                        {
+                            Clipboard.SetImage(bmp);
+                            // （任意）トレイバルーン or トーストで「コピーしました」通知してもOK
+                            break;
+                        }
+                        catch (ExternalException) // クリップボードが他プロセスにロック等
+                        {
+                            Thread.Sleep(60);
+                            if (i == maxTry - 1) throw;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // 失敗時はログだけ（必要ならバルーンでエラー表示）
+                System.Diagnostics.Debug.WriteLine("[CopyImageToClipboardSafe] " + ex);
+            }
+        }
+        static void HealUserConfig()
+        {
+            try
+            {
+                Kiritori.Properties.Settings.Default.Upgrade();
+                Kiritori.Properties.Settings.Default.Save();
+            }
+            catch (ConfigurationErrorsException ex)
+            {
+                var bad = (ex.InnerException as ConfigurationErrorsException)?.Filename;
+                if (!string.IsNullOrEmpty(bad) && File.Exists(bad))
+                {
+                    try { File.Delete(bad); } catch { }
+                    Kiritori.Properties.Settings.Default.Reload();
+                    Kiritori.Properties.Settings.Default.Save();
+                    Debug.WriteLine("[Settings] user.config reset: " + bad);
+                }
+            }
+        }
     }
+    #pragma warning disable CS0618
+    [ComVisible(true)]
+    [Guid("B1D2B1C3-3B77-4F26-9A39-1D1A8D3A9A10")] // ←このGUIDを控える
+    [ClassInterface(ClassInterfaceType.None)]
+    public sealed class MyToastActivator : CommunityToolkit.WinUI.Notifications.NotificationActivator
+    {
+        public override void OnActivated(string arguments,
+                                        CommunityToolkit.WinUI.Notifications.NotificationUserInput userInput,
+                                        string appUserModelId) { }
+    }
+    #pragma warning restore CS0618
 }

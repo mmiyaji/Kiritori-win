@@ -113,3 +113,4 @@ UpgradeLog*.XML
 old_*
 Thumbs.db
 dist/
+MigrationBackup/

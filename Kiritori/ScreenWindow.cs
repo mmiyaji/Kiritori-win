@@ -9,6 +9,10 @@ using System.Text;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
 using System.Drawing.Drawing2D;
+using CommunityToolkit.WinUI.Notifications;
+using System.Diagnostics;
+using System.Security.Principal;
+using Windows.UI.Notifications;
 
 namespace Kiritori
 {
@@ -265,7 +269,7 @@ namespace Kiritori
         private Point startPointPhys;
         private Point hoverPoint = Point.Empty;
         private bool showHover = true;
-        private Point endPoint;
+        //private Point endPoint;
         private Rectangle rc;
         private Boolean isPressed = false;
 
@@ -354,24 +358,84 @@ namespace Kiritori
 
         private void ScreenWindow_MouseUp(object sender, MouseEventArgs e)
         {
-            if (isPressed)
-            {
-                endPoint = new Point(e.X, e.Y);
-                isPressed = false;
-                this.CloseScreen();
+            if (!isPressed) return;
+            isPressed = false;
 
-                if (rc.Width != 0 || rc.Height != 0)
+            if (rc.Width > 0 && rc.Height > 0 && baseBmp != null)
+            {
+                // 1) 先に安全クロップ
+                Rectangle crop = Rectangle.Intersect(rc, new Rectangle(0, 0, baseBmp.Width, baseBmp.Height));
+                if (crop.Width > 0 && crop.Height > 0)
                 {
-                    SnapWindow sw = new SnapWindow(this.ma);
-                    sw.StartPosition = FormStartPosition.Manual;
-                    sw.capture(new Rectangle(rc.X + x, rc.Y + y, rc.Width, rc.Height));
-                    sw.SetBounds(rc.X + x, rc.Y + y, 0, 0);
+                    this.Opacity = 0.0; // 透明化しておく
+                    // 2) 画面上の配置位置（物理座標）
+                    var desired = new Point(crop.X + x, crop.Y + y);
+
+                    // 3) SnapWindow を作って baseBmp から適用
+                    var sw = new SnapWindow(this.ma)
+                    {
+                        StartPosition = FormStartPosition.Manual
+                    };
+
+                    // CloseScreen() より前に baseBmp を使い切る or Clone して渡す
+                    sw.CaptureFromBitmap(baseBmp, crop, desired);
+
+                    // 4) もう原本は不要ならここで閉じる
+                    this.CloseScreen();
+
                     sw.FormClosing += new FormClosingEventHandler(SW_FormClosing);
                     captureArray.Add(sw);
-                    sw.Show();
+                    notifyCaptured();
+                    return;
                 }
             }
+            this.CloseScreen();
         }
+
+        private static DateTime _lastToastAt = DateTime.MinValue;
+
+        private void notifyCaptured()
+        {
+            if (!Properties.Settings.Default.isShowNotify) return;
+            // 直前の連打を抑止（例: 500ms 以内は捨てる）
+            var now = DateTime.Now;
+            if ((now - _lastToastAt).TotalMilliseconds < 500) return;
+            _lastToastAt = now;
+
+            try
+            {
+                var builder = new ToastContentBuilder()
+                    .AddArgument("action", "open")
+                    .AddText("Kiritori")
+                    .AddText(SR.T("Toast.Captured", "Captured"));
+
+                if (PackagedHelper.IsPackaged())
+                {
+                    // パッケージアプリ: そのまま送る
+                    builder.Show(t =>
+                    {
+                        t.Tag = "kiritori-capture";
+                        t.Group = "kiritori";
+                    });
+                }
+                else
+                {
+                    // 非パッケージの場合：ToastNotificationManager（Compatじゃない方）で AUMID を指定
+                    var xml = builder.GetToastContent().GetXml();
+                    var toast = new ToastNotification(xml) { Tag = "kiritori-capture", Group = "kiritori" };
+
+                    // ★ ここで AUMID（Startメニューのショートカットと一致するID）を指定
+                    ToastNotificationManager.CreateToastNotifier("Kiritori.App").Show(toast);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine("[Toast] Show() failed: " + ex);
+                var main = Application.OpenForms["MainApplication"] as Kiritori.MainApplication;
+                main?.NotifyIcon?.ShowBalloonTip(2500, "Kiritori", "キャプチャを保存しました", ToolTipIcon.None);
+            }
+        }
+
 
         private void RedrawHoverOnly()
         {
@@ -411,6 +475,20 @@ namespace Kiritori
             }
             pictureBox1.Refresh();
         }
+        static bool IsElevated()
+        {
+            var id = WindowsIdentity.GetCurrent();
+            try
+            {
+                var principal = new WindowsPrincipal(id);
+                return principal.IsInRole(WindowsBuiltInRole.Administrator);
+            }
+            finally
+            {
+                id?.Dispose();
+            }
+        }
+
 
         // ====== 複数ウィンドウ管理（既存） ======
         public void hideWindows()
