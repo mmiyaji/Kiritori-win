@@ -592,7 +592,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Save に類似しているローカライズされた文字列を検索します。
+        ///   OK に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_BtnSave {
             get {
@@ -808,7 +808,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Hotkeys に類似しているローカライズされた文字列を検索します。
+        ///   Global Hotkeys に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_Hotkeys {
             get {
@@ -1204,7 +1204,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Kiritori - minimized to tray (click to open) に類似しているローカライズされた文字列を検索します。
+        ///   Kiritori - click to open menu に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Tray_TrayIcon {
             get {

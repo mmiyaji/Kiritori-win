@@ -157,7 +157,7 @@
     <value>History limit</value>
   </data>
   <data name="Text.Hotkeys" xml:space="preserve">
-    <value>Hotkeys</value>
+    <value>Global Hotkeys</value>
   </data>
   <data name="Text.ImageCapture" xml:space="preserve">
     <value>Image Capture</value>
@@ -172,7 +172,7 @@
     <value>Exit Kiritori</value>
   </data>
   <data name="Text.BtnSave" xml:space="preserve">
-    <value>Save</value>
+    <value>OK</value>
   </data>
   <data name="Text.BtnCancel" xml:space="preserve">
     <value>Cancel</value>
@@ -298,7 +298,7 @@
     <value>Save image</value>
   </data>
   <data name="Tray.TrayIcon" xml:space="preserve">
-    <value>Kiritori - minimized to tray (click to open)</value>
+    <value>Kiritori - click to open menu</value>
   </data>
   <data name="Text.OpenImageFile" xml:space="preserve">
     <value>Open Image File</value>

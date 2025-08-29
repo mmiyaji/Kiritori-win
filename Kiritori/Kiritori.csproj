@@ -105,6 +105,18 @@
     <Compile Include="Helpers\Localizer.cs" />
     <Compile Include="Helpers\SR.cs" />
     <Compile Include="Helpers\HotKey.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Services\Settings\SettingsDirtyTracker.cs" />
+    <Compile Include="Views\Controls\AlphaPreviewPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Views\Controls\Separator.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Views\LiveCapture\LiveRegionWindow_GDI.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -170,14 +182,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DependentUpon>Resources.resx</DependentUpon>
-      <DesignTime>True</DesignTime>
-    </Compile>
     <None Include="Kiritori_4_TemporaryKey.pfx" />
     <None Include="Properties\app.manifest" />
     <None Include="Properties\Settings.settings">
@@ -195,6 +202,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="kiritori.ico" />
+    <Content Include="resources\kiritori.ico" />
     <None Include="resources\icon_128x128.png" />
   </ItemGroup>
   <ItemGroup>

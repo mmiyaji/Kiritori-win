@@ -1,5 +1,7 @@
 ﻿using Kiritori.Helpers;
 using Kiritori.Startup;
+using Kiritori.Views.Controls;
+using Kiritori.Services.Settings;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,6 +15,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+
 
 namespace Kiritori
 {
@@ -62,10 +65,10 @@ namespace Kiritori
                 this.Load += (_, __) => SafeApplyTextsAndLayout();
                 SR.CultureChanged += () => SafeApplyTextsAndLayout();
 
-                // アプリアイコンのスケーリング
-                var src = Properties.Resources.icon_128x128;
-                picAppIcon.Image?.Dispose();
-                picAppIcon.Image = ScaleBitmap(src, 120, 120);
+                // // アプリアイコンのスケーリング
+                // var src = Properties.Resources.icon_128x128;
+                // picAppIcon.Image?.Dispose();
+                // picAppIcon.Image = ScaleBitmap(src, 120, 120);
             }
 
             // Language コンボの初期化と保存値の復元（SelectedIndexChanged が走ってもガードできるように）
@@ -154,8 +157,8 @@ namespace Kiritori
                 // 初期化がすべて終わってから基準を撮る
                 using (SuppressDirtyScope())
                 {
-                    _baselineHash = ComputeSettingsHash();
-                    _baselineMap = BuildSettingsSnapshotMap();
+                    _baselineHash = SettingsDirtyTracker.ComputeSettingsHash();
+                    _baselineMap = SettingsDirtyTracker.BuildSettingsSnapshotMap();
                     _isDirty = false;
                     UpdateDirtyUI();
                 }
@@ -163,7 +166,7 @@ namespace Kiritori
                 Properties.Settings.Default.PropertyChanged += (_, __) =>
                 {
                     if (_suppressDirty > 0) return;
-                    var now = ComputeSettingsHash();
+                    var now = SettingsDirtyTracker.ComputeSettingsHash();
                     _isDirty = (now != _baselineHash);
                     UpdateDirtyUI();
                 };
@@ -217,16 +220,17 @@ namespace Kiritori
             }
         }
 
-        private void btnSavestings_Click(object sender, EventArgs e)
+        private void btnSaveSettings_Click(object sender, EventArgs e)
         {
             using (SuppressDirtyScope())
             {
                 Properties.Settings.Default.Save();
-                _baselineHash = ComputeSettingsHash();
-                _baselineMap = BuildSettingsSnapshotMap();
+                _baselineHash = SettingsDirtyTracker.ComputeSettingsHash();
+                _baselineMap = SettingsDirtyTracker.BuildSettingsSnapshotMap();
                 _isDirty = false;
                 UpdateDirtyUI();
             }
+            this.Close();
         }
 
         private void btnCancelSettings_Click(object sender, EventArgs e)
@@ -234,8 +238,8 @@ namespace Kiritori
             using (SuppressDirtyScope())
             {
                 Properties.Settings.Default.Reload();
-                _baselineHash = ComputeSettingsHash();
-                _baselineMap = BuildSettingsSnapshotMap();
+                _baselineHash = SettingsDirtyTracker.ComputeSettingsHash();
+                _baselineMap = SettingsDirtyTracker.BuildSettingsSnapshotMap();
                 _isDirty = false;
                 UpdateDirtyUI();
             }
@@ -249,7 +253,7 @@ namespace Kiritori
             if (_isDirty)
             {
                 int total;
-                string diff = FormatSettingsDiff(6, out total);
+                string diff = SettingsDirtyTracker.FormatSettingsDiff(6, out total, _baselineMap);
                 string msg = TSafe("Text.ExitWithUnsavedChanges", "Do you want to save the changes?")
                         + Environment.NewLine + Environment.NewLine
                         + diff + (diff.Length > 0 ? Environment.NewLine : "")
@@ -275,8 +279,8 @@ namespace Kiritori
                     {
                         Properties.Settings.Default.Reload();
                     }
-                    _baselineHash = ComputeSettingsHash();
-                    _baselineMap = BuildSettingsSnapshotMap();
+                    _baselineHash = SettingsDirtyTracker.ComputeSettingsHash();
+                    _baselineMap = SettingsDirtyTracker.BuildSettingsSnapshotMap();
                     _isDirty = false;
                     UpdateDirtyUI();
                 }
@@ -626,8 +630,8 @@ namespace Kiritori
                     {
                         Properties.Settings.Default.Reload();
                     }
-                    _baselineHash = ComputeSettingsHash();
-                    _baselineMap = BuildSettingsSnapshotMap();
+                    _baselineHash = SettingsDirtyTracker.ComputeSettingsHash();
+                    _baselineMap = SettingsDirtyTracker.BuildSettingsSnapshotMap();
                     _isDirty = false;
                     UpdateDirtyUI();
                 }
@@ -795,136 +799,7 @@ namespace Kiritori
         }
 
         // === Settings のスナップショット（ハッシュ）を作る ===
-        private static string ComputeSettingsHash()
-        {
-            var s = Properties.Settings.Default;
-            var sb = new StringBuilder(256);
-            foreach (SettingsProperty p in s.Properties)
-            {
-                object v = s[p.Name];
-                string str;
-                try
-                {
-                    var tc = TypeDescriptor.GetConverter(p.PropertyType);
-                    str = (tc != null && tc.CanConvertTo(typeof(string)))
-                        ? (tc.ConvertToInvariantString(v) ?? "")
-                        : (v != null ? v.ToString() : "");
-                }
-                catch
-                {
-                    str = (v != null ? v.ToString() : "");
-                }
-                sb.Append(p.Name).Append('=').Append(str).Append('\n');
-            }
-            using (var sha = SHA256.Create())
-            {
-                var bytes = Encoding.UTF8.GetBytes(sb.ToString());
-                var hash = sha.ComputeHash(bytes);
-                return BitConverter.ToString(hash).Replace("-", "");
-            }
-        }
 
-        private static Dictionary<string, string> BuildSettingsSnapshotMap()
-        {
-            var s = Properties.Settings.Default;
-            var map = new Dictionary<string, string>(StringComparer.Ordinal);
-
-            foreach (SettingsProperty p in s.Properties)
-            {
-                object v = s[p.Name];
-                string str;
-                try
-                {
-                    var tc = TypeDescriptor.GetConverter(p.PropertyType);
-                    str = (tc != null && tc.CanConvertTo(typeof(string)))
-                        ? (tc.ConvertToInvariantString(v) ?? "")
-                        : (v != null ? v.ToString() : "");
-                }
-                catch
-                {
-                    str = (v != null ? v.ToString() : "");
-                }
-                map[p.Name] = str;
-            }
-            return map;
-        }
-
-        private string FormatSettingsDiff(int maxLines, out int totalChanges)
-        {
-            var now = BuildSettingsSnapshotMap();
-            var lines = new System.Collections.Generic.List<string>();
-            totalChanges = 0;
-
-            foreach (var kv in now)
-            {
-                var key = kv.Key;
-                var cur = kv.Value ?? "";
-                string old;
-                _baselineMap.TryGetValue(key, out old);
-                old = old ?? "";
-
-                if (!string.Equals(old, cur, StringComparison.Ordinal))
-                {
-                    totalChanges++;
-                    if (lines.Count < maxLines)
-                    {
-                        var displayKey = DisplayNameFor(key);
-                        var oldV = FormatValueForDisplay(old, key);
-                        var newV = FormatValueForDisplay(cur, key);
-
-                        // 1行フォーマット（多言語）。既定: "{0}: {1} -> {2}"
-                        var line = string.Format(
-                            TSafe("Text.DiffLine", "{0}: {1} -> {2}"),
-                            displayKey, oldV, newV
-                        );
-                        lines.Add(line);
-                    }
-                }
-            }
-
-            var sb = new System.Text.StringBuilder();
-            for (int i = 0; i < lines.Count; i++)
-            {
-                sb.Append("• ").Append(lines[i]).Append(Environment.NewLine);
-            }
-            if (totalChanges > lines.Count)
-            {
-                // 既定: "…and {0} more"
-                sb.Append(string.Format(TSafe("Text.AndMoreNum", "…and {0} more"), totalChanges - lines.Count));
-            }
-            return sb.ToString();
-        }
-
-
-        private static string FormatValueForDisplay(string raw, string key)
-        {
-            if (string.IsNullOrEmpty(raw)) return TSafe("Common.Empty", "(empty)");
-
-            // bool → On/Off（多言語）
-            if (string.Equals(raw, "True",  StringComparison.OrdinalIgnoreCase)) return TSafe("Common.On",  "On");
-            if (string.Equals(raw, "False", StringComparison.OrdinalIgnoreCase)) return TSafe("Common.Off", "Off");
-
-            // Color [Cyan] → Cyan
-            if (raw.StartsWith("Color [", StringComparison.Ordinal) && raw.EndsWith("]", StringComparison.Ordinal))
-                return raw.Substring(7, raw.Length - 8);
-
-            // 数値系に単位を付けたい場合（キー名で判断）
-            if (key.EndsWith("AlphaPercent", StringComparison.Ordinal)) return raw + TSafe("Common.PercentSuffix", "%");
-            if (key.EndsWith("Thickness",    StringComparison.Ordinal)) return raw + TSafe("Common.PixelSuffix",   " px");
-
-            return raw;
-        }
-        private static string DisplayNameFor(string key)
-        {
-            // 見つからなければキー名をそのまま出す
-            return TSafe("Setting.Display." + key, key);
-        }
-        static void DumpSettingsKeys()
-        {
-            Debug.WriteLine("=== Settings.Keys ===");
-            foreach (SettingsProperty p in Kiritori.Properties.Settings.Default.Properties)
-                Debug.WriteLine($"- {p.Name} : {p.PropertyType}");
-        }
         
         static void DumpControlBindings(Form f)
         {
@@ -946,78 +821,7 @@ namespace Kiritori
         // =========================================================
         // ================== Nested UI Controls ===================
         // =========================================================
-        public class AlphaPreviewPanel : Panel
-        {
-            private Color _rgbColor = Color.Red;
-            private int _alphaPercent = 60;
 
-            [Bindable(true)]
-            public Color RgbColor
-            {
-                get { return _rgbColor; }
-                set { if (_rgbColor != value) { _rgbColor = value; Invalidate(); } }
-            }
-
-            [Bindable(true)]
-            public int AlphaPercent
-            {
-                get { return _alphaPercent; }
-                set
-                {
-                    var v = Math.Max(0, Math.Min(100, value));
-                    if (_alphaPercent != v) { _alphaPercent = v; Invalidate(); }
-                }
-            }
-
-            public AlphaPreviewPanel()
-            {
-                this.SetStyle(ControlStyles.AllPaintingInWmPaint
-                            | ControlStyles.OptimizedDoubleBuffer
-                            | ControlStyles.UserPaint, true);
-                this.BorderStyle = BorderStyle.FixedSingle;
-                this.Height = 24;
-                this.Width = 120;
-            }
-
-            protected override void OnPaint(PaintEventArgs e)
-            {
-                base.OnPaint(e);
-                var g = e.Graphics;
-                int sz = 6;
-                using (var brushDark = new SolidBrush(Color.LightGray))
-                using (var brushLight = new SolidBrush(Color.White))
-                {
-                    for (int y = 0; y < Height; y += sz)
-                        for (int x = 0; x < Width; x += sz)
-                            g.FillRectangle((((x / sz) + (y / sz)) % 2 == 0) ? brushDark : brushLight, x, y, sz, sz);
-                }
-
-                int alpha = (int)Math.Round(_alphaPercent * 2.55);
-                using (var overlay = new SolidBrush(Color.FromArgb(alpha, _rgbColor)))
-                {
-                    g.FillRectangle(overlay, ClientRectangle);
-                }
-            }
-        }
-
-        public class Separator : Control
-        {
-            public Separator()
-            {
-                this.Height = 1;
-                this.Dock = DockStyle.Top;
-                this.Margin = new Padding(0, 6, 0, 6);
-            }
-
-            protected override void OnPaint(PaintEventArgs e)
-            {
-                base.OnPaint(e);
-                using (var p = new Pen(SystemColors.ControlLight))
-                {
-                    e.Graphics.DrawLine(p, 0, this.Height / 2, this.Width, this.Height / 2);
-                }
-            }
-        }
         internal static class AppShutdown
         {
             public static bool ExitConfirmed; // 終了確認/未保存処理は済んだ

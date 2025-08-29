@@ -157,7 +157,7 @@
     <value>履歴の保存件数</value>
   </data>
   <data name="Text.Hotkeys" xml:space="preserve">
-    <value>ホットキー</value>
+    <value>グローバルホットキー設定</value>
   </data>
   <data name="Text.ImageCapture" xml:space="preserve">
     <value>画像キャプチャー</value>
@@ -298,7 +298,7 @@
     <value>キャプチャー画像を保存</value>
   </data>
   <data name="Tray.TrayIcon" xml:space="preserve">
-    <value>Kiritori - 最小化状態(クリックでメニュー起動)</value>
+    <value>Kiritori - クリックでメニュー起動</value>
   </data>
   <data name="Text.OpenImageFile" xml:space="preserve">
     <value>画像を開く</value>

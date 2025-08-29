@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Kiritori.Views.Controls;
+using System;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -144,7 +145,7 @@ namespace Kiritori
         private TableLayoutPanel bottomBar;
         private FlowLayoutPanel rightButtons;
         private Button btnCancelSettings;
-        private Button btnSavestings;
+        private Button btnSaveSettings;
         private Button btnExitAppLeft;
 
         // ========= Initialize =========
@@ -229,17 +230,17 @@ namespace Kiritori
             };
             this.btnCancelSettings.Click += new EventHandler(this.btnCancelSettings_Click);
 
-            this.btnSavestings = new Button
+            this.btnSaveSettings = new Button
             {
-                Text = "Save",
+                Text = "OK",
                 AutoSize = true,
                 Margin = new Padding(6, 6, 0, 6),
                 Tag = "loc:Text.BtnSave"
             };
-            this.btnSavestings.Click += new EventHandler(this.btnSavestings_Click);
+            this.btnSaveSettings.Click += new EventHandler(this.btnSaveSettings_Click);
 
             this.rightButtons.Controls.Add(this.btnCancelSettings);
-            this.rightButtons.Controls.Add(this.btnSavestings);
+            this.rightButtons.Controls.Add(this.btnSaveSettings);
 
             var spacer = new Panel { Dock = DockStyle.Fill };
 
