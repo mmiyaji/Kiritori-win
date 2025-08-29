@@ -1,6 +1,6 @@
 ﻿using System.Windows.Forms;
 
-namespace Kiritori
+namespace Kiritori.Helpers
 {
     public static class Localizer
     {

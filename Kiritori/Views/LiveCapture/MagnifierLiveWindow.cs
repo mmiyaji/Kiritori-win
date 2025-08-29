@@ -4,7 +4,7 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-namespace Kiritori
+namespace Kiritori.Views.LiveCapture
 {
     /// <summary>
     /// Magnification API を使って、指定領域の画面をライブで映し続けるフォーム

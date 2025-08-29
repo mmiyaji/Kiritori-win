@@ -1,5 +1,4 @@
-﻿using CommunityToolkit.WinUI.Notifications;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -92,63 +91,6 @@ namespace Kiritori
                 System.Diagnostics.Debug.WriteLine($"[DPI] Awareness={v}");
             }
             catch { }
-            if (!PackagedHelper.IsPackaged())
-            {
-                DesktopNotificationManagerCompat.RegisterAumidAndComServer<MyToastActivator>("Kiritori.Desktop");
-                DesktopNotificationManagerCompat.RegisterActivator<MyToastActivator>();
-            }
-            ToastNotificationManagerCompat.OnActivated += e =>
-            {
-                try
-                {
-                    var ta = ToastArguments.Parse(e.Argument ?? string.Empty);
-
-                    string action = null;
-                    string path = null;
-                    ta.TryGetValue("action", out action);
-                    ta.TryGetValue("path", out path);
-
-                    // 既定動作（本文クリックで引数が無い場合の保険）
-                    if (string.IsNullOrEmpty(action)) action = "open";
-
-                    // UI スレッドへ
-                    var anyForm = System.Windows.Forms.Application.OpenForms.Count > 0
-                                ? System.Windows.Forms.Application.OpenForms[0]
-                                : null;
-
-                    void RunOnUI(Action act)
-                    {
-                        if (anyForm != null && anyForm.IsHandleCreated)
-                            anyForm.BeginInvoke(act);
-                        else
-                        {
-                            // 念のため単発 STA スレッドでも対応
-                            var t = new System.Threading.Thread(() => act());
-                            t.SetApartmentState(System.Threading.ApartmentState.STA);
-                            t.Start();
-                        }
-                    }
-
-                    if (action == "copy" && !string.IsNullOrEmpty(path) && System.IO.File.Exists(path))
-                    {
-                        RunOnUI(() => CopyImageToClipboardSafe(path));
-                    }
-                    else if (action == "open" && !string.IsNullOrEmpty(path) && System.IO.File.Exists(path))
-                    {
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
-                    }
-                    else if (action == "openFolder")
-                    {
-                        var dir = System.IO.Directory.Exists(path) ? path : System.IO.Path.GetDirectoryName(path);
-                        if (!string.IsNullOrEmpty(dir))
-                            System.Diagnostics.Process.Start("explorer.exe", "/select,\"" + path + "\"");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine("[Toast OnActivated] " + ex);
-                }
-            };
 
             Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
             Application.EnableVisualStyles();

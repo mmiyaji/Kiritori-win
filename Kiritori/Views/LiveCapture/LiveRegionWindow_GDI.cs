@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace Kiritori
+namespace Kiritori.Views.LiveCapture
 {
     public sealed class LiveRegionWindow_GDI : Form
     {

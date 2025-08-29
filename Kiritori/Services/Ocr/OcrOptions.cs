@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Kiritori
+namespace Kiritori.Services.Ocr
 {
 
     public sealed class OcrOptions

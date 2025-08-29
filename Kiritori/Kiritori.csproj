@@ -104,23 +104,24 @@
   <ItemGroup>
     <Compile Include="Helpers\Localizer.cs" />
     <Compile Include="Helpers\SR.cs" />
-    <Compile Include="HotKey.cs" />
-    <Compile Include="LiveRegionWindow_GDI.cs">
+    <Compile Include="Helpers\HotKey.cs" />
+    <Compile Include="Views\LiveCapture\LiveRegionWindow_GDI.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="MagnifierLiveWindow.cs">
+    <Compile Include="Views\LiveCapture\MagnifierLiveWindow.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Services\Notifications\ToastBootstrapper.cs" />
     <Compile Include="Services\Ocr\IOcrProvider.cs" />
     <Compile Include="Services\Ocr\OcrOptions.cs" />
     <Compile Include="Services\Ocr\OcrResult.cs" />
     <Compile Include="Services\Ocr\OcrService.cs" />
     <Compile Include="Services\Ocr\WindowsOcrProvider.cs" />
-    <Compile Include="PackageHelper.cs" />
-    <Compile Include="PrefForm.cs">
+    <Compile Include="Helpers\PackageHelper.cs" />
+    <Compile Include="Views\PrefForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="PrefForm.Designer.cs">
+    <Compile Include="Views\PrefForm.Designer.cs">
       <DependentUpon>PrefForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\Strings.Designer.cs">
@@ -128,31 +129,32 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Strings.resx</DependentUpon>
     </Compile>
-    <Compile Include="ScreenWindow.cs">
+    <Compile Include="Views\ScreenWindow.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="ScreenWindow.Designer.cs">
+    <Compile Include="Views\ScreenWindow.Designer.cs">
       <DependentUpon>ScreenWindow.cs</DependentUpon>
     </Compile>
-    <Compile Include="Services\NotificationService.cs" />
-    <Compile Include="Settings.cs" />
-    <Compile Include="SnapWindow.cs">
+    <Compile Include="Services\Notifications\NotificationService.cs" />
+    <Compile Include="Properties\Settings.cs" />
+    <Compile Include="Views\SnapWindow.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="SnapWindow.Designer.cs">
+    <Compile Include="Views\SnapWindow.Designer.cs">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </Compile>
-    <Compile Include="MainApplication.cs" />
-    <Compile Include="MainApplication.Designer.cs">
+    <Compile Include="Views\MainApplication.cs" />
+    <Compile Include="Views\MainApplication.Designer.cs">
       <DependentUpon>MainApplication.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="StartupManager.cs" />
-    <EmbeddedResource Include="MainApplication.resx">
+    <Compile Include="Startup\StartupManager.cs" />
+    <Compile Include="Startup\ShellLinkWriter.cs" />
+    <EmbeddedResource Include="Views\MainApplication.resx">
       <DependentUpon>MainApplication.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="PrefForm.resx">
+    <EmbeddedResource Include="Views\PrefForm.resx">
       <DependentUpon>PrefForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Strings.ja.resx" />
@@ -160,10 +162,10 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Strings.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Include="ScreenWindow.resx">
+    <EmbeddedResource Include="Views\ScreenWindow.resx">
       <DependentUpon>ScreenWindow.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="SnapWindow.resx">
+    <EmbeddedResource Include="Views\SnapWindow.resx">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
@@ -217,6 +219,7 @@
       <Version>7.1.2</Version>
     </PackageReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

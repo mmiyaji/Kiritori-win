@@ -2,7 +2,7 @@
 using System.Globalization;
 using System.Threading;
 
-namespace Kiritori
+namespace Kiritori.Helpers
 {
     public static class SR
     {

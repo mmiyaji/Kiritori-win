@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using CommunityToolkit.WinUI.Notifications; // ToastContentBuilder, ToastNotificationManagerCompat
 
-namespace Kiritori.Services
+namespace Kiritori.Services.Notifications
 {
     internal static class NotificationService
     {
