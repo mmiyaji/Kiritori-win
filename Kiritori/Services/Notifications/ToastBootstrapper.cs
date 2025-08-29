@@ -1,97 +1,108 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using CommunityToolkit.WinUI.Notifications;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
+using CommunityToolkit.WinUI.Notifications; // DesktopNotificationManagerCompat, ToastArguments
 using Kiritori.Helpers;
-using Kiritori.Startup;
 
 namespace Kiritori.Services.Notifications
 {
     internal static class ToastBootstrapper
     {
-        internal const string Aumid = "Kiritori.Desktop";
+        private static string Aumid = NotificationService.GetAppAumid();
+        private const string ShortcutName = "Kiritori";     // Startメニューに表示される名前
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        private static extern int SetCurrentProcessExplicitAppUserModelID(string appID);
+
+        private static bool _initialized;
 
         internal static void Initialize()
         {
-            // Packaged (MSIX) の場合は AUMID 登録不要
+            if (_initialized) return;
+            _initialized = true;
+
             if (!PackagedHelper.IsPackaged())
             {
-                DesktopNotificationManagerCompat.RegisterAumidAndComServer<MyToastActivator>("Kiritori.Desktop");
+                // 1) Start メニューに AUMID 付きショートカットを用意
+                EnsureStartMenuShortcut(ShortcutName + ".lnk", Aumid, Application.ExecutablePath);
+
+                // 2) AUMID と COM アクティベータを登録（非管理者でOK）
+                DesktopNotificationManagerCompat.RegisterAumidAndComServer<MyToastActivator>(Aumid);
+                DesktopNotificationManagerCompat.RegisterActivator<MyToastActivator>();
+
+                // 3) （推奨）プロセスにも AUMID を付与
+                try { SetCurrentProcessExplicitAppUserModelID(Aumid); } catch { }
+            }
+            else
+            {
+                // パッケージ時は AUMID/lnk 不要。OnActivated を使うため RegisterActivator のみ。
                 DesktopNotificationManagerCompat.RegisterActivator<MyToastActivator>();
             }
+
+            // クリック時ハンドラ（重複登録しない）
             ToastNotificationManagerCompat.OnActivated += e =>
             {
                 try
                 {
                     var ta = ToastArguments.Parse(e.Argument ?? string.Empty);
+                    var action = ta.Get("action") ?? "open";
+                    var path   = ta.Get("path");
 
-                    string action = null;
-                    string path = null;
-                    ta.TryGetValue("action", out action);
-                    ta.TryGetValue("path", out path);
-
-                    // 既定動作（本文クリックで引数が無い場合の保険）
-                    if (string.IsNullOrEmpty(action)) action = "open";
-
-                    // UI スレッドへ
-                    var anyForm = System.Windows.Forms.Application.OpenForms.Count > 0
-                                ? System.Windows.Forms.Application.OpenForms[0]
-                                : null;
-
-                    void RunOnUI(Action act)
+                    // UIスレッドへ（起動直後などフォームが無いケースも考慮）
+                    var anyForm = Application.OpenForms.Count > 0 ? Application.OpenForms[0] : null;
+                    void OnUI(Action a)
                     {
-                        if (anyForm != null && anyForm.IsHandleCreated)
-                            anyForm.BeginInvoke(act);
+                        if (anyForm != null && anyForm.IsHandleCreated) anyForm.BeginInvoke(a);
                         else
                         {
-                            // 念のため単発 STA スレッドでも対応
-                            var t = new System.Threading.Thread(() => act());
+                            var t = new System.Threading.Thread(() => a());
                             t.SetApartmentState(System.Threading.ApartmentState.STA);
                             t.Start();
                         }
                     }
 
-                    if (action == "copy" && !string.IsNullOrEmpty(path) && System.IO.File.Exists(path))
+                    if (action == "open" && !string.IsNullOrEmpty(path) && File.Exists(path))
+                        Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+                    else if (action == "openFolder" && !string.IsNullOrEmpty(path))
                     {
-                        //RunOnUI(() => CopyImageToClipboardSafe(path));
-                    }
-                    else if (action == "open" && !string.IsNullOrEmpty(path) && System.IO.File.Exists(path))
-                    {
-                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
-                    }
-                    else if (action == "openFolder")
-                    {
-                        var dir = System.IO.Directory.Exists(path) ? path : System.IO.Path.GetDirectoryName(path);
+                        var dir = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
                         if (!string.IsNullOrEmpty(dir))
-                            System.Diagnostics.Process.Start("explorer.exe", "/select,\"" + path + "\"");
+                            Process.Start("explorer.exe", "/select,\"" + path + "\"");
                     }
+                    // 例: copy アクションを実装したい場合はここに
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine("[Toast OnActivated] " + ex);
+                    Debug.WriteLine("[Toast OnActivated] " + ex);
                 }
-            };
-
-
-            // クリック時ハンドラ（どこか1回だけ購読）
-            ToastNotificationManagerCompat.OnActivated += e =>
-            {
-                var args = ToastArguments.Parse(e.Argument);
-                var action = args.Get("action");
-                var path = args.Get("path");
-                // TODO: あなたの処理へ委譲
             };
         }
 
         private static void EnsureStartMenuShortcut(string linkName, string aumid, string exePath)
         {
-            string startMenu = Environment.GetFolderPath(Environment.SpecialFolder.StartMenu);
-            string linkPath = Path.Combine(startMenu, "Programs", linkName);
-            Directory.CreateDirectory(Path.GetDirectoryName(linkPath) ?? startMenu);
-            if (File.Exists(linkPath)) return;
+            if (string.IsNullOrWhiteSpace(linkName)) throw new ArgumentException(nameof(linkName));
+            if (string.IsNullOrWhiteSpace(aumid)) throw new ArgumentException(nameof(aumid));
+            if (string.IsNullOrWhiteSpace(exePath)) throw new ArgumentException(nameof(exePath));
 
-            // （先にお渡しした IShellLink / IPropertyStore の実装をそのまま使用）
-            ShellLinkWriter.CreateOrUpdateShortcutWithAumid(linkPath, exePath, aumid);
+            // 拡張子が無ければ .lnk を付ける
+            if (Path.GetExtension(linkName).Length == 0)
+                linkName += ".lnk";
+
+            // 「スタートメニュー > プログラム」直下のパスを取得
+            var programsDir = Environment.GetFolderPath(Environment.SpecialFolder.Programs);
+            if (string.IsNullOrEmpty(programsDir))
+                throw new InvalidOperationException("Failed to resolve Start Menu Programs folder.");
+
+            var linkPath = Path.Combine(programsDir, linkName);
+
+            // 存在しなくても OK（存在しても例外にならない）
+            Directory.CreateDirectory(programsDir);
+
+            // 既存 .lnk があっても AUMID 更新が必要なことがあるので、毎回「作成または更新」するのがおすすめ
+            // 既存なら何もしない方が良ければ、事前に File.Exists(linkPath) を見て return してください。
+            Startup.ShellLinkWriter.CreateOrUpdateShortcutWithAumid(linkPath, exePath, aumid);
         }
     }
 }

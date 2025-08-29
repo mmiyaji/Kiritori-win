@@ -10,6 +10,8 @@ using System.Threading;
 //using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Configuration;
+using Kiritori.Helpers;
+using Kiritori.Startup;
 
 namespace Kiritori
 {
@@ -43,11 +45,6 @@ namespace Kiritori
         [STAThread]
         static void Main()
         {
-            // try
-            // {
-            //     HealUserConfig();
-            // }
-            // catch {  }
             try
             {
                 Thread.CurrentThread.CurrentUICulture = new CultureInfo(Properties.Settings.Default.UICulture);
@@ -95,8 +92,7 @@ namespace Kiritori
             Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            new MainApplication();
-            Application.Run();
+            Application.Run(new MainApplication());
         }
         static void CopyImageToClipboardSafe(string path)
         {
@@ -152,7 +148,7 @@ namespace Kiritori
     }
     #pragma warning disable CS0618
     [ComVisible(true)]
-    [Guid("B1D2B1C3-3B77-4F26-9A39-1D1A8D3A9A10")] // ←このGUIDを控える
+    [Guid("013AE16E-2760-4474-845B-7F47DF556826")]
     [ClassInterface(ClassInterfaceType.None)]
     public sealed class MyToastActivator : CommunityToolkit.WinUI.Notifications.NotificationActivator
     {

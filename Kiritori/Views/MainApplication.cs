@@ -14,6 +14,8 @@ using System.IO;
 using System.Drawing.Imaging;
 using System.Globalization;
 using Kiritori.Helpers;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Kiritori
 {
@@ -29,6 +31,8 @@ namespace Kiritori
         private ScreenWindow s;
         private static readonly string HistoryTempDir = Path.Combine(Path.GetTempPath(), "Kiritori", "History");
 
+        private bool _allowShow = false;          // Visible 抑止用
+        private readonly System.Windows.Forms.Timer _bootTimer; // 起動後ワンショット
         public MainApplication()
         {
             InitializeComponent();
@@ -49,7 +53,14 @@ namespace Kiritori
             };
 
             ApplyDpiToUi(GetDpiForWindowSafe(this.Handle));
-            MaybeShowPreferencesOnStartup();
+            // MaybeShowPreferencesOnStartup();
+            _bootTimer = new System.Windows.Forms.Timer { Interval = 10, Enabled = true };
+            _bootTimer.Tick += async (_, __) =>
+            {
+                _bootTimer.Enabled = false;
+                await EnsureStartupAsync();
+                MaybeShowPreferencesOnStartup();
+            };
         }
 
         // --- DPI 変更を受け取り、UI のスケール依存を更新
@@ -127,8 +138,10 @@ namespace Kiritori
         {
             try
             {
+                if (notifyIcon1 == null) return;
                 ClearHistoryMenu();
-                notifyIcon1.Visible = false;
+                //try { if (notifyIcon1 != null && notifyIcon1.Visible) notifyIcon1.Visible = false; }
+                //catch { /* NullReference/InvalidOperation を握りつぶす */ }
                 notifyIcon1.Dispose();
                 this.Icon?.Dispose();
                 hotKey.Dispose();
@@ -382,7 +395,7 @@ namespace Kiritori
             if (notifyIcon1 != null)
                 notifyIcon1.Text = SR.T("Tray.TrayIcon");  // 文字数は63字以内推奨
         }
-                // ToolStrip / ContextMenuStrip 用のローカライズ適用
+        // ToolStrip / ContextMenuStrip 用のローカライズ適用
         private static void ApplyToolStripLocalization(ToolStripItemCollection items)
         {
             foreach (ToolStripItem it in items)
@@ -403,7 +416,65 @@ namespace Kiritori
         public NotifyIcon NotifyIcon
         {
             get { return this.notifyIcon1; }
-        }    
+        }
+        // 最初は絶対に Visible にしない（ちらつき・表示を防止）
+        protected override void SetVisibleCore(bool value)
+        {
+            base.SetVisibleCore(_allowShow && value);
+        }
+
+        // 間違って Close されたら Hide に置き換える（本当に終了するときは Application.Exit 呼び出し側で）
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (e.CloseReason == CloseReason.UserClosing)
+            {
+                e.Cancel = true;
+                this.Hide();
+                return;
+            }
+            base.OnFormClosing(e);
+        }
+
+        private async Task EnsureStartupAsync()
+        {
+            try
+            {
+                if (Properties.Settings.Default.isStartup)
+                {
+                    if (Helpers.PackagedHelper.IsPackaged())
+                    {
+                        // MSIX: 必要なら同意ダイアログ
+                        await Startup.StartupManager.EnsureEnabledAsync();
+                    }
+                    else
+                    {
+                        // 非MSIX: .lnk 作成は STA が安全
+                        await RunStaAsync(() => Startup.StartupManager.EnsureEnabled());
+                    }
+                }
+                else
+                {
+                    if (Helpers.PackagedHelper.IsPackaged())
+                        await Startup.StartupManager.DisableAsync();
+                    else
+                        await RunStaAsync(() => Startup.StartupManager.SetEnabled(false));
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex);
+            }
+        }
+
+        private static Task RunStaAsync(Action action)
+        {
+            var tcs = new TaskCompletionSource<object>();
+            var th = new Thread(() => { try { action(); tcs.SetResult(null); } catch (Exception ex) { tcs.SetException(ex); } });
+            th.SetApartmentState(ApartmentState.STA);
+            th.IsBackground = true;
+            th.Start();
+            return tcs.Task;
+        }
 
     }
 }

@@ -10,5 +10,10 @@ namespace Kiritori.Services.Notifications
     internal static class NotificationService
     {
         private const string AppAumid = "Kiritori.Desktop";
+
+        public static string GetAppAumid()
+        {
+            return AppAumid;
+        }
     }
 }

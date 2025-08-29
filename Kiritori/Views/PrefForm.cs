@@ -15,6 +15,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using System.Threading.Tasks;
 
 
 namespace Kiritori
@@ -44,6 +45,16 @@ namespace Kiritori
 
             InitializeComponent();
             _loadingUi = true;
+            
+            #if DEBUG
+                DebugUiDecorator.Apply(this, new DebugUiOptions
+                {
+                    ShowBanner = true,        // 上部赤バナー
+                    PrefixTitle = true,       // タイトルに [DEBUG]
+                    PatchIcon = true,         // タスクバー/タイトルのアイコンに赤丸バッジ
+                    Watermark = false,        // 透かし (大文字DEBUG) を背景に描画（必要なら true）
+                });
+            #endif
 
             PopulatePresetCombos();
             WireUpDataBindings();
@@ -186,37 +197,76 @@ namespace Kiritori
         // =========================================================
         // ================== UI Event Handlers ====================
         // =========================================================
-        private void ChkRunAtStartup_CheckedChanged(object sender, EventArgs e)
+        private bool _handlingStartupToggle = false;
+
+        private async void ChkRunAtStartup_CheckedChanged(object sender, EventArgs e)
         {
-            if (_initStartupToggle) return; // 初期化中は無視
+            if (_initStartupToggle || _handlingStartupToggle) return;
+            _handlingStartupToggle = true;
 
-            // “設定に反映” は同値代入を避ける
-            var want = chkRunAtStartup.Checked;
-            if (Properties.Settings.Default.isStartup != want)
-            {
-                Properties.Settings.Default.isStartup = want;
-            }
+            // 変更前の状態を保持（ロールバック用）
+            var before = Properties.Settings.Default.isStartup;
+            var want   = chkRunAtStartup.Checked;
 
-            // システム側のショートカット操作は Dirty 判定に影響させない
-            using (SuppressDirtyScope())
+            // UI操作中は触らせない
+            chkRunAtStartup.Enabled = false;
+            var oldCursor = Cursor.Current;
+            Cursor.Current = Cursors.WaitCursor;
+
+            try
             {
-                try
+                bool ok = false;
+
+                if (PackagedHelper.IsPackaged())
                 {
-                    if (PackagedHelper.IsPackaged())
+                    if (want)
                     {
-                        // ここで StartupManager.Enable/Disable を呼ぶ実装に拡張可
+                        ok = await StartupManager.EnableAsync();           // ユーザー同意UIが出る場合あり（UIスレッドでOK）
                     }
                     else
                     {
-                        SetStartupShortcut(want);
+                        await StartupManager.DisableAsync();
+                        ok = !(await StartupManager.IsEnabledAsync());      // 実際に無効になったか確認
                     }
                 }
-                catch (Exception ex)
+                else
                 {
-                    chkRunAtStartup.Checked = false;
-                    MessageBox.Show(this, SR.F("Text.UnableSetStartup", ex.Message),
-                        "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    // .lnk 作成/削除は STA 必須。専用 STA スレッドで実行して待機（UIはブロックしない）
+                    await RunStaAsync(() => StartupManager.SetEnabled(want));
+                    ok = true; // 例外が出なければ成功とみなす。必要なら .lnk の存在確認で厳密化
                 }
+
+                using (SuppressDirtyScope())
+                {
+                    if (ok)
+                    {
+                        // システム側が成功したときだけ設定値を確定
+                        Properties.Settings.Default.isStartup = want;
+                    }
+                    else
+                    {
+                        // ロールバック（イベント再発火を抑止）
+                        _initStartupToggle = true;
+                        chkRunAtStartup.Checked = before;
+                        _initStartupToggle = false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // 失敗時は元に戻す（イベント再発火を抑止）
+                _initStartupToggle = true;
+                chkRunAtStartup.Checked = before;
+                _initStartupToggle = false;
+
+                MessageBox.Show(this, SR.F("Text.UnableSetStartup", ex.Message),
+                    "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                Cursor.Current = oldCursor;
+                chkRunAtStartup.Enabled = true;
+                _handlingStartupToggle = false;
             }
         }
 
@@ -406,8 +456,8 @@ namespace Kiritori
             }
             this.tlpInfoHeader.ResumeLayout(true);
 
-            // アイコンのスケール（小さい幅では96、大きい幅では120）
-            int target = narrow ? 96 : 120;
+            // アイコンのスケール（小さい幅では96、大きい幅では128）
+            int target = narrow ? 96 : 128;
             if (this.picAppIcon.Size.Width != target)
             {
                 try
@@ -799,8 +849,6 @@ namespace Kiritori
         }
 
         // === Settings のスナップショット（ハッシュ）を作る ===
-
-        
         static void DumpControlBindings(Form f)
         {
             Debug.WriteLine("=== Control Bindings to Settings ===");
@@ -817,6 +865,19 @@ namespace Kiritori
                         ; // （メニューに設定バインドしてなければスキップでOK）
             }
             Walk(f);
+        }
+        private static Task RunStaAsync(Action action)
+        {
+            var tcs = new TaskCompletionSource<object>();
+            var th = new Thread(() =>
+            {
+                try { action(); tcs.SetResult(null); }
+                catch (Exception ex) { tcs.SetException(ex); }
+            });
+            th.SetApartmentState(ApartmentState.STA);
+            th.IsBackground = true;
+            th.Start();
+            return tcs.Task;
         }
         // =========================================================
         // ================== Nested UI Controls ===================

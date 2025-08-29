@@ -591,7 +591,7 @@ namespace Kiritori
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
                 RowCount = 3,
-                Padding = new Padding(12),
+                Padding = new Padding(12, 0, 12, 12),
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink
             };
@@ -614,9 +614,9 @@ namespace Kiritori
             // 左：アプリアイコン（初期は120px、幅に応じて後で縮小）
             this.picAppIcon = new PictureBox
             {
-                Size = new Size(120, 120),
+                Size = new Size(128, 128),
                 SizeMode = PictureBoxSizeMode.Zoom,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left
+                Anchor = AnchorStyles.Top | AnchorStyles.Left,
             };
             try { this.picAppIcon.Image = global::Kiritori.Properties.Resources.icon_128x128; } catch { /* ignore */ }
 
@@ -634,10 +634,14 @@ namespace Kiritori
             {
                 Text = "\"Kiritori\" for Windows",
                 AutoSize = true,
-                Margin = new Padding(0, 5, 0, 10),
+                Margin = new Padding(0, 15, 0, 10),
                 Tag = "loc:App.Name"
             };
-            this.labelAppName.Font = new Font(this.Font.FontFamily, this.Font.Size + 6, FontStyle.Bold);
+            this.labelAppName.Font = new Font(
+                this.Font.FontFamily,
+                this.Font.Size + 7,
+                FontStyle.Bold
+            );
 
             // バージョン（ApplyDynamicTexts で差し替え）
             this.labelVersion = new Label

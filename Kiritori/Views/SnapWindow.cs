@@ -13,6 +13,7 @@ using System.Text;
 using System.Windows.Forms;
 using CommunityToolkit.WinUI.Notifications;
 using Kiritori.Helpers;
+using Kiritori.Services.Notifications;
 using Kiritori.Services.Ocr;
 using Windows.UI.Notifications;
 
@@ -1269,7 +1270,7 @@ namespace Kiritori
                     var toast = new ToastNotification(xml) { Tag = "kiritori-ocr", Group = "kiritori" };
 
                     // ★ ここで AUMID（Startメニューのショートカットと一致するID）を指定
-                    ToastNotificationManager.CreateToastNotifier("Kiritori.App").Show(toast);
+                    ToastNotificationManager.CreateToastNotifier(NotificationService.GetAppAumid()).Show(toast);
                 }
             }
             catch (Exception ex)
