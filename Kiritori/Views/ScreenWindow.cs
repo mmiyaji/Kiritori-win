@@ -15,6 +15,7 @@ using System.Security.Principal;
 using Windows.UI.Notifications;
 using Kiritori.Views.LiveCapture;
 using Kiritori.Helpers;
+using Kiritori.Services.Notifications;
 
 namespace Kiritori
 {
@@ -409,6 +410,7 @@ namespace Kiritori
                 var builder = new ToastContentBuilder()
                     .AddArgument("action", "open")
                     .AddText("Kiritori")
+                    .AddAudio(new Uri("ms-winsoundevent:Notification.IM"))
                     .AddText(SR.T("Toast.Captured", "Captured"));
 
                 if (PackagedHelper.IsPackaged())
@@ -427,7 +429,8 @@ namespace Kiritori
                     var toast = new ToastNotification(xml) { Tag = "kiritori-capture", Group = "kiritori" };
 
                     // ★ ここで AUMID（Startメニューのショートカットと一致するID）を指定
-                    ToastNotificationManager.CreateToastNotifier("Kiritori.App").Show(toast);
+                    Debug.WriteLine("[Toast] Show() called: " + NotificationService.GetAppAumid());
+                    ToastNotificationManager.CreateToastNotifier(NotificationService.GetAppAumid()).Show(toast);
                 }
             }
             catch (Exception ex)

@@ -201,6 +201,7 @@ namespace Kiritori
 
         private async void ChkRunAtStartup_CheckedChanged(object sender, EventArgs e)
         {
+            Debug.WriteLine($"[StartupToggle] fired: init={_initStartupToggle}, handling={_handlingStartupToggle}, want={chkRunAtStartup.Checked}");
             if (_initStartupToggle || _handlingStartupToggle) return;
             _handlingStartupToggle = true;
 

@@ -20,6 +20,7 @@ namespace Kiritori.Services.Notifications
 
         internal static void Initialize()
         {
+            Debug.WriteLine("[ToastBootstrapper] Initialize: " + Aumid);
             if (_initialized) return;
             _initialized = true;
 

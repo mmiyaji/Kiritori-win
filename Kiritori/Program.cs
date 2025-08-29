@@ -89,9 +89,13 @@ namespace Kiritori
             }
             catch { }
 
+            // 例: Program.cs / Main の最初で
+            Kiritori.Services.Notifications.ToastBootstrapper.Initialize();
+
             Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
             Application.Run(new MainApplication());
         }
         static void CopyImageToClipboardSafe(string path)
