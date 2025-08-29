@@ -114,3 +114,4 @@ old_*
 Thumbs.db
 dist/
 MigrationBackup/
+*_temp_*

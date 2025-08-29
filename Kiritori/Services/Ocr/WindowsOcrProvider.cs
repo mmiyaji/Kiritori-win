@@ -56,8 +56,20 @@ namespace Kiritori.Services.Ocr
                 var native = await engine.RecognizeAsync(swb).AsTask().ConfigureAwait(false);
 
                 // 5) テキスト取り出し＋正規化（日本語の前後スペース除去・連続スペース縮約）
-                string text = native.Text != null ? native.Text.Replace("\r\n", "\n") : "";
-                text = NormalizeOcrText(text);
+                // string text = native.Text != null ? native.Text.Replace("\r\n", "\n") : "";
+                // text = NormalizeOcrText(text);
+                string text = "";
+                if (native.Lines != null)
+                {
+                    var sb = new StringBuilder();
+                    foreach (var line in native.Lines)
+                    {
+                        string lineText = string.Join(" ", line.Words.Select(w => w.Text));
+                        lineText = NormalizeOcrText(lineText);
+                        sb.AppendLine(lineText);
+                    }
+                    text = sb.ToString().TrimEnd();
+                }
 
                 // 6) バウンディングボックス（必要時）。前処理で拡大したなら元倍率へ補正
                 System.Collections.Generic.List<OcrWordBox> words = null;
