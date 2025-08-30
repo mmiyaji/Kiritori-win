@@ -43,14 +43,15 @@ namespace Kiritori
 
         // ====== 設定をキャッシュして描画に使うフィールド ======
         private Color _bgColor;               // CaptureBackgroundColor
-        private int   _bgAlphaPercent;        // CaptureBackgroundAlphaPercent (0-100)
+        private int _bgAlphaPercent;        // CaptureBackgroundAlphaPercent (0-100)
         private Color _hoverColor;            // HoverHighlightColor
-        private int   _hoverAlphaPercent;     // HoverHighlightAlphaPercent (0-100)
-        private int   _hoverThicknessPx;      // HoverHighlightThickness (px)
+        private int _hoverAlphaPercent;     // HoverHighlightAlphaPercent (0-100)
+        private int _hoverThicknessPx;      // HoverHighlightThickness (px)
 
         // 任意の拡張（Settings があれば拾う。無ければ既存値を使用）
-        private int   _snapGridPx;            // SnapGridPx
-        private int   _edgeSnapTolPx;         // EdgeSnapTolerancePx
+        private int _snapGridPx;            // SnapGridPx
+        private int _edgeSnapTolPx;         // EdgeSnapTolerancePx
+        private bool _ocr_mode = false;
 
         // ====== コンストラクタ ======
         public ScreenWindow(MainApplication mainapp, Func<int> getHostDpi = null)
@@ -84,7 +85,7 @@ namespace Kiritori
         {
             pictureBox1.MouseDown += new MouseEventHandler(ScreenWindow_MouseDown);
             pictureBox1.MouseMove += new MouseEventHandler(ScreenWindow_MouseMove);
-            pictureBox1.MouseUp   += new MouseEventHandler(ScreenWindow_MouseUp);
+            pictureBox1.MouseUp += new MouseEventHandler(ScreenWindow_MouseUp);
         }
 
         // ====== 設定読み込み・監視 ======
@@ -93,22 +94,22 @@ namespace Kiritori
             var S = Properties.Settings.Default;
 
             // --- Background mask ---
-            _bgColor        = S.CaptureBackgroundColor;
+            _bgColor = S.CaptureBackgroundColor;
             _bgAlphaPercent = Clamp01to100(S.CaptureBackgroundAlphaPercent);
 
             // --- Hover highlight ---
-            _hoverColor         = S.HoverHighlightColor;
-            _hoverAlphaPercent  = Clamp01to100(S.HoverHighlightAlphaPercent);
-            _hoverThicknessPx   = Math.Max(1, S.HoverHighlightThickness);
+            _hoverColor = S.HoverHighlightColor;
+            _hoverAlphaPercent = Clamp01to100(S.HoverHighlightAlphaPercent);
+            _hoverThicknessPx = Math.Max(1, S.HoverHighlightThickness);
 
             // --- Snap grid / tolerance（存在すれば上書き） ---
-            _snapGridPx    = snapGrid;
+            _snapGridPx = snapGrid;
             _edgeSnapTolPx = edgeSnapTol;
             try { object v = S["SnapGridPx"]; if (v != null) _snapGridPx = Math.Max(5, Convert.ToInt32(v)); } catch { }
             try { object v = S["EdgeSnapTolerancePx"]; if (v != null) _edgeSnapTolPx = Math.Max(1, Convert.ToInt32(v)); } catch { }
 
             // 既存フィールドへ反映
-            snapGrid    = _snapGridPx;
+            snapGrid = _snapGridPx;
             edgeSnapTol = _edgeSnapTolPx;
         }
 
@@ -178,8 +179,8 @@ namespace Kiritori
 
             // 2) 画像端にスナップ（許容距離内なら吸着）
             int W = bmp.Width, H = bmp.Height;
-            if (Math.Abs(p.X - 0)       <= edgeSnapTol) p.X = 0;
-            if (Math.Abs(p.Y - 0)       <= edgeSnapTol) p.Y = 0;
+            if (Math.Abs(p.X - 0) <= edgeSnapTol) p.X = 0;
+            if (Math.Abs(p.Y - 0) <= edgeSnapTol) p.Y = 0;
             if (Math.Abs(p.X - (W - 1)) <= edgeSnapTol) p.X = W - 1;
             if (Math.Abs(p.Y - (H - 1)) <= edgeSnapTol) p.Y = H - 1;
 
@@ -240,6 +241,7 @@ namespace Kiritori
         public void showScreenAll()
         {
             this.Opacity = 1.0;
+            this.isOpen = true;
             DisposeCaptureSurface();
 
             this.StartPosition = FormStartPosition.Manual;
@@ -266,6 +268,12 @@ namespace Kiritori
             this.TopLevel = true;
             this.Show();
         }
+        public void showScreenOCR()
+        {
+            this._ocr_mode = true;
+            showScreenAll();
+        }
+
 
         // ====== 選択操作 ======
         private Point startPoint;
@@ -307,7 +315,7 @@ namespace Kiritori
 
             rc.X = Math.Min(startPoint.X, cur.X);
             rc.Y = Math.Min(startPoint.Y, cur.Y);
-            rc.Width  = Math.Abs(cur.X - startPoint.X);
+            rc.Width = Math.Abs(cur.X - startPoint.X);
             rc.Height = Math.Abs(cur.Y - startPoint.Y);
 
             if (IsSquareConstraint())
@@ -371,25 +379,61 @@ namespace Kiritori
                 if (crop.Width > 0 && crop.Height > 0)
                 {
                     this.Opacity = 0.0; // 透明化しておく
-                    // 2) 画面上の配置位置（物理座標）
-                    var desired = new Point(crop.X + x, crop.Y + y);
-
-                    // 3) SnapWindow を作って baseBmp から適用
-                    var sw = new SnapWindow(this.ma)
+                    if (_ocr_mode)
                     {
-                        StartPosition = FormStartPosition.Manual
-                    };
+                        // ★ CloseScreen() より前に「クロップ済み画像」を作る
+                        Bitmap sub = null;
+                        try
+                        {
+                            sub = baseBmp?.Clone(crop, baseBmp.PixelFormat);
+                        }
+                        catch { /* clone失敗は null で後段へ */ }
 
-                    // CloseScreen() より前に baseBmp を使い切る or Clone して渡す
-                    sw.CaptureFromBitmap(baseBmp, crop, desired);
+                        // もう画面は閉じてOK（baseBmp はここで破棄される）
+                        this.CloseScreen();
 
-                    // 4) もう原本は不要ならここで閉じる
-                    this.CloseScreen();
+                        // ★ UIスレッド(BeginInvoke)でOCRへ。subの破棄はOCR側で行う
+                        this.BeginInvoke(new Action(async () =>
+                        {
+                            try
+                            {
+                                if (sub == null)
+                                {
+                                    System.Diagnostics.Debug.WriteLine("[OCR] sub image is null.");
+                                    NotifyOcrError();
+                                    return;
+                                }
+                                await DoOcrFromSubImageAsync(sub); // ← 新規（下で追加）
+                            }
+                            finally
+                            {
+                                _ocr_mode = false;
+                            }
+                        }));
+                        return;
+                    }
+                    else
+                    {
+                        // 2) 画面上の配置位置（物理座標）
+                        var desired = new Point(crop.X + x, crop.Y + y);
 
-                    sw.FormClosing += new FormClosingEventHandler(SW_FormClosing);
-                    captureArray.Add(sw);
-                    notifyCaptured();
-                    return;
+                        // 3) SnapWindow を作って baseBmp から適用
+                        var sw = new SnapWindow(this.ma)
+                        {
+                            StartPosition = FormStartPosition.Manual
+                        };
+
+                        // CloseScreen() より前に baseBmp を使い切る or Clone して渡す
+                        sw.CaptureFromBitmap(baseBmp, crop, desired);
+
+                        // 4) もう原本は不要ならここで閉じる
+                        this.CloseScreen();
+
+                        sw.FormClosing += new FormClosingEventHandler(SW_FormClosing);
+                        captureArray.Add(sw);
+                        notifyCaptured();
+                        return;
+                    }
                 }
             }
             this.CloseScreen();
@@ -399,6 +443,8 @@ namespace Kiritori
 
         private void notifyCaptured()
         {
+            // OCRモード時はキャプチャ完了トーストを出さない
+            if (_ocr_mode) return;
             if (!Properties.Settings.Default.isShowNotify) return;
             // 直前の連打を抑止（例: 500ms 以内は捨てる）
             var now = DateTime.Now;
@@ -529,6 +575,7 @@ namespace Kiritori
             this.isOpen = false;
             DisposeCaptureSurface();
             this.Hide();
+            try { ma?.ReleaseScreenGate(); } catch { }
         }
 
         void SW_FormClosing(object sender, FormClosingEventArgs e)
@@ -658,6 +705,7 @@ namespace Kiritori
         // ====== 終了処理 ======
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            try { ma?.ReleaseScreenGate(); } catch { }
             DisposeCaptureSurface();
 
             fnt?.Dispose();
@@ -716,5 +764,181 @@ namespace Kiritori
         }
 
         private void StopLive() { if (_liveRegion != null) _liveRegion.StopLive(); }
+
+        // ====== OCR ユーティリティ ======
+        private async System.Threading.Tasks.Task DoOcrFromCropAsync(Bitmap baseImage, Rectangle crop)
+        {
+            try
+            {
+                using (var sub = baseImage.Clone(crop, baseImage.PixelFormat))
+                {
+                    // あなたの OCR 実装に合わせて参照名を調整してください
+                    // 例: Kiritori.Services.Ocr.WindowsOcrProvider / IOcrProvider / OcrOptions
+                    var provider = new Kiritori.Services.Ocr.WindowsOcrProvider();
+                    var opt = new Kiritori.Services.Ocr.OcrOptions(); // オプションが不要なら削除OK
+
+                    var result = await provider.RecognizeAsync(sub, opt);
+
+                    // ★ OcrResult のプロパティ名に合わせて調整
+                    // Windows.Media.Ocr.OcrResult なら .Text
+                    // 自作 OcrResult でも通常は Text/PlainText いずれか
+                    string text = null;
+                    try
+                    {
+                        // 最初に Text を試す
+                        var prop = result.GetType().GetProperty("Text");
+                        if (prop != null) text = prop.GetValue(result, null) as string;
+                    }
+                    catch { /* ignore */ }
+
+                    if (string.IsNullOrEmpty(text))
+                    {
+                        // 次善: PlainText を試す
+                        try
+                        {
+                            var prop = result.GetType().GetProperty("PlainText");
+                            if (prop != null) text = prop.GetValue(result, null) as string;
+                        }
+                        catch { /* ignore */ }
+                    }
+
+                    if (text == null) text = result != null ? result.ToString() : string.Empty;
+                    if (text == null) text = string.Empty;
+
+                    // クリップボードへ
+                    TrySetClipboardText(text);
+
+                    // トースト
+                    NotifyOcr(text);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine("[OCR] failed: " + ex);
+                NotifyOcrError();
+            }
+        }
+
+        /// <summary>
+        /// STA 前提の UI スレッドから呼ばれる想定。例外は握りつぶす。
+        /// </summary>
+        private void TrySetClipboardText(string text)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(text))
+                    Clipboard.SetText(text);
+            }
+            catch { /* クリップボード競合などは無視 */ }
+        }
+
+        private void NotifyOcr(string text)
+        {
+            if (!Properties.Settings.Default.isShowNotify) return;
+
+            // 先頭 ~80文字をプレビューに
+            string preview = text ?? "";
+            if (preview.Length > 80) preview = preview.Substring(0, 80) + "…";
+
+            try
+            {
+                var builder = new CommunityToolkit.WinUI.Notifications.ToastContentBuilder()
+                    .AddArgument("action", "open")
+                    .AddText("Kiritori")
+                    .AddAudio(new System.Uri("ms-winsoundevent:Notification.IM"))
+                    .AddText(SR.T("Toast.OcrCopied", "OCR text copied to clipboard"))
+                    .AddText(preview);
+
+                if (Kiritori.Helpers.PackagedHelper.IsPackaged())
+                {
+                    builder.Show(t => { t.Tag = "kiritori-ocr"; t.Group = "kiritori"; });
+                }
+                else
+                {
+                    var xml = builder.GetToastContent().GetXml();
+                    var toast = new Windows.UI.Notifications.ToastNotification(xml) { Tag = "kiritori-ocr", Group = "kiritori" };
+                    Windows.UI.Notifications.ToastNotificationManager
+                        .CreateToastNotifier(Kiritori.Services.Notifications.NotificationService.GetAppAumid())
+                        .Show(toast);
+                }
+            }
+            catch
+            {
+                var main = Application.OpenForms["MainApplication"] as Kiritori.MainApplication;
+                if (main != null && main.NotifyIcon != null)
+                    main.NotifyIcon.ShowBalloonTip(2500, "Kiritori", SR.T("Toast.OcrCopied", "OCR text copied to clipboard"), ToolTipIcon.None);
+            }
+        }
+
+        private void NotifyOcrError()
+        {
+            try
+            {
+                var builder = new CommunityToolkit.WinUI.Notifications.ToastContentBuilder()
+                    .AddArgument("action", "open")
+                    .AddText("Kiritori")
+                    .AddText(SR.T("Toast.OcrFailed", "OCR failed"));
+                if (Kiritori.Helpers.PackagedHelper.IsPackaged())
+                {
+                    builder.Show(t => { t.Tag = "kiritori-ocr"; t.Group = "kiritori"; });
+                }
+                else
+                {
+                    var xml = builder.GetToastContent().GetXml();
+                    var toast = new Windows.UI.Notifications.ToastNotification(xml) { Tag = "kiritori-ocr", Group = "kiritori" };
+                    Windows.UI.Notifications.ToastNotificationManager
+                        .CreateToastNotifier(Kiritori.Services.Notifications.NotificationService.GetAppAumid())
+                        .Show(toast);
+                }
+            }
+            catch
+            {
+                var main = Application.OpenForms["MainApplication"] as Kiritori.MainApplication;
+                if (main != null && main.NotifyIcon != null)
+                    main.NotifyIcon.ShowBalloonTip(2500, "Kiritori", SR.T("Toast.OcrFailed", "OCR failed"), ToolTipIcon.Error);
+            }
+        }
+        // こちらを新設。受け取った sub はここで using 破棄します
+        private async System.Threading.Tasks.Task DoOcrFromSubImageAsync(Bitmap sub)
+        {
+            try
+            {
+                using (sub) // ★ ここで確実に破棄
+                {
+                    // あなたの OCR 実装に合わせて
+                    var provider = new Kiritori.Services.Ocr.WindowsOcrProvider();
+                    var opt = new Kiritori.Services.Ocr.OcrOptions();
+
+                    var result = await provider.RecognizeAsync(sub, opt);
+
+                    string text = null;
+                    try
+                    {
+                        var prop = result.GetType().GetProperty("Text");
+                        if (prop != null) text = prop.GetValue(result, null) as string;
+                    }
+                    catch { }
+                    if (string.IsNullOrEmpty(text))
+                    {
+                        try
+                        {
+                            var prop = result.GetType().GetProperty("PlainText");
+                            if (prop != null) text = prop.GetValue(result, null) as string;
+                        }
+                        catch { }
+                    }
+                    if (text == null) text = result != null ? result.ToString() : string.Empty;
+
+                    TrySetClipboardText(text);
+                    NotifyOcr(text);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine("[OCR] failed: " + ex);
+                NotifyOcrError();
+            }
+        }
+
     }
 }

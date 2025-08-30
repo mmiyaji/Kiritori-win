@@ -871,6 +871,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   OCR capture に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_OCRCapture {
+            get {
+                return ResourceManager.GetString("Text.OCRCapture", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   On app launch に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_OnAppLaunch {

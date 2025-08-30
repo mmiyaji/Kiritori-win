@@ -103,9 +103,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Helpers\DebugUiOptions.cs" />
+    <Compile Include="Helpers\HotkeyUtil.cs" />
     <Compile Include="Helpers\Localizer.cs" />
     <Compile Include="Helpers\SR.cs" />
     <Compile Include="Helpers\HotKey.cs" />
+    <Compile Include="Helpers\WinRtAwait.cs" />
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -113,6 +115,9 @@
     </Compile>
     <Compile Include="Services\Settings\SettingsDirtyTracker.cs" />
     <Compile Include="Views\Controls\AlphaPreviewPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Views\Controls\HotkeyPicker.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Views\Controls\Separator.cs">

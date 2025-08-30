@@ -59,5 +59,11 @@
     <Setting Name="UICulture" Type="System.String" Scope="User">
       <Value Profile="(Default)">en</Value>
     </Setting>
+    <Setting Name="HotkeyCapture" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Ctrl+Shift+5</Value>
+    </Setting>
+    <Setting Name="HotkeyOcr" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Ctrl+Shift+4</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

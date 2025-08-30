@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Kiritori.Properties;
+using Kiritori.Helpers;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -9,13 +11,12 @@ using System.Text;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
 //using System.Windows.Forms.Cursor;
-using Kiritori.Properties;
 using System.IO;
 using System.Drawing.Imaging;
 using System.Globalization;
-using Kiritori.Helpers;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Diagnostics;
 
 namespace Kiritori
 {
@@ -27,19 +28,51 @@ namespace Kiritori
     public partial class MainApplication : Form
     {
         private const int WM_DPICHANGED = 0x02E0;
-        private HotKey hotKey;
         private ScreenWindow s;
+        private int _screenOpenGate = 0;
         private static readonly string HistoryTempDir = Path.Combine(Path.GetTempPath(), "Kiritori", "History");
 
-        private bool _allowShow = false;          // Visible 抑止用
-        private readonly System.Windows.Forms.Timer _bootTimer; // 起動後ワンショット
+        private bool _allowShow = false;
+        private readonly System.Windows.Forms.Timer _bootTimer;
+
+        // 追加: Win32 P/Invoke と定数
+        private const int WM_HOTKEY = 0x0312;
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern int RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk);
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern int UnregisterHotKey(IntPtr hWnd, int id);
+
+        // デバッグ用ID（他IDと被らない値に）
+        private const int HOTKEY_ID_CAPTURE = 9001;
+        private const int HOTKEY_ID_OCR = 9002;
+
+        // Win32のMOD定数（既存MOD_KEYと同値だがintで扱う）
+        private const int MOD_ALT = 0x0001;
+        private const int MOD_CONTROL = 0x0002;
+        private const int MOD_SHIFT = 0x0004;
+        private const int MOD_WIN     = 0x0008; // 使うなら
+        private const int MOD_NOREPEAT= 0x4000; // チャタリング対策
         public MainApplication()
         {
             InitializeComponent();
             notifyIcon1.Icon = Properties.Resources.AppIcon;
             this.Icon = Properties.Resources.AppIcon;
-            hotKey = new HotKey(MOD_KEY.CONTROL | MOD_KEY.SHIFT, Keys.D5);
-            hotKey.HotKeyPush += new EventHandler(hotKey_HotKeyPush);
+            // hotKey = new HotKey(MOD_KEY.CONTROL | MOD_KEY.SHIFT, Keys.D5);
+            // hotKey.HotKeyPush += new EventHandler(hotKey_HotKeyPush);
+            this.HandleCreated += (s2, e2) =>
+            {
+                try
+                {
+                    Debug.WriteLine("[HK] HandleCreated: registering hotkeys (PlanB direct)");
+                    // RegisterHotkeys_PlanB();   // ★ 直登録
+                    ReloadHotkeysFromSettings(); // ←既存のHotKeyクラス経由も残してOK（二重登録は不可なのでPlanBで先にUnregister）
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[HK] Error on HandleCreated: {ex}");
+                }
+            };
+
             Application.ApplicationExit += new EventHandler(Application_ApplicationExit);
             s = new ScreenWindow(this);
             this.AutoScaleMode = AutoScaleMode.Dpi;
@@ -66,10 +99,27 @@ namespace Kiritori
         // --- DPI 変更を受け取り、UI のスケール依存を更新
         protected override void WndProc(ref Message m)
         {
+            if (m.Msg == WM_HOTKEY)
+            {
+                int id = m.WParam.ToInt32();
+                if (id == HOTKEY_ID_CAPTURE)
+                {
+                    Debug.WriteLine("[HK] WM_HOTKEY: CAPTURE");
+                    openScreen();
+                    return;
+                }
+                if (id == HOTKEY_ID_OCR)
+                {
+                    Debug.WriteLine("[HK] WM_HOTKEY: OCR");
+                    openScreenOCR();
+                    return;
+                }
+            }
+
             base.WndProc(ref m);
+
             if (m.Msg == WM_DPICHANGED)
             {
-                // wParam の下位ワードが新しい DPI
                 int newDpi = (int)((uint)m.WParam & 0xFFFF);
                 ApplyDpiToUi(newDpi);
             }
@@ -130,28 +180,21 @@ namespace Kiritori
         {
             [DllImport("user32.dll")] public static extern int GetDpiForWindow(IntPtr hWnd);
         }
-        void hotKey_HotKeyPush(object sender, EventArgs e)
-        {
-            this.openScreen();
-        }
         private void Application_ApplicationExit(object sender, EventArgs e)
         {
             try
             {
                 if (notifyIcon1 == null) return;
                 ClearHistoryMenu();
-                //try { if (notifyIcon1 != null && notifyIcon1.Visible) notifyIcon1.Visible = false; }
-                //catch { /* NullReference/InvalidOperation を握りつぶす */ }
-                notifyIcon1.Dispose();
-                this.Icon?.Dispose();
-                hotKey.Dispose();
+                if (notifyIcon1 != null) notifyIcon1.Dispose();
+                if (this.Icon != null) this.Icon.Dispose();
+
+                UnregisterHotKey(this.Handle, HOTKEY_ID_CAPTURE);
+                UnregisterHotKey(this.Handle, HOTKEY_ID_OCR);
             }
             catch { }
         }
 
-        private void Form2_Load(object sender, EventArgs e)
-        {
-        }
 
         private void exitToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -166,16 +209,54 @@ namespace Kiritori
 
         public void openScreen()
         {
-            // restrict multiple open
-            if (s == null)
+            if (Interlocked.Exchange(ref _screenOpenGate, 1) == 1)
             {
-                s = new ScreenWindow(this, () => GetDpiForWindowSafe(this.Handle));
-                s.showScreenAll();
+                Debug.WriteLine("[HK] openScreen: busy -> ignored");
+                return;
             }
-            else
+            try
             {
-                s.showScreenAll();
+                if (s == null || s.IsDisposed)
+                    s = new ScreenWindow(this, () => GetDpiForWindowSafe(this.Handle));
+
+                if (!s.Visible)
+                    s.showScreenAll();
+                else
+                    s.Activate(); // 既に表示中なら前面化だけ
             }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HK] openScreen exception: " + ex);
+                Interlocked.Exchange(ref _screenOpenGate, 0); // 失敗時はゲート解放
+            }
+        }
+        public void openScreenOCR()
+        {
+            if (Interlocked.Exchange(ref _screenOpenGate, 1) == 1)
+            {
+                Debug.WriteLine("[HK] openScreenOCR: busy -> ignored");
+                return;
+            }
+            try
+            {
+                if (s == null || s.IsDisposed)
+                    s = new ScreenWindow(this, () => GetDpiForWindowSafe(this.Handle));
+
+                if (!s.Visible)
+                    s.showScreenOCR();
+                else
+                    s.Activate();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HK] openScreenOCR exception: " + ex);
+                Interlocked.Exchange(ref _screenOpenGate, 0);
+            }
+        }
+        internal void ReleaseScreenGate()
+        {
+            Interlocked.Exchange(ref _screenOpenGate, 0);
+            Debug.WriteLine("[HK] screen gate released");
         }
         public void openImage()
         {
@@ -474,6 +555,56 @@ namespace Kiritori
             th.IsBackground = true;
             th.Start();
             return tcs.Task;
+        }
+
+
+        private void ReloadHotkeysFromSettings()
+        {
+            // 念のため一旦解除
+            try { UnregisterHotKey(this.Handle, HOTKEY_ID_CAPTURE); } catch { }
+            try { UnregisterHotKey(this.Handle, HOTKEY_ID_OCR); } catch { }
+
+            // 設定値を解析（ログ多め）
+            var defCap = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 };
+            var defOcr = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 };
+            var capSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyCapture, defCap);
+            var ocrSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyOcr,     defOcr);
+
+            Debug.WriteLine($"[HK] Capture parsed: {HotkeyUtil.ToText(capSpec)}  (Key={capSpec.Key})");
+            Debug.WriteLine($"[HK] OCR     parsed: {HotkeyUtil.ToText(ocrSpec)}  (Key={ocrSpec.Key})");
+
+            // 変換（intに）
+            int capMods = 0, ocrMods = 0;
+            if ((capSpec.Mods & ModMask.Ctrl)  != 0) capMods |= MOD_CONTROL;
+            if ((capSpec.Mods & ModMask.Shift) != 0) capMods |= MOD_SHIFT;
+            if ((capSpec.Mods & ModMask.Alt)   != 0) capMods |= MOD_ALT;
+
+            if ((ocrSpec.Mods & ModMask.Ctrl)  != 0) ocrMods |= MOD_CONTROL;
+            if ((ocrSpec.Mods & ModMask.Shift) != 0) ocrMods |= MOD_SHIFT;
+            if ((ocrSpec.Mods & ModMask.Alt)   != 0) ocrMods |= MOD_ALT;
+
+            // 実登録（Win32直）
+            int ok1 = RegisterHotKey(this.Handle, HOTKEY_ID_CAPTURE, capMods /* | MOD_NOREPEAT */, (int)capSpec.Key);
+            if (ok1 == 0)
+            {
+                int err = Marshal.GetLastWin32Error();
+                Debug.WriteLine($"[HK] Register CAPTURE failed. mods={capMods}, vk={(Keys)capSpec.Key}, lastError=0x{err:X8}");
+            }
+            else
+            {
+                Debug.WriteLine($"[HK] Register CAPTURE success. mods={capMods}, vk={(Keys)capSpec.Key}");
+            }
+
+            int ok2 = RegisterHotKey(this.Handle, HOTKEY_ID_OCR, ocrMods /* | MOD_NOREPEAT */, (int)ocrSpec.Key);
+            if (ok2 == 0)
+            {
+                int err = Marshal.GetLastWin32Error();
+                Debug.WriteLine($"[HK] Register OCR failed. mods={ocrMods}, vk={(Keys)ocrSpec.Key}, lastError=0x{err:X8}");
+            }
+            else
+            {
+                Debug.WriteLine($"[HK] Register OCR success. mods={ocrMods}, vk={(Keys)ocrSpec.Key}");
+            }
         }
 
     }

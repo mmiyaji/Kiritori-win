@@ -67,6 +67,8 @@ namespace Kiritori
         private GroupBox grpHotkey;
         private Label labelHotkeyCapture;
         private TextBox textBoxKiritori;            // Capture (existing)
+        private Label labelHotkeyCaptureOCR;
+        private TextBox textBoxHotkeyCaptureOCR;
         private Label labelHotkeyCapturePrev;       // Capture at previous region
         private TextBox textBoxCapturePrev;
         private Label labelHotkeyVideo;             // Video capture (disabled)
@@ -319,6 +321,9 @@ namespace Kiritori
             this.labelHotkeyCapture = NewRightLabel("Image capture");
             this.labelHotkeyCapture.Tag = "loc:Text.ImageCapture";
             this.textBoxKiritori = new TextBox { Enabled = false, Width = 160, Text = "Ctrl + Shift + 5" };
+            this.labelHotkeyCaptureOCR = NewRightLabel("OCR capture");
+            this.labelHotkeyCaptureOCR.Tag = "loc:Text.OCRCapture";
+            this.textBoxHotkeyCaptureOCR = new TextBox { Enabled = false, Width = 160, Text = "Ctrl + Shift + 4" };
             //this.textBoxKiritori.KeyDown += new KeyEventHandler(this.textBoxKiritori_KeyDown);
             //this.textBoxKiritori.PreviewKeyDown += new PreviewKeyDownEventHandler(this.textBoxKiritori_PreviewKeyDown);
 
@@ -332,10 +337,12 @@ namespace Kiritori
 
             tlpHot.Controls.Add(this.labelHotkeyCapture, 0, 0);
             tlpHot.Controls.Add(this.textBoxKiritori, 1, 0);
-            tlpHot.Controls.Add(this.labelHotkeyCapturePrev, 0, 1);
-            tlpHot.Controls.Add(this.textBoxCapturePrev, 1, 1);
-            tlpHot.Controls.Add(this.labelHotkeyVideo, 0, 2);
-            tlpHot.Controls.Add(this.textBoxVideo, 1, 2);
+            tlpHot.Controls.Add(this.labelHotkeyCaptureOCR, 0, 1);
+            tlpHot.Controls.Add(this.textBoxHotkeyCaptureOCR, 1, 1);
+            tlpHot.Controls.Add(this.labelHotkeyCapturePrev, 0, 2);
+            tlpHot.Controls.Add(this.textBoxCapturePrev, 1, 2);
+            tlpHot.Controls.Add(this.labelHotkeyVideo, 0, 3);
+            tlpHot.Controls.Add(this.textBoxVideo, 1, 3);
 
             this.grpHotkey.Controls.Add(tlpHot);
 

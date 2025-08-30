@@ -250,5 +250,29 @@ namespace Kiritori.Properties {
                 this["UICulture"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Ctrl+Shift+5")]
+        public string HotkeyCapture {
+            get {
+                return ((string)(this["HotkeyCapture"]));
+            }
+            set {
+                this["HotkeyCapture"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Ctrl+Shift+4")]
+        public string HotkeyOcr {
+            get {
+                return ((string)(this["HotkeyOcr"]));
+            }
+            set {
+                this["HotkeyOcr"] = value;
+            }
+        }
     }
 }

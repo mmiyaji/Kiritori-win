@@ -138,7 +138,6 @@
             this.ClientSize = new System.Drawing.Size(284, 262);
             this.Name = "MainApplication";
             this.Text = "Kiritori - Main";
-            this.Load += new System.EventHandler(this.Form2_Load);
             this.contextMenuStrip1.ResumeLayout(false);
             this.ResumeLayout(false);
 

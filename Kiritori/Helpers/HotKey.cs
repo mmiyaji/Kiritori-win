@@ -1,28 +1,16 @@
-﻿using System;
+﻿// Kiritori.Helpers.HotKey
+using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 
 namespace Kiritori.Helpers
 {
-    /// <summary>
-    /// グローバルホットキーを登録するクラス。
-    /// 使用後は必ずDisposeすること。
-    /// </summary>
     public class HotKey : IDisposable
     {
         HotKeyForm form;
-        /// <summary>
-        /// ホットキーが押されると発生する。
-        /// </summary>
         public event EventHandler HotKeyPush;
 
-        /// <summary>
-        /// ホットキーを指定して初期化する。
-        /// 使用後は必ずDisposeすること。
-        /// </summary>
-        /// <param name="modKey">修飾キー</param>
-        /// <param name="key">キー</param>
         public HotKey(MOD_KEY modKey, Keys key)
         {
             form = new HotKeyForm(modKey, key, raiseHotKeyPush);
@@ -30,33 +18,33 @@ namespace Kiritori.Helpers
 
         private void raiseHotKeyPush()
         {
-            if (HotKeyPush != null)
-            {
-                HotKeyPush(this, EventArgs.Empty);
-            }
+            var h = HotKeyPush;
+            if (h != null) h(this, EventArgs.Empty);
         }
 
-        public void Dispose()
-        {
-            form.Dispose();
-        }
+        public void Dispose() { if (form != null) form.Dispose(); }
 
         private class HotKeyForm : Form
         {
-            [DllImport("user32.dll")]
-            extern static int RegisterHotKey(IntPtr HWnd, int ID, MOD_KEY MOD_KEY, Keys KEY);
+            [DllImport("user32.dll", SetLastError = true)]
+            private static extern int RegisterHotKey(IntPtr hWnd, int id, MOD_KEY fsModifiers, Keys vk);
 
-            [DllImport("user32.dll")]
-            extern static int UnregisterHotKey(IntPtr HWnd, int ID);
+            [DllImport("user32.dll", SetLastError = true)]
+            private static extern int UnregisterHotKey(IntPtr hWnd, int id);
 
             const int WM_HOTKEY = 0x0312;
-            int id;
+            int id = -1;
             ThreadStart proc;
 
             public HotKeyForm(MOD_KEY modKey, Keys key, ThreadStart proc)
             {
                 this.proc = proc;
-                for (int i = 0x0000; i <= 0xbfff; i++)
+
+                // フォームのハンドルを“必ず”作ってから登録
+                if (!this.IsHandleCreated) this.CreateHandle();
+
+                // id を探しつつ登録（この HWND 上で一意）
+                for (int i = 0x0001; i <= 0xBFFF; i++)
                 {
                     if (RegisterHotKey(this.Handle, i, modKey, key) != 0)
                     {
@@ -64,36 +52,49 @@ namespace Kiritori.Helpers
                         break;
                     }
                 }
+
+                if (id < 0)
+                {
+                    int err = Marshal.GetLastWin32Error();
+                    throw new InvalidOperationException(
+                        $"RegisterHotKey failed. modifiers={modKey}, key={key}, lastError=0x{err:X8}");
+                }
+
+                // 表示不要
+                this.ShowInTaskbar = false;
+                this.Visible = false;
             }
 
             protected override void WndProc(ref Message m)
             {
-                base.WndProc(ref m);
-
-                if (m.Msg == WM_HOTKEY)
+                if (m.Msg == WM_HOTKEY && id >= 0 && (int)m.WParam == id)
                 {
-                    if ((int)m.WParam == id)
-                    {
-                        proc();
-                    }
+                    try { proc(); } catch { /* swallow */ }
+                    return;
                 }
+                base.WndProc(ref m);
             }
 
             protected override void Dispose(bool disposing)
             {
-                UnregisterHotKey(this.Handle, id);
+                if (id >= 0 && this.IsHandleCreated)
+                {
+                    UnregisterHotKey(this.Handle, id);
+                    id = -1;
+                }
                 base.Dispose(disposing);
             }
         }
     }
 
-    /// <summary>
-    /// HotKeyクラスの初期化時に指定する修飾キー
-    /// </summary>
+    [Flags]
     public enum MOD_KEY : int
     {
-        ALT = 0x0001,
+        ALT     = 0x0001,
         CONTROL = 0x0002,
-        SHIFT = 0x0004,
+        SHIFT   = 0x0004,
+        // 任意: NOREPEAT も使えます（チャタリング防止）
+        // NOREPEAT = 0x4000,
+        WIN     = 0x0008, // 使う場合は HotkeyPicker 側も対応を
     }
 }
