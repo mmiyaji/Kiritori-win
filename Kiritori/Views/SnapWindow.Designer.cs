@@ -17,7 +17,8 @@ namespace Kiritori
         private ToolStripMenuItem captureToolStripMenuItem;
         private ToolStripMenuItem closeESCToolStripMenuItem;
         private ToolStripMenuItem cutCtrlXToolStripMenuItem;
-        private ToolStripMenuItem copyCtrlXToolStripMenuItem;
+        private ToolStripMenuItem copyCtrlCToolStripMenuItem;
+        private ToolStripMenuItem ocrCtrlTToolStripMenuItem;
         private ToolStripMenuItem saveImageToolStripMenuItem;
         private ToolStripMenuItem openImageToolStripMenuItem;
         private ToolStripMenuItem editPaintToolStripMenuItem;
@@ -76,7 +77,8 @@ namespace Kiritori
             this.captureToolStripMenuItem = new ToolStripMenuItem();
             this.closeESCToolStripMenuItem = new ToolStripMenuItem();
             this.cutCtrlXToolStripMenuItem = new ToolStripMenuItem();
-            this.copyCtrlXToolStripMenuItem = new ToolStripMenuItem();
+            this.copyCtrlCToolStripMenuItem = new ToolStripMenuItem();
+            this.ocrCtrlTToolStripMenuItem = new ToolStripMenuItem();
             this.saveImageToolStripMenuItem = new ToolStripMenuItem();
             this.openImageToolStripMenuItem = new ToolStripMenuItem();
             this.editPaintToolStripMenuItem = new ToolStripMenuItem();
@@ -150,7 +152,8 @@ namespace Kiritori
             // 
             this.editParentMenu.DropDownItems.AddRange(new ToolStripItem[] {
                 this.cutCtrlXToolStripMenuItem,
-                this.copyCtrlXToolStripMenuItem,
+                this.copyCtrlCToolStripMenuItem,
+                this.ocrCtrlTToolStripMenuItem,
                 this.editPaintToolStripMenuItem,
             });
             this.editParentMenu.Name = "editParentMenu";
@@ -230,14 +233,23 @@ namespace Kiritori
             this.cutCtrlXToolStripMenuItem.Tag = "loc:Menu.Cut";
             this.cutCtrlXToolStripMenuItem.Click += new System.EventHandler(this.cutCtrlXToolStripMenuItem_Click);
             // 
-            // copyCtrlXToolStripMenuItem
+            // copyCtrlCToolStripMenuItem
             // 
-            this.copyCtrlXToolStripMenuItem.Name = "copyCtrlXToolStripMenuItem";
-            this.copyCtrlXToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.C)));
-            this.copyCtrlXToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
-            this.copyCtrlXToolStripMenuItem.Text = "Copy";
-            this.copyCtrlXToolStripMenuItem.Tag = "loc:Menu.Copy";
-            this.copyCtrlXToolStripMenuItem.Click += new System.EventHandler(this.copyCtrlCToolStripMenuItem_Click);
+            this.copyCtrlCToolStripMenuItem.Name = "copyCtrlCToolStripMenuItem";
+            this.copyCtrlCToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.C)));
+            this.copyCtrlCToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
+            this.copyCtrlCToolStripMenuItem.Text = "Copy";
+            this.copyCtrlCToolStripMenuItem.Tag = "loc:Menu.Copy";
+            this.copyCtrlCToolStripMenuItem.Click += new System.EventHandler(this.copyCtrlCToolStripMenuItem_Click);
+            // 
+            // ocrCtrlTToolStripMenuItem
+            // 
+            this.ocrCtrlTToolStripMenuItem.Name = "ocrCtrlTToolStripMenuItem";
+            this.ocrCtrlTToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.T)));
+            this.ocrCtrlTToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
+            this.ocrCtrlTToolStripMenuItem.Text = "OCR";
+            this.ocrCtrlTToolStripMenuItem.Tag = "loc:Menu.OCR";
+            this.ocrCtrlTToolStripMenuItem.Click += new System.EventHandler(this.ocrCtrlTToolStripMenuItem_Click);
             // 
             // editPaintToolStripMenuItem
             // 

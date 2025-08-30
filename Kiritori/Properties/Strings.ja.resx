@@ -528,4 +528,7 @@
   <data name="Text.NotifyTrayOCR" xml:space="preserve">
     <value>OCR結果をトレイ通知</value>
   </data>
+  <data name="Menu.OCR" xml:space="preserve">
+    <value>OCR(テキスト抽出)</value>
+  </data>
 </root>

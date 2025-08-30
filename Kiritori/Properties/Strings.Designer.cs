@@ -214,6 +214,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   OCR(text recognition) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_OCR {
+            get {
+                return ResourceManager.GetString("Menu.OCR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Opacity に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_Opacity {

@@ -528,4 +528,7 @@
   <data name="Text.NotifyTrayOCR" xml:space="preserve">
     <value>Notify in tray on OCR</value>
   </data>
+  <data name="Menu.OCR" xml:space="preserve">
+    <value>OCR(text recognition)</value>
+  </data>
 </root>
