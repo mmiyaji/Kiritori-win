@@ -122,7 +122,9 @@ namespace Kiritori
 
         // OCR 処理中フラグ
         private bool _ocrBusy = false;
-
+        // 対応画像拡張子
+        private static readonly string[] ImageExts =
+                    { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp" };
         #endregion
 
         #region ===== Win32/プロパティ =====
@@ -194,6 +196,10 @@ namespace Kiritori
             this.DoubleBuffered = true;
             this.AutoScaleMode = AutoScaleMode.Dpi;
             this.AutoScaleDimensions = new SizeF(96F, 96F);
+
+            this.AllowDrop = true;
+            this.DragEnter += SnapWindow_DragEnter;
+            this.DragDrop  += SnapWindow_DragDrop;
         }
 
         public Bitmap GetMainImage() => (Bitmap)pictureBox1.Image;
@@ -335,6 +341,48 @@ namespace Kiritori
                 Alignment = PenAlignment.Inset // 外にはみ出さない
             };
             return pen;
+        }
+
+        private void SnapWindow_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data != null && e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                var paths = e.Data.GetData(DataFormats.FileDrop) as string[];
+                if (paths != null && paths.Any(IsValidImageFile))
+                {
+                    e.Effect = DragDropEffects.Copy;
+                    return;
+                }
+            }
+            e.Effect = DragDropEffects.None;
+        }
+
+        private void SnapWindow_DragDrop(object sender, DragEventArgs e)
+        {
+            var paths = e.Data.GetData(DataFormats.FileDrop) as string[];
+            if (paths == null || paths.Length == 0) return;
+
+            // 先頭の有効な画像だけ使う（置き換え）
+            var img = paths.FirstOrDefault(IsValidImageFile);
+            if (string.IsNullOrEmpty(img)) return;
+
+            try
+            {
+                this.setImageFromPath(img);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(SR.T("Text.DragDropFailed", "Failed open image") + ":\n" + ex.Message, "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private static bool IsValidImageFile(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return false;
+            if (Directory.Exists(path)) return false;          // フォルダは対象外
+            if (!File.Exists(path)) return false;              // 実在チェック
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            return ImageExts.Contains(ext);
         }
 
         #endregion
@@ -791,6 +839,7 @@ namespace Kiritori
                 this.thumbnail_image = bmp;
             }
         }
+        public void openImage() => this.ma.openImage();
 
         public void saveImage()
         {
@@ -814,115 +863,124 @@ namespace Kiritori
         {
             try
             {
-                OpenFileDialog openFileDialog1 = new OpenFileDialog();
-                openFileDialog1.Title = "Load Image";
-                openFileDialog1.Filter = "Image|*.png;*.PNG;*.jpg;*.JPG;*.jpeg;*.JPEG;*.gif;*.GIF;*.bmp;*.BMP|すべてのファイル|*.*";
-                openFileDialog1.FilterIndex = 1;
-                openFileDialog1.ValidateNames = false;
-
-                if (openFileDialog1.ShowDialog() == DialogResult.OK)
+                using (var ofd = new OpenFileDialog())
                 {
-                    openFileDialog1.Dispose();
+                    ofd.Title = "Load Image";
+                    ofd.Filter = "Image|*.png;*.PNG;*.jpg;*.JPG;*.jpeg;*.JPEG;*.gif;*.GIF;*.bmp;*.BMP|すべてのファイル|*.*";
+                    ofd.FilterIndex = 1;
+                    ofd.ValidateNames = true;
+                    ofd.RestoreDirectory = true;
 
-                    Bitmap bmp = new Bitmap(openFileDialog1.FileName);
-                    Size bs = bmp.Size;
-                    int sw = Screen.GetBounds(this).Width;
-                    int sh = Screen.GetBounds(this).Height;
-                    if (bs.Height > sh)
-                    {
-                        bs.Height = sh;
-                        bs.Width = (int)((double)bs.Height * ((double)bmp.Width / (double)bmp.Height));
-                    }
-                    this.Size = bs;
-                    pictureBox1.Size = bs;
-                    SetImageAndResetZoom(bmp);
-                    pictureBox1.Image = bmp;
-                    this.Text = openFileDialog1.FileName;
-                    this.StartPosition = FormStartPosition.CenterScreen;
-                    this.SetDesktopLocation(this.DesktopLocation.X - (int)(this.Size.Width / 2.0),
-                                            this.DesktopLocation.Y - (int)(this.Size.Height / 2.0));
+                    if (ofd.ShowDialog() != DialogResult.OK) return;
 
-                    this.main_image = bmp;
-                    this.setThumbnail(bmp);
-                    if (!SuppressHistory) ma.setHistory(this);
-                    ShowOverlay("Loaded");
-                }
-                else
-                {
-                    openFileDialog1.Dispose();
+                    var bmp = LoadBitmapClone(ofd.FileName);
+                    ApplyImage(bmp, ofd.FileName, addHistory: !SuppressHistory, showOverlay: true);
                 }
             }
             catch
             {
-                this.Close();
+                // 必要なら MessageBox 等。落とさない方がUXは良い。
+                // MessageBox.Show("画像の読み込みに失敗しました。", "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
-        public void openImage() => this.ma.openImage();
 
         public void setImageFromPath(string fname)
         {
             try
             {
-                Bitmap bmp = new Bitmap(fname);
-                Size bs = bmp.Size;
-                int sw = Screen.GetBounds(this).Width;
-                int sh = Screen.GetBounds(this).Height;
-                if (bs.Height > sh)
-                {
-                    bs.Height = sh;
-                    bs.Width = (int)((double)bs.Height * ((double)bmp.Width / (double)bmp.Height));
-                }
-                this.Size = bs;
-                pictureBox1.Size = bs;
-                SetImageAndResetZoom(bmp);
-                pictureBox1.Image = bmp;
-                this.Text = fname;
-                this.TopMost = this.isAfloatWindow;
-                this.Opacity = this.WindowAlphaPercent;
-                this.StartPosition = FormStartPosition.CenterScreen;
-                this.SetDesktopLocation(this.DesktopLocation.X - (int)(this.Size.Width / 2.0),
-                                        this.DesktopLocation.Y - (int)(this.Size.Height / 2.0));
+                if (string.IsNullOrWhiteSpace(fname) || !File.Exists(fname)) return;
 
-                this.main_image = bmp;
-                this.setThumbnail(bmp);
-                if (!SuppressHistory) ma.setHistory(this);
-                ShowOverlay("Loaded");
+                var bmp = LoadBitmapClone(fname);
+                ApplyImage(bmp, fname, addHistory: !SuppressHistory, showOverlay: true);
             }
             catch
             {
-                this.Close();
+                // 旧実装は Close() していたが、ここでは黙って無視する方が安全
+                // this.Close();
             }
         }
 
         public void setImageFromBMP(Bitmap bmp)
         {
+            if (bmp == null) return;
+            // 呼び出し元の bmp 所有権は呼び出し元にある想定なので、ここでクローンして使う
+            using (var clone = new Bitmap(bmp))
+            {
+                ApplyImage(clone, titlePath: null, addHistory: false, showOverlay: false);
+            }
+        }
+
+        // ---- 共通処理（ここだけで見た目・配置・履歴・オーバーレイなどを完結） ----
+
+        private void ApplyImage(Bitmap bmp, string titlePath, bool addHistory, bool showOverlay)
+        {
+            // 1) サイズを作業領域にフィット（縦だけでなく横も考慮）
+            var wa = Screen.FromControl(this).WorkingArea; // マルチモニタに強い
+            var target = FitInto(bmp.Size, wa.Size);
+
+            // 2) 反映
+            this.SuspendLayout();
             try
             {
-                Size bs = bmp.Size;
-                int sw = Screen.GetBounds(this).Width;
-                int sh = Screen.GetBounds(this).Height;
-                if (bs.Height > sh)
-                {
-                    bs.Height = sh;
-                    bs.Width = (int)((double)bs.Height * ((double)bmp.Width / (double)bmp.Height));
-                }
-                this.Size = bs;
-                pictureBox1.Size = bs;
-                SetImageAndResetZoom(bmp);
-                pictureBox1.Image = bmp;
+                this.Size = target;
+                var old = pictureBox1.Image;
+                pictureBox1.Image = null;                  // 一旦外す（Paint競合回避）
+
+                if (pictureBox1.Size != target)
+                    pictureBox1.Size = target;
+
+                SetImageAndResetZoom(bmp);                 // ※この中で old を Dispose しないこと
+                pictureBox1.Image = bmp;                   // ← ここからこのフォームが所有
+                if (old != null) old.Dispose();            // ← 古い画像を最後に破棄
+
+                if (!string.IsNullOrEmpty(titlePath))
+                    this.Text = titlePath;
+
                 this.TopMost = this.isAfloatWindow;
                 this.Opacity = this.WindowAlphaPercent;
-                this.StartPosition = FormStartPosition.CenterScreen;
-                this.SetDesktopLocation(this.DesktopLocation.X - (int)(this.Size.Width / 2.0),
-                                        this.DesktopLocation.Y - (int)(this.Size.Height / 2.0));
+                this.StartPosition = FormStartPosition.Manual;
 
-                this.main_image = bmp;
+                // 中央配置
+                var loc = new Point(
+                    wa.Left + (wa.Width  - this.Width)  / 2,
+                    wa.Top  + (wa.Height - this.Height) / 2
+                );
+                this.Location = loc;
+
+                this.main_image = bmp;         // 所有権はフォームに移譲
                 this.setThumbnail(bmp);
+
+                if (addHistory) ma.setHistory(this);
+                if (showOverlay) ShowOverlay("Loaded");
             }
-            catch
+            finally
             {
-                this.Close();
+                this.ResumeLayout();
+            }
+        }
+
+        // 画像を作業領域に収まるよう縦横比を保って縮小（オリジナルが小さければそのまま）
+        private static Size FitInto(Size src, Size box)
+        {
+            if (src.Width <= box.Width && src.Height <= box.Height) return src;
+
+            double rw = (double)box.Width / src.Width;
+            double rh = (double)box.Height / src.Height;
+            double r  = Math.Min(rw, rh);
+
+            int w = Math.Max(1, (int)Math.Round(src.Width * r));
+            int h = Math.Max(1, (int)Math.Round(src.Height * r));
+            return new Size(w, h);
+        }
+
+        // ファイルロックを残さない読み込み
+        private static Bitmap LoadBitmapClone(string path)
+        {
+            // 共有読み込み（他プロセスが書き込み中でも読めることがある）
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var img = Image.FromStream(fs, useEmbeddedColorManagement: false, validateImageData: false))
+            {
+                return new Bitmap(img); // クローンして FileStream をすぐ閉じる
             }
         }
 

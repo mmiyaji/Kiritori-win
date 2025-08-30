@@ -522,4 +522,7 @@
   <data name="Toast.OcrFailed" xml:space="preserve">
     <value>OCR失敗</value>
   </data>
+  <data name="Text.DragDropFailed" xml:space="preserve">
+    <value>画像を開けませんでした</value>
+  </data>
 </root>

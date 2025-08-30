@@ -301,7 +301,14 @@ namespace Kiritori
             {
                 s = new ScreenWindow(this);
             }
-            s.openImage(path);
+            if (!string.IsNullOrEmpty(path) && File.Exists(path))
+            {
+                s.openImage(path);
+            }
+            else
+            {
+                s.openImage();
+            }
         }
         public void openImageFromHistory(ToolStripMenuItem item)
         {

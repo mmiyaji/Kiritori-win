@@ -745,6 +745,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Failed open image に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_DragDropFailed {
+            get {
+                return ResourceManager.GetString("Text.DragDropFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Drop shadow に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_DropShadow {
