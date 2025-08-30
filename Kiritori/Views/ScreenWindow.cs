@@ -38,7 +38,6 @@ namespace Kiritori
         // スナップ関連の既定（Settings が無い場合のフォールバック）
         private int snapGrid = 50;      // グリッド間隔(px)
         private int edgeSnapTol = 6;    // 端スナップの許容距離(px)
-        private bool showSnapGuides = true; // Alt中にガイド線を描くか
 
         private MagnifierLiveWindow _live;
         private LiveRegionWindow_GDI _liveRegion;
@@ -291,8 +290,6 @@ namespace Kiritori
         private Point startPoint;
         private Point startPointPhys;
         private Point hoverPoint = Point.Empty;
-        private bool showHover = true;
-        //private Point endPoint;
         private Rectangle rc;
         private Boolean isPressed = false;
 
@@ -507,8 +504,7 @@ namespace Kiritori
 
 
         private Point _hoverPoint;
-        private bool _showHover;
-        private bool _showSnapGuides;
+        private bool _showHover = false;
 
         private void RedrawHoverOnly()
         {
