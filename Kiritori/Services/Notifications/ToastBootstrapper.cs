@@ -24,6 +24,7 @@ namespace Kiritori.Services.Notifications
             if (_initialized) return;
             _initialized = true;
 
+            #pragma warning disable CS0618
             if (!PackagedHelper.IsPackaged())
             {
                 // 1) Start メニューに AUMID 付きショートカットを用意
@@ -41,7 +42,7 @@ namespace Kiritori.Services.Notifications
                 // パッケージ時は AUMID/lnk 不要。OnActivated を使うため RegisterActivator のみ。
                 DesktopNotificationManagerCompat.RegisterActivator<MyToastActivator>();
             }
-
+            #pragma warning restore CS0618
             // クリック時ハンドラ（重複登録しない）
             ToastNotificationManagerCompat.OnActivated += e =>
             {
@@ -65,14 +66,18 @@ namespace Kiritori.Services.Notifications
                     }
 
                     if (action == "open" && !string.IsNullOrEmpty(path) && File.Exists(path))
-                        Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+                    {
+                        OnUI(() => Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }));
+                    }
                     else if (action == "openFolder" && !string.IsNullOrEmpty(path))
                     {
-                        var dir = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
-                        if (!string.IsNullOrEmpty(dir))
-                            Process.Start("explorer.exe", "/select,\"" + path + "\"");
+                        OnUI(() =>
+                        {
+                            var dir = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
+                            if (!string.IsNullOrEmpty(dir))
+                                Process.Start("explorer.exe", "/select,\"" + path + "\"");
+                        });
                     }
-                    // 例: copy アクションを実装したい場合はここに
                 }
                 catch (Exception ex)
                 {
