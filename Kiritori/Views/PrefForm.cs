@@ -16,7 +16,7 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using System.Threading.Tasks;
-
+using System.Linq;
 
 namespace Kiritori
 {
@@ -35,6 +35,9 @@ namespace Kiritori
         private System.Collections.Generic.Dictionary<string, string> _baselineMap =
                     new System.Collections.Generic.Dictionary<string, string>();
 
+        private HotkeySpec defCap = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 };
+        private HotkeySpec defOcr = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 };
+
         // =========================================================
         // ==================== Constructor ========================
         // =========================================================
@@ -45,7 +48,7 @@ namespace Kiritori
 
             InitializeComponent();
             _loadingUi = true;
-            
+
             #if DEBUG
                 DebugUiDecorator.Apply(this, new DebugUiOptions
                 {
@@ -405,6 +408,145 @@ namespace Kiritori
                 SR.SetCulture(culture);
             }
         }
+
+        private void SaveHotkeyFromPicker(bool isCapture, HotkeyPicker picker)
+        {
+            Debug.WriteLine($"[Prefs] SaveHotkeyFromPicker(isCapture={isCapture})");
+            if (picker == null) { Debug.WriteLine("[Prefs] picker is null"); return; }
+            if (picker.Value == null) { Debug.WriteLine("[Prefs] picker.Value is null"); return; }
+
+            var pickedText = HotkeyUtil.ToText(picker.Value);
+            Debug.WriteLine($"[Prefs] picked: '{pickedText}' (Mods={picker.Value.Mods}, Key={picker.Value.Key})");
+
+            var currentCap = Properties.Settings.Default.HotkeyCapture ?? "";
+            var currentOcr = Properties.Settings.Default.HotkeyOcr ?? "";
+            Debug.WriteLine($"[Prefs] before: Cap='{currentCap}', Ocr='{currentOcr}'");
+
+            // 重複チェック
+            if (isCapture)
+            {
+                if (string.Equals(pickedText, currentOcr, StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageBox.Show(this, SR.T("Prefs.Hotkey.DuplicateOCR", "Duplicate with OCR hotkey."),
+                                    "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ((HotkeyPicker)this.textBoxKiritori).SetFromText(currentCap,
+                        new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 });
+                    return;
+                }
+                Properties.Settings.Default.HotkeyCapture = pickedText;
+            }
+            else
+            {
+                if (string.Equals(pickedText, currentCap, StringComparison.OrdinalIgnoreCase))
+                {
+                    MessageBox.Show(this, SR.T("Prefs.Hotkey.DuplicateCapture", "Duplicate with Image hotkey."),
+                                    "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ((HotkeyPicker)this.textBoxHotkeyCaptureOCR).SetFromText(currentOcr,
+                        new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 });
+                    return;
+                }
+                Properties.Settings.Default.HotkeyOcr = pickedText;
+            }
+
+            Properties.Settings.Default.Save();
+            Debug.WriteLine($"[Prefs] saved: Cap='{Properties.Settings.Default.HotkeyCapture}', Ocr='{Properties.Settings.Default.HotkeyOcr}'");
+
+            // --- Main を確実に見つける（名前文字列ではなく型で）
+            // var main = Application.OpenForms.OfType<Kiritori.MainApplication>().FirstOrDefault();
+            // if (main == null)
+            // {
+            //     Debug.WriteLine("[Prefs] MainApplication not found via OpenForms; hotkeys NOT reloaded.");
+            //     return;
+            // }
+
+            // if (!main.IsHandleCreated)
+            // {
+            //     Debug.WriteLine("[Prefs] Main handle not created yet; posting reload on HandleCreated.");
+            //     main.HandleCreated += (s, e) =>
+            //     {
+            //         try { main.BeginInvoke(new Action(main.ReloadHotkeysFromSettings)); }
+            //         catch (Exception ex) { Debug.WriteLine("[Prefs] BeginInvoke (HandleCreated) failed: " + ex); }
+            //     };
+            //     return;
+            // }
+
+            // Debug.WriteLine("[Prefs] calling main.ReloadHotkeysFromSettings()");
+            // try { main.BeginInvoke(new Action(main.ReloadHotkeysFromSettings)); }
+            // catch (Exception ex) { Debug.WriteLine("[Prefs] BeginInvoke failed: " + ex); }
+        }
+        private void ResetCaptureHotkeyToDefault()
+        {
+
+            var defCapText = HotkeyUtil.ToText(defCap);
+            var defOcrText = HotkeyUtil.ToText(defOcr);
+
+            // OCR と衝突していたら OCR も既定に
+            var currentOcr = Properties.Settings.Default.HotkeyOcr ?? "";
+            if (string.Equals(defCapText, currentOcr, StringComparison.OrdinalIgnoreCase))
+            {
+                Properties.Settings.Default.HotkeyOcr = defOcrText;
+                ((HotkeyPicker)this.textBoxHotkeyCaptureOCR).SetFromText(defOcrText, defOcr);
+            }
+
+            Properties.Settings.Default.HotkeyCapture = defCapText;
+            Properties.Settings.Default.Save(); // Main が監視して再登録してくれる
+
+            ((HotkeyPicker)this.textBoxKiritori).SetFromText(defCapText, defCap);
+        }
+
+        private void ResetOcrHotkeyToDefault()
+        {
+
+            var defCapText = HotkeyUtil.ToText(defCap);
+            var defOcrText = HotkeyUtil.ToText(defOcr);
+
+            // Image と衝突していたら Image も既定に
+            var currentCap = Properties.Settings.Default.HotkeyCapture ?? "";
+            if (string.Equals(defOcrText, currentCap, StringComparison.OrdinalIgnoreCase))
+            {
+                Properties.Settings.Default.HotkeyCapture = defCapText;
+                ((HotkeyPicker)this.textBoxKiritori).SetFromText(defCapText, defCap);
+            }
+
+            Properties.Settings.Default.HotkeyOcr = defOcrText;
+            Properties.Settings.Default.Save();
+
+            ((HotkeyPicker)this.textBoxHotkeyCaptureOCR).SetFromText(defOcrText, defOcr);
+        }
+
+        private void RebuildShortcutsInfo()
+        {
+            this.grpShortcuts.Controls.Clear();
+
+            var tlpShortcutsInfo = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoSize = true,
+                ColumnCount = 2,
+                CellBorderStyle = TableLayoutPanelCellBorderStyle.None,
+                Padding = new Padding(8),
+            };
+            tlpShortcutsInfo.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            tlpShortcutsInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+
+            // ▼ 設定から動的に
+            var capText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyCapture, defCap);
+            var ocrGlobalText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyOcr, defOcr);
+
+            AddShortcutInfo(tlpShortcutsInfo, capText,          "Start capture",                     tagKey: "Text.StartCapture");
+            AddShortcutInfo(tlpShortcutsInfo, ocrGlobalText,    "Start OCR capture (global)",         tagKey: "Text.StartOcrCapture");
+
+            AddShortcutInfo(tlpShortcutsInfo, "Ctrl + W, ESC",  "Close window",                      tagKey: "Text.CloseWindow");
+            AddShortcutInfo(tlpShortcutsInfo, "Ctrl + C",       "Copy to clipboard",                 tagKey: "Text.CopyToClipboard");
+            // AddShortcutInfo(tlpShortcutsInfo, "Ctrl + S",    "Save image",                         tagKey: "Text.SaveImage");
+            AddShortcutInfo(tlpShortcutsInfo, "Ctrl + T",       "Run OCR (copy result / show toast)", tagKey: "Text.RunOCRDesc");
+
+            AddShortcutInfo(tlpShortcutsInfo, "", "");
+            AddShortcutInfo(tlpShortcutsInfo, "", "...and more. See Shortcuts",                       tagKey: "Text.AndMore");
+
+            this.grpShortcuts.Controls.Add(tlpShortcutsInfo);
+        }
+
 
         // =========================================================
         // ================= Layout / Painting =====================
@@ -880,6 +1022,13 @@ namespace Kiritori
             th.Start();
             return tcs.Task;
         }
+        private static string HotkeyTextForDisplay(string stored, HotkeySpec fallback, bool addSpaces = true)
+        {
+            var spec = Kiritori.Helpers.HotkeyUtil.ParseOrDefault(stored, fallback);
+            var s = Kiritori.Helpers.HotkeyUtil.ToText(spec);  // 例: "Ctrl+Shift+5"
+            return addSpaces ? s.Replace("+", " + ") : s;
+        }
+
         // =========================================================
         // ================== Nested UI Controls ===================
         // =========================================================

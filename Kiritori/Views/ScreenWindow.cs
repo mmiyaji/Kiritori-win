@@ -844,7 +844,7 @@ namespace Kiritori
             {
                 var builder = new CommunityToolkit.WinUI.Notifications.ToastContentBuilder()
                     .AddArgument("action", "open")
-                    .AddText("Kiritori")
+                    .AddText("Kiritori - OCR")
                     .AddAudio(new System.Uri("ms-winsoundevent:Notification.IM"))
                     .AddText(SR.T("Toast.OcrCopied", "OCR text copied to clipboard"))
                     .AddText(preview);
@@ -866,7 +866,7 @@ namespace Kiritori
             {
                 var main = Application.OpenForms["MainApplication"] as Kiritori.MainApplication;
                 if (main != null && main.NotifyIcon != null)
-                    main.NotifyIcon.ShowBalloonTip(2500, "Kiritori", SR.T("Toast.OcrCopied", "OCR text copied to clipboard"), ToolTipIcon.None);
+                    main.NotifyIcon.ShowBalloonTip(1000, "Kiritori - OCR", SR.T("Toast.OcrCopied", "OCR text copied to clipboard"), ToolTipIcon.None);
             }
         }
 
@@ -876,7 +876,7 @@ namespace Kiritori
             {
                 var builder = new CommunityToolkit.WinUI.Notifications.ToastContentBuilder()
                     .AddArgument("action", "open")
-                    .AddText("Kiritori")
+                    .AddText("Kiritori - OCR")
                     .AddText(SR.T("Toast.OcrFailed", "OCR failed"));
                 if (Kiritori.Helpers.PackagedHelper.IsPackaged())
                 {

@@ -94,6 +94,26 @@ namespace Kiritori
                 await EnsureStartupAsync();
                 MaybeShowPreferencesOnStartup();
             };
+            Properties.Settings.Default.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(Properties.Settings.Default.HotkeyCapture) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.HotkeyOcr))
+                {
+                    Debug.WriteLine($"[HK] Settings changed: {e.PropertyName} → reload hotkeys");
+                    // UIスレッドに投げる
+                    if (this.IsHandleCreated)
+                        this.BeginInvoke((Action)ReloadHotkeysFromSettings);
+                    else
+                    {
+                        void handler(object s2, EventArgs e2)
+                        {
+                            this.HandleCreated -= handler;
+                            ReloadHotkeysFromSettings();
+                        }
+                        this.HandleCreated += handler;
+                    }
+                }
+            };
         }
 
         // --- DPI 変更を受け取り、UI のスケール依存を更新
@@ -558,8 +578,25 @@ namespace Kiritori
         }
 
 
-        private void ReloadHotkeysFromSettings()
+        public void ReloadHotkeysFromSettings()
         {
+            Debug.WriteLine("[HK] ReloadHotkeysFromSettings() called");
+            Debug.WriteLine($"[HK] raw settings: Cap='{Properties.Settings.Default.HotkeyCapture}', Ocr='{Properties.Settings.Default.HotkeyOcr}'");
+
+            // ウィンドウ ハンドルが未作成だと RegisterHotKey に失敗するので保護
+            if (!this.IsHandleCreated)
+            {
+                Debug.WriteLine("[HK] Handle not created; deferring until HandleCreated.");
+
+                // 起動直後などで未作成なら、HandleCreated 後にもう一度やる
+                void handler(object s, EventArgs e)
+                {
+                    this.HandleCreated -= handler;
+                    ReloadHotkeysFromSettings();
+                }
+                this.HandleCreated += handler;
+                return;
+            }
             // 念のため一旦解除
             try { UnregisterHotKey(this.Handle, HOTKEY_ID_CAPTURE); } catch { }
             try { UnregisterHotKey(this.Handle, HOTKEY_ID_OCR); } catch { }

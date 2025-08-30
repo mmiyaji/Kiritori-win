@@ -376,6 +376,24 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Duplicate with Image Capture hotkey に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Prefs_Hotkey_DuplicateCapture {
+            get {
+                return ResourceManager.GetString("Prefs.Hotkey.DuplicateCapture", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Duplicate with OCR hotkey に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Prefs_Hotkey_DuplicateOCR {
+            get {
+                return ResourceManager.GetString("Prefs.Hotkey.DuplicateOCR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Capture Background Opacity (%) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Setting_Display_CaptureBackgroundAlphaPercent {
@@ -952,6 +970,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Reset に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_ResetDefault {
+            get {
+                return ResourceManager.GetString("Text.ResetDefault", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Run at Startup に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_Runatstartup {
@@ -1056,6 +1083,15 @@ namespace Kiritori.Properties {
         internal static string Text_StartCapture {
             get {
                 return ResourceManager.GetString("Text.StartCapture", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Start OCR capture に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_StartOcrCapture {
+            get {
+                return ResourceManager.GetString("Text.StartOcrCapture", resourceCulture);
             }
         }
         

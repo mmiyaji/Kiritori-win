@@ -1,4 +1,5 @@
-﻿using Kiritori.Views.Controls;
+﻿using Kiritori.Helpers;
+using Kiritori.Views.Controls;
 using System;
 using System.Drawing;
 using System.Linq;
@@ -317,15 +318,44 @@ namespace Kiritori
             this.grpHotkey.Tag = "loc:Text.Hotkeys";
             this.grpHotkey.Margin = new Padding(0, 8, 0, 0);
 
-            var tlpHot = NewGrid(3, 2);
+            var tlpHot = NewGrid(3, 4);
             this.labelHotkeyCapture = NewRightLabel("Image capture");
             this.labelHotkeyCapture.Tag = "loc:Text.ImageCapture";
             this.textBoxKiritori = new TextBox { Enabled = false, Width = 160, Text = "Ctrl + Shift + 5" };
             this.labelHotkeyCaptureOCR = NewRightLabel("OCR capture");
             this.labelHotkeyCaptureOCR.Tag = "loc:Text.OCRCapture";
-            this.textBoxHotkeyCaptureOCR = new TextBox { Enabled = false, Width = 160, Text = "Ctrl + Shift + 4" };
+
+            this.labelHotkeyCapture = NewRightLabel("Image capture");
+            this.labelHotkeyCapture.Tag = "loc:Text.ImageCapture";
+
+            // ★ TextBox → HotkeyPicker に
+            this.textBoxKiritori = new HotkeyPicker { ReadOnly = true, Width = 160 };
+            ((HotkeyPicker)this.textBoxKiritori).SetFromText(
+                Properties.Settings.Default.HotkeyCapture, defCap);
+            ((HotkeyPicker)this.textBoxKiritori).HotkeyPicked += (s, e) =>
+            {
+                SaveHotkeyFromPicker(isCapture:true, (HotkeyPicker)this.textBoxKiritori);
+            };
+
+            this.labelHotkeyCaptureOCR = NewRightLabel("OCR capture");
+            this.labelHotkeyCaptureOCR.Tag = "loc:Text.OCRCapture";
+
+            this.textBoxHotkeyCaptureOCR = new HotkeyPicker { ReadOnly = true, Width = 160 };
+            ((HotkeyPicker)this.textBoxHotkeyCaptureOCR).SetFromText(
+                Properties.Settings.Default.HotkeyOcr, defOcr);
+            ((HotkeyPicker)this.textBoxHotkeyCaptureOCR).HotkeyPicked += (s, e) =>
+            {
+                SaveHotkeyFromPicker(isCapture:false, (HotkeyPicker)this.textBoxHotkeyCaptureOCR);
+            };
             //this.textBoxKiritori.KeyDown += new KeyEventHandler(this.textBoxKiritori_KeyDown);
             //this.textBoxKiritori.PreviewKeyDown += new PreviewKeyDownEventHandler(this.textBoxKiritori_PreviewKeyDown);
+            var btnResetCap = new Button { Text = "Reset", AutoSize = true };
+            btnResetCap.Tag = "loc:Text.ResetDefault";
+            btnResetCap.Click += (s, e) => ResetCaptureHotkeyToDefault();
+
+            var btnResetOcr = new Button { Text = "Reset", AutoSize = true };
+            btnResetOcr.Tag = "loc:Text.ResetDefault";
+            btnResetOcr.Click += (s, e) => ResetOcrHotkeyToDefault();
 
             this.labelHotkeyCapturePrev = NewRightLabel("Capture at previous region");
             this.labelHotkeyCapturePrev.Tag = "loc:Text.PreviousCapture";
@@ -337,8 +367,10 @@ namespace Kiritori
 
             tlpHot.Controls.Add(this.labelHotkeyCapture, 0, 0);
             tlpHot.Controls.Add(this.textBoxKiritori, 1, 0);
+            tlpHot.Controls.Add(btnResetCap, 2, 0);
             tlpHot.Controls.Add(this.labelHotkeyCaptureOCR, 0, 1);
             tlpHot.Controls.Add(this.textBoxHotkeyCaptureOCR, 1, 1);
+            tlpHot.Controls.Add(btnResetOcr, 2, 1);
             tlpHot.Controls.Add(this.labelHotkeyCapturePrev, 0, 2);
             tlpHot.Controls.Add(this.textBoxCapturePrev, 1, 2);
             tlpHot.Controls.Add(this.labelHotkeyVideo, 0, 3);
@@ -613,7 +645,7 @@ namespace Kiritori
                 ColumnCount = 2,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                Margin = new Padding(0, 0, 0, 8)
+                Margin = new Padding(0, 0, 0, 0)
             };
             this.tlpInfoHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 140)); // アイコン列
             this.tlpInfoHeader.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));  // 情報列
@@ -724,6 +756,7 @@ namespace Kiritori
             AddShortcutInfo(tlpShortcutsInfo, "", "...and more. See Shortcuts", tagKey: "Text.AndMore");
             this.grpShortcuts.Controls.Clear();
             this.grpShortcuts.Controls.Add(tlpShortcutsInfo);
+            RebuildShortcutsInfo();
 
             // ==== 起動時カード(GroupBox) ====
             this.grpOnAppLaunch = new GroupBox
@@ -875,6 +908,7 @@ namespace Kiritori
                 ReadOnly = true,
                 Dock = DockStyle.Fill,
                 Margin = new Padding(3, 3, 3, 3),
+                Enabled = false,
             };
 
             tlp.Controls.Add(label, colOffset + 0, row);
@@ -882,6 +916,10 @@ namespace Kiritori
         }
         private void AddShortcutInfo(TableLayoutPanel tlp, string keys, string desc, string tagKey = null)
         {
+            // var labelFont = new Font(
+            //     this.Font.FontFamily,
+            //     this.Font.Size - 1
+            // );
             if (string.IsNullOrEmpty(keys) && string.IsNullOrEmpty(desc))
             {
                 // 空行
@@ -889,7 +927,8 @@ namespace Kiritori
                 tlp.Controls.Add(spacer);
                 tlp.SetColumnSpan(spacer, 2);
                 return;
-            }else if (string.IsNullOrEmpty(keys))
+            }
+            else if (string.IsNullOrEmpty(keys))
             {
                 // キーなし（説明だけ、左寄せ）
                 var lblDescOnly = new Label
@@ -898,7 +937,7 @@ namespace Kiritori
                     AutoSize = true,
                     Margin = new Padding(0, 2, 0, 2),
                     ForeColor = SystemColors.GrayText,
-
+                    // Font = labelFont,
                     Tag = tagKey != null ? $"loc:{tagKey}" : null
                 };
                 tlp.Controls.Add(lblDescOnly);
@@ -909,14 +948,14 @@ namespace Kiritori
             {
                 Text = keys,
                 AutoSize = true,
-                // Font = new Font("Segoe UI"),
+                // Font = labelFont,
                 Margin = new Padding(0, 2, 20, 2), // 右に余白
             };
             var lblDesc = new Label
             {
                 Text = desc,
                 AutoSize = true,
-                // Font = new Font("Segoe UI", this.Font.Size, FontStyle.Regular),
+                // Font = labelFont,
                 Margin = new Padding(0, 2, 0, 2),
                 Tag = tagKey != null ? $"loc:{tagKey}" : null
             };

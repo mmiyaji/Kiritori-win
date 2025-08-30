@@ -286,7 +286,7 @@
     <value>その他はショートカットタブに記載</value>
   </data>
   <data name="Text.StartCapture" xml:space="preserve">
-    <value>キャプチャー開始</value>
+    <value>キャプチャー開始(グローバル設定)</value>
   </data>
   <data name="Text.CloseWindow" xml:space="preserve">
     <value>キャプチャーウィンドウを閉じる</value>
@@ -499,9 +499,21 @@
     <value>OCR実行</value>
   </data>
   <data name="Text.RunOCRDesc" xml:space="preserve">
-    <value>OCR実行(結果をクリップボードコピー)</value>
+    <value>キャプチャー画像にOCR実行(クリップボードコピー)</value>
   </data>
   <data name="Text.OCRCapture" xml:space="preserve">
     <value>OCRモードでキャプチャー</value>
+  </data>
+  <data name="Prefs.Hotkey.DuplicateCapture" xml:space="preserve">
+    <value>画像キャプチャーのホットキーが競合しています</value>
+  </data>
+  <data name="Prefs.Hotkey.DuplicateOCR" xml:space="preserve">
+    <value>OCRモードキャプチャーのホットキーが競合しています</value>
+  </data>
+  <data name="Text.ResetDefault" xml:space="preserve">
+    <value>リセット</value>
+  </data>
+  <data name="Text.StartOcrCapture" xml:space="preserve">
+    <value>OCRモードキャプチャー開始(グローバル設定)</value>
   </data>
 </root>

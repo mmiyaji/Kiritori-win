@@ -504,4 +504,16 @@
   <data name="Text.OCRCapture" xml:space="preserve">
     <value>OCR capture</value>
   </data>
+  <data name="Prefs.Hotkey.DuplicateCapture" xml:space="preserve">
+    <value>Duplicate with Image Capture hotkey</value>
+  </data>
+  <data name="Prefs.Hotkey.DuplicateOCR" xml:space="preserve">
+    <value>Duplicate with OCR hotkey</value>
+  </data>
+  <data name="Text.ResetDefault" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="Text.StartOcrCapture" xml:space="preserve">
+    <value>Start OCR capture</value>
+  </data>
 </root>

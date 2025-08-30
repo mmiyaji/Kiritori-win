@@ -1277,7 +1277,7 @@ namespace Kiritori
             {
                 System.Diagnostics.Trace.WriteLine("[Toast] Show() failed: " + ex);
                 var main = Application.OpenForms["MainApplication"] as Kiritori.MainApplication;
-                main?.NotifyIcon?.ShowBalloonTip(2500, "Kiritori - OCR", snippet, ToolTipIcon.None);
+                main?.NotifyIcon?.ShowBalloonTip(1000, "Kiritori - OCR", snippet, ToolTipIcon.None);
             }
         }
 
