@@ -25,7 +25,8 @@ namespace Kiritori
         private async void RunOcrOnCurrentImage()
         {
             if (_ocrBusy) return;
-            if (this.pictureBox1.Image == null)
+            var src = _originalImage ?? pictureBox1?.Image as Bitmap;
+            if (src == null)
             {
                 ShowOverlay("No image");
                 return;
@@ -34,7 +35,7 @@ namespace Kiritori
             _ocrBusy = true;
             try
             {
-                using (var clone = new Bitmap(this.pictureBox1.Image))
+                using (var clone = new Bitmap(src))
                 {
                     var ocrService = new OcrService();
                     var provider = ocrService.Get(null);
