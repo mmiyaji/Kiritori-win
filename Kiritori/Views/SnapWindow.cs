@@ -961,7 +961,7 @@ namespace Kiritori
                 this.main_image = bmp;         // 所有権はフォームに移譲
                 this.setThumbnail(bmp);
                 ApplyInitialDisplayZoomIfNeeded();
-                
+
                 if (addHistory) ma.setHistory(this);
                 if (showOverlay) ShowOverlay("Loaded");
             }
@@ -1307,13 +1307,15 @@ namespace Kiritori
                     {
                         try { Clipboard.SetText(result.Text); } catch { }
                         ShowOverlay("OCR copied");
-
+                        if (Properties.Settings.Default.isShowNotifyOCR)
+                        {
+                            ShowOcrToast(result.Text ?? "");
+                        }
                     }
                     else
                     {
                         ShowOverlay("OCR no text");
                     }
-                    ShowOcrToast(result.Text ?? "");
                 }
             }
             catch (Exception ex)

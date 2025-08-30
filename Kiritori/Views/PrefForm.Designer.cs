@@ -82,7 +82,8 @@ namespace Kiritori
         private GroupBox grpCaptureSettings;
         private CheckBox chkScreenGuide;   // show guide lines
         private CheckBox chkTrayNotify;    // notify on capture
-        private CheckBox chkPlaySound;     // play sound on capture
+        private CheckBox chkTrayNotifyOCR;    // notify on capture
+        // private CheckBox chkPlaySound;     // play sound on capture
         private Label labelBgPreset;
         private ComboBox cmbBgPreset;
         private AlphaPreviewPanel previewBg;
@@ -395,12 +396,13 @@ namespace Kiritori
 
             this.chkScreenGuide = new CheckBox { Text = "Show guide lines", Checked = true, AutoSize = true, Tag = "loc:Text.ShowGuide" };
             this.chkTrayNotify = new CheckBox { Text = "Notify in tray on capture", AutoSize = true, Tag = "loc:Text.NotifyTray" };
-            this.chkPlaySound = new CheckBox { Text = "Play sound on capture", AutoSize = true, Enabled = false, Tag = "loc:Text.PlaySound" };
+            this.chkTrayNotifyOCR = new CheckBox { Text = "Notify in tray on OCR capture", AutoSize = true, Tag = "loc:Text.NotifyTrayOCR" };
+            // this.chkPlaySound = new CheckBox { Text = "Play sound on capture", AutoSize = true, Enabled = false, Tag = "loc:Text.PlaySound" };
 
             var flowToggles = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
             flowToggles.Controls.Add(this.chkScreenGuide);
             flowToggles.Controls.Add(this.chkTrayNotify);
-            flowToggles.Controls.Add(this.chkPlaySound);
+            flowToggles.Controls.Add(this.chkTrayNotifyOCR);
 
             tlpCap.Controls.Add(new Label { Text = "Options", AutoSize = true, TextAlign = ContentAlignment.MiddleRight, Anchor = AnchorStyles.Right, Tag = "loc:Text.Option" }, 0, 0);
             tlpCap.Controls.Add(flowToggles, 1, 0);
@@ -1061,6 +1063,8 @@ namespace Kiritori
                 new Binding("Checked", S, nameof(S.isScreenGuide), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkTrayNotify.DataBindings.Add(
                 new Binding("Checked", S, nameof(S.isShowNotify), true, DataSourceUpdateMode.OnPropertyChanged));
+            this.chkTrayNotifyOCR.DataBindings.Add(
+                new Binding("Checked", S, nameof(S.isShowNotifyOCR), true, DataSourceUpdateMode.OnPropertyChanged));
 
             if (S.WindowAlphaPercent < this.trackbarDefaultOpacity.Minimum)
                 S.WindowAlphaPercent = this.trackbarDefaultOpacity.Minimum;

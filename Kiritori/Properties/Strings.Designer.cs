@@ -898,6 +898,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Notify in tray on OCR に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_NotifyTrayOCR {
+            get {
+                return ResourceManager.GetString("Text.NotifyTrayOCR", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   OCR capture に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_OCRCapture {

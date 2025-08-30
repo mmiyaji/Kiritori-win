@@ -274,5 +274,17 @@ namespace Kiritori.Properties {
                 this["HotkeyOcr"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool isShowNotifyOCR {
+            get {
+                return ((bool)(this["isShowNotifyOCR"]));
+            }
+            set {
+                this["isShowNotifyOCR"] = value;
+            }
+        }
     }
 }

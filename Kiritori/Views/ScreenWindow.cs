@@ -846,7 +846,7 @@ namespace Kiritori
 
         private void NotifyOcr(string text)
         {
-            if (!Properties.Settings.Default.isShowNotify) return;
+            if (!Properties.Settings.Default.isShowNotifyOCR) return;
 
             // 先頭 ~80文字をプレビューに
             string preview = text ?? "";
