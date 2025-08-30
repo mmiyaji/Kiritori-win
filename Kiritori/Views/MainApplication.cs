@@ -30,6 +30,7 @@ namespace Kiritori
         private const int WM_DPICHANGED = 0x02E0;
         private ScreenWindow s;
         private int _screenOpenGate = 0;
+        private readonly AppStartupOptions _opt;
         private static readonly string HistoryTempDir = Path.Combine(Path.GetTempPath(), "Kiritori", "History");
 
         private bool _allowShow = false;
@@ -52,8 +53,9 @@ namespace Kiritori
         private const int MOD_SHIFT = 0x0004;
         private const int MOD_WIN     = 0x0008; // 使うなら
         private const int MOD_NOREPEAT= 0x4000; // チャタリング対策
-        public MainApplication()
+        internal MainApplication(AppStartupOptions opt = null)
         {
+            _opt = opt ?? new AppStartupOptions();
             InitializeComponent();
             notifyIcon1.Icon = Properties.Resources.AppIcon;
             this.Icon = Properties.Resources.AppIcon;
@@ -64,8 +66,7 @@ namespace Kiritori
                 try
                 {
                     Debug.WriteLine("[HK] HandleCreated: registering hotkeys (PlanB direct)");
-                    // RegisterHotkeys_PlanB();   // ★ 直登録
-                    ReloadHotkeysFromSettings(); // ←既存のHotKeyクラス経由も残してOK（二重登録は不可なのでPlanBで先にUnregister）
+                    ReloadHotkeysFromSettings();
                 }
                 catch (Exception ex)
                 {
@@ -144,6 +145,14 @@ namespace Kiritori
                 ApplyDpiToUi(newDpi);
             }
         }
+        internal void OpenImagesFromIpc(string[] paths)
+        {
+            if (paths == null || paths.Length == 0) return;
+            foreach (var path in paths)
+            {
+                this.openImage(path);
+            }
+        }
 
         private void ApplyDpiToUi(int dpi)
         {
@@ -164,6 +173,14 @@ namespace Kiritori
         private void MaybeShowPreferencesOnStartup()
         {
             // 初回だけは強制表示
+            if (_opt.Mode == AppStartupMode.Viewer && _opt.ImagePaths.Length > 0)
+            {
+                foreach (var path in _opt.ImagePaths)
+                {
+                    this.openImage(path);
+                }
+                return;
+            }
             if (!Settings.Default.isFirstRunShown)
             {
                 Settings.Default.isFirstRunShown = true;
@@ -278,13 +295,13 @@ namespace Kiritori
             Interlocked.Exchange(ref _screenOpenGate, 0);
             Debug.WriteLine("[HK] screen gate released");
         }
-        public void openImage()
+        public void openImage(String path = null)
         {
             if (s == null)
             {
                 s = new ScreenWindow(this);
             }
-            s.openImage();
+            s.openImage(path);
         }
         public void openImageFromHistory(ToolStripMenuItem item)
         {

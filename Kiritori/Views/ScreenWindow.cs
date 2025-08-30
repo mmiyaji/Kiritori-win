@@ -16,6 +16,7 @@ using Windows.UI.Notifications;
 using Kiritori.Views.LiveCapture;
 using Kiritori.Helpers;
 using Kiritori.Services.Notifications;
+using System.IO;
 
 namespace Kiritori
 {
@@ -188,10 +189,20 @@ namespace Kiritori
         }
 
         // ====== 画像オープン関連（既存） ======
-        public void openImage()
+        public void openImage(String path = null)
         {
             try
             {
+                if (path != null)
+                {
+                    SnapWindow sw = new SnapWindow(this.ma);
+                    sw.StartPosition = FormStartPosition.CenterScreen;
+                    sw.setImageFromPath(path);
+                    sw.FormClosing += new FormClosingEventHandler(SW_FormClosing);
+                    captureArray.Add(sw);
+                    sw.Show();
+                    return;
+                }
                 OpenFileDialog openFileDialog1 = new OpenFileDialog();
                 openFileDialog1.Title = "Open Image";
                 openFileDialog1.Filter = "Image|*.png;*.PNG;*.jpg;*.JPG;*.jpeg;*.JPEG;*.gif;*.GIF;*.bmp;*.BMP|すべてのファイル|*.*";

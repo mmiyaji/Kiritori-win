@@ -516,4 +516,10 @@
   <data name="Text.StartOcrCapture" xml:space="preserve">
     <value>Start OCR capture</value>
   </data>
+  <data name="Toast.OcrCopied" xml:space="preserve">
+    <value>OCR text copied to clipboard</value>
+  </data>
+  <data name="Toast.OcrFailed" xml:space="preserve">
+    <value>OCR failed</value>
+  </data>
 </root>

@@ -15,6 +15,18 @@ using Kiritori.Startup;
 
 namespace Kiritori
 {
+    internal enum AppStartupMode
+    {
+        Normal,
+        Viewer
+    }
+
+    internal sealed class AppStartupOptions
+    {
+        internal AppStartupMode Mode { get; set; } = AppStartupMode.Normal;
+        internal string[] ImagePaths { get; set; } = Array.Empty<string>();
+    }
+
     static class Program
     {
         /// <summary>
@@ -43,7 +55,7 @@ namespace Kiritori
 
 
         [STAThread]
-        static void Main()
+        static void Main(string[] args)
         {
             try
             {
@@ -96,7 +108,56 @@ namespace Kiritori
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            Application.Run(new MainApplication());
+            Debug.WriteLine($"[Startup] Args: {string.Join(" ", args ?? Array.Empty<string>())}");
+            var opt = ParseArgs(args);
+            using (var mutex = new Mutex(true, SingleInstance.MutexName, out bool isNew))
+                {
+                    if (isNew)
+                    {
+                        // 1) まず待受け開始（Mainより前）
+                        SingleInstance.StartServer(null);
+
+                        // 2) Main を作成
+                        var main = new MainApplication(opt);
+
+                        // 3) Main ができたらハンドラを登録（キュー分も即消化）
+                        SingleInstance.SetHandler(paths =>
+                        {
+                            if (main != null && main.IsHandleCreated)
+                                main.BeginInvoke(new Action(() => main.OpenImagesFromIpc(paths)));
+                        });
+
+                        Application.ApplicationExit += (s, e) => SingleInstance.StopServer();
+                        Application.Run(main);
+                    }
+                    else
+                    {
+                        // 既存へ渡して終了（リトライ込み）
+                        if (opt.Mode == AppStartupMode.Viewer && opt.ImagePaths.Length > 0)
+                            if (SingleInstance.TrySendToExisting(opt.ImagePaths)) return;
+
+                        // 渡すものがない場合は単に終了でもOK
+                        return;
+                    }
+                }
+        }
+        private static AppStartupOptions ParseArgs(string[] args)
+        {
+            string[] exts = { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp" /*, ".heic"*/ };
+
+            var files = (args ?? Array.Empty<string>())
+                .Select(a => a?.Trim('"'))
+                .Where(a => !string.IsNullOrWhiteSpace(a))
+                .Where(File.Exists)
+                .Where(p => exts.Contains(Path.GetExtension(p).ToLowerInvariant()))
+                .Distinct()
+                .ToArray();
+
+            Debug.WriteLine($"[Startup] Parsed files: {string.Join(", ", files)}");
+
+            return files.Length > 0
+                ? new AppStartupOptions { Mode = AppStartupMode.Viewer, ImagePaths = files }
+                : new AppStartupOptions { Mode = AppStartupMode.Normal };
         }
         static void CopyImageToClipboardSafe(string path)
         {

@@ -105,6 +105,7 @@
     <Compile Include="Helpers\DebugUiOptions.cs" />
     <Compile Include="Helpers\HotkeyUtil.cs" />
     <Compile Include="Helpers\Localizer.cs" />
+    <Compile Include="Helpers\SingleInstance.cs" />
     <Compile Include="Helpers\SR.cs" />
     <Compile Include="Helpers\HotKey.cs" />
     <Compile Include="Helpers\WinRtAwait.cs" />

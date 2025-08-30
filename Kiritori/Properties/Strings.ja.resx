@@ -516,4 +516,10 @@
   <data name="Text.StartOcrCapture" xml:space="preserve">
     <value>OCRモードキャプチャー開始(グローバル設定)</value>
   </data>
+  <data name="Toast.OcrCopied" xml:space="preserve">
+    <value>OCRで抽出したテキストをコピーしました</value>
+  </data>
+  <data name="Toast.OcrFailed" xml:space="preserve">
+    <value>OCR失敗</value>
+  </data>
 </root>

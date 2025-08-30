@@ -1249,6 +1249,24 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   OCR text copied to clipboard に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Toast_OcrCopied {
+            get {
+                return ResourceManager.GetString("Toast.OcrCopied", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   OCR failed に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Toast_OcrFailed {
+            get {
+                return ResourceManager.GetString("Toast.OcrFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Kiritori - click to open menu に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Tray_TrayIcon {
