@@ -899,10 +899,10 @@ namespace Kiritori
             try
             {
                 if (string.IsNullOrWhiteSpace(fname) || !File.Exists(fname)) return;
+                SetLoadMethod(LoadMethod.Path);
 
                 var bmp = LoadBitmapClone(fname);
                 ApplyImage(bmp, fname, addHistory: !SuppressHistory, showOverlay: true);
-                SetLoadMethod(LoadMethod.Path);
             }
             catch
             {
@@ -923,7 +923,6 @@ namespace Kiritori
         }
 
         // ---- 共通処理（ここだけで見た目・配置・履歴・オーバーレイなどを完結） ----
-
         private void ApplyImage(Bitmap bmp, string titlePath, bool addHistory, bool showOverlay)
         {
             // 1) サイズを作業領域にフィット（縦だけでなく横も考慮）
@@ -961,7 +960,8 @@ namespace Kiritori
 
                 this.main_image = bmp;         // 所有権はフォームに移譲
                 this.setThumbnail(bmp);
-
+                ApplyInitialDisplayZoomIfNeeded();
+                
                 if (addHistory) ma.setHistory(this);
                 if (showOverlay) ShowOverlay("Loaded");
             }
@@ -970,6 +970,7 @@ namespace Kiritori
                 this.ResumeLayout();
             }
         }
+
 
         // 画像を作業領域に収まるよう縦横比を保って縮小（オリジナルが小さければそのまま）
         private static Size FitInto(Size src, Size box)
@@ -1158,6 +1159,32 @@ namespace Kiritori
                 this.Left -= dx;
                 this.Top -= dy;
             }
+        }
+        private void ApplyInitialDisplayZoomIfNeeded()
+        {
+            if (_originalImage == null) return;
+
+            // 作業領域（タスクバー除く）
+            var wa = Screen.FromControl(this).WorkingArea;
+
+            // 横50%の上限 / 高さ上限 の両方で抑える。拡大はしない。
+            double capByHalfWidth = (wa.Width  * 0.5) / (double)_originalImage.Width;
+            double capByHeight    = (wa.Height * 1.0) / (double)_originalImage.Height;
+            double desired = Math.Min(1.0, Math.Min(capByHalfWidth, capByHeight));
+
+            // すでに1.0以下なら “縮小が必要なときだけ” 適用（= desired < 1.0 のとき）
+            if (desired >= 1.0) return;
+
+            // 既存のステップ制御（_zoomStep, STEP_LINEAR, MIN_SCALE, MAX_SCALE）に合わせて丸める
+            // 例: _scale = 1.0f + (_zoomStep * STEP_LINEAR)
+            double clamped = Math.Max(MIN_SCALE, Math.Min(MAX_SCALE, desired));
+            int step = (int)Math.Round((clamped - 1.0) / STEP_LINEAR);
+
+            _zoomStep = step;           // 既存ルールに合わせて内部状態を同期
+            UpdateScaleFromStep();      // ← _scale を正規化（丸め）する
+
+            // ウィンドウの中央を維持しつつリサイズ＆再描画
+            ApplyZoom(redrawOnly: false);
         }
 
         public void ToggleShadow(bool enable)
