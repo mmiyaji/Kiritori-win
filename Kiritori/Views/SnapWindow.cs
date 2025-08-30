@@ -125,6 +125,9 @@ namespace Kiritori
         // リサイズ用
         private const int GRIP_PX = 18;
         private int _lastPaintTick;
+        private enum ResizeAnchor { None, TopLeft, TopRight, BottomLeft, BottomRight }
+        private ResizeAnchor _anchor = ResizeAnchor.None;
+        private Point _startLocation; // フォームの開始位置
 
         // MSPaint 編集
         private string _paintEditPath;
@@ -643,18 +646,22 @@ namespace Kiritori
             if (!_closeBtnRect.IsEmpty && _closeBtnRect.Contains(e.Location)) return;
 
             // リサイズ優先
-            if (GripRectOnPB().Contains(e.Location))
+            var hit = HitTestCorner(e.Location);
+            if (hit != ResizeAnchor.None)
             {
+                _anchor = hit;
                 _isResizing = true;
                 _isDragging = false;
                 _dragStartScreen = Cursor.Position;
                 _startSize = this.Size;
+                _startLocation = this.Location;
 
                 _imgAspect = (pictureBox1.Image != null)
                     ? (float)pictureBox1.Image.Width / pictureBox1.Image.Height
                     : (float)Math.Max(1, this.ClientSize.Width) / Math.Max(1, this.ClientSize.Height);
 
                 pictureBox1.Capture = true;
+                this.Cursor = GetCursorForAnchor(_anchor);
                 return;
             }
 
@@ -671,45 +678,104 @@ namespace Kiritori
                 return;
             }
 
-            // リサイズ中
             if (_isResizing)
             {
                 var now = Cursor.Position;
                 int dx = now.X - _dragStartScreen.X;
                 int dy = now.Y - _dragStartScreen.Y;
 
-                int w = _startSize.Width  + dx;
-                int h = _startSize.Height + dy;
+                // 基準値
+                int newW = _startSize.Width;
+                int newH = _startSize.Height;
+                int newLeft = _startLocation.X;
+                int newTop  = _startLocation.Y;
 
+                switch (_anchor)
+                {
+                    case ResizeAnchor.BottomRight:
+                        newW = _startSize.Width  + dx;
+                        newH = _startSize.Height + dy;
+                        break;
+
+                    case ResizeAnchor.BottomLeft:
+                        newW = _startSize.Width  - dx;
+                        newH = _startSize.Height + dy;
+                        newLeft = _startLocation.X + dx; // 左側が動く
+                        break;
+
+                    case ResizeAnchor.TopRight:
+                        newW = _startSize.Width  + dx;
+                        newH = _startSize.Height - dy;
+                        newTop = _startLocation.Y + dy; // 上側が動く
+                        break;
+
+                    case ResizeAnchor.TopLeft:
+                        newW = _startSize.Width  - dx;
+                        newH = _startSize.Height - dy;
+                        newLeft = _startLocation.X + dx;
+                        newTop  = _startLocation.Y + dy;
+                        break;
+                }
+
+                // Shiftでアスペクト固定（既存ロジック流用）
                 if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift && _imgAspect != null)
                 {
                     float ar = _imgAspect.Value;
-                    if (Math.Abs(dx) >= Math.Abs(dy)) h = (int)Math.Round(w / ar);
-                    else                               w = (int)Math.Round(h * ar);
+                    // どっちに合わせるか（変化量の大きい方）
+                    if (Math.Abs(newW - _startSize.Width) >= Math.Abs(newH - _startSize.Height))
+                    {
+                        newH = (int)Math.Round(newW / ar);
+                    }
+                    else
+                    {
+                        newW = (int)Math.Round(newH * ar);
+                    }
+
+                    // アンカーが左/上のときは位置も再補正
+                    if (_anchor == ResizeAnchor.BottomLeft || _anchor == ResizeAnchor.TopLeft)
+                    {
+                        newLeft = _startLocation.X + (_startSize.Width - newW);
+                    }
+                    if (_anchor == ResizeAnchor.TopLeft || _anchor == ResizeAnchor.TopRight)
+                    {
+                        newTop = _startLocation.Y + (_startSize.Height - newH);
+                    }
                 }
 
-                w = Math.Max(this.MinimumSize.Width,  w);
-                h = Math.Max(this.MinimumSize.Height, h);
+                // 最小サイズ
+                newW = Math.Max(this.MinimumSize.Width,  newW);
+                newH = Math.Max(this.MinimumSize.Height, newH);
 
-                this.ClientSize = new Size(w, h);
-                pictureBox1.Size = this.ClientSize;
+                // 反映
+                this.SuspendLayout();
+                try
+                {
+                    this.Location = new Point(newLeft, newTop);
+                    this.ClientSize = new Size(newW, newH);
+                    pictureBox1.Size = this.ClientSize;
+                }
+                finally
+                {
+                    this.ResumeLayout();
+                }
 
-                this.Cursor = Cursors.SizeNWSE;
+                this.Cursor = GetCursorForAnchor(_anchor);
 
                 int nowTick = Environment.TickCount;
-                if (nowTick - _lastPaintTick >= 15) // ~66fps
+                if (nowTick - _lastPaintTick >= 15)
                 {
                     pictureBox1.Invalidate();
-                    pictureBox1.Update();            // 同期描画
+                    pictureBox1.Update();
                     _lastPaintTick = nowTick;
                 }
                 return;
             }
 
-            // リサイズしていない時のカーソル
-            this.Cursor = GripRectOnPB().Contains(e.Location) ? Cursors.SizeNWSE : Cursors.Default;
+            // 非リサイズ時のカーソル表示
+            var hoverAnchor = HitTestCorner(e.Location);
+            this.Cursor = GetCursorForAnchor(hoverAnchor);
 
-            // 移動
+            // 移動（既存）
             if (_isDragging && (e.Button & MouseButtons.Left) == MouseButtons.Left)
             {
                 this.Left += e.X - mousePoint.X;
@@ -718,21 +784,24 @@ namespace Kiritori
             }
         }
 
+
         private void pictureBox1_MouseUp(object sender, MouseEventArgs e)
         {
             if (e.Button != MouseButtons.Left) return;
 
-            // 移動終了
             _isDragging = false;
             this.Opacity = this.WindowAlphaPercent;
 
-            // リサイズ終了
             if (_isResizing)
             {
                 _isResizing = false;
+                _anchor = ResizeAnchor.None;
                 _imgAspect = null;
                 pictureBox1.Capture = false;
-                this.Cursor = GripRectOnPB().Contains(e.Location) ? Cursors.SizeNWSE : Cursors.Default;
+
+                // ホバー位置のカーソルに戻す
+                var hoverAnchor = HitTestCorner(e.Location);
+                this.Cursor = GetCursorForAnchor(hoverAnchor);
                 pictureBox1.Invalidate();
             }
         }
@@ -742,6 +811,7 @@ namespace Kiritori
             if (_isResizing)
             {
                 _isResizing = false;
+                _anchor = ResizeAnchor.None;
                 _imgAspect = null;
                 pictureBox1.Cursor = Cursors.Default;
             }
@@ -749,16 +819,44 @@ namespace Kiritori
             this.Opacity = this.WindowAlphaPercent;
         }
 
-        private Rectangle GripRectOnPB()
+        private Dictionary<ResizeAnchor, Rectangle> GripRectsOnPB()
         {
             float scale = this.DeviceDpi / 96f;
             int grip = (int)Math.Max(12, GRIP_PX * scale);
-            return new Rectangle(
-                pictureBox1.ClientSize.Width  - grip,
-                pictureBox1.ClientSize.Height - grip,
-                grip, grip
-            );
+
+            var w = pictureBox1.ClientSize.Width;
+            var h = pictureBox1.ClientSize.Height;
+
+            var dict = new Dictionary<ResizeAnchor, Rectangle>();
+            dict[ResizeAnchor.BottomRight] = new Rectangle(w - grip, h - grip, grip, grip);
+            dict[ResizeAnchor.BottomLeft ] = new Rectangle(0,        h - grip, grip, grip);
+            dict[ResizeAnchor.TopRight   ] = new Rectangle(w - grip, 0,        grip, grip);
+            dict[ResizeAnchor.TopLeft    ] = new Rectangle(0,        0,        grip, grip);
+            return dict;
         }
+
+        private ResizeAnchor HitTestCorner(Point p)
+        {
+            foreach (var kv in GripRectsOnPB())
+                if (kv.Value.Contains(p)) return kv.Key;
+            return ResizeAnchor.None;
+        }
+
+        private static Cursor GetCursorForAnchor(ResizeAnchor a)
+        {
+            switch (a)
+            {
+                case ResizeAnchor.BottomRight:
+                case ResizeAnchor.TopLeft:
+                    return Cursors.SizeNWSE;
+                case ResizeAnchor.BottomLeft:
+                case ResizeAnchor.TopRight:
+                    return Cursors.SizeNESW;
+                default:
+                    return Cursors.Default;
+            }
+        }
+
 
         #endregion
 
