@@ -86,15 +86,4 @@ namespace Kiritori.Helpers
             }
         }
     }
-
-    [Flags]
-    public enum MOD_KEY : int
-    {
-        ALT     = 0x0001,
-        CONTROL = 0x0002,
-        SHIFT   = 0x0004,
-        // 任意: NOREPEAT も使えます（チャタリング防止）
-        // NOREPEAT = 0x4000,
-        WIN     = 0x0008, // 使う場合は HotkeyPicker 側も対応を
-    }
 }

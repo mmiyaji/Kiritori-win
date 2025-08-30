@@ -290,6 +290,8 @@ namespace Kiritori
         private Point startPoint;
         private Point startPointPhys;
         private Point hoverPoint = Point.Empty;
+        private bool showHover = true;
+        //private Point endPoint;
         private Rectangle rc;
         private Boolean isPressed = false;
 

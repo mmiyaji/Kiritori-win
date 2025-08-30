@@ -104,7 +104,6 @@ namespace Kiritori
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.contextMenuStrip1.SuspendLayout();
             this.SuspendLayout();
-            //this.Resize += new System.EventHandler(this.Form1_Resize);
             // 
             // pictureBox1
             // 
@@ -460,7 +459,7 @@ namespace Kiritori
             this.Name = "SnapWindow";
             this.ShowInTaskbar = false;
             this.Text = "Kiritori - Snap";
-            this.Load += new System.EventHandler(this.Form1_Load);
+            this.Load += new System.EventHandler(this.SnapWindow_Load);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.contextMenuStrip1.ResumeLayout(false);
             this.ResumeLayout(false);
