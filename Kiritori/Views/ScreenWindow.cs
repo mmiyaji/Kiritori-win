@@ -17,6 +17,7 @@ using Kiritori.Views.LiveCapture;
 using Kiritori.Helpers;
 using Kiritori.Services.Notifications;
 using System.IO;
+//using static Kiritori.Helpers;
 
 namespace Kiritori
 {
@@ -238,7 +239,7 @@ namespace Kiritori
 
                 var src = (item.Tag as SnapWindow)?.main_image;
                 if (src == null) return;
-                sw.setImageFromBMP((Bitmap)src.Clone());
+                sw.setImageFromBMP((Bitmap)src.Clone(), LoadMethod.History);
                 sw.Text = (item.Tag as SnapWindow).Text;
 
                 sw.FormClosing += new FormClosingEventHandler(SW_FormClosing);
@@ -435,7 +436,7 @@ namespace Kiritori
                         };
 
                         // CloseScreen() より前に baseBmp を使い切る or Clone して渡す
-                        sw.CaptureFromBitmap(baseBmp, crop, desired);
+                        sw.CaptureFromBitmap(baseBmp, crop, desired, LoadMethod.Capture);
 
                         // 4) もう原本は不要ならここで閉じる
                         this.CloseScreen();

@@ -125,6 +125,9 @@ namespace Kiritori
         // 対応画像拡張子
         private static readonly string[] ImageExts =
                     { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp" };
+
+        internal LoadMethod CurrentLoadMethod { get; private set; } = LoadMethod.Path;
+
         #endregion
 
         #region ===== Win32/プロパティ =====
@@ -211,7 +214,11 @@ namespace Kiritori
             pictureBox1.MouseMove += new MouseEventHandler(Form1_MouseMove);
             pictureBox1.MouseUp += new MouseEventHandler(Form1_MouseUp);
         }
-
+        public void SetLoadMethod(LoadMethod m)
+        {
+            Debug.WriteLine($"SetLoadMethod: {m}");
+            CurrentLoadMethod = m;
+        }
         #endregion
 
         #region ===== 設定読み込み / 監視 =====
@@ -750,10 +757,11 @@ namespace Kiritori
 
             this.main_image = bmp;
             this.setThumbnail(bmp);
+            this.SetLoadMethod(LoadMethod.Capture);
             if (!SuppressHistory) ma.setHistory(this);
-            ShowOverlay("Kiritori");
+            ShowOverlay("Kiritori(1)");
         }
-        public void CaptureFromBitmap(Bitmap source, Rectangle crop, Point desiredScreenPos)
+        public void CaptureFromBitmap(Bitmap source, Rectangle crop, Point desiredScreenPos, LoadMethod loadMethod = LoadMethod.Capture)
         {
             // 1) 安全にトリミング
             Rectangle safe = Rectangle.Intersect(crop, new Rectangle(0, 0, source.Width, source.Height));
@@ -762,6 +770,7 @@ namespace Kiritori
             // 2) Cloneで切り出し（sourceは呼び出し元が管理）
             Bitmap cropped = source.Clone(safe, source.PixelFormat);
 
+            SetLoadMethod(loadMethod);
             // 3) 共通適用
             ApplyBitmap(cropped);
 
@@ -875,6 +884,7 @@ namespace Kiritori
 
                     var bmp = LoadBitmapClone(ofd.FileName);
                     ApplyImage(bmp, ofd.FileName, addHistory: !SuppressHistory, showOverlay: true);
+                    SetLoadMethod(LoadMethod.Path);
                 }
             }
             catch
@@ -892,6 +902,7 @@ namespace Kiritori
 
                 var bmp = LoadBitmapClone(fname);
                 ApplyImage(bmp, fname, addHistory: !SuppressHistory, showOverlay: true);
+                SetLoadMethod(LoadMethod.Path);
             }
             catch
             {
@@ -900,13 +911,14 @@ namespace Kiritori
             }
         }
 
-        public void setImageFromBMP(Bitmap bmp)
+        public void setImageFromBMP(Bitmap bmp, LoadMethod method = LoadMethod.History)
         {
             if (bmp == null) return;
             // 呼び出し元の bmp 所有権は呼び出し元にある想定なので、ここでクローンして使う
             using (var clone = new Bitmap(bmp))
             {
                 ApplyImage(clone, titlePath: null, addHistory: false, showOverlay: false);
+                SetLoadMethod(method);
             }
         }
 

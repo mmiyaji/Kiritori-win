@@ -103,6 +103,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Helpers\DebugUiOptions.cs" />
+    <Compile Include="Helpers\Enums.cs" />
     <Compile Include="Helpers\HotkeyUtil.cs" />
     <Compile Include="Helpers\Localizer.cs" />
     <Compile Include="Helpers\SingleInstance.cs" />

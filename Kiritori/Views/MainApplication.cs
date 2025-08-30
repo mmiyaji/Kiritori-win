@@ -17,6 +17,7 @@ using System.Globalization;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Diagnostics;
+//using static Kiritori.Helpers.Enums;
 
 namespace Kiritori
 {
@@ -51,8 +52,8 @@ namespace Kiritori
         private const int MOD_ALT = 0x0001;
         private const int MOD_CONTROL = 0x0002;
         private const int MOD_SHIFT = 0x0004;
-        private const int MOD_WIN     = 0x0008; // 使うなら
-        private const int MOD_NOREPEAT= 0x4000; // チャタリング対策
+        private const int MOD_WIN = 0x0008; // 使うなら
+        private const int MOD_NOREPEAT = 0x4000; // チャタリング対策
         internal MainApplication(AppStartupOptions opt = null)
         {
             _opt = opt ?? new AppStartupOptions();
@@ -324,12 +325,10 @@ namespace Kiritori
             int limit = Properties.Settings.Default.HistoryLimit;
             if (limit == 0) return;
 
-            // 1) 履歴用の実パスを決定（なければ Temp に保存）
-            string path = sw.Text; // 既存はタイトル文字列。ファイルパスのこともある
+            // 実パスの確定（既存ロジックのまま）
+            string path = sw.Text;
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
-                // 画像ソースの既知パスが付いていればそれを優先（Tagに入れている場合）
-                // var tagged = sw.pictureBox1?.Image?.Tag as string;
                 var tagged = sw.GetImageSourcePath();
                 if (!string.IsNullOrEmpty(tagged) && File.Exists(tagged))
                 {
@@ -337,42 +336,63 @@ namespace Kiritori
                 }
                 else
                 {
-                    // Temp に確実に保存
                     Directory.CreateDirectory(HistoryTempDir);
                     path = Path.Combine(HistoryTempDir, $"{DateTime.Now:yyyyMMdd_HHmmssfff}.png");
                     using (var clone = (Bitmap)sw.main_image.Clone())
-                    {
-                        clone.Save(path, ImageFormat.Png);
-                    }
+                        clone.Save(path, System.Drawing.Imaging.ImageFormat.Png);
                 }
             }
 
-            // 2) サムネは必ず独立クローン
-            Bitmap thumb = (Bitmap)sw.thumbnail_image.Clone();
+            // 小さめサムネ（前回の CreateThumb 推奨）
+            const int TH_W = 48, TH_H = 48;
+            var srcForThumb = (Image)(sw.thumbnail_image ?? sw.main_image);
+            Bitmap thumb = CreateThumb(srcForThumb, TH_W, TH_H, Color.Transparent);
 
             var entry = new HistoryEntry { Path = path, Thumb = thumb };
+
+            // 表示テキスト：ファイルならファイル名1行＋詳細1行 / それ以外は「キャプチャー/クリップボード」
+            // sw.CurrentLoadMethod が History の場合は、path が実在すれば Path扱い、なければ Capture扱い等でOK
+            var displayMethod =
+                (sw.CurrentLoadMethod == LoadMethod.Path && !IsHistoryTempPath(path))
+                    ? LoadMethod.Path
+                    : (sw.CurrentLoadMethod == LoadMethod.Clipboard
+                        ? LoadMethod.Clipboard
+                        : LoadMethod.Capture);
+
+            // 表示用の path は、Path 扱いのときだけ渡す
+            var text = FormatHistoryText(
+                path: (displayMethod == LoadMethod.Path) ? path : null,
+                method: displayMethod,
+                res: new Size(sw.main_image.Width, sw.main_image.Height),
+                loadedAt: DateTime.Now
+            );
 
             var item = new ToolStripMenuItem
             {
                 Image = thumb,
-                Text = substringAtCount(Path.GetFileName(path), 30),
+                Text = text,
                 DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
                 ImageAlign = ContentAlignment.MiddleLeft,
                 ImageScaling = ToolStripItemImageScaling.None,
-                Tag = entry
+                Tag = entry,
+                AutoSize = true
             };
+            // ツールチップにフルパスを出す（ファイル時のみ）
+            if (displayMethod == LoadMethod.Path)
+            {
+                item.AutoToolTip = true;
+                item.ToolTipText = path;
+            }
+
             item.Click += historyToolStripMenuItem1_item_Click;
             historyToolStripMenuItem1.DropDownItems.Insert(0, item);
 
+            // 上限掃除（既存のDispose順でOK）
             while (historyToolStripMenuItem1.DropDownItems.Count > limit)
             {
                 int lastIdx = historyToolStripMenuItem1.DropDownItems.Count - 1;
                 var last = historyToolStripMenuItem1.DropDownItems[lastIdx] as ToolStripMenuItem;
-
-                // 1) まずコレクションから外す（Countが変わるのはここだけ）
                 historyToolStripMenuItem1.DropDownItems.RemoveAt(lastIdx);
-
-                // 2) その後に後始末（ファイル/Bitmap/Item）
                 if (last != null)
                 {
                     if (last.Tag is HistoryEntry he)
@@ -385,6 +405,63 @@ namespace Kiritori
                     last.Dispose();
                 }
             }
+        }
+        private static Bitmap CreateThumb(Image src, int maxW, int maxH, Color? bg = null)
+        {
+            if (src == null) return null;
+
+            // アスペクト維持で縮小サイズ計算
+            double rw = (double)maxW / src.Width;
+            double rh = (double)maxH / src.Height;
+            double r = Math.Min(1.0, Math.Min(rw, rh)); // 拡大しない
+            int w = Math.Max(1, (int)Math.Round(src.Width * r));
+            int h = Math.Max(1, (int)Math.Round(src.Height * r));
+
+            var bmp = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+            using (var g = Graphics.FromImage(bmp))
+            {
+                // 高品質縮小
+                g.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceOver;
+                g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+
+                if (bg.HasValue) using (var br = new SolidBrush(bg.Value)) g.FillRectangle(br, 0, 0, w, h);
+                g.DrawImage(src, new Rectangle(0, 0, w, h));
+            }
+            return bmp;
+        }
+        private static string FormatHistoryText(string path, LoadMethod method, Size res, DateTime loadedAt)
+        {
+            Debug.WriteLine($"FormatHistoryText: {path}, {method}, {res}, {loadedAt}");
+            // 1行目：ファイルならファイル名（長ければ省略）／それ以外は種別
+            // 2行目：解像度 + 読み込み時刻
+            string text = $"[{loadedAt:yyyy/MM/dd HH:mm:ss}] ({res.Width}x{res.Height})";
+
+            if (method == LoadMethod.Path && !string.IsNullOrEmpty(path) && File.Exists(path))
+            {
+                var name = Path.GetFileName(path);
+                text += Environment.NewLine + MiddleEllipsis(name, 32);   // 例：32文字に中省略
+            }
+            // else
+            // {
+            //     // 日本語表示（必要なら SR.T(...) に置き換え）
+            //     line1 = (method == LoadMethod.Clipboard) ? "クリップボード" : "キャプチャー";
+            // }
+            return text;
+        }
+
+        private static string MiddleEllipsis(string s, int max)
+        {
+            if (string.IsNullOrEmpty(s) || s.Length <= max) return s;
+            const string ell = "…";
+            int keep = max - ell.Length;
+            if (keep <= 1) return s.Substring(0, max); // ほぼ入らないケース
+
+            int left = keep / 2;
+            int right = keep - left;
+            return s.Substring(0, left) + ell + s.Substring(s.Length - right);
         }
 
         private void hideAllWindowsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -629,20 +706,20 @@ namespace Kiritori
             var defCap = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 };
             var defOcr = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 };
             var capSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyCapture, defCap);
-            var ocrSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyOcr,     defOcr);
+            var ocrSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyOcr, defOcr);
 
             Debug.WriteLine($"[HK] Capture parsed: {HotkeyUtil.ToText(capSpec)}  (Key={capSpec.Key})");
             Debug.WriteLine($"[HK] OCR     parsed: {HotkeyUtil.ToText(ocrSpec)}  (Key={ocrSpec.Key})");
 
             // 変換（intに）
             int capMods = 0, ocrMods = 0;
-            if ((capSpec.Mods & ModMask.Ctrl)  != 0) capMods |= MOD_CONTROL;
+            if ((capSpec.Mods & ModMask.Ctrl) != 0) capMods |= MOD_CONTROL;
             if ((capSpec.Mods & ModMask.Shift) != 0) capMods |= MOD_SHIFT;
-            if ((capSpec.Mods & ModMask.Alt)   != 0) capMods |= MOD_ALT;
+            if ((capSpec.Mods & ModMask.Alt) != 0) capMods |= MOD_ALT;
 
-            if ((ocrSpec.Mods & ModMask.Ctrl)  != 0) ocrMods |= MOD_CONTROL;
+            if ((ocrSpec.Mods & ModMask.Ctrl) != 0) ocrMods |= MOD_CONTROL;
             if ((ocrSpec.Mods & ModMask.Shift) != 0) ocrMods |= MOD_SHIFT;
-            if ((ocrSpec.Mods & ModMask.Alt)   != 0) ocrMods |= MOD_ALT;
+            if ((ocrSpec.Mods & ModMask.Alt) != 0) ocrMods |= MOD_ALT;
 
             // 実登録（Win32直）
             int ok1 = RegisterHotKey(this.Handle, HOTKEY_ID_CAPTURE, capMods /* | MOD_NOREPEAT */, (int)capSpec.Key);
