@@ -742,6 +742,19 @@ namespace Kiritori
                     }
                 }
 
+                ClampAndAdjustForAnchor(ref newW, ref newH, ref newLeft, ref newTop, _anchor);
+                this.SuspendLayout();
+                try
+                {
+                    this.Location = new Point(newLeft, newTop);
+                    this.ClientSize = new Size(newW, newH);
+                    pictureBox1.Size = this.ClientSize;
+                }
+                finally
+                {
+                    this.ResumeLayout();
+                }
+
                 // 最小サイズ
                 newW = Math.Max(this.MinimumSize.Width,  newW);
                 newH = Math.Max(this.MinimumSize.Height, newH);
@@ -833,6 +846,35 @@ namespace Kiritori
             dict[ResizeAnchor.TopRight   ] = new Rectangle(w - grip, 0,        grip, grip);
             dict[ResizeAnchor.TopLeft    ] = new Rectangle(0,        0,        grip, grip);
             return dict;
+        }
+        private void ClampAndAdjustForAnchor(ref int newW, ref int newH, ref int newLeft, ref int newTop, ResizeAnchor anchor)
+        {
+            int minW = this.MinimumSize.Width;
+            int minH = this.MinimumSize.Height;
+
+            // 幅クリップ
+            if (newW < minW)
+            {
+                // 左側が動くアンカーなら、Leftを「右方向へ補正」して見た目の反転を防ぐ
+                if (anchor == ResizeAnchor.TopLeft || anchor == ResizeAnchor.BottomLeft)
+                {
+                    int delta = minW - newW;     // 不足分
+                    newLeft -= delta;            // 左に出た分を戻す（== 右へ寄せる）
+                }
+                newW = minW;
+            }
+
+            // 高さクリップ
+            if (newH < minH)
+            {
+                // 上側が動くアンカーなら、Topを「下方向へ補正」して見た目の反転を防ぐ
+                if (anchor == ResizeAnchor.TopLeft || anchor == ResizeAnchor.TopRight)
+                {
+                    int delta = minH - newH;
+                    newTop -= delta;             // 上に出た分を戻す（== 下へ寄せる）
+                }
+                newH = minH;
+            }
         }
 
         private ResizeAnchor HitTestCorner(Point p)
