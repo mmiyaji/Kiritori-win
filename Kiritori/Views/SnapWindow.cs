@@ -120,6 +120,13 @@ namespace Kiritori
         private PropertyChangedEventHandler _settingsHandler;
         private bool _isApplyingSettings = false;
 
+        private const int GRIP_PX = 18;           // グリップの見た目/判定サイズ
+        private bool _isResizing = false;         // 右下リサイズ中か
+        private Point _dragStartScreen;           // ドラッグ開始時のスクリーン座標
+        private Size _startSize;                 // ドラッグ開始時のフォームサイズ
+        private float? _imgAspect = null;         // Shift中の比率固定用
+        private int _lastPaintTick;
+
         // OCR 処理中フラグ
         private bool _ocrBusy = false;
         // 対応画像拡張子
@@ -191,10 +198,6 @@ namespace Kiritori
             HookSettingsChanged();
 
             this.pictureBox1.Paint += PictureBox1_Paint;
-            this.pictureBox1.MouseMove += PictureBox1_MouseMove_Icon;
-            this.pictureBox1.MouseClick += PictureBox1_MouseClick_Icon;
-            this.pictureBox1.MouseEnter += delegate { _hoverWindow = true; pictureBox1.Invalidate(); };
-            this.pictureBox1.MouseLeave += delegate { _hoverWindow = false; _hoverClose = false; pictureBox1.Invalidate(); };
 
             this.DoubleBuffered = true;
             this.AutoScaleMode = AutoScaleMode.Dpi;
@@ -202,7 +205,7 @@ namespace Kiritori
 
             this.AllowDrop = true;
             this.DragEnter += SnapWindow_DragEnter;
-            this.DragDrop  += SnapWindow_DragDrop;
+            this.DragDrop += SnapWindow_DragDrop;
         }
 
         public Bitmap GetMainImage() => (Bitmap)pictureBox1.Image;
@@ -210,9 +213,17 @@ namespace Kiritori
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            pictureBox1.MouseDown += new MouseEventHandler(Form1_MouseDown);
-            pictureBox1.MouseMove += new MouseEventHandler(Form1_MouseMove);
-            pictureBox1.MouseUp += new MouseEventHandler(Form1_MouseUp);
+            this.pictureBox1.MouseMove += PictureBox1_MouseMove_Icon;
+            this.pictureBox1.MouseClick += PictureBox1_MouseClick_Icon;
+            this.pictureBox1.MouseEnter += delegate { _hoverWindow = true; pictureBox1.Invalidate(); };
+            this.pictureBox1.MouseLeave += delegate { _hoverWindow = false; _hoverClose = false; pictureBox1.Invalidate(); };
+            this.ClientSizeChanged += (_, __) => pictureBox1.Size = this.ClientSize;
+
+            pictureBox1.MouseDown += new MouseEventHandler(pictureBox1_MouseDown);
+            pictureBox1.MouseMove += new MouseEventHandler(pictureBox1_MouseMove);
+            pictureBox1.MouseUp += new MouseEventHandler(pictureBox1_MouseUp);
+            pictureBox1.MouseCaptureChanged += PictureBox1_CaptureChanged;
+            pictureBox1.MouseLeave += (_, __) => { if (!_isResizing) this.Cursor = Cursors.Default; };
         }
         public void SetLoadMethod(LoadMethod m)
         {
@@ -328,6 +339,8 @@ namespace Kiritori
             base.OnHandleCreated(e);
             // ハンドル作成直後に UI へ反映
             ApplyUiFromFields();
+            // if (this.Padding.Bottom < GRIP_PX)
+            //     this.Padding = new Padding(this.Padding.Left, this.Padding.Top, this.Padding.Right, Math.Max(this.Padding.Bottom, GRIP_PX + 2));
         }
 
         // DPI に合わせた線幅
@@ -638,6 +651,7 @@ namespace Kiritori
             }
 
             // --- マウスホバー中の内枠強調（Settings 反映） ---
+            // if (!_isResizing && isHighlightOnHover && _hoverWindow && _hoverAlphaPercent > 0 && _hoverThicknessPx > 0)
             if (isHighlightOnHover && _hoverWindow && _hoverAlphaPercent > 0 && _hoverThicknessPx > 0)
             {
                 using (var pen = MakeHoverPen())
@@ -697,40 +711,116 @@ namespace Kiritori
                 this.Close();
         }
 
-        private void Form1_MouseDown(object sender, MouseEventArgs e)
+        private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button != MouseButtons.Left) return;
             if (!_closeBtnRect.IsEmpty && _closeBtnRect.Contains(e.Location)) return;
+
+            // --- まずグリップ判定を先に ---
+            if (GripRectOnPB().Contains(e.Location))
+            {
+                _isResizing = true;
+                _isDragging = false;                 // ← 重要：移動は無効化
+                _dragStartScreen = Cursor.Position;
+                _startSize = this.Size;
+
+                _imgAspect = (pictureBox1.Image != null)
+                    ? (float)pictureBox1.Image.Width / pictureBox1.Image.Height
+                    : (float)Math.Max(1, this.ClientSize.Width) / Math.Max(1, this.ClientSize.Height);
+
+                pictureBox1.Capture = true;
+                return;                               // ← ここで打ち切り
+            }
+
+            // ここまで来たら“移動”として扱う
             mousePoint = new Point(e.X, e.Y);
             _isDragging = true;
         }
 
-        private void Form1_MouseMove(object sender, MouseEventArgs e)
+        private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
         {
             if (!_closeBtnRect.IsEmpty && _closeBtnRect.Contains(e.Location))
             {
                 this.Cursor = Cursors.Hand;
                 return;
             }
-            else
+
+            // リサイズ中
+            if (_isResizing)
             {
-                this.Cursor = Cursors.Default;
+                var now = Cursor.Position;
+                int dx = now.X - _dragStartScreen.X;
+                int dy = now.Y - _dragStartScreen.Y;
+
+                int w = _startSize.Width  + dx;
+                int h = _startSize.Height + dy;
+
+                if ((Control.ModifierKeys & Keys.Shift) == Keys.Shift && _imgAspect != null)
+                {
+                    float ar = _imgAspect.Value;
+                    if (Math.Abs(dx) >= Math.Abs(dy)) h = (int)Math.Round(w / ar);
+                    else                               w = (int)Math.Round(h * ar);
+                }
+
+                w = Math.Max(this.MinimumSize.Width,  w);
+                h = Math.Max(this.MinimumSize.Height, h);
+
+                this.ClientSize = new Size(w, h);
+                pictureBox1.Size = this.ClientSize;
+
+                this.Cursor = Cursors.SizeNWSE;
+
+                int nowTick = Environment.TickCount;
+                if (nowTick - _lastPaintTick >= 15) {   // ~66fps
+                    pictureBox1.Invalidate();
+                    pictureBox1.Update();               // この瞬間だけ同期描画
+                    _lastPaintTick = nowTick;
+                }
+                return;                               // ★移動処理に行かない
             }
 
+            // リサイズしていない時のカーソル
+            this.Cursor = GripRectOnPB().Contains(e.Location) ? Cursors.SizeNWSE : Cursors.Default;
+
+            // ウィンドウ移動
             if (_isDragging && (e.Button & MouseButtons.Left) == MouseButtons.Left)
             {
                 this.Left += e.X - mousePoint.X;
-                this.Top += e.Y - mousePoint.Y;
+                this.Top  += e.Y - mousePoint.Y;
                 this.Opacity = this.WindowAlphaPercent * DRAG_ALPHA;
             }
         }
 
-        private void Form1_MouseUp(object sender, MouseEventArgs e)
+        private void pictureBox1_MouseUp(object sender, MouseEventArgs e)
         {
+            if (e.Button != MouseButtons.Left) return;
+
+            // 移動終了
+            _isDragging = false;
+            this.Opacity = this.WindowAlphaPercent;
+
+            // リサイズ終了
+            if (_isResizing)
+            {
+                _isResizing = false;
+                _imgAspect = null;
+                pictureBox1.Capture = false;        // ← Captureは必ず解除
+                this.Cursor = GripRectOnPB().Contains(e.Location) ? Cursors.SizeNWSE : Cursors.Default;
+                pictureBox1.Invalidate();
+                return;
+            }
+        }
+        private void PictureBox1_CaptureChanged(object sender, EventArgs e)
+        {
+            if (_isResizing)
+            {
+                _isResizing = false;
+                _imgAspect = null;
+                pictureBox1.Cursor = Cursors.Default;
+            }
             _isDragging = false;
             this.Opacity = this.WindowAlphaPercent;
         }
-
         #endregion
 
         #region ===== 汎用関数（メニュー/キーから呼ばれるロジック） =====
@@ -953,8 +1043,8 @@ namespace Kiritori
 
                 // 中央配置
                 var loc = new Point(
-                    wa.Left + (wa.Width  - this.Width)  / 2,
-                    wa.Top  + (wa.Height - this.Height) / 2
+                    wa.Left + (wa.Width - this.Width) / 2,
+                    wa.Top + (wa.Height - this.Height) / 2
                 );
                 this.Location = loc;
 
@@ -979,7 +1069,7 @@ namespace Kiritori
 
             double rw = (double)box.Width / src.Width;
             double rh = (double)box.Height / src.Height;
-            double r  = Math.Min(rw, rh);
+            double r = Math.Min(rw, rh);
 
             int w = Math.Max(1, (int)Math.Round(src.Width * r));
             int h = Math.Max(1, (int)Math.Round(src.Height * r));
@@ -1118,7 +1208,9 @@ namespace Kiritori
             _originalImage = (Image)img.Clone();
 
             _scale = 1f;
-            pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
+            // pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
+            this.pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage;
+
             ApplyZoom(false);
         }
 
@@ -1168,8 +1260,8 @@ namespace Kiritori
             var wa = Screen.FromControl(this).WorkingArea;
 
             // 横50%の上限 / 高さ上限 の両方で抑える。拡大はしない。
-            double capByHalfWidth = (wa.Width  * 0.5) / (double)_originalImage.Width;
-            double capByHeight    = (wa.Height * 1.0) / (double)_originalImage.Height;
+            double capByHalfWidth = (wa.Width * 0.5) / (double)_originalImage.Width;
+            double capByHeight = (wa.Height * 1.0) / (double)_originalImage.Height;
             double desired = Math.Min(1.0, Math.Min(capByHalfWidth, capByHeight));
 
             // すでに1.0以下なら “縮小が必要なときだけ” 適用（= desired < 1.0 のとき）
@@ -1379,8 +1471,15 @@ namespace Kiritori
                 main?.NotifyIcon?.ShowBalloonTip(1000, "Kiritori - OCR", snippet, ToolTipIcon.None);
             }
         }
-
-
+        private Rectangle GripRectOnPB()
+        {
+            float scale = this.DeviceDpi / 96f;
+            int grip = (int)Math.Max(12, GRIP_PX * scale);
+            return new Rectangle(
+                pictureBox1.ClientSize.Width  - grip,
+                pictureBox1.ClientSize.Height - grip,
+                grip, grip);
+        }
         #endregion
     }
 }

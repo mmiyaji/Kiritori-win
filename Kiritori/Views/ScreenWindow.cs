@@ -49,7 +49,7 @@ namespace Kiritori
         private Color _hoverColor;            // HoverHighlightColor
         private int _hoverAlphaPercent;     // HoverHighlightAlphaPercent (0-100)
         private int _hoverThicknessPx;      // HoverHighlightThickness (px)
-
+        private int _lastPaintTick;
         // 任意の拡張（Settings があれば拾う。無ければ既存値を使用）
         private int _snapGridPx;            // SnapGridPx
         private int _edgeSnapTolPx;         // EdgeSnapTolerancePx
@@ -375,7 +375,13 @@ namespace Kiritori
                     }
                 }
 
-                pictureBox1.Refresh();
+                int nowTick = Environment.TickCount;
+                if (nowTick - _lastPaintTick >= 15) {   // ~66fps
+                    pictureBox1.Invalidate();
+                    pictureBox1.Update();               // この瞬間だけ同期描画
+                    _lastPaintTick = nowTick;
+                }
+                // pictureBox1.Refresh();
             }
         }
 
@@ -500,43 +506,27 @@ namespace Kiritori
         }
 
 
+        private Point _hoverPoint;
+        private bool _showHover;
+        private bool _showSnapGuides;
+
         private void RedrawHoverOnly()
         {
-            if (!showHover || bmp == null || baseBmp == null) return;
+            if (!_showHover || pictureBox1.Image == null) return;
 
-            var pt = hoverPoint;
-            if (IsAltDown())
-                pt = SnapPoint(pt);
+            var old = _hoverPoint;
+            _hoverPoint = IsAltDown() ? SnapPoint(hoverPoint) : hoverPoint;
 
-            using (g = Graphics.FromImage(bmp))
-            {
-                // 原本から描き直し
-                g.DrawImage(baseBmp, Point.Empty);
+            // 影響範囲だけ再描画（ライン太さ等を考慮して少し広めに）
+            int pad = 8;
+            var r1 = new Rectangle(0, _hoverPoint.Y - pad, pictureBox1.Width, pad * 2);
+            var r2 = new Rectangle(_hoverPoint.X - pad, 0, pad * 2, pictureBox1.Height);
+            var r3 = new Rectangle(0, old.Y - pad, pictureBox1.Width, pad * 2);
+            var r4 = new Rectangle(old.X - pad, 0, pad * 2, pictureBox1.Height);
 
-                // 全体に背景マスク
-                using (var mask = MakeBackgroundMaskBrush())
-                    g.FillRectangle(mask, new Rectangle(0, 0, bmp.Width, bmp.Height));
-
-                if (showSnapGuides && IsAltDown())
-                {
-                    using (var pen = MakeGuidePen())
-                    {
-                        g.DrawLine(pen, 0, pt.Y, bmp.Width, pt.Y);
-                        g.DrawLine(pen, pt.X, 0, pt.X, bmp.Height);
-                    }
-                }
-                // 開始候補点に十字
-                // DrawCrosshair(g, hoverPoint);
-
-                // 物理座標（仮想スクリーン基準）
-                var phys = new Point(hoverPoint.X + x, hoverPoint.Y + y);
-                if (showSnapGuides)
-                {
-                    DrawLabel(g, string.Format("{0}, {1}", phys.X, phys.Y),
-                                new Point(hoverPoint.X + 10, hoverPoint.Y + 10));
-                }
-            }
-            pictureBox1.Refresh();
+            pictureBox1.Invalidate(Rectangle.Union(Rectangle.Union(r1, r2), Rectangle.Union(r3, r4)));
+            // 必要なら「全面マスク」を描くために全体 Invalidate:
+            // pictureBox1.Invalidate();
         }
         static bool IsElevated()
         {
