@@ -89,6 +89,9 @@ namespace Kiritori
                 case (int)HOTS.ZOOM_OUT:
                     zoomOut();
                     break;
+                case (int)HOTS.LOCATE_ORIGIN_MAIN:
+                    initLocation();
+                    break;
 
                 case (int)HOTS.COPY:
                     copyImage(this);

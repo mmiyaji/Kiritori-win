@@ -28,7 +28,7 @@ namespace Kiritori.Startup
             int iconIndex = 0)
         {
             var dir = Path.GetDirectoryName(linkPath)
-              ?? throw new InvalidOperationException("Invalid link path.");
+                ?? throw new InvalidOperationException("Invalid link path.");
                 Directory.CreateDirectory(dir);
 
             // ShellLink COM

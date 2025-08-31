@@ -250,6 +250,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Pause に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_Pause {
+            get {
+                return ResourceManager.GetString("Menu.Pause", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   MainMenu / Preferences に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_Preferences {
@@ -264,6 +273,24 @@ namespace Kiritori.Properties {
         internal static string Menu_Print {
             get {
                 return ResourceManager.GetString("Menu.Print", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Move to the initial position に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_Realign {
+            get {
+                return ResourceManager.GetString("Menu.Realign", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Resume に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_Resume {
+            get {
+                return ResourceManager.GetString("Menu.Resume", resourceCulture);
             }
         }
         
@@ -327,6 +354,15 @@ namespace Kiritori.Properties {
         internal static string Menu_Size500 {
             get {
                 return ResourceManager.GetString("Menu.Size500", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Keep on top に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_TopMost {
+            get {
+                return ResourceManager.GetString("Menu.TopMost", resourceCulture);
             }
         }
         

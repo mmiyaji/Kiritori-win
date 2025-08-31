@@ -329,7 +329,6 @@ namespace Kiritori
             this.labelHotkeyCapture = NewRightLabel("Image capture");
             this.labelHotkeyCapture.Tag = "loc:Text.ImageCapture";
 
-            // ★ TextBox → HotkeyPicker に
             this.textBoxKiritori = new HotkeyPicker { ReadOnly = true, Width = 160 };
             ((HotkeyPicker)this.textBoxKiritori).SetFromText(
                 Properties.Settings.Default.HotkeyCapture, defCap);

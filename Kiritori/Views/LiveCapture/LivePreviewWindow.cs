@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Kiritori.Helpers;
+using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
@@ -13,6 +14,15 @@ namespace Kiritori.Views.LiveCapture
 
         public Rectangle CaptureRect { get; set; }   // 論理px（スクリーン座標）
         public bool AutoTopMost { get; set; } = true;
+        private ContextMenuStrip _ctx;
+        private ToolStripMenuItem
+            _miOriginal, _miZoomIn, _miZoomOut, _miZoomPct,
+            _miOpacity, _miPauseResume, _miRealign, _miTopMost, _miClose,
+            _miPref, _miExit;
+
+        private float _zoom = 1.0f;     // 表示倍率（1.0=100%）
+        private bool _paused = false;
+        public object MainApp { get; set; }
 
         public LivePreviewWindow()
         {
@@ -20,9 +30,11 @@ namespace Kiritori.Views.LiveCapture
             this.DoubleBuffered = true;
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint, true);
 
-            // 見た目上の白チラ防止（初回のみ透明で開く）
-            this.Opacity = 0.0;
-            this.BackColor = Color.Black; // 透明が効かない環境でも黒背景に
+            BuildContextMenu();
+            this.ContextMenuStrip = _ctx;
+
+            this.Opacity = 0.0; // 初回白チラ防止
+            this.BackColor = Color.Black;
         }
 
         protected override void OnHandleCreated(EventArgs e)
@@ -38,7 +50,7 @@ namespace Kiritori.Views.LiveCapture
             // 表示前に位置合わせ（論理pxでOK）
             WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: AutoTopMost);
 
-            // ★ 初回だけ同期で1フレーム取って白画面を回避
+            // 初回だけ同期で1フレーム取って白画面を回避
             TrySyncFirstCaptureIntoLatest(CaptureRect);
             Invalidate(); // 直ちに描画
 
@@ -55,25 +67,6 @@ namespace Kiritori.Views.LiveCapture
         }
 
         private bool _firstFrameShown = false;
-
-        private void OnFrameArrived(Bitmap bmp)
-        {
-            // 簡易：Clone で差し替え（最適化は後で）
-            var old = _latest;
-            _latest = (Bitmap)bmp.Clone();
-            if (old != null) old.Dispose();
-
-            if (IsHandleCreated) BeginInvoke((Action)(() =>
-            {
-                Invalidate();
-                if (!_firstFrameShown)
-                {
-                    _firstFrameShown = true;
-                    // 初フレームが来たら不透明化（保険）
-                    if (this.Opacity < 1.0) this.Opacity = 1.0;
-                }
-            }));
-        }
 
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -129,6 +122,137 @@ namespace Kiritori.Views.LiveCapture
             // ここで見せてOK
             if (this.Opacity < 1.0) this.Opacity = 1.0;
             _firstFrameShown = true; // 既に初回を表示済み
+        }
+        private void RealignToKiritori()
+        {
+            // _zoom = 1.0f;
+            WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: _miTopMost?.Checked ?? true);
+            Invalidate();
+        }
+        private void BuildContextMenu()
+        {
+            _ctx = new ContextMenuStrip();
+
+            // --- View 節に近い並び ---
+            _miOriginal = new ToolStripMenuItem(SR.T("Menu.OriginalSize", "Original Size")) { /* Ctrl+0 は ProcessCmdKeyで処理 */ };
+            _miOriginal.Click += (s, e) => SetZoom(1.0f);
+
+            _miZoomIn = new ToolStripMenuItem(SR.T("Menu.ZoomIn", "Zoom In(+10%)")); _miZoomIn.Click += (s, e) => SetZoom(_zoom + 0.10f);
+            _miZoomOut = new ToolStripMenuItem(SR.T("Menu.ZoomOut", "Zoom Out(-10%)")); _miZoomOut.Click += (s, e) => SetZoom(_zoom - 0.10f);
+
+            // Zoom(%) サブメニュー（スクショ準拠：10 / 50 / 100 / 150 / 200 / 500）
+            _miZoomPct = new ToolStripMenuItem(SR.T("Menu.Zoom", "Zoom(%)"));
+            foreach (var pct in new[] { 10, 50, 100, 150, 200, 500 })
+            {
+                var mi = new ToolStripMenuItem($"Size {pct}%") { Tag = pct };
+                mi.Click += (s, e) =>
+                {
+                    var p = (int)((ToolStripMenuItem)s).Tag;
+                    SetZoom(p / 100f);
+                };
+                _miZoomPct.DropDownItems.Add(mi);
+            }
+
+            // Opacity サブメニュー（よく使う段）
+            _miOpacity = new ToolStripMenuItem(SR.T("Menu.Opacity", "Opacity"));
+            foreach (var pct in new[] { 100, 90, 80, 70, 60, 50, 30 })
+            {
+                var mi = new ToolStripMenuItem($"Opacity {pct}%") { Tag = pct };
+                mi.Click += (s, e) =>
+                {
+                    var p = (int)((ToolStripMenuItem)s).Tag;
+                    this.Opacity = Math.Max(0.05, Math.Min(1.0, p / 100.0));
+                };
+                _miOpacity.DropDownItems.Add(mi);
+            }
+
+            // 実用操作
+            _miPauseResume = new ToolStripMenuItem(SR.T("Menu.Pause", "Pause")); _miPauseResume.Click += (s, e) => TogglePause();
+            _miRealign = new ToolStripMenuItem(SR.T("Menu.Realign", "Move to the initial position")); _miRealign.Click += (s, e) => RealignToKiritori();
+
+            // 固定・終了
+            _miTopMost = new ToolStripMenuItem(SR.T("Menu.TopMost", "Keep on top")) { Checked = true, CheckOnClick = true };
+            _miTopMost.CheckedChanged += (s, e) => this.TopMost = _miTopMost.Checked;
+
+            _miClose = new ToolStripMenuItem(SR.T("Menu.CloseWindow", "Close Window")); _miClose.Click += (s, e) => this.Close();
+            _miPref = new ToolStripMenuItem(SR.T("Menu.Preferences", "Preferences")); _miPref.Click += (s, e) => ShowPreferences();
+            _miExit = new ToolStripMenuItem(SR.T("Menu.Exit", "Exit Kiritori")); _miExit.Click += (s, e) => Application.Exit();
+
+            _ctx.Items.AddRange(new ToolStripItem[] {
+                _miPauseResume,
+                _miClose,
+                new ToolStripSeparator(),
+                _miOriginal,
+                _miZoomIn,
+                _miZoomOut,
+                _miZoomPct,
+                _miOpacity,
+                new ToolStripSeparator(),
+                _miRealign,
+                _miTopMost,
+                new ToolStripSeparator(),
+                _miPref,
+                _miExit
+            });
+
+            this.ContextMenuStrip = _ctx;
+        }
+        private void ShowPreferences()
+        {
+            try
+            {
+                PrefForm.ShowSingleton((IWin32Window)this.MainApp);
+            }
+            catch
+            { 
+                // MainApplicationオーナーで開けない場合は自分をオーナーに
+                PrefForm.ShowSingleton(this);
+            }
+        }
+        private void SetZoom(float z)
+        {
+            Debug.WriteLine($"[LivePreview] SetZoom: {z}");
+            z = Math.Max(0.1f, Math.Min(8.0f, z));
+            if (Math.Abs(_zoom - z) < 0.0001f) return;
+            _zoom = z;
+
+            var newClient = new Size(
+                (int)Math.Round(CaptureRect.Width * _zoom),
+                (int)Math.Round(CaptureRect.Height * _zoom)
+            );
+
+            WindowAligner.ResizeFormClientKeepTopLeft(
+                this,
+                newClient,
+                topMost: _miTopMost?.Checked ?? this.TopMost
+            );
+
+            Invalidate();
+            Debug.WriteLine($"[LivePreview] ResizeFormClientAt: {newClient}, {this.Size}");
+        }
+
+        private void TogglePause()
+        {
+            _paused = !_paused;
+            _miPauseResume.Text = _paused ? SR.T("Menu.Resume", "Resume") : SR.T("Menu.Pause", "Pause");
+            // バックエンドは動かしたまま、描画だけ止める（カク付き最小）
+            if (!_paused) Invalidate();
+        }
+
+        // FrameArrived 側で停止中は無視
+        private void OnFrameArrived(Bitmap bmp)
+        {
+            if (_paused) return;
+
+            var old = _latest;
+            _latest = (Bitmap)bmp.Clone();
+            if (old != null) old.Dispose();
+
+            if (IsHandleCreated) BeginInvoke((Action)(() =>
+            {
+                Invalidate();
+                if (!_firstFrameShown) { _firstFrameShown = true; if (this.Opacity < 1.0) this.Opacity = 1.0; }
+            }));
         }
 
         // ---- 自己キャプチャ除外 ----

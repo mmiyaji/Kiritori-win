@@ -61,6 +61,7 @@ public DateTime date;
 
         // 画像・ズーム関連
         private Image _originalImage;
+        private Point _originalLocation;
         private float _scale = 1f;
         private int _zoomStep = 0;
         private const float STEP_LINEAR = 0.10f;
@@ -201,6 +202,7 @@ public DateTime date;
             this.AllowDrop = true;
             this.DragEnter += SnapWindow_DragEnter;
             this.DragDrop += SnapWindow_DragDrop;
+            this._originalLocation = this.Location;
         }
 
         private void SnapWindow_Load(object sender, EventArgs e)

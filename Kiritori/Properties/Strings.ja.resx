@@ -531,4 +531,16 @@
   <data name="Menu.OCR" xml:space="preserve">
     <value>OCR(テキスト抽出)</value>
   </data>
+  <data name="Menu.Realign" xml:space="preserve">
+    <value>初期位置に移動</value>
+  </data>
+  <data name="Menu.TopMost" xml:space="preserve">
+    <value>最前面固定</value>
+  </data>
+  <data name="Menu.Resume" xml:space="preserve">
+    <value>再開</value>
+  </data>
+  <data name="Menu.Pause" xml:space="preserve">
+    <value>一時停止</value>
+  </data>
 </root>

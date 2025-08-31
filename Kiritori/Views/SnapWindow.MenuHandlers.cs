@@ -35,6 +35,7 @@ namespace Kiritori
         }
         private void saveImageToolStripMenuItem_Click(object sender, EventArgs e) { saveImage(); }
         private void openImageToolStripMenuItem_Click(object sender, EventArgs e) { openImage(); }
+        private void originalLocationToolStripMenuItem_Click(object sender, EventArgs e) { initLocation(); }
         private void originalSizeToolStripMenuItem_Click(object sender, EventArgs e) { zoomOff(); }
         private void zoomInToolStripMenuItem_Click(object sender, EventArgs e) { zoomIn(); }
         private void zoomOutToolStripMenuItem_Click(object sender, EventArgs e) { zoomOut(); }
@@ -45,7 +46,7 @@ namespace Kiritori
         private void size200ToolStripMenuItem_Click(object sender, EventArgs e) { ZoomToPercent(200); }
         private void size500ToolStripMenuItem_Click(object sender, EventArgs e) { ZoomToPercent(500); }
         private void dropShadowToolStripMenuItem_Click(object sender, EventArgs e) { ToggleShadow(!this.isWindowShadow); }
-        private void preferencesToolStripMenuItem_Click(object sender, EventArgs e) { PrefForm.ShowSingleton(this); }
+        private void preferencesToolStripMenuItem_Click(object sender, EventArgs e) { PrefForm.ShowSingleton(this.ma); }
         private void printToolStripMenuItem_Click(object sender, EventArgs e) { printImage(); }
         private void opacity100toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(1.0); ShowOverlay("Opacity: 100%"); }
         private void opacity90toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(0.9); ShowOverlay("Opacity: 90%"); }
@@ -287,6 +288,12 @@ namespace Kiritori
 
             if (this.Icon != null) { this.Icon.Dispose(); this.Icon = null; }
             base.OnFormClosed(e);
+        }
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            this._originalLocation = this.Location;
+            Debug.WriteLine($"Original Location: {this._originalLocation}");
         }
 
         #endregion

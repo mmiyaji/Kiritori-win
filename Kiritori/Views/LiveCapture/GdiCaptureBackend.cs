@@ -10,19 +10,22 @@ namespace Kiritori.Views.LiveCapture
         public event Action<Bitmap> FrameArrived;
         public int MaxFps { get; set; } = 30;
 
-        // ★ 追加：自己キャプチャ除外したいウィンドウのハンドル
-        public IntPtr ExcludeWindow { get; set; }
+        public IntPtr ExcludeWindow { get; set; } // 使わないなら未設定でOK
 
-        // ★ CaptureRect は論理px（スクリーン座標）で保持。スレッド安全に読む
-        private readonly object _sync = new object();
+        // CaptureRect は論理px（スクリーン座標）
+        private readonly object _rectLock = new object();
         private Rectangle _captureRect;
         public Rectangle CaptureRect
         {
-            get { lock (_sync) return _captureRect; }
-            set { lock (_sync) _captureRect = value; }
+            get { lock (_rectLock) return _captureRect; }
+            set { lock (_rectLock) _captureRect = value; }
         }
 
         private volatile bool _running;
+        private Thread _thread;
+
+        // バッファまわり（破棄と生成を同じロックで保護）
+        private readonly object _bufLock = new object();
         private Bitmap _buffer;
         private Graphics _g;
 
@@ -30,11 +33,20 @@ namespace Kiritori.Views.LiveCapture
         {
             if (_running) return;
             _running = true;
-            var t = new Thread(CaptureLoop) { IsBackground = true };
-            t.Start();
+            _thread = new Thread(CaptureLoop) { IsBackground = true, Name = "GdiCaptureBackend" };
+            _thread.Start();
         }
 
-        public void Stop() => _running = false;
+        public void Stop()
+        {
+            _running = false;
+            var t = _thread;
+            if (t != null && t.IsAlive)
+            {
+                try { t.Join(500); } catch { /* ignore */ }
+            }
+            _thread = null;
+        }
 
         private void CaptureLoop()
         {
@@ -43,52 +55,74 @@ namespace Kiritori.Views.LiveCapture
                 while (_running)
                 {
                     Rectangle rLogical;
-                    lock (_sync) rLogical = _captureRect;
+                    lock (_rectLock) rLogical = _captureRect;
+
                     if (rLogical.Width <= 0 || rLogical.Height <= 0)
                     {
                         Thread.Sleep(50);
                         continue;
                     }
 
-                    // BitBlt は物理pxで行う
                     var rPhysical = DpiUtil.LogicalToPhysical(rLogical);
 
+                    // バッファを確実に用意
                     EnsureBuffers(rPhysical.Size);
 
-                    // 画面DC取得
                     IntPtr desktopWnd = NativeMethods.GetDesktopWindow();
-                    var hdcSrc = NativeMethods.GetWindowDC(desktopWnd);
+                    IntPtr hdcSrc = IntPtr.Zero;
+                    IntPtr hdcDst = IntPtr.Zero;
+
                     try
                     {
-                        // // ★ ExcludeWindow が重なっていたらスキップ（自己キャプチャ防止）
-                        // if (ExcludeWindow != IntPtr.Zero && NativeMethods.GetWindowRect(ExcludeWindow, out var wrc))
-                        // {
-                        //     var winPhy = Rectangle.FromLTRB(wrc.Left, wrc.Top, wrc.Right, wrc.Bottom);
-                        //     if (winPhy.IntersectsWith(rPhysical))
-                        //     {
-                        //         Thread.Sleep(Math.Max(1, 1000 / Math.Max(1, MaxFps)));
-                        //         continue;
-                        //     }
-                        // }
+                        hdcSrc = NativeMethods.GetWindowDC(desktopWnd);
+                        if (hdcSrc == IntPtr.Zero) { Thread.Sleep(5); continue; }
 
-                        // BitBlt: 画面→バッファ
-                        var destHdc = _g.GetHdc();
-                        try
+                        // Graphics/HDC を安全に取得
+                        lock (_bufLock)
                         {
-                            NativeMethods.BitBlt(destHdc, 0, 0, rPhysical.Width, rPhysical.Height,
-                                                 hdcSrc, rPhysical.X, rPhysical.Y, NativeMethods.SRCCOPY);
+                            if (_g == null || _buffer == null || _buffer.Width != rPhysical.Width || _buffer.Height != rPhysical.Height)
+                            {
+                                // 破棄直後やサイズ変更の競合。次ループで再準備。
+                                continue;
+                            }
+
+                            hdcDst = _g.GetHdc();
                         }
-                        finally
-                        {
-                            _g.ReleaseHdc(destHdc);
-                        }
+
+                        // コピー
+                        NativeMethods.BitBlt(hdcDst, 0, 0, rPhysical.Width, rPhysical.Height,
+                                            hdcSrc, rPhysical.X, rPhysical.Y, NativeMethods.SRCCOPY);
+                    }
+                    catch
+                    {
+                        // 例外時は少し待って次ループ
+                        Thread.Sleep(5);
                     }
                     finally
                     {
-                        NativeMethods.ReleaseDC(desktopWnd, hdcSrc);
+                        if (hdcDst != IntPtr.Zero)
+                        {
+                            lock (_bufLock)
+                            {
+                                // _g が null でない時だけ ReleaseHdc
+                                if (_g != null) _g.ReleaseHdc(hdcDst);
+                            }
+                        }
+                        if (hdcSrc != IntPtr.Zero) NativeMethods.ReleaseDC(desktopWnd, hdcSrc);
                     }
 
-                    FrameArrived?.Invoke(_buffer);
+                    // フレーム通知（null は送らない）
+                    Bitmap toSend = null;
+                    lock (_bufLock)
+                    {
+                        if (_buffer != null)
+                            toSend = (Bitmap)_buffer.Clone();
+                    }
+                    if (toSend != null)
+                    {
+                        try { FrameArrived?.Invoke(toSend); }
+                        finally { toSend.Dispose(); }
+                    }
 
                     if (MaxFps > 0)
                         Thread.Sleep(Math.Max(1, 1000 / MaxFps));
@@ -102,26 +136,34 @@ namespace Kiritori.Views.LiveCapture
 
         private void EnsureBuffers(Size size)
         {
-            if (_buffer != null && _buffer.Size == size) return;
+            lock (_bufLock)
+            {
+                if (_buffer != null && _buffer.Size == size && _g != null) return;
 
-            DisposeBuffers();
-            _buffer = new Bitmap(size.Width, size.Height, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
-            _g = Graphics.FromImage(_buffer);
-            _g.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceCopy;
-            _g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
-            _g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
+                DisposeBuffers_NoLock();
+                _buffer = new Bitmap(size.Width, size.Height, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+                _g = Graphics.FromImage(_buffer);
+                _g.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceCopy;
+                _g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+                _g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.None;
+            }
         }
 
-        private void DisposeBuffers()
+        private void DisposeBuffers_NoLock()
         {
             if (_g != null) { _g.Dispose(); _g = null; }
             if (_buffer != null) { _buffer.Dispose(); _buffer = null; }
         }
 
+        private void DisposeBuffers()
+        {
+            lock (_bufLock) DisposeBuffers_NoLock();
+        }
+
         public void Dispose()
         {
-            Stop();
-            DisposeBuffers();
+            Stop();            // ← スレッド停止を先に
+            DisposeBuffers();  // ← その後でバッファ破棄
         }
 
         private static class NativeMethods
@@ -133,15 +175,9 @@ namespace Kiritori.Views.LiveCapture
             [DllImport("user32.dll")] public static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
             [DllImport("gdi32.dll", SetLastError = true)]
             public static extern bool BitBlt(IntPtr hdcDest, int nXDest, int nYDest, int nWidth, int nHeight,
-                                             IntPtr hdcSrc, int nXSrc, int nYSrc, int dwRop);
-
-            // ★ 追加：ウィンドウ矩形（物理px）
-            [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-            [StructLayout(LayoutKind.Sequential)]
-            public struct RECT { public int Left, Top, Right, Bottom; }
+                                            IntPtr hdcSrc, int nXSrc, int nYSrc, int dwRop);
         }
 
-        // ★ 物理/論理変換（左上のモニタ DPI を採用。矩形が複数モニタ跨ぎの場合は分割が理想）
         internal static class DpiUtil
         {
             [DllImport("Shcore.dll")] private static extern int GetDpiForMonitor(IntPtr hmonitor, int dpiType, out uint dpiX, out uint dpiY);

@@ -531,4 +531,16 @@
   <data name="Menu.OCR" xml:space="preserve">
     <value>OCR(text recognition)</value>
   </data>
+  <data name="Menu.Realign" xml:space="preserve">
+    <value>Move to the initial position</value>
+  </data>
+  <data name="Menu.TopMost" xml:space="preserve">
+    <value>Keep on top</value>
+  </data>
+  <data name="Menu.Resume" xml:space="preserve">
+    <value>Resume</value>
+  </data>
+  <data name="Menu.Pause" xml:space="preserve">
+    <value>Pause</value>
+  </data>
 </root>

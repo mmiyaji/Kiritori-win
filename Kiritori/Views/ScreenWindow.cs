@@ -420,7 +420,7 @@ namespace Kiritori
 
                         if (_ocr_mode)
                         {
-                            // ★ CloseScreen() より前にクロップ済み画像を作る
+                            // CloseScreen() より前にクロップ済み画像を作る
                             Bitmap sub = null;
                             try
                             {
@@ -434,7 +434,7 @@ namespace Kiritori
                             // もう画面は閉じてOK（baseBmpはこの中で破棄される想定）
                             this.CloseScreen();
 
-                            // ★ UIスレッドでOCRへ。sub の破棄は OCR 側で実施する
+                            // UIスレッドでOCRへ。sub の破棄は OCR 側で実施する
                             this.BeginInvoke(new Action(async () =>
                             {
                                 try
@@ -456,7 +456,7 @@ namespace Kiritori
                         }
                         else if (_live_mode)
                         {
-                            // ======== ★ Live プレビュー（リアルタイム） =========
+                            // ======== Live プレビュー（リアルタイム） =========
                             // crop は baseBmp 内の相対座標なので、必ずキャプチャ原点 (x,y) を加算して
                             // 「スクリーン上の論理座標」に直すこと！
                             // ここで物理pxに変換しないこと（キャプチャ側だけで物理化する設計）
@@ -471,7 +471,8 @@ namespace Kiritori
                             {
                                 // LivePreviewWindow は CaptureRect を「論理px（スクリーン座標）」として解釈する前提
                                 CaptureRect = rScreenLogical,
-                                StartPosition = FormStartPosition.Manual
+                                StartPosition = FormStartPosition.Manual,
+                                MainApp = this.ma,
                             };
 
                             // クライアント左上が rScreenLogical.Left/Top に一致するように、
@@ -560,7 +561,7 @@ namespace Kiritori
                     var xml = builder.GetToastContent().GetXml();
                     var toast = new ToastNotification(xml) { Tag = "kiritori-capture", Group = "kiritori" };
 
-                    // ★ ここで AUMID（Startメニューのショートカットと一致するID）を指定
+                    // ここで AUMID（Startメニューのショートカットと一致するID）を指定
                     Debug.WriteLine("[Toast] Show() called: " + NotificationService.GetAppAumid());
                     ToastNotificationManager.CreateToastNotifier(NotificationService.GetAppAumid()).Show(toast);
                 }
@@ -817,7 +818,7 @@ namespace Kiritori
 
                     var result = await provider.RecognizeAsync(sub, opt);
 
-                    // ★ OcrResult のプロパティ名に合わせて調整
+                    // OcrResult のプロパティ名に合わせて調整
                     // Windows.Media.Ocr.OcrResult なら .Text
                     // 自作 OcrResult でも通常は Text/PlainText いずれか
                     string text = null;
@@ -941,7 +942,7 @@ namespace Kiritori
         {
             try
             {
-                using (sub) // ★ ここで確実に破棄
+                using (sub) // ここで確実に破棄
                 {
                     // あなたの OCR 実装に合わせて
                     var provider = new Kiritori.Services.Ocr.WindowsOcrProvider();

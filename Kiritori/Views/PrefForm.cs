@@ -534,7 +534,7 @@ namespace Kiritori
             var ocrGlobalText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyOcr, defOcr);
 
             AddShortcutInfo(tlpShortcutsInfo, capText,          "Start capture",                     tagKey: "Text.StartCapture");
-            AddShortcutInfo(tlpShortcutsInfo, ocrGlobalText,    "Start OCR capture (global)",         tagKey: "Text.StartOcrCapture");
+            AddShortcutInfo(tlpShortcutsInfo, ocrGlobalText,    "Start OCR capture",         tagKey: "Text.StartOcrCapture");
 
             AddShortcutInfo(tlpShortcutsInfo, "Ctrl + W, ESC",  "Close window",                      tagKey: "Text.CloseWindow");
             AddShortcutInfo(tlpShortcutsInfo, "Ctrl + C",       "Copy to clipboard",                 tagKey: "Text.CopyToClipboard");

@@ -35,6 +35,7 @@ namespace Kiritori.Helpers
         ZOOM_ORIGIN_MAIN = Keys.Control | Keys.D0,
         ZOOM_IN = Keys.Control | Keys.Oemplus,
         ZOOM_OUT = Keys.Control | Keys.OemMinus,
+        LOCATE_ORIGIN_MAIN = Keys.Control | Keys.D9,
         CLOSE = Keys.Control | Keys.W,
         ESCAPE = Keys.Escape,
         COPY = Keys.Control | Keys.C,

@@ -141,6 +141,7 @@
     <Compile Include="Services\Ocr\OcrService.cs" />
     <Compile Include="Services\Ocr\WindowsOcrProvider.cs" />
     <Compile Include="Helpers\PackageHelper.cs" />
+    <Compile Include="Views\LiveCapture\TitleIconBadger.cs" />
     <Compile Include="Views\LiveCapture\WindowAligner.cs" />
     <Compile Include="Views\PrefForm.cs">
       <SubType>Form</SubType>

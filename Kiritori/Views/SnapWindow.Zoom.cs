@@ -112,6 +112,11 @@ namespace Kiritori
                 ShowOverlay("Zoom " + percent + "%");
             }
         }
+        public void initLocation()
+        {
+            if(this._originalLocation!=null) this.Location = this._originalLocation;
+            ShowOverlay("Reset Location");
+        }
 
         private void UpdateScaleFromStep()
         {

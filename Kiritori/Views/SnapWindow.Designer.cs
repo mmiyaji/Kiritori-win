@@ -22,6 +22,7 @@ namespace Kiritori
         private ToolStripMenuItem saveImageToolStripMenuItem;
         private ToolStripMenuItem openImageToolStripMenuItem;
         private ToolStripMenuItem editPaintToolStripMenuItem;
+        private ToolStripMenuItem originalLocationToolStripMenuItem;
         private ToolStripMenuItem originalSizeToolStripMenuItem;
         private ToolStripMenuItem size10ToolStripMenuItem;
         private ToolStripMenuItem size50ToolStripMenuItem;
@@ -82,6 +83,7 @@ namespace Kiritori
             this.saveImageToolStripMenuItem = new ToolStripMenuItem();
             this.openImageToolStripMenuItem = new ToolStripMenuItem();
             this.editPaintToolStripMenuItem = new ToolStripMenuItem();
+            this.originalLocationToolStripMenuItem = new ToolStripMenuItem();
             this.originalSizeToolStripMenuItem = new ToolStripMenuItem();
             this.size10ToolStripMenuItem = new ToolStripMenuItem();
             this.size50ToolStripMenuItem = new ToolStripMenuItem();
@@ -170,6 +172,7 @@ namespace Kiritori
                 this.zoomParentMenu,
                 new ToolStripSeparator(),
                 this.opacityParentMenu,
+                this.originalLocationToolStripMenuItem,
             });
             this.viewParentMenu.Name = "viewParentMenu";
             this.viewParentMenu.Size = new System.Drawing.Size(231, 22);
@@ -277,6 +280,16 @@ namespace Kiritori
             this.openImageToolStripMenuItem.Text = "Open Image";
             this.openImageToolStripMenuItem.Tag = "loc:Menu.OpenImage";
             this.openImageToolStripMenuItem.Click += new System.EventHandler(this.openImageToolStripMenuItem_Click);
+            // 
+            // originalLocationToolStripMenuItem
+            // 
+            this.originalLocationToolStripMenuItem.Name = "originalLocationToolStripMenuItem";
+            this.originalLocationToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
+            this.originalLocationToolStripMenuItem.Text = "Original Location";
+            this.originalLocationToolStripMenuItem.Tag = "loc:Menu.OriginalLocation";
+            this.originalLocationToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.NumPad9)));
+            this.originalLocationToolStripMenuItem.ShortcutKeyDisplayString = "Ctrl+9";
+            this.originalLocationToolStripMenuItem.Click += new System.EventHandler(this.originalLocationToolStripMenuItem_Click);
             // 
             // originalSizeToolStripMenuItem
             // 

@@ -6,8 +6,8 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms; // Application.ProductName / ExecutablePath
-using System.Runtime.InteropServices.WindowsRuntime; // ★ AsTask()
-using Windows.ApplicationModel; // ★ StartupTask / StartupTaskState
+using System.Runtime.InteropServices.WindowsRuntime; // AsTask()
+using Windows.ApplicationModel; // StartupTask / StartupTaskState
 
 namespace Kiritori.Startup
 {
