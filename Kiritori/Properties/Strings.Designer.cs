@@ -394,7 +394,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Zoom(%) に類似しているローカライズされた文字列を検索します。
+        ///   Zoom (%) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_Zoom {
             get {
@@ -403,7 +403,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Zoom In(+10%) に類似しているローカライズされた文字列を検索します。
+        ///   Zoom In (+10%) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_ZoomIn {
             get {
@@ -412,7 +412,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Zoom Out(-10%) に類似しているローカライズされた文字列を検索します。
+        ///   Zoom Out (-10%) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_ZoomOut {
             get {
@@ -583,7 +583,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Genral に類似しているローカライズされた文字列を検索します。
+        ///   General に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Tab_General {
             get {
@@ -871,7 +871,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Highlignt thickness(px) に類似しているローカライズされた文字列を検索します。
+        ///   Highlignt thickness (px) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_HighlightThickness {
             get {
@@ -925,7 +925,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Live preview(Beta) に類似しているローカライズされた文字列を検索します。
+        ///   [Beta] Live preview (Realtime) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_LivePreview {
             get {

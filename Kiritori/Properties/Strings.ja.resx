@@ -205,7 +205,7 @@
     <value>強調色</value>
   </data>
   <data name="Text.HighlightThickness" xml:space="preserve">
-    <value>強調ボーダーの太さ(px)</value>
+    <value>強調ボーダーの太さ (px)</value>
   </data>
   <data name="Text.WindowOpacity" xml:space="preserve">
     <value>ウィンドウの不透明度</value>
@@ -541,7 +541,7 @@
     <value>一時停止</value>
   </data>
   <data name="Text.LivePreview" xml:space="preserve">
-    <value>ライブプレビュー(ベター版)</value>
+    <value>[ベータ版]ライブプレビュー(リアルタイム表示)</value>
   </data>
   <data name="Prefs.Hotkey.DuplicateLive" xml:space="preserve">
     <value>他のホットキーが競合しています</value>

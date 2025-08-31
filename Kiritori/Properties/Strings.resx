@@ -124,7 +124,7 @@
     <value>Preferences</value>
   </data>
   <data name="Tab.General" xml:space="preserve">
-    <value>Genral</value>
+    <value>General</value>
   </data>
   <data name="Tab.Appearance" xml:space="preserve">
     <value>Appearance</value>
@@ -205,7 +205,7 @@
     <value>Highlight color</value>
   </data>
   <data name="Text.HighlightThickness" xml:space="preserve">
-    <value>Highlignt thickness(px)</value>
+    <value>Highlignt thickness (px)</value>
   </data>
   <data name="Text.WindowOpacity" xml:space="preserve">
     <value>Default opacity</value>
@@ -328,7 +328,7 @@
     <value>Window</value>
   </data>
   <data name="Menu.Zoom" xml:space="preserve">
-    <value>Zoom(%)</value>
+    <value>Zoom (%)</value>
   </data>
   <data name="Menu.Capture" xml:space="preserve">
     <value>Image Capture</value>
@@ -355,10 +355,10 @@
     <value>Original Size</value>
   </data>
   <data name="Menu.ZoomIn" xml:space="preserve">
-    <value>Zoom In(+10%)</value>
+    <value>Zoom In (+10%)</value>
   </data>
   <data name="Menu.ZoomOut" xml:space="preserve">
-    <value>Zoom Out(-10%)</value>
+    <value>Zoom Out (-10%)</value>
   </data>
   <data name="Menu.Size10" xml:space="preserve">
     <value>Size 10%</value>
@@ -541,7 +541,7 @@
     <value>Pause</value>
   </data>
   <data name="Text.LivePreview" xml:space="preserve">
-    <value>Live preview(Beta)</value>
+    <value>[Beta] Live preview (Realtime)</value>
   </data>
   <data name="Prefs.Hotkey.DuplicateLive" xml:space="preserve">
     <value>Duplicate with another hotkey</value>
