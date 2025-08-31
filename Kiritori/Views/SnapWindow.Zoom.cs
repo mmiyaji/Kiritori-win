@@ -82,18 +82,18 @@ namespace Kiritori
 
         public void zoomOff()
         {
-            if (_smoothZoomEnabled)
-            {
-                StartZoomAnimationToScale(1.0f, 140);
-                ShowOverlay("Zoom 100%");
-            }
-            else
-            {
+            // if (_smoothZoomEnabled)
+            // {
+            //     StartZoomAnimationToScale(1.0f, 140);
+            //     ShowOverlay("Zoom 100%");
+            // }
+            // else
+            // {
                 _zoomStep = 0;
                 UpdateScaleFromStep();
                 ApplyZoom(false);
                 ShowOverlay("Zoom 100%");
-            }
+            // }
         }
 
         public void ZoomToPercent(int percent)
@@ -137,6 +137,7 @@ namespace Kiritori
             this.pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage; // ストレッチ採用
             ApplyZoom(false);
         }
+        private bool _pinWindowLocationDuringZoom = true;
         private void ApplyZoom(bool redrawOnly) { ApplyZoom(redrawOnly, false); }
         private void ApplyZoom(bool redrawOnly, bool interactive)
         {
@@ -169,12 +170,12 @@ namespace Kiritori
             // 既存仕様どおりフォームも変える場合は残す：
             this.ClientSize = new Size(newW, newH);
 
-            if (!redrawOnly)
+            if (!redrawOnly && !_pinWindowLocationDuringZoom)
             {
                 int dx = (this.ClientSize.Width - oldClient.Width) / 2;
                 int dy = (this.ClientSize.Height - oldClient.Height) / 2;
                 this.Left -= dx;
-                this.Top -= dy;
+                this.Top  -= dy;
             }
         }
 

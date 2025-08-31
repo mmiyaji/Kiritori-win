@@ -70,30 +70,30 @@ namespace Kiritori
                 int newW = _startSize.Width;
                 int newH = _startSize.Height;
                 int newLeft = _startLocation.X;
-                int newTop  = _startLocation.Y;
+                int newTop = _startLocation.Y;
 
                 switch (_anchor)
                 {
                     // 角４つ（既存と同じ：Left/Top 側は位置も動かす）
                     case ResizeAnchor.BottomRight:
-                        newW = _startSize.Width  + dx;
+                        newW = _startSize.Width + dx;
                         newH = _startSize.Height + dy;
                         break;
                     case ResizeAnchor.BottomLeft:
-                        newW = _startSize.Width  - dx;
+                        newW = _startSize.Width - dx;
                         newH = _startSize.Height + dy;
                         newLeft = _startLocation.X + dx;
                         break;
                     case ResizeAnchor.TopRight:
-                        newW = _startSize.Width  + dx;
+                        newW = _startSize.Width + dx;
                         newH = _startSize.Height - dy;
                         newTop = _startLocation.Y + dy;
                         break;
                     case ResizeAnchor.TopLeft:
-                        newW = _startSize.Width  - dx;
+                        newW = _startSize.Width - dx;
                         newH = _startSize.Height - dy;
                         newLeft = _startLocation.X + dx;
-                        newTop  = _startLocation.Y + dy;
+                        newTop = _startLocation.Y + dy;
                         break;
 
                     // 辺４つ（横だけ/縦だけ、Left/Top は位置も動かす）
@@ -148,7 +148,7 @@ namespace Kiritori
                 }
 
                 // 最小サイズ
-                newW = Math.Max(this.MinimumSize.Width,  newW);
+                newW = Math.Max(this.MinimumSize.Width, newW);
                 newH = Math.Max(this.MinimumSize.Height, newH);
 
                 // 反映
@@ -185,7 +185,7 @@ namespace Kiritori
             if (_isDragging && (e.Button & MouseButtons.Left) == MouseButtons.Left)
             {
                 this.Left += e.X - mousePoint.X;
-                this.Top  += e.Y - mousePoint.Y;
+                this.Top += e.Y - mousePoint.Y;
                 this.Opacity = this.WindowAlphaPercent * DRAG_ALPHA;
             }
         }
@@ -209,6 +209,7 @@ namespace Kiritori
                 var hoverAnchor = HitTestCorner(e.Location);
                 this.Cursor = GetCursorForAnchor(hoverAnchor);
                 pictureBox1.Invalidate();
+                RefreshFromOriginalHiQ();
             }
         }
 
@@ -235,16 +236,16 @@ namespace Kiritori
 
             var dict = new Dictionary<ResizeAnchor, Rectangle>();
             dict[ResizeAnchor.BottomRight] = new Rectangle(w - grip, h - grip, grip, grip);
-            dict[ResizeAnchor.BottomLeft ] = new Rectangle(0,        h - grip, grip, grip);
-            dict[ResizeAnchor.TopRight   ] = new Rectangle(w - grip, 0,        grip, grip);
-            dict[ResizeAnchor.TopLeft    ] = new Rectangle(0,        0,        grip, grip);
+            dict[ResizeAnchor.BottomLeft] = new Rectangle(0, h - grip, grip, grip);
+            dict[ResizeAnchor.TopRight] = new Rectangle(w - grip, 0, grip, grip);
+            dict[ResizeAnchor.TopLeft] = new Rectangle(0, 0, grip, grip);
             return dict;
         }
         private (Dictionary<ResizeAnchor, Rectangle> corners, Dictionary<ResizeAnchor, Rectangle> edges) BuildGripRects()
         {
             float scale = this.DeviceDpi / 96f;
             int grip = (int)Math.Max(12, GRIP_PX * scale);   // 角の四角
-            int band = (int)Math.Max(6,  6 * scale);         // 辺の帯幅
+            int band = (int)Math.Max(6, 6 * scale);         // 辺の帯幅
 
             int w = pictureBox1.ClientSize.Width;
             int h = pictureBox1.ClientSize.Height;
@@ -252,18 +253,18 @@ namespace Kiritori
             var corners = new Dictionary<ResizeAnchor, Rectangle>
             {
                 [ResizeAnchor.BottomRight] = new Rectangle(w - grip, h - grip, grip, grip),
-                [ResizeAnchor.BottomLeft ] = new Rectangle(0,       h - grip, grip, grip),
-                [ResizeAnchor.TopRight   ] = new Rectangle(w - grip, 0,       grip, grip),
-                [ResizeAnchor.TopLeft    ] = new Rectangle(0,        0,       grip, grip),
+                [ResizeAnchor.BottomLeft] = new Rectangle(0, h - grip, grip, grip),
+                [ResizeAnchor.TopRight] = new Rectangle(w - grip, 0, grip, grip),
+                [ResizeAnchor.TopLeft] = new Rectangle(0, 0, grip, grip),
             };
 
             // 角を除いた帯（上下は左右の角を避ける、左右は上下の角を避ける）
             var edges = new Dictionary<ResizeAnchor, Rectangle>
             {
-                [ResizeAnchor.Top]    = new Rectangle(grip, 0, w - grip*2, band),
-                [ResizeAnchor.Bottom] = new Rectangle(grip, h - band, w - grip*2, band),
-                [ResizeAnchor.Left]   = new Rectangle(0, grip, band, h - grip*2),
-                [ResizeAnchor.Right]  = new Rectangle(w - band, grip, band, h - grip*2),
+                [ResizeAnchor.Top] = new Rectangle(grip, 0, w - grip * 2, band),
+                [ResizeAnchor.Bottom] = new Rectangle(grip, h - band, w - grip * 2, band),
+                [ResizeAnchor.Left] = new Rectangle(0, grip, band, h - grip * 2),
+                [ResizeAnchor.Right] = new Rectangle(w - band, grip, band, h - grip * 2),
             };
 
             return (corners, edges);
@@ -273,7 +274,7 @@ namespace Kiritori
         {
             var (corners, edges) = BuildGripRects();
             foreach (var kv in corners) if (kv.Value.Contains(p)) return kv.Key; // 角優先
-            foreach (var kv in edges)   if (kv.Value.Contains(p)) return kv.Key;
+            foreach (var kv in edges) if (kv.Value.Contains(p)) return kv.Key;
             return ResizeAnchor.None;
         }
 
@@ -321,12 +322,12 @@ namespace Kiritori
                 case ResizeAnchor.TopLeft:
                 case ResizeAnchor.BottomRight: return Cursors.SizeNWSE;
                 case ResizeAnchor.TopRight:
-                case ResizeAnchor.BottomLeft:  return Cursors.SizeNESW;
+                case ResizeAnchor.BottomLeft: return Cursors.SizeNESW;
                 case ResizeAnchor.Left:
-                case ResizeAnchor.Right:       return Cursors.SizeWE;
+                case ResizeAnchor.Right: return Cursors.SizeWE;
                 case ResizeAnchor.Top:
-                case ResizeAnchor.Bottom:      return Cursors.SizeNS;
-                default:                       return Cursors.Default;
+                case ResizeAnchor.Bottom: return Cursors.SizeNS;
+                default: return Cursors.Default;
             }
         }
 

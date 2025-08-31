@@ -238,6 +238,33 @@ namespace Kiritori
                 this.Location = new Point(this.Location.X + dx, this.Location.Y + dy);
             }
         }
+        private void RefreshFromOriginalHiQ()
+        {
+            Debug.WriteLine("Resize ended");
+            if (_originalImage == null) return;
+
+            var vw = Math.Max(1, pictureBox1.ClientSize.Width);
+            var vh = Math.Max(1, pictureBox1.ClientSize.Height);
+
+            var bmp = new Bitmap(vw, vh, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.CompositingMode    = CompositingMode.SourceOver;
+                g.SmoothingMode      = SmoothingMode.HighQuality;
+                g.CompositingQuality = CompositingQuality.HighQuality;
+                g.InterpolationMode  = InterpolationMode.HighQualityBicubic;
+                g.PixelOffsetMode    = PixelOffsetMode.HighQuality;
+
+                // ウィンドウにフィット（縦横比は固定しない＝以前の挙動）
+                g.DrawImage(_originalImage, new Rectangle(0, 0, vw, vh));
+            }
+
+            var old = pictureBox1.Image;
+            // pictureBox1.SizeMode = PictureBoxSizeMode.Normal; // ← もう描画済みBitmapなのでストレッチ不要
+            pictureBox1.Image = bmp;
+            old?.Dispose();
+        }
+
 
         #endregion
 
