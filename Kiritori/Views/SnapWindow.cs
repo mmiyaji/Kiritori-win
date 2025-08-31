@@ -66,6 +66,20 @@ public DateTime date;
         private const float STEP_LINEAR = 0.10f;
         private const float MIN_SCALE = 0.10f;
         private const float MAX_SCALE = 8.00f;
+        // ---- Smooth Zoom（短時間アニメーション）用 ----
+        private bool _smoothZoomEnabled = true;
+        private System.Windows.Forms.Timer _zoomAnimTimer;
+        private bool _isZoomAnimating;
+        private float _animFromScale;
+        private float _animToScale;
+        private int _animDurationMs = 80;   // 120～180ms 推奨
+        private DateTime _animStartUtc;
+        private const int   INPUT_BURST_MS       = 180; // この時間内の連打は同一バースト扱い
+        private const int   MAX_PENDING_STEPS    = 6;   // 現在表示位置から“先行できる”最大ステップ
+        private const int   MIN_ANIM_MS          = 80;  // どんなに短くてもこの時間
+        private const int   MAX_ANIM_MS          = 220; // どんなに長くてもこの時間
+        private DateTime    _lastZoomInputUtc;          // 最終ズーム入力時刻
+
 
         // サムネイル
         private const int THUMB_WIDTH = 250;
@@ -96,6 +110,13 @@ public DateTime date;
         private int _lastPaintTick;
         private ResizeAnchor _anchor = ResizeAnchor.None;
         private Point _startLocation; // フォームの開始位置
+        private bool _isResizeInteractive;
+        private bool _resizeHooksSet;
+        private Timer _resizeCommitTimer;   // 一瞬手を離しただけでも高品質確定へ
+        private int _resizeCommitDelayMs = 120;
+
+        // PictureBox に渡す「非アニメ・静止」複製（ImageAnimator回避用）
+        private Bitmap _originalStill;
 
         // MSPaint 編集
         private string _paintEditPath;
@@ -160,8 +181,16 @@ public DateTime date;
                 ApplyAllContextMenusLocalization();
             };
 
+            // フォーム
+            this.SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
+
+            // PictureBox（反射）
+            var pi = typeof(PictureBox).GetProperty("DoubleBuffered", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            if (pi != null) pi.SetValue(pictureBox1, true, null);
+
             ApplyUiFromFields();
             HookSettingsChanged();
+            InitializeResizePreviewPipeline();
 
             this.pictureBox1.Paint += PictureBox1_Paint;
 
