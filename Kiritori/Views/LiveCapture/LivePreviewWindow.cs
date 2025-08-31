@@ -23,6 +23,7 @@ namespace Kiritori.Views.LiveCapture
         private float _zoom = 1.0f;     // 表示倍率（1.0=100%）
         private bool _paused = false;
         public object MainApp { get; set; }
+        private TitleIconBadger _iconBadge;
 
         public LivePreviewWindow()
         {
@@ -64,6 +65,9 @@ namespace Kiritori.Views.LiveCapture
             gdi.FrameArrived += OnFrameArrived;
             _backend = gdi;
             _backend.Start();
+
+            _iconBadge = new TitleIconBadger(this);
+            _iconBadge.SetState(LiveBadgeState.Recording, blink: true); // ライブ開始 → 録画中バッジ
         }
 
         private bool _firstFrameShown = false;
@@ -84,6 +88,10 @@ namespace Kiritori.Views.LiveCapture
             _backend = null;
 
             if (_latest != null) { _latest.Dispose(); _latest = null; }
+
+            try { _iconBadge?.Dispose(); } catch { }
+            _iconBadge = null;
+
             base.OnFormClosed(e);
         }
 
@@ -235,6 +243,8 @@ namespace Kiritori.Views.LiveCapture
         {
             _paused = !_paused;
             _miPauseResume.Text = _paused ? SR.T("Menu.Resume", "Resume") : SR.T("Menu.Pause", "Pause");
+            _iconBadge?.SetState(_paused ? LiveBadgeState.Paused : LiveBadgeState.Recording,
+                        blink: !_paused);
             // バックエンドは動かしたまま、描画だけ止める（カク付き最小）
             if (!_paused) Invalidate();
         }
