@@ -9,6 +9,10 @@ namespace Kiritori
         public HotkeySpec Value { get; private set; }
         public event EventHandler HotkeyPicked;
 
+        public HotkeySpec DEF_HOTKEY_CAP  = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 };
+        public HotkeySpec DEF_HOTKEY_OCR  = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 };
+        public HotkeySpec DEF_HOTKEY_LIVE = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D6 };
+
         public HotkeyPicker()
         {
             this.ReadOnly = true;

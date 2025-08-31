@@ -202,7 +202,7 @@ public DateTime date;
             this.AllowDrop = true;
             this.DragEnter += SnapWindow_DragEnter;
             this.DragDrop += SnapWindow_DragDrop;
-            this._originalLocation = this.Location;
+            _originalLocation = this.Location;
         }
 
         private void SnapWindow_Load(object sender, EventArgs e)

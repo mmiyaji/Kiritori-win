@@ -371,7 +371,7 @@ namespace Kiritori
             this.keepAfloatToolStripMenuItem.Name = "keepAfloatToolStripMenuItem";
             this.keepAfloatToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.A)));
             this.keepAfloatToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
-            this.keepAfloatToolStripMenuItem.Text = "Toggle Always on top";
+            this.keepAfloatToolStripMenuItem.Text = "Keep on top";
             this.keepAfloatToolStripMenuItem.Tag = "loc:Menu.AlwaysOnTop";
             this.keepAfloatToolStripMenuItem.Click += new System.EventHandler(this.keepAfloatToolStripMenuItem_Click);
             // 
@@ -380,7 +380,7 @@ namespace Kiritori
             this.dropShadowToolStripMenuItem.Name = "dropShadowToolStripMenuItem";
             this.dropShadowToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.D)));
             this.dropShadowToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
-            this.dropShadowToolStripMenuItem.Text = "Toggle Drop Shadow";
+            this.dropShadowToolStripMenuItem.Text = "Drop Shadow";
             this.dropShadowToolStripMenuItem.Tag = "loc:Menu.DropShadow";
             this.dropShadowToolStripMenuItem.Click += new System.EventHandler(this.dropShadowToolStripMenuItem_Click);
             // 

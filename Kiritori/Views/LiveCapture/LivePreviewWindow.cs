@@ -176,7 +176,7 @@ namespace Kiritori.Views.LiveCapture
 
             // 実用操作
             _miPauseResume = new ToolStripMenuItem(SR.T("Menu.Pause", "Pause")); _miPauseResume.Click += (s, e) => TogglePause();
-            _miRealign = new ToolStripMenuItem(SR.T("Menu.Realign", "Move to the initial position")); _miRealign.Click += (s, e) => RealignToKiritori();
+            _miRealign = new ToolStripMenuItem(SR.T("Menu.OriginalLocation", "Move to the initial position")); _miRealign.Click += (s, e) => RealignToKiritori();
 
             // 固定・終了
             _miTopMost = new ToolStripMenuItem(SR.T("Menu.TopMost", "Keep on top")) { Checked = true, CheckOnClick = true };

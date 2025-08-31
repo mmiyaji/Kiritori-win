@@ -70,10 +70,10 @@ namespace Kiritori
         private TextBox textBoxKiritori;            // Capture (existing)
         private Label labelHotkeyCaptureOCR;
         private TextBox textBoxHotkeyCaptureOCR;
+        private Label labelHotkeyLivePreview;       // Live Preview
+        private TextBox textBoxHotkeyLivePreview;
         private Label labelHotkeyCapturePrev;       // Capture at previous region
         private TextBox textBoxCapturePrev;
-        private Label labelHotkeyVideo;             // Video capture (disabled)
-        private TextBox textBoxVideo;
 
         // ========= Appearance ==========
         private TabPage tabAppearance;
@@ -326,29 +326,33 @@ namespace Kiritori
             this.labelHotkeyCaptureOCR = NewRightLabel("OCR capture");
             this.labelHotkeyCaptureOCR.Tag = "loc:Text.OCRCapture";
 
-            this.labelHotkeyCapture = NewRightLabel("Image capture");
-            this.labelHotkeyCapture.Tag = "loc:Text.ImageCapture";
+            this.labelHotkeyLivePreview = NewRightLabel("Live preview");
+            this.labelHotkeyLivePreview.Tag = "loc:Text.LivePreview";
 
             this.textBoxKiritori = new HotkeyPicker { ReadOnly = true, Width = 160 };
             ((HotkeyPicker)this.textBoxKiritori).SetFromText(
-                Properties.Settings.Default.HotkeyCapture, defCap);
+                Properties.Settings.Default.HotkeyCapture, DEF_HOTKEY_CAP);
             ((HotkeyPicker)this.textBoxKiritori).HotkeyPicked += (s, e) =>
             {
-                SaveHotkeyFromPicker(isCapture:true, (HotkeyPicker)this.textBoxKiritori);
+                SaveHotkeyFromPicker(CaptureMode.image, (HotkeyPicker)this.textBoxKiritori);
             };
-
-            this.labelHotkeyCaptureOCR = NewRightLabel("OCR capture");
-            this.labelHotkeyCaptureOCR.Tag = "loc:Text.OCRCapture";
 
             this.textBoxHotkeyCaptureOCR = new HotkeyPicker { ReadOnly = true, Width = 160 };
             ((HotkeyPicker)this.textBoxHotkeyCaptureOCR).SetFromText(
-                Properties.Settings.Default.HotkeyOcr, defOcr);
+                Properties.Settings.Default.HotkeyOcr, DEF_HOTKEY_OCR);
             ((HotkeyPicker)this.textBoxHotkeyCaptureOCR).HotkeyPicked += (s, e) =>
             {
-                SaveHotkeyFromPicker(isCapture:false, (HotkeyPicker)this.textBoxHotkeyCaptureOCR);
+                SaveHotkeyFromPicker(CaptureMode.ocr, (HotkeyPicker)this.textBoxHotkeyCaptureOCR);
             };
-            //this.textBoxKiritori.KeyDown += new KeyEventHandler(this.textBoxKiritori_KeyDown);
-            //this.textBoxKiritori.PreviewKeyDown += new PreviewKeyDownEventHandler(this.textBoxKiritori_PreviewKeyDown);
+
+            this.textBoxHotkeyLivePreview = new HotkeyPicker { ReadOnly = true, Width = 160 };
+            ((HotkeyPicker)this.textBoxHotkeyLivePreview).SetFromText(
+                Properties.Settings.Default.HotkeyLive, DEF_HOTKEY_LIVE);
+            ((HotkeyPicker)this.textBoxHotkeyLivePreview).HotkeyPicked += (s, e) =>
+            {
+                SaveHotkeyFromPicker(CaptureMode.live, (HotkeyPicker)this.textBoxHotkeyLivePreview);
+            };
+
             var btnResetCap = new Button { Text = "Reset", AutoSize = true };
             btnResetCap.Tag = "loc:Text.ResetDefault";
             btnResetCap.Click += (s, e) => ResetCaptureHotkeyToDefault();
@@ -357,13 +361,13 @@ namespace Kiritori
             btnResetOcr.Tag = "loc:Text.ResetDefault";
             btnResetOcr.Click += (s, e) => ResetOcrHotkeyToDefault();
 
+            var btnResetLive = new Button { Text = "Reset", AutoSize = true };
+            btnResetLive.Tag = "loc:Text.ResetDefault";
+            btnResetLive.Click += (s, e) => ResetLiveHotkeyToDefault();
+
             this.labelHotkeyCapturePrev = NewRightLabel("Capture at previous region");
             this.labelHotkeyCapturePrev.Tag = "loc:Text.PreviousCapture";
             this.textBoxCapturePrev = new TextBox { Enabled = false, Width = 160, Text = "(disabled)" };
-
-            this.labelHotkeyVideo = NewRightLabel("Video capture");
-            this.labelHotkeyVideo.Tag = "loc:Text.VideoCapture";
-            this.textBoxVideo = new TextBox { Enabled = false, Width = 160, Text = "(disabled)" };
 
             tlpHot.Controls.Add(this.labelHotkeyCapture, 0, 0);
             tlpHot.Controls.Add(this.textBoxKiritori, 1, 0);
@@ -371,10 +375,11 @@ namespace Kiritori
             tlpHot.Controls.Add(this.labelHotkeyCaptureOCR, 0, 1);
             tlpHot.Controls.Add(this.textBoxHotkeyCaptureOCR, 1, 1);
             tlpHot.Controls.Add(btnResetOcr, 2, 1);
-            tlpHot.Controls.Add(this.labelHotkeyCapturePrev, 0, 2);
-            tlpHot.Controls.Add(this.textBoxCapturePrev, 1, 2);
-            tlpHot.Controls.Add(this.labelHotkeyVideo, 0, 3);
-            tlpHot.Controls.Add(this.textBoxVideo, 1, 3);
+            tlpHot.Controls.Add(this.labelHotkeyLivePreview, 0, 2);
+            tlpHot.Controls.Add(this.textBoxHotkeyLivePreview, 1, 2);
+            tlpHot.Controls.Add(btnResetLive, 2, 2);
+            tlpHot.Controls.Add(this.labelHotkeyCapturePrev, 0, 3);
+            tlpHot.Controls.Add(this.textBoxCapturePrev, 1, 3);
 
             this.grpHotkey.Controls.Add(tlpHot);
 

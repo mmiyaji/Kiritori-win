@@ -165,9 +165,6 @@
   <data name="Text.PreviousCapture" xml:space="preserve">
     <value>前回と同じ場所をキャプチャー</value>
   </data>
-  <data name="Text.VideoCapture" xml:space="preserve">
-    <value>リアルタイムキャプチャー</value>
-  </data>
   <data name="Text.BtnExit" xml:space="preserve">
     <value>Kiritoriアプリを終了</value>
   </data>
@@ -382,10 +379,10 @@
     <value>サイズ 500%</value>
   </data>
   <data name="Menu.AlwaysOnTop" xml:space="preserve">
-    <value>最前面固定切り替え</value>
+    <value>最前面固定</value>
   </data>
   <data name="Menu.DropShadow" xml:space="preserve">
-    <value>ドロップシャドウ切り替え</value>
+    <value>ドロップシャドウ</value>
   </data>
   <data name="Menu.Minimize" xml:space="preserve">
     <value>最小化</value>
@@ -505,10 +502,10 @@
     <value>OCRモードでキャプチャー</value>
   </data>
   <data name="Prefs.Hotkey.DuplicateCapture" xml:space="preserve">
-    <value>画像キャプチャーのホットキーが競合しています</value>
+    <value>他のホットキーが競合しています</value>
   </data>
   <data name="Prefs.Hotkey.DuplicateOCR" xml:space="preserve">
-    <value>OCRモードキャプチャーのホットキーが競合しています</value>
+    <value>他のホットキーが競合しています</value>
   </data>
   <data name="Text.ResetDefault" xml:space="preserve">
     <value>リセット</value>
@@ -542,5 +539,14 @@
   </data>
   <data name="Menu.Pause" xml:space="preserve">
     <value>一時停止</value>
+  </data>
+  <data name="Text.LivePreview" xml:space="preserve">
+    <value>ライブプレビュー(ベター版)</value>
+  </data>
+  <data name="Prefs.Hotkey.DuplicateLive" xml:space="preserve">
+    <value>他のホットキーが競合しています</value>
+  </data>
+  <data name="Menu.OriginalLocation" xml:space="preserve">
+    <value>初期位置に移動</value>
   </data>
 </root>

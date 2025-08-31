@@ -31,6 +31,7 @@ namespace Kiritori
         {
             this.TopMost = !this.TopMost;
             ShowOverlay("Keep Afloat: " + this.TopMost);
+            this.keepAfloatToolStripMenuItem.Checked = this.TopMost;
             this.isAfloatWindow = this.TopMost;
         }
         private void saveImageToolStripMenuItem_Click(object sender, EventArgs e) { saveImage(); }

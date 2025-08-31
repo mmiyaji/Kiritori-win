@@ -165,9 +165,6 @@
   <data name="Text.PreviousCapture" xml:space="preserve">
     <value>Capture at previous region</value>
   </data>
-  <data name="Text.VideoCapture" xml:space="preserve">
-    <value>Video Capture</value>
-  </data>
   <data name="Text.BtnExit" xml:space="preserve">
     <value>Exit Kiritori</value>
   </data>
@@ -382,10 +379,10 @@
     <value>Size 500%</value>
   </data>
   <data name="Menu.AlwaysOnTop" xml:space="preserve">
-    <value>Toggle Always on top</value>
+    <value>Keep on top</value>
   </data>
   <data name="Menu.DropShadow" xml:space="preserve">
-    <value>Toggle Drop Shadow</value>
+    <value>Drop Shadow</value>
   </data>
   <data name="Menu.Minimize" xml:space="preserve">
     <value>Minimize</value>
@@ -505,10 +502,10 @@
     <value>OCR capture</value>
   </data>
   <data name="Prefs.Hotkey.DuplicateCapture" xml:space="preserve">
-    <value>Duplicate with Image Capture hotkey</value>
+    <value>Duplicate with another hotkey</value>
   </data>
   <data name="Prefs.Hotkey.DuplicateOCR" xml:space="preserve">
-    <value>Duplicate with OCR hotkey</value>
+    <value>Duplicate with another hotkey</value>
   </data>
   <data name="Text.ResetDefault" xml:space="preserve">
     <value>Reset</value>
@@ -542,5 +539,14 @@
   </data>
   <data name="Menu.Pause" xml:space="preserve">
     <value>Pause</value>
+  </data>
+  <data name="Text.LivePreview" xml:space="preserve">
+    <value>Live preview(Beta)</value>
+  </data>
+  <data name="Prefs.Hotkey.DuplicateLive" xml:space="preserve">
+    <value>Duplicate with another hotkey</value>
+  </data>
+  <data name="Menu.OriginalLocation" xml:space="preserve">
+    <value>Reset Location</value>
   </data>
 </root>

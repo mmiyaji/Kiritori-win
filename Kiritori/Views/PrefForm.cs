@@ -35,8 +35,10 @@ namespace Kiritori
         private System.Collections.Generic.Dictionary<string, string> _baselineMap =
                     new System.Collections.Generic.Dictionary<string, string>();
 
-        private HotkeySpec defCap = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 };
-        private HotkeySpec defOcr = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 };
+        private HotkeySpec DEF_HOTKEY_CAP   = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 };
+        private HotkeySpec DEF_HOTKEY_OCR   = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 };
+        private HotkeySpec DEF_HOTKEY_LIVE  = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D6 };
+
 
         // =========================================================
         // ==================== Constructor ========================
@@ -409,111 +411,159 @@ namespace Kiritori
             }
         }
 
-        private void SaveHotkeyFromPicker(bool isCapture, HotkeyPicker picker)
+        private void SaveHotkeyFromPicker(CaptureMode mode, HotkeyPicker picker)
         {
-            Debug.WriteLine($"[Prefs] SaveHotkeyFromPicker(isCapture={isCapture})");
+            Debug.WriteLine($"[Prefs] SaveHotkeyFromPicker(mode={mode})");
             if (picker == null) { Debug.WriteLine("[Prefs] picker is null"); return; }
             if (picker.Value == null) { Debug.WriteLine("[Prefs] picker.Value is null"); return; }
 
-            var pickedText = HotkeyUtil.ToText(picker.Value);
+            var pickedText = HotkeyUtil.ToText(picker.Value) ?? "";
             Debug.WriteLine($"[Prefs] picked: '{pickedText}' (Mods={picker.Value.Mods}, Key={picker.Value.Key})");
 
-            var currentCap = Properties.Settings.Default.HotkeyCapture ?? "";
-            var currentOcr = Properties.Settings.Default.HotkeyOcr ?? "";
-            Debug.WriteLine($"[Prefs] before: Cap='{currentCap}', Ocr='{currentOcr}'");
+            // 現在値
+            var currentCap  = Properties.Settings.Default.HotkeyCapture ?? "";
+            var currentOcr  = Properties.Settings.Default.HotkeyOcr ?? "";
+            var currentLive = Properties.Settings.Default.HotkeyLive ?? "";
+            Debug.WriteLine($"[Prefs] before: Cap='{currentCap}', Ocr='{currentOcr}', Live='{currentLive}'");
 
-            // 重複チェック
-            if (isCapture)
+            // 比較は大文字小文字を無視
+            Func<string, string, bool> same = (a, b) =>
+                string.Equals(a ?? "", b ?? "", StringComparison.OrdinalIgnoreCase);
+
+            // それぞれのデフォルト（重複時にUIへ戻すキー）
+
+            // 重複チェック＆保存
+            if (mode == CaptureMode.image)
             {
-                if (string.Equals(pickedText, currentOcr, StringComparison.OrdinalIgnoreCase))
+                if (same(pickedText, currentOcr) || same(pickedText, currentLive))
                 {
-                    MessageBox.Show(this, SR.T("Prefs.Hotkey.DuplicateOCR", "Duplicate with OCR hotkey."),
-                                    "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    ((HotkeyPicker)this.textBoxKiritori).SetFromText(currentCap,
-                        new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 });
+                    MessageBox.Show(this,
+                        SR.T("Prefs.Hotkey.DuplicateCapture", "Duplicate with another hotkey."),
+                        "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ((HotkeyPicker)this.textBoxKiritori)?.SetFromText(currentCap, DEF_HOTKEY_CAP);
                     return;
                 }
                 Properties.Settings.Default.HotkeyCapture = pickedText;
             }
-            else
+            else if (mode == CaptureMode.ocr)
             {
-                if (string.Equals(pickedText, currentCap, StringComparison.OrdinalIgnoreCase))
+                if (same(pickedText, currentCap) || same(pickedText, currentLive))
                 {
-                    MessageBox.Show(this, SR.T("Prefs.Hotkey.DuplicateCapture", "Duplicate with Image hotkey."),
-                                    "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    ((HotkeyPicker)this.textBoxHotkeyCaptureOCR).SetFromText(currentOcr,
-                        new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 });
+                    MessageBox.Show(this,
+                        SR.T("Prefs.Hotkey.DuplicateOCR", "Duplicate with another hotkey."),
+                        "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ((HotkeyPicker)this.textBoxHotkeyCaptureOCR)?.SetFromText(currentOcr, DEF_HOTKEY_OCR);
                     return;
                 }
                 Properties.Settings.Default.HotkeyOcr = pickedText;
             }
+            else if (mode == CaptureMode.live)
+            {
+                if (same(pickedText, currentCap) || same(pickedText, currentOcr))
+                {
+                    MessageBox.Show(this,
+                        SR.T("Prefs.Hotkey.DuplicateLive", "Duplicate with another hotkey."),
+                        "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ((HotkeyPicker)this.textBoxHotkeyLivePreview)?.SetFromText(currentLive, DEF_HOTKEY_LIVE);
+                    return;
+                }
+                Properties.Settings.Default.HotkeyLive = pickedText;
+            }
+            else
+            {
+                // 未知モードは何もしない
+                Debug.WriteLine("[Prefs] unknown mode; skipped");
+                return;
+            }
 
+            // ここで一回だけ保存
             Properties.Settings.Default.Save();
-            Debug.WriteLine($"[Prefs] saved: Cap='{Properties.Settings.Default.HotkeyCapture}', Ocr='{Properties.Settings.Default.HotkeyOcr}'");
-
-            // --- Main を確実に見つける（名前文字列ではなく型で）
-            // var main = Application.OpenForms.OfType<Kiritori.MainApplication>().FirstOrDefault();
-            // if (main == null)
-            // {
-            //     Debug.WriteLine("[Prefs] MainApplication not found via OpenForms; hotkeys NOT reloaded.");
-            //     return;
-            // }
-
-            // if (!main.IsHandleCreated)
-            // {
-            //     Debug.WriteLine("[Prefs] Main handle not created yet; posting reload on HandleCreated.");
-            //     main.HandleCreated += (s, e) =>
-            //     {
-            //         try { main.BeginInvoke(new Action(main.ReloadHotkeysFromSettings)); }
-            //         catch (Exception ex) { Debug.WriteLine("[Prefs] BeginInvoke (HandleCreated) failed: " + ex); }
-            //     };
-            //     return;
-            // }
-
-            // Debug.WriteLine("[Prefs] calling main.ReloadHotkeysFromSettings()");
-            // try { main.BeginInvoke(new Action(main.ReloadHotkeysFromSettings)); }
-            // catch (Exception ex) { Debug.WriteLine("[Prefs] BeginInvoke failed: " + ex); }
+            Debug.WriteLine(
+                $"[Prefs] saved: Cap='{Properties.Settings.Default.HotkeyCapture}', " +
+                $"Ocr='{Properties.Settings.Default.HotkeyOcr}', Live='{Properties.Settings.Default.HotkeyLive}'");
         }
+
         private void ResetCaptureHotkeyToDefault()
         {
+            var defCapText  = HotkeyUtil.ToText(DEF_HOTKEY_CAP);
+            var defOcrText  = HotkeyUtil.ToText(DEF_HOTKEY_OCR);
+            var defLiveText = HotkeyUtil.ToText(DEF_HOTKEY_LIVE);
 
-            var defCapText = HotkeyUtil.ToText(defCap);
-            var defOcrText = HotkeyUtil.ToText(defOcr);
+            // 現在値
+            var curOcr  = Properties.Settings.Default.HotkeyOcr   ?? "";
+            var curLive = Properties.Settings.Default.HotkeyLive  ?? "";
 
-            // OCR と衝突していたら OCR も既定に
-            var currentOcr = Properties.Settings.Default.HotkeyOcr ?? "";
-            if (string.Equals(defCapText, currentOcr, StringComparison.OrdinalIgnoreCase))
+            // Capture 既定と衝突していたら OCR / Live も既定化
+            if (string.Equals(defCapText, curOcr, StringComparison.OrdinalIgnoreCase))
             {
                 Properties.Settings.Default.HotkeyOcr = defOcrText;
-                ((HotkeyPicker)this.textBoxHotkeyCaptureOCR).SetFromText(defOcrText, defOcr);
+                (this.textBoxHotkeyCaptureOCR as HotkeyPicker)?.SetFromText(defOcrText, DEF_HOTKEY_OCR);
+            }
+            if (string.Equals(defCapText, curLive, StringComparison.OrdinalIgnoreCase))
+            {
+                Properties.Settings.Default.HotkeyLive = defLiveText;
+                (this.textBoxHotkeyLivePreview as HotkeyPicker)?.SetFromText(defLiveText, DEF_HOTKEY_LIVE);
             }
 
             Properties.Settings.Default.HotkeyCapture = defCapText;
-            Properties.Settings.Default.Save(); // Main が監視して再登録してくれる
+            (this.textBoxKiritori as HotkeyPicker)?.SetFromText(defCapText, DEF_HOTKEY_CAP);
 
-            ((HotkeyPicker)this.textBoxKiritori).SetFromText(defCapText, defCap);
+            Properties.Settings.Default.Save();
         }
 
         private void ResetOcrHotkeyToDefault()
         {
+            var defCapText  = HotkeyUtil.ToText(DEF_HOTKEY_CAP);
+            var defOcrText  = HotkeyUtil.ToText(DEF_HOTKEY_OCR);
+            var defLiveText = HotkeyUtil.ToText(DEF_HOTKEY_LIVE);
 
-            var defCapText = HotkeyUtil.ToText(defCap);
-            var defOcrText = HotkeyUtil.ToText(defOcr);
+            var curCap  = Properties.Settings.Default.HotkeyCapture ?? "";
+            var curLive = Properties.Settings.Default.HotkeyLive    ?? "";
 
-            // Image と衝突していたら Image も既定に
-            var currentCap = Properties.Settings.Default.HotkeyCapture ?? "";
-            if (string.Equals(defOcrText, currentCap, StringComparison.OrdinalIgnoreCase))
+            // OCR 既定と衝突していたら Capture / Live も既定化
+            if (string.Equals(defOcrText, curCap, StringComparison.OrdinalIgnoreCase))
             {
                 Properties.Settings.Default.HotkeyCapture = defCapText;
-                ((HotkeyPicker)this.textBoxKiritori).SetFromText(defCapText, defCap);
+                (this.textBoxKiritori as HotkeyPicker)?.SetFromText(defCapText, DEF_HOTKEY_CAP);
+            }
+            if (string.Equals(defOcrText, curLive, StringComparison.OrdinalIgnoreCase))
+            {
+                Properties.Settings.Default.HotkeyLive = defLiveText;
+                (this.textBoxHotkeyLivePreview as HotkeyPicker)?.SetFromText(defLiveText, DEF_HOTKEY_LIVE);
             }
 
             Properties.Settings.Default.HotkeyOcr = defOcrText;
-            Properties.Settings.Default.Save();
+            (this.textBoxHotkeyCaptureOCR as HotkeyPicker)?.SetFromText(defOcrText, DEF_HOTKEY_OCR);
 
-            ((HotkeyPicker)this.textBoxHotkeyCaptureOCR).SetFromText(defOcrText, defOcr);
+            Properties.Settings.Default.Save();
         }
 
+        private void ResetLiveHotkeyToDefault()
+        {
+            var defCapText  = HotkeyUtil.ToText(DEF_HOTKEY_CAP);
+            var defOcrText  = HotkeyUtil.ToText(DEF_HOTKEY_OCR);
+            var defLiveText = HotkeyUtil.ToText(DEF_HOTKEY_LIVE);
+
+            var curCap = Properties.Settings.Default.HotkeyCapture ?? "";
+            var curOcr = Properties.Settings.Default.HotkeyOcr      ?? "";
+
+            // Live 既定と衝突していたら Capture / OCR も既定化
+            if (string.Equals(defLiveText, curCap, StringComparison.OrdinalIgnoreCase))
+            {
+                Properties.Settings.Default.HotkeyCapture = defCapText;
+                (this.textBoxKiritori as HotkeyPicker)?.SetFromText(defCapText, DEF_HOTKEY_CAP);
+            }
+            if (string.Equals(defLiveText, curOcr, StringComparison.OrdinalIgnoreCase))
+            {
+                Properties.Settings.Default.HotkeyOcr = defOcrText;
+                (this.textBoxHotkeyCaptureOCR as HotkeyPicker)?.SetFromText(defOcrText, DEF_HOTKEY_OCR);
+            }
+
+            Properties.Settings.Default.HotkeyLive = defLiveText;
+            (this.textBoxHotkeyLivePreview as HotkeyPicker)?.SetFromText(defLiveText, DEF_HOTKEY_LIVE);
+
+            Properties.Settings.Default.Save();
+        }
         private void RebuildShortcutsInfo()
         {
             this.grpShortcuts.Controls.Clear();
@@ -530,8 +580,9 @@ namespace Kiritori
             tlpShortcutsInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
 
             // ▼ 設定から動的に
-            var capText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyCapture, defCap);
-            var ocrGlobalText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyOcr, defOcr);
+            var capText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyCapture, DEF_HOTKEY_CAP);
+            var ocrGlobalText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyOcr, DEF_HOTKEY_OCR);
+            var liveGlobalText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyLive, DEF_HOTKEY_LIVE);
 
             AddShortcutInfo(tlpShortcutsInfo, capText,          "Start capture",                     tagKey: "Text.StartCapture");
             AddShortcutInfo(tlpShortcutsInfo, ocrGlobalText,    "Start OCR capture",         tagKey: "Text.StartOcrCapture");

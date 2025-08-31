@@ -54,10 +54,17 @@ namespace Kiritori.Helpers
         // NOREPEAT = 0x4000,
         WIN = 0x0008, // 使う場合は HotkeyPicker 側も対応を
     }
-    public enum ResizeAnchor {
+    public enum ResizeAnchor
+    {
         None,
         TopLeft, TopRight, BottomLeft, BottomRight,
         Left, Right, Top, Bottom
+    }
+    public enum CaptureMode
+    {
+        image,
+        ocr,
+        live,
     }
 
 }

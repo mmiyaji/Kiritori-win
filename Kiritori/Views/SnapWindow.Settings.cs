@@ -52,6 +52,12 @@ namespace Kiritori
             {
                 this.TopMost = isAfloatWindow;
                 this.Opacity = WindowAlphaPercent;
+                try
+                {
+                    this.keepAfloatToolStripMenuItem.Checked = isAfloatWindow;
+                    this.dropShadowToolStripMenuItem.Checked = isWindowShadow;
+                }
+                catch { }
             }
             catch { }
         }

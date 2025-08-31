@@ -115,7 +115,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Toggle Always on top に類似しているローカライズされた文字列を検索します。
+        ///   Keep on top に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_AlwaysOnTop {
             get {
@@ -160,7 +160,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Toggle Drop Shadow に類似しているローカライズされた文字列を検索します。
+        ///   Drop Shadow に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_DropShadow {
             get {
@@ -237,6 +237,15 @@ namespace Kiritori.Properties {
         internal static string Menu_OpenImage {
             get {
                 return ResourceManager.GetString("Menu.OpenImage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Reset Location に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_OriginalLocation {
+            get {
+                return ResourceManager.GetString("Menu.OriginalLocation", resourceCulture);
             }
         }
         
@@ -421,7 +430,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Duplicate with Image Capture hotkey に類似しているローカライズされた文字列を検索します。
+        ///   Duplicate with another hotkey に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Prefs_Hotkey_DuplicateCapture {
             get {
@@ -430,7 +439,16 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Duplicate with OCR hotkey に類似しているローカライズされた文字列を検索します。
+        ///   Duplicate with another hotkey に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Prefs_Hotkey_DuplicateLive {
+            get {
+                return ResourceManager.GetString("Prefs.Hotkey.DuplicateLive", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Duplicate with another hotkey に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Prefs_Hotkey_DuplicateOCR {
             get {
@@ -907,6 +925,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Live preview(Beta) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_LivePreview {
+            get {
+                return ResourceManager.GetString("Text.LivePreview", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   MainMenu / Preferences に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_MainPreferences {
@@ -1218,15 +1245,6 @@ namespace Kiritori.Properties {
         internal static string Text_UnsavedChangesTitle {
             get {
                 return ResourceManager.GetString("Text.UnsavedChangesTitle", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Video Capture に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string Text_VideoCapture {
-            get {
-                return ResourceManager.GetString("Text.VideoCapture", resourceCulture);
             }
         }
         

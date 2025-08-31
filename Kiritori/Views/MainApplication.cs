@@ -17,7 +17,6 @@ using System.Globalization;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Diagnostics;
-//using static Kiritori.Helpers.Enums;
 
 namespace Kiritori
 {
@@ -732,14 +731,15 @@ namespace Kiritori
             try { UnregisterHotKey(this.Handle, HOTKEY_ID_CAPTURE); } catch { }
             try { UnregisterHotKey(this.Handle, HOTKEY_ID_OCR); } catch { }
             try { UnregisterHotKey(this.Handle, HOTKEY_ID_LIVE); } catch { }
+            HotkeySpec DEF_HOTKEY_CAP   = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 };
+            HotkeySpec DEF_HOTKEY_OCR   = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 };
+            HotkeySpec DEF_HOTKEY_LIVE  = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D6 };
+
 
             // 設定値を解析（ログ多め）
-            var defCap = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 };
-            var defOcr = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 };
-            var defLive = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D6 };
-            var capSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyCapture, defCap);
-            var ocrSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyOcr, defOcr);
-            var liveSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyLive, defLive);
+            var capSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyCapture, DEF_HOTKEY_CAP);
+            var ocrSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyOcr, DEF_HOTKEY_OCR);
+            var liveSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyLive, DEF_HOTKEY_LIVE);
 
             Debug.WriteLine($"[HK] Capture parsed: {HotkeyUtil.ToText(capSpec)}  (Key={capSpec.Key})");
             Debug.WriteLine($"[HK] OCR     parsed: {HotkeyUtil.ToText(ocrSpec)}  (Key={ocrSpec.Key})");
