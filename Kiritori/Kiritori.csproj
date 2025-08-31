@@ -103,6 +103,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Helpers\DebugUiOptions.cs" />
+    <Compile Include="Helpers\DpiUtil.cs" />
     <Compile Include="Helpers\Enums.cs" />
     <Compile Include="Helpers\HotkeyUtil.cs" />
     <Compile Include="Helpers\Localizer.cs" />
@@ -125,11 +126,13 @@
     <Compile Include="Views\Controls\Separator.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="Views\LiveCapture\LiveRegionWindow_GDI.cs">
+    <Compile Include="Views\LiveCapture\GdiCaptureBackend.cs" />
+    <Compile Include="Views\LiveCapture\LiveCaptureBackend.cs" />
+    <Compile Include="Views\LiveCapture\LivePreviewWindow.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Views\LiveCapture\MagnifierLiveWindow.cs">
-      <SubType>Form</SubType>
+    <Compile Include="Views\LiveCapture\LivePreviewWindow.Designer.cs">
+      <DependentUpon>LivePreviewWindow.cs</DependentUpon>
     </Compile>
     <Compile Include="Services\Notifications\ToastBootstrapper.cs" />
     <Compile Include="Services\Ocr\IOcrProvider.cs" />
@@ -138,6 +141,7 @@
     <Compile Include="Services\Ocr\OcrService.cs" />
     <Compile Include="Services\Ocr\WindowsOcrProvider.cs" />
     <Compile Include="Helpers\PackageHelper.cs" />
+    <Compile Include="Views\LiveCapture\WindowAligner.cs" />
     <Compile Include="Views\PrefForm.cs">
       <SubType>Form</SubType>
     </Compile>

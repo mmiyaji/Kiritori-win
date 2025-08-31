@@ -47,7 +47,7 @@ namespace Kiritori
         // デバッグ用ID（他IDと被らない値に）
         private const int HOTKEY_ID_CAPTURE = 9001;
         private const int HOTKEY_ID_OCR = 9002;
-
+        private const int HOTKEY_ID_LIVE = 9003;
         // Win32のMOD定数（既存MOD_KEYと同値だがintで扱う）
         private const int MOD_ALT = 0x0001;
         private const int MOD_CONTROL = 0x0002;
@@ -66,7 +66,7 @@ namespace Kiritori
             {
                 try
                 {
-                    Debug.WriteLine("[HK] HandleCreated: registering hotkeys (PlanB direct)");
+                    Debug.WriteLine("[HK] HandleCreated: registering hotkeys");
                     ReloadHotkeysFromSettings();
                 }
                 catch (Exception ex)
@@ -99,7 +99,8 @@ namespace Kiritori
             Properties.Settings.Default.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(Properties.Settings.Default.HotkeyCapture) ||
-                    e.PropertyName == nameof(Properties.Settings.Default.HotkeyOcr))
+                    e.PropertyName == nameof(Properties.Settings.Default.HotkeyOcr) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.HotkeyLive))
                 {
                     Debug.WriteLine($"[HK] Settings changed: {e.PropertyName} → reload hotkeys");
                     // UIスレッドに投げる
@@ -134,6 +135,12 @@ namespace Kiritori
                 {
                     Debug.WriteLine("[HK] WM_HOTKEY: OCR");
                     openScreenOCR();
+                    return;
+                }
+                if (id == HOTKEY_ID_LIVE)
+                {
+                    Debug.WriteLine("[HK] WM_HOTKEY: LIVE");
+                    openScreenLive();
                     return;
                 }
             }
@@ -288,6 +295,29 @@ namespace Kiritori
             catch (Exception ex)
             {
                 Debug.WriteLine("[HK] openScreenOCR exception: " + ex);
+                Interlocked.Exchange(ref _screenOpenGate, 0);
+            }
+        }
+        public void openScreenLive()
+        {
+            if (Interlocked.Exchange(ref _screenOpenGate, 1) == 1)
+            {
+                Debug.WriteLine("[HK] openScreenLive: busy -> ignored");
+                return;
+            }
+            try
+            {
+                if (s == null || s.IsDisposed)
+                    s = new ScreenWindow(this, () => GetDpiForWindowSafe(this.Handle));
+
+                if (!s.Visible)
+                    s.showScreenLive();
+                else
+                    s.Activate();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HK] openScreenLive exception: " + ex);
                 Interlocked.Exchange(ref _screenOpenGate, 0);
             }
         }
@@ -701,18 +731,22 @@ namespace Kiritori
             // 念のため一旦解除
             try { UnregisterHotKey(this.Handle, HOTKEY_ID_CAPTURE); } catch { }
             try { UnregisterHotKey(this.Handle, HOTKEY_ID_OCR); } catch { }
+            try { UnregisterHotKey(this.Handle, HOTKEY_ID_LIVE); } catch { }
 
             // 設定値を解析（ログ多め）
             var defCap = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 };
             var defOcr = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 };
+            var defLive = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D6 };
             var capSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyCapture, defCap);
             var ocrSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyOcr, defOcr);
+            var liveSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyLive, defLive);
 
             Debug.WriteLine($"[HK] Capture parsed: {HotkeyUtil.ToText(capSpec)}  (Key={capSpec.Key})");
             Debug.WriteLine($"[HK] OCR     parsed: {HotkeyUtil.ToText(ocrSpec)}  (Key={ocrSpec.Key})");
+            Debug.WriteLine($"[HK] Live    parsed: {HotkeyUtil.ToText(liveSpec)}  (Key={liveSpec.Key})");
 
             // 変換（intに）
-            int capMods = 0, ocrMods = 0;
+            int capMods = 0, ocrMods = 0, liveMods = 0;
             if ((capSpec.Mods & ModMask.Ctrl) != 0) capMods |= MOD_CONTROL;
             if ((capSpec.Mods & ModMask.Shift) != 0) capMods |= MOD_SHIFT;
             if ((capSpec.Mods & ModMask.Alt) != 0) capMods |= MOD_ALT;
@@ -720,6 +754,10 @@ namespace Kiritori
             if ((ocrSpec.Mods & ModMask.Ctrl) != 0) ocrMods |= MOD_CONTROL;
             if ((ocrSpec.Mods & ModMask.Shift) != 0) ocrMods |= MOD_SHIFT;
             if ((ocrSpec.Mods & ModMask.Alt) != 0) ocrMods |= MOD_ALT;
+
+            if ((liveSpec.Mods & ModMask.Ctrl) != 0) liveMods |= MOD_CONTROL;
+            if ((liveSpec.Mods & ModMask.Shift) != 0) liveMods |= MOD_SHIFT;
+            if ((liveSpec.Mods & ModMask.Alt) != 0) liveMods |= MOD_ALT;
 
             // 実登録（Win32直）
             int ok1 = RegisterHotKey(this.Handle, HOTKEY_ID_CAPTURE, capMods /* | MOD_NOREPEAT */, (int)capSpec.Key);
@@ -743,7 +781,18 @@ namespace Kiritori
             {
                 Debug.WriteLine($"[HK] Register OCR success. mods={ocrMods}, vk={(Keys)ocrSpec.Key}");
             }
-        }
 
+            int ok3 = RegisterHotKey(this.Handle, HOTKEY_ID_LIVE, liveMods /* | MOD_NOREPEAT */, (int)liveSpec.Key);
+            if (ok3 == 0)
+            {
+                int err = Marshal.GetLastWin32Error();
+                Debug.WriteLine($"[HK] Register LIVE failed. mods={liveMods}, vk={(Keys)liveSpec.Key}, lastError=0x{err:X8}");
+            }
+            else
+            {
+                Debug.WriteLine($"[HK] Register LIVE success. mods={liveMods}, vk={(Keys)liveSpec.Key}");
+            }
+
+        }
     }
 }

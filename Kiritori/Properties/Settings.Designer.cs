@@ -286,5 +286,17 @@ namespace Kiritori.Properties {
                 this["isShowNotifyOCR"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Ctrl+Shift+6")]
+        public string HotkeyLive {
+            get {
+                return ((string)(this["HotkeyLive"]));
+            }
+            set {
+                this["HotkeyLive"] = value;
+            }
+        }
     }
 }

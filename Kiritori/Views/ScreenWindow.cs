@@ -17,6 +17,7 @@ using Kiritori.Views.LiveCapture;
 using Kiritori.Helpers;
 using Kiritori.Services.Notifications;
 using System.IO;
+using System.Threading;
 //using static Kiritori.Helpers;
 
 namespace Kiritori
@@ -39,9 +40,6 @@ namespace Kiritori
         private int snapGrid = 50;      // グリッド間隔(px)
         private int edgeSnapTol = 6;    // 端スナップの許容距離(px)
 
-        private MagnifierLiveWindow _live;
-        private LiveRegionWindow_GDI _liveRegion;
-
         // ====== 設定をキャッシュして描画に使うフィールド ======
         private Color _bgColor;               // CaptureBackgroundColor
         private int _bgAlphaPercent;        // CaptureBackgroundAlphaPercent (0-100)
@@ -53,6 +51,8 @@ namespace Kiritori
         private int _snapGridPx;            // SnapGridPx
         private int _edgeSnapTolPx;         // EdgeSnapTolerancePx
         private bool _ocr_mode = false;
+        // Live mode
+        private bool _live_mode = false;
 
         // ====== コンストラクタ ======
         public ScreenWindow(MainApplication mainapp, Func<int> getHostDpi = null)
@@ -284,6 +284,11 @@ namespace Kiritori
             this._ocr_mode = true;
             showScreenAll();
         }
+        public void showScreenLive()
+        {
+            this._live_mode = true;
+            showScreenAll();
+        }
 
 
         // ====== 選択操作 ======
@@ -402,72 +407,123 @@ namespace Kiritori
             if (!isPressed) return;
             isPressed = false;
 
-            if (rc.Width > 0 && rc.Height > 0 && baseBmp != null)
+            try
             {
-                // 1) 先に安全クロップ
-                Rectangle crop = Rectangle.Intersect(rc, new Rectangle(0, 0, baseBmp.Width, baseBmp.Height));
-                if (crop.Width > 0 && crop.Height > 0)
+                if (rc.Width > 0 && rc.Height > 0 && baseBmp != null)
                 {
-                    this.Opacity = 0.0; // 透明化しておく
-                    if (_ocr_mode)
+                    // 1) 安全クロップ（baseBmp の範囲に収める）
+                    Rectangle crop = Rectangle.Intersect(rc, new Rectangle(0, 0, baseBmp.Width, baseBmp.Height));
+                    if (crop.Width > 0 && crop.Height > 0)
                     {
-                        // ★ CloseScreen() より前に「クロップ済み画像」を作る
-                        Bitmap sub = null;
-                        try
-                        {
-                            sub = baseBmp?.Clone(crop, baseBmp.PixelFormat);
-                        }
-                        catch { /* clone失敗は null で後段へ */ }
+                        // 透明化：画面上に残らないように（自己キャプチャ抑止にも有効）
+                        this.Opacity = 0.0;
 
-                        // もう画面は閉じてOK（baseBmp はここで破棄される）
-                        this.CloseScreen();
-
-                        // ★ UIスレッド(BeginInvoke)でOCRへ。subの破棄はOCR側で行う
-                        this.BeginInvoke(new Action(async () =>
+                        if (_ocr_mode)
                         {
+                            // ★ CloseScreen() より前にクロップ済み画像を作る
+                            Bitmap sub = null;
                             try
                             {
-                                if (sub == null)
-                                {
-                                    System.Diagnostics.Debug.WriteLine("[OCR] sub image is null.");
-                                    NotifyOcrError();
-                                    return;
-                                }
-                                await DoOcrFromSubImageAsync(sub); // ← 新規（下で追加）
+                                sub = baseBmp?.Clone(crop, baseBmp.PixelFormat);
                             }
-                            finally
+                            catch
                             {
-                                _ocr_mode = false;
+                                // clone失敗は sub=null のまま後段へ
                             }
-                        }));
-                        return;
-                    }
-                    else
-                    {
-                        // 2) 画面上の配置位置（物理座標）
-                        var desired = new Point(crop.X + x, crop.Y + y);
 
-                        // 3) SnapWindow を作って baseBmp から適用
-                        var sw = new SnapWindow(this.ma)
+                            // もう画面は閉じてOK（baseBmpはこの中で破棄される想定）
+                            this.CloseScreen();
+
+                            // ★ UIスレッドでOCRへ。sub の破棄は OCR 側で実施する
+                            this.BeginInvoke(new Action(async () =>
+                            {
+                                try
+                                {
+                                    if (sub == null)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine("[OCR] sub image is null.");
+                                        NotifyOcrError();
+                                        return;
+                                    }
+                                    await DoOcrFromSubImageAsync(sub); // 別実装に委譲
+                                }
+                                finally
+                                {
+                                    _ocr_mode = false;
+                                }
+                            }));
+                            return;
+                        }
+                        else if (_live_mode)
                         {
-                            StartPosition = FormStartPosition.Manual
-                        };
+                            // ======== ★ Live プレビュー（リアルタイム） =========
+                            // crop は baseBmp 内の相対座標なので、必ずキャプチャ原点 (x,y) を加算して
+                            // 「スクリーン上の論理座標」に直すこと！
+                            // ここで物理pxに変換しないこと（キャプチャ側だけで物理化する設計）
+                            var rScreenLogical = new Rectangle(
+                                crop.X + x,
+                                crop.Y + y,
+                                crop.Width,
+                                crop.Height
+                            );
 
-                        // CloseScreen() より前に baseBmp を使い切る or Clone して渡す
-                        sw.CaptureFromBitmap(baseBmp, crop, desired, LoadMethod.Capture);
+                            var liveWin = new LivePreviewWindow
+                            {
+                                // LivePreviewWindow は CaptureRect を「論理px（スクリーン座標）」として解釈する前提
+                                CaptureRect = rScreenLogical,
+                                StartPosition = FormStartPosition.Manual
+                            };
 
-                        // 4) もう原本は不要ならここで閉じる
-                        this.CloseScreen();
+                            // クライアント左上が rScreenLogical.Left/Top に一致するように、
+                            // DPI と非クライアント（枠/タイトルバー）を API で加味して配置。
+                            WindowAligner.MoveFormToMatchClient(liveWin, rScreenLogical, topMost: true);
 
-                        sw.FormClosing += new FormClosingEventHandler(SW_FormClosing);
-                        captureArray.Add(sw);
-                        notifyCaptured();
-                        return;
+                            // 表示（TopMost は MoveFormToMatchClient 内でも設定している）
+                            liveWin.Show();
+
+                            // この選択ウィンドウは役目を終えたので閉じる
+                            this.CloseScreen();
+
+                            // Live モードはここで終了
+                            _live_mode = false;
+                            return;
+                        }
+                        else
+                        {
+                            // ======== 通常の静止画スナップ（既存動作） ========
+                            // 2) 画面上の配置位置（論理スクリーン座標）。SnapWindow でも (x,y) を足している
+                            var desired = new Point(crop.X + x, crop.Y + y);
+
+                            var sw = new SnapWindow(this.ma)
+                            {
+                                StartPosition = FormStartPosition.Manual
+                            };
+
+                            // CloseScreen() より前に baseBmp を使い切る or Clone して渡す
+                            sw.CaptureFromBitmap(baseBmp, crop, desired, LoadMethod.Capture);
+
+                            // 4) 原本は不要ならここで閉じる（baseBmp 破棄など）
+                            this.CloseScreen();
+
+                            sw.FormClosing += new FormClosingEventHandler(SW_FormClosing);
+                            captureArray.Add(sw);
+                            notifyCaptured();
+                            return;
+                        }
                     }
                 }
             }
-            this.CloseScreen();
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("[ScreenWindow_MouseUp] " + ex);
+            }
+            finally
+            {
+                // フォールバック的に、最後は閉じておく
+                this.CloseScreen();
+            }
         }
+
 
         private static DateTime _lastToastAt = DateTime.MinValue;
 
@@ -746,37 +802,6 @@ namespace Kiritori
             g = null;
         }
 
-        // ====== ライブ表示サンプル（既存） ======
-        private void StartLiveFromSelection1(Rectangle rect)
-        {
-            var viewerSize = rect.Size;
-            var screenBounds = Screen.PrimaryScreen.WorkingArea;
-            var viewerLoc = new Point(
-                Math.Max(0, screenBounds.Right - viewerSize.Width - 20),
-                Math.Max(0, screenBounds.Bottom - viewerSize.Height - 20)
-            );
-
-            _live?.Close();
-            _live = new MagnifierLiveWindow();
-            _live.StartLive(rect, viewerLoc, viewerSize, scale: 1.0f, clickThrough: false);
-        }
-
-        private void StopLive1()
-        {
-            _live?.Close();
-            _live = null;
-        }
-
-        private void StartLiveFromSelection(Rectangle selectedLogicalRect)
-        {
-            _liveRegion?.StopLive();
-            _liveRegion = new LiveRegionWindow_GDI();
-
-            Rectangle? viewer = null; // 例: new Rectangle(100, 100, 400, 300);
-            _liveRegion.StartLive(selectedLogicalRect, viewer);
-        }
-
-        private void StopLive() { if (_liveRegion != null) _liveRegion.StopLive(); }
 
         // ====== OCR ユーティリティ ======
         private async System.Threading.Tasks.Task DoOcrFromCropAsync(Bitmap baseImage, Rectangle crop)

@@ -68,5 +68,8 @@
     <Setting Name="isShowNotifyOCR" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
+    <Setting Name="HotkeyLive" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Ctrl+Shift+6</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
