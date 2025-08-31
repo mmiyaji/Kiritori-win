@@ -322,15 +322,30 @@ namespace Kiritori
                 cur = SnapPoint(cur);
             }
 
-            rc.X = Math.Min(startPoint.X, cur.X);
-            rc.Y = Math.Min(startPoint.Y, cur.Y);
-            rc.Width = Math.Abs(cur.X - startPoint.X);
-            rc.Height = Math.Abs(cur.Y - startPoint.Y);
+            int dx = cur.X - startPoint.X;
+            int dy = cur.Y - startPoint.Y;
 
-            if (IsSquareConstraint())
+            if (!IsSquareConstraint())
             {
-                int size = Math.Min(rc.Width, rc.Height);
-                rc.Width = rc.Height = size;
+                // 通常
+                rc.X = Math.Min(startPoint.X, cur.X);
+                rc.Y = Math.Min(startPoint.Y, cur.Y);
+                rc.Width  = Math.Abs(dx);
+                rc.Height = Math.Abs(dy);
+            }
+            else
+            {
+                // Shift：正方形制約
+                // カーソル方向（dx, dy の符号）に応じて起点を動かし、辺は Max(|dx|, |dy|)
+                int side = Math.Max(Math.Abs(dx), Math.Abs(dy));
+
+                int x0 = (dx >= 0) ? startPoint.X : startPoint.X - side;
+                int y0 = (dy >= 0) ? startPoint.Y : startPoint.Y - side;
+
+                rc.X = x0;
+                rc.Y = y0;
+                rc.Width  = side;
+                rc.Height = side;
             }
 
             using (g = Graphics.FromImage(bmp))
