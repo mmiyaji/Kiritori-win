@@ -549,4 +549,7 @@
   <data name="Menu.OriginalLocation" xml:space="preserve">
     <value>初期位置に移動</value>
   </data>
+  <data name="Menu.Titlebar" xml:space="preserve">
+    <value>タイトルバーを表示</value>
+  </data>
 </root>

@@ -127,6 +127,9 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Views\LiveCapture\GdiCaptureBackend.cs" />
+    <Compile Include="Views\LiveCapture\GlassPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Views\LiveCapture\LiveCaptureBackend.cs" />
     <Compile Include="Views\LiveCapture\LivePreviewWindow.cs">
       <SubType>Form</SubType>

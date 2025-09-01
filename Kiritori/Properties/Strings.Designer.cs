@@ -367,6 +367,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Show title bar に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_Titlebar {
+            get {
+                return ResourceManager.GetString("Menu.Titlebar", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Keep on top に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_TopMost {

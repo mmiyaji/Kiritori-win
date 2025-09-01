@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -18,7 +19,7 @@ namespace Kiritori.Views.LiveCapture
         private ToolStripMenuItem
             _miOriginal, _miZoomIn, _miZoomOut, _miZoomPct,
             _miOpacity, _miPauseResume, _miRealign, _miTopMost, _miClose,
-            _miPref, _miExit, _miTabbar;
+            _miPref, _miExit, _miTitlebar;
 
         private float _zoom = 1.0f;     // 表示倍率（1.0=100%）
         private bool _paused = false;
@@ -39,6 +40,7 @@ namespace Kiritori.Views.LiveCapture
 
         const int WM_NCLBUTTONDOWN = 0x00A1;
         const int WM_LBUTTONDOWN   = 0x0201;
+        const int WM_LBUTTONUP     = 0x0202;
         const int WM_NCCALCSIZE    = 0x0083;
         const int WM_NCHITTEST     = 0x0084;
 
@@ -47,6 +49,13 @@ namespace Kiritori.Views.LiveCapture
 
         // 影オプション（メニューから切替可能にする想定）
         private bool _shadowWhenTabless = true;
+
+        // ---- HUD（Pause/Resume）描画用（子コントロールは使わない）
+// ---- HUD（Pause/Resume）描画用（子コントロールは使わない）
+        private Timer _fadeTimer;                 // ← これだけにする
+        private int _hudAlpha = 0, _hudTargetAlpha = 0; // 0..200
+        private Rectangle _hudRect;                     // HUD ボタン矩形
+        private bool _hudHot = false, _hudDown = false; // ホバー/押下状態
 
         // タブを隠す直前に測った左右・下の枠厚
         private int _savedNcLeft = 0, _savedNcRight = 0, _savedNcBottom = 0;
@@ -72,11 +81,13 @@ namespace Kiritori.Views.LiveCapture
         [DllImport("user32.dll")]
         static extern bool RedrawWindow(IntPtr hWnd, IntPtr lprcUpdate, IntPtr hrgnUpdate, uint flags);
         const uint RDW_INVALIDATE=0x0001, RDW_UPDATENOW=0x0100, RDW_FRAME=0x0400, RDW_ALLCHILDREN=0x0080;
-// 影トグル用
-        private bool _shadowTabless = false;          // 既定OFF（お好みで true に）
+
+        // 影トグル用
+        private bool _shadowTabless = true;          // 既定ON
         private ToolStripMenuItem _miShadow;          // メニュー項目
         private int _origStyle = 0;
         private bool _captionHidden = false;
+
         [StructLayout(LayoutKind.Sequential)]
         private struct MARGINS
         {
@@ -88,11 +99,15 @@ namespace Kiritori.Views.LiveCapture
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS margins);
+
         public LivePreviewWindow()
         {
             InitializeComponent();
             this.DoubleBuffered = true;
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint, true);
+
+            BuildOverlay();        // HUD 初期化
+            WireHoverHandlers();   // ホバー/フェード
 
             BuildContextMenu();
             this.ContextMenuStrip = _ctx;
@@ -101,11 +116,114 @@ namespace Kiritori.Views.LiveCapture
             this.BackColor = Color.Black;
         }
 
+        // 背景消去しない（_latest を全面に描く & フリッカ抑制）
+        protected override void OnPaintBackground(PaintEventArgs e) { /* no-op */ }
+
+        // ===== HUD 初期化（タイマーなど） =====
+        private void BuildOverlay()
+        {
+            CenterOverlay(); // _hudRect を決定
+
+            _fadeTimer = new Timer { Interval = 16 }; // ~60fps
+            _fadeTimer.Tick += (s, e) =>
+            {
+                int cur = _hudAlpha;
+                int step = 24; // フェード速度
+                if (cur < _hudTargetAlpha) cur = Math.Min(_hudTargetAlpha, cur + step);
+                else if (cur > _hudTargetAlpha) cur = Math.Max(_hudTargetAlpha, cur - step);
+                if (cur != _hudAlpha)
+                {
+                    _hudAlpha = cur;
+                    // Invalidate(_hudRect); // HUD 部分だけ再描画
+                    Invalidate(GetHudInvalidateRect());
+                }
+                if (cur == _hudTargetAlpha) _fadeTimer.Stop();
+            };
+        }
+
+        private int DpiScale(int px) => (int)Math.Round(px * this.DeviceDpi / 96.0);
+        private void CenterOverlay()
+        {
+            int clientW = this.ClientSize.Width;
+            int clientH = this.ClientSize.Height;
+
+            // 円の外側に少し余白（はみ出し防止）
+            int safePad = DpiScale(8);
+
+            // そもそも余白を取るスペースがない場合は HUD 無効
+            if (clientW <= safePad * 2 || clientH <= safePad * 2)
+            {
+                _hudRect = Rectangle.Empty;
+                return;
+            }
+
+            int desiredD = DpiScale(120);                 // 通常サイズ（YouTube風）
+            int maxD     = Math.Min(clientW, clientH) - safePad * 2; // 収まる最大直径
+            int minD     = DpiScale(56);                  // これ未満なら表示しない
+
+            int d = Math.Min(desiredD, maxD);
+            if (d < minD)
+            {
+                _hudRect = Rectangle.Empty;               // 小さすぎるので非表示
+                return;
+            }
+
+            _hudRect = new Rectangle(
+                (clientW - d) / 2,
+                (clientH - d) / 2,
+                d, d
+            );
+        }
+
+        private void WireHoverHandlers()
+        {
+            this.MouseEnter += (s, e) => ShowOverlay();
+            this.MouseMove  += (s, e) =>
+            {
+                ShowOverlay();
+                if (_hudAlpha > 0 && !_hudRect.IsEmpty)
+                {
+                    var me = (MouseEventArgs)e;
+                    bool hot = _hudRect.Contains(me.Location);
+                    if (hot != _hudHot) { _hudHot = hot; Invalidate(GetHudInvalidateRect()); }
+                }
+            };
+            this.MouseLeave += (s, e) => HideOverlay();
+        }
+        private void ShowOverlay()
+        {
+            if (_hudRect.IsEmpty)
+            {
+                // 収まらない場合は常に非表示
+                _hudTargetAlpha = 0;
+                if (!_fadeTimer.Enabled && _hudAlpha > 0) _fadeTimer.Start();
+                return;
+            }
+
+            _hudTargetAlpha = 140;             // お好みで 100〜160
+            if (!_fadeTimer.Enabled) _fadeTimer.Start();
+        }
+
+        private void HideOverlay()
+        {
+            _hudHot = _hudDown = false;        // 状態リセット
+            _hudTargetAlpha = 0;
+            if (!_fadeTimer.Enabled) _fadeTimer.Start();
+        }
+
+
+        private void FadeOutOverlay()
+        {
+            _hudTargetAlpha = 0;
+            if (!_fadeTimer.Enabled) _fadeTimer.Start();
+        }
+
         private Size GetDesiredClient() =>
             new Size(
-                (int)Math.Round(CaptureRect.Width  * _zoom),
+                (int)Math.Round(CaptureRect.Width * _zoom),
                 (int)Math.Round(CaptureRect.Height * _zoom)
             );
+
         private void ApplyTablessShadow(bool enable)
         {
             try
@@ -152,14 +270,126 @@ namespace Kiritori.Views.LiveCapture
 
         private bool _firstFrameShown = false;
 
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            var oldInv = GetHudInvalidateRect();  // 変更前
+            CenterOverlay();                      // _hudRect 更新
+            var newInv = GetHudInvalidateRect();  // 変更後
+            if (!oldInv.IsEmpty) Invalidate(oldInv);
+            if (!newInv.IsEmpty) Invalidate(newInv);
+
+            if (_hudAlpha > 0 && _hudRect.IsEmpty) HideOverlay(); // 入らなくなったら隠す
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
             if (_latest == null) return;
 
             var dst = this.ClientRectangle;
-            e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
             e.Graphics.DrawImage(_latest, dst);
+
+            DrawHud(e.Graphics);
+        }
+
+        private void DrawHud(Graphics g)
+        {
+            if (_hudAlpha <= 0 || _hudRect.IsEmpty) return;
+
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.CompositingMode = CompositingMode.SourceOver;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+            g.CompositingQuality = CompositingQuality.HighQuality;
+
+            int d = _hudRect.Width;                // 円の直径
+            float a = Math.Min(_hudAlpha, 200);    // 背景の最大濃度
+            
+            // --- 背景：黒い円
+            using (var bg = new SolidBrush(Color.FromArgb((int)a, 0, 0, 0)))
+                g.FillEllipse(bg, _hudRect);
+
+            // ほのかな外周ハイライト
+            float penW = Math.Max(1f, d * 0.012f);
+            using (var pen = new Pen(Color.FromArgb((int)(a * 0.35f), 255, 255, 255), penW))
+            {
+                var rStroke = new RectangleF(_hudRect.X, _hudRect.Y, _hudRect.Width, _hudRect.Height);
+                rStroke.Inflate(-penW / 2f, -penW / 2f);  // ストロークが外に出ないよう内側へ
+                g.DrawEllipse(pen, rStroke);
+            }
+
+            // --- アイコン領域
+            int margin = (int)Math.Round(d * 0.22); 
+            var iconRect = new Rectangle(
+                _hudRect.X + margin, _hudRect.Y + margin,
+                _hudRect.Width - margin * 2, _hudRect.Height - margin * 2);
+
+            float fgBoost = _hudDown ? 1.00f : (_hudHot ? 0.92f : 0.85f);
+            int fgA = (int)(255 * fgBoost);
+
+            if (_paused)
+            {
+                // ▶（重心中央補正版）
+                float W = iconRect.Width;
+                float H = iconRect.Height;
+
+                float leftPadRatio  = 0.30f;
+                float rightPadRatio = Math.Max(0f, 2f * leftPadRatio - 0.5f);
+
+                float L = iconRect.Left  + leftPadRatio  * W;
+                float R = iconRect.Right - rightPadRatio * W;
+
+                float vPad = H * 0.08f;
+                float top = iconRect.Top + vPad;
+                float bottom = iconRect.Bottom - vPad;
+                float cy = iconRect.Top + H / 2f;
+
+                using (var path = new GraphicsPath())
+                using (var br = new SolidBrush(Color.FromArgb(fgA, 255, 255, 255)))
+                {
+                    path.AddPolygon(new[]
+                    {
+                        new PointF(L, top),
+                        new PointF(L, bottom),
+                        new PointF(R, cy)
+                    });
+                    g.FillPath(br, path);
+                }
+            }
+            else
+            {
+                // ‖（丸角バー）
+                int barW = (int)Math.Round(d * 0.14);
+                int gap  = (int)Math.Round(d * 0.12);
+                int barH = (int)Math.Round(d * 0.52);
+                int y    = _hudRect.Y + (_hudRect.Height - barH) / 2;
+                int xL   = _hudRect.X + (_hudRect.Width - (barW * 2 + gap)) / 2;
+                int xR   = xL + barW + gap;
+                int r    = Math.Max(2, barW / 2);
+
+                using (var br = new SolidBrush(Color.FromArgb(fgA, 255, 255, 255)))
+                using (var left  = RoundedRect(new Rectangle(xL, y, barW, barH), r))
+                using (var right = RoundedRect(new Rectangle(xR, y, barW, barH), r))
+                {
+                    g.FillPath(br, left);
+                    g.FillPath(br, right);
+                }
+            }
+        }
+
+
+        // 角丸矩形（int版）
+        private static GraphicsPath RoundedRect(Rectangle r, int radius)
+        {
+            int d = Math.Max(2, radius * 2);
+            var p = new GraphicsPath();
+            p.AddArc(r.Left, r.Top, d, d, 180, 90);
+            p.AddArc(r.Right - d, r.Top, d, d, 270, 90);
+            p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+            p.AddArc(r.Left, r.Bottom - d, d, d, 90, 90);
+            p.CloseFigure();
+            return p;
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -172,7 +402,7 @@ namespace Kiritori.Views.LiveCapture
             try { _iconBadge?.Dispose(); } catch { }
             _iconBadge = null;
 
-            try { _ctx?.Dispose(); } catch { }   // ★ これを追加（ContextMenuStrip を明示破棄）
+            try { _ctx?.Dispose(); } catch { }   // ContextMenuStrip を明示破棄
 
             base.OnFormClosed(e);
         }
@@ -213,12 +443,13 @@ namespace Kiritori.Views.LiveCapture
             if (this.Opacity < 1.0) this.Opacity = 1.0;
             _firstFrameShown = true; // 既に初回を表示済み
         }
+
         private void RealignToKiritori()
         {
-            // _zoom = 1.0f;
             WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: _miTopMost?.Checked ?? true);
             Invalidate();
         }
+
         private void BuildContextMenu()
         {
             _ctx = new ContextMenuStrip();
@@ -230,7 +461,7 @@ namespace Kiritori.Views.LiveCapture
             _miZoomIn = new ToolStripMenuItem(SR.T("Menu.ZoomIn", "Zoom In(+10%)")); _miZoomIn.Click += (s, e) => SetZoom(_zoom + 0.10f);
             _miZoomOut = new ToolStripMenuItem(SR.T("Menu.ZoomOut", "Zoom Out(-10%)")); _miZoomOut.Click += (s, e) => SetZoom(_zoom - 0.10f);
 
-            // Zoom(%) サブメニュー（スクショ準拠：10 / 50 / 100 / 150 / 200 / 500）
+            // Zoom(%) サブメニュー
             _miZoomPct = new ToolStripMenuItem(SR.T("Menu.Zoom", "Zoom(%)"));
             foreach (var pct in new[] { 10, 50, 100, 150, 200, 500 })
             {
@@ -243,7 +474,7 @@ namespace Kiritori.Views.LiveCapture
                 _miZoomPct.DropDownItems.Add(mi);
             }
 
-            // Opacity サブメニュー（よく使う段）
+            // Opacity サブメニュー
             _miOpacity = new ToolStripMenuItem(SR.T("Menu.Opacity", "Opacity"));
             foreach (var pct in new[] { 100, 90, 80, 70, 60, 50, 30 })
             {
@@ -258,8 +489,8 @@ namespace Kiritori.Views.LiveCapture
 
             // 実用操作
             _miPauseResume = new ToolStripMenuItem(SR.T("Menu.Pause", "Pause")); _miPauseResume.Click += (s, e) => TogglePause();
-            _miTabbar = new ToolStripMenuItem(SR.T("Menu.Tabbar", "Show Tabbar")); _miTabbar.Click += (s, e) => ToggleTabbar();
-            _miTabbar.Checked = true;
+            _miTitlebar = new ToolStripMenuItem(SR.T("Menu.Titlebar", "Show Title bar")); _miTitlebar.Click += (s, e) => ToggleTitlebar();
+            _miTitlebar.Checked = true;
             _miRealign = new ToolStripMenuItem(SR.T("Menu.OriginalLocation", "Move to the initial position")); _miRealign.Click += (s, e) => RealignToKiritori();
 
             // 固定・終了
@@ -270,7 +501,7 @@ namespace Kiritori.Views.LiveCapture
             _miPref = new ToolStripMenuItem(SR.T("Menu.Preferences", "Preferences")); _miPref.Click += (s, e) => ShowPreferences();
             _miExit = new ToolStripMenuItem(SR.T("Menu.Exit", "Exit Kiritori")); _miExit.Click += (s, e) => Application.Exit();
 
-            _miShadow = new ToolStripMenuItem("Drop shadow (tabless)")
+            _miShadow = new ToolStripMenuItem(SR.T("Menu.DropShadow", "Drop shadow (tabless)"))
             {
                 Checked = _shadowTabless,
                 CheckOnClick = true
@@ -288,10 +519,9 @@ namespace Kiritori.Views.LiveCapture
                 }
             };
 
-
             _ctx.Items.AddRange(new ToolStripItem[] {
                 _miPauseResume,
-                _miTabbar,
+                _miTitlebar,
                 _miClose,
                 new ToolStripSeparator(),
                 _miOriginal,
@@ -349,6 +579,7 @@ namespace Kiritori.Views.LiveCapture
             MarkDropDownExclusion(_miZoomPct);
             MarkDropDownExclusion(_miOpacity);
         }
+
         private void ShowPreferences()
         {
             try
@@ -356,11 +587,12 @@ namespace Kiritori.Views.LiveCapture
                 PrefForm.ShowSingleton((IWin32Window)this.MainApp);
             }
             catch
-            { 
+            {
                 // MainApplicationオーナーで開けない場合は自分をオーナーに
                 PrefForm.ShowSingleton(this);
             }
         }
+
         private void SetZoom(float z)
         {
             Debug.WriteLine($"[LivePreview] SetZoom: {z}");
@@ -388,19 +620,22 @@ namespace Kiritori.Views.LiveCapture
             _paused = !_paused;
             _miPauseResume.Text = _paused ? SR.T("Menu.Resume", "Resume") : SR.T("Menu.Pause", "Pause");
             _iconBadge?.SetState(_paused ? LiveBadgeState.Paused : LiveBadgeState.Recording);
-            // バックエンドは動かしたまま、描画だけ止める（カク付き最小）
+
+            // 再開時は即描画、ラベルは HUD 内で更新
             if (!_paused) Invalidate();
+            Invalidate(GetHudInvalidateRect());
         }
-        private void ToggleTabbar()
+
+        private void ToggleTitlebar()
         {
             var desiredClient = GetDesiredClient();
 
             // 切替「前」の枠厚（左・上）を実測
             var oldInsets = GetNcInsets();
 
-            if (_miTabbar.Checked) HideCaptionBarTemporarily();
+            if (_miTitlebar.Checked) HideCaptionBarTemporarily();
             else                   RestoreCaptionBar();
-            _miTabbar.Checked = !_miTabbar.Checked;
+            _miTitlebar.Checked = !_miTitlebar.Checked;
 
             Action apply = () =>
             {
@@ -412,8 +647,8 @@ namespace Kiritori.Views.LiveCapture
                 var newInsets = GetNcInsets();
 
                 // 差分だけ位置補正（左/上）
-                int dx = oldInsets.Left - newInsets.Left;   // 左枠が薄くなったら +dx で右へ、厚くなったら -dx で左へ
-                int dy = oldInsets.Top - newInsets.Top;    // これまでのdyと同じ理屈
+                int dx = oldInsets.Left - newInsets.Left;
+                int dy = oldInsets.Top - newInsets.Top;
 
                 if (dx != 0 || dy != 0)
                 {
@@ -506,10 +741,9 @@ namespace Kiritori.Views.LiveCapture
             ApplyTablessShadow(_shadowTabless);
             UpdateShadowMenuState();
 
-            // ★ 追加：全辺 1px のガラス延長 → DWM の影が出る
+            // 追加：全辺 1px のガラス延長 → DWM の影が出る
             var m = new MARGINS { cxLeftWidth = 1, cxRightWidth = 1, cyTopHeight = 1, cyBottomHeight = 1 };
             try { DwmExtendFrameIntoClientArea(this.Handle, ref m); } catch { /* 非対応OSは無視 */ }
-            
         }
 
         public void RestoreCaptionBar()
@@ -528,17 +762,18 @@ namespace Kiritori.Views.LiveCapture
             ApplyTablessShadow(false);
             UpdateShadowMenuState();
 
-            // ★ 追加：延長を 0 に戻して通常の枠に
+            // 延長を 0 に戻して通常の枠に
             var m = new MARGINS(); // 全て 0
             try { DwmExtendFrameIntoClientArea(this.Handle, ref m); } catch { }
-    
         }
+
         private void UpdateShadowMenuState()
         {
             if (_miShadow == null) return;
             // タブなし（_captionHidden=true）のときだけ操作可能
             _miShadow.Enabled = _captionHidden;
         }
+
         private bool _pendingNcRefresh = false;
 
         private void ForceRefreshNonClient()
@@ -569,20 +804,26 @@ namespace Kiritori.Views.LiveCapture
 
         protected override void WndProc(ref Message m)
         {
-            // 参照コードの WM_NCCALCSIZE ブロックはそのまま（＝_captionHidden時は全域クライアント化）
+            // タブなし＝全域クライアント化
             if (_captionHidden && m.Msg == WM_NCCALCSIZE && m.WParam != IntPtr.Zero)
             {
                 m.Result = IntPtr.Zero;
                 return;
             }
 
-            // ★ 追加：タブあり/なし関係なく、クライアントの“リサイズ帯以外”を掴んだらドラッグ開始
+            // HUD 上のクリック処理（ドラッグ開始を抑止）
             if (m.Msg == WM_LBUTTONDOWN)
             {
-                int grip = Math.Max(8, this.DeviceDpi * 8 / 96);
                 var pt = this.PointToClient(Cursor.Position);
-                int w = this.ClientSize.Width, h = this.ClientSize.Height;
+                if (_hudAlpha > 0 && _hudRect.Contains(pt))
+                {
+                    _hudDown = true;
+                    Invalidate(_hudRect);
+                    return; // ドラッグ開始させない
+                }
 
+                int grip = Math.Max(8, this.DeviceDpi * 8 / 96);
+                int w = this.ClientSize.Width, h = this.ClientSize.Height;
                 bool nearEdge = (pt.X <= grip) || (pt.X >= w - grip) || (pt.Y <= grip) || (pt.Y >= h - grip);
                 if (!nearEdge)
                 {
@@ -590,10 +831,21 @@ namespace Kiritori.Views.LiveCapture
                     SendMessage(this.Handle, WM_NCLBUTTONDOWN, HTCAPTION, 0);
                     return; // ドラッグ開始
                 }
-                // 端はリサイズに任せる
+            }
+            else if (m.Msg == WM_LBUTTONUP)
+            {
+                if (_hudDown)
+                {
+                    _hudDown = false;
+                    var pt = this.PointToClient(Cursor.Position);
+                    bool inside = _hudRect.Contains(pt);
+                    Invalidate(_hudRect);
+                    if (inside) { TogglePause(); }
+                    return;
+                }
             }
 
-            // 参照コードの NCHITTEST 補強もそのまま（全域クライアント時＝タブなしで効く）
+            // リサイズ帯のヒットテスト（従来どおり）
             if (m.Msg == WM_NCHITTEST)
             {
                 base.WndProc(ref m);
@@ -620,7 +872,7 @@ namespace Kiritori.Views.LiveCapture
                 if (top)              { m.Result = (IntPtr)HTTOP;      return; }
                 if (bottom)           { m.Result = (IntPtr)HTBOTTOM;   return; }
 
-                return; // 中央は HTCLIENT（右クリックメニューは既存どおり）
+                return; // 中央は HTCLIENT
             }
 
             base.WndProc(ref m);
@@ -634,7 +886,6 @@ namespace Kiritori.Views.LiveCapture
         [DllImport("user32.dll", SetLastError = true)]
         static extern bool AdjustWindowRectExForDpi(ref RECT lpRect, int dwStyle, bool bMenu, int dwExStyle, uint dpi);
 
-        // 既存のヘルパ（あればそのまま）
         private static bool TryAdjustWindowRectForDpi(ref RECT rc, int style, int exstyle, uint dpi)
         {
             try { return AdjustWindowRectExForDpi(ref rc, style, false, exstyle, dpi); }
@@ -677,11 +928,22 @@ namespace Kiritori.Views.LiveCapture
             SetWindowPos(h, IntPtr.Zero, this.Left, this.Top, newW, newH,
                 SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 
-            // 念のためフレーム再描画（あなたの ForceRefreshNonClient でOK）
+            // 念のためフレーム再描画
             ForceRefreshNonClient();
 
             Debug.WriteLine($"  -> actual outer size: {this.Size} (client={this.ClientSize})");
         }
+        private Rectangle GetHudInvalidateRect()
+        {
+            if (_hudRect.IsEmpty) return Rectangle.Empty;
+            int d = _hudRect.Width;
+            float penW = Math.Max(1f, d * 0.012f);         // 外周白枠の太さと同じ
+            int pad = (int)Math.Ceiling(penW * 0.5f) + 2;  // その半分 + AA余白
+            var r = Rectangle.Inflate(_hudRect, pad, pad);
+            r.Intersect(this.ClientRectangle);
+            return r;
+        }
+
         [DllImport("user32.dll")] static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
         [DllImport("user32.dll")] static extern int  MapWindowPoints(IntPtr hWndFrom, IntPtr hWndTo, ref RECT lpPoints, int cPoints);
 
@@ -717,6 +979,5 @@ namespace Kiritori.Views.LiveCapture
             public static extern bool BitBlt(IntPtr hdcDest, int nXDest, int nYDest, int nWidth, int nHeight,
                                             IntPtr hdcSrc, int nXSrc, int nYSrc, int dwRop);
         }
-
     }
 }

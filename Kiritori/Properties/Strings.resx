@@ -549,4 +549,7 @@
   <data name="Menu.OriginalLocation" xml:space="preserve">
     <value>Reset Location</value>
   </data>
+  <data name="Menu.Titlebar" xml:space="preserve">
+    <value>Show title bar</value>
+  </data>
 </root>
