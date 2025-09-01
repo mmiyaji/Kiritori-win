@@ -51,11 +51,15 @@ namespace Kiritori.Views.LiveCapture
         private bool _shadowWhenTabless = true;
 
         // ---- HUD（Pause/Resume）描画用（子コントロールは使わない）
-// ---- HUD（Pause/Resume）描画用（子コントロールは使わない）
         private Timer _fadeTimer;                 // ← これだけにする
         private int _hudAlpha = 0, _hudTargetAlpha = 0; // 0..200
         private Rectangle _hudRect;                     // HUD ボタン矩形
         private bool _hudHot = false, _hudDown = false; // ホバー/押下状態
+        // HUD フィードバック用
+        private bool _hudCursorIsHand = false;
+        private const int HUD_INTERACTABLE_ALPHA = 80; // この濃さ以上でクリック可能とみなす
+        private bool IsHudInteractable() => _hudAlpha >= HUD_INTERACTABLE_ALPHA && !_hudRect.IsEmpty;
+
 
         // タブを隠す直前に測った左右・下の枠厚
         private int _savedNcLeft = 0, _savedNcRight = 0, _savedNcBottom = 0;
@@ -128,7 +132,7 @@ namespace Kiritori.Views.LiveCapture
             _fadeTimer.Tick += (s, e) =>
             {
                 int cur = _hudAlpha;
-                int step = 24; // フェード速度
+                int step = 20; // フェード速度
                 if (cur < _hudTargetAlpha) cur = Math.Min(_hudTargetAlpha, cur + step);
                 else if (cur > _hudTargetAlpha) cur = Math.Max(_hudTargetAlpha, cur - step);
                 if (cur != _hudAlpha)
@@ -181,15 +185,42 @@ namespace Kiritori.Views.LiveCapture
             this.MouseMove  += (s, e) =>
             {
                 ShowOverlay();
-                if (_hudAlpha > 0 && !_hudRect.IsEmpty)
+
+                var me = (MouseEventArgs)e;
+                bool inside = !_hudRect.IsEmpty && _hudRect.Contains(me.Location);
+                bool canClick = inside && IsHudInteractable();
+
+                // ホット状態を更新（描画は HUD 領域＋縁を再描画）
+                if (inside != _hudHot)
                 {
-                    var me = (MouseEventArgs)e;
-                    bool hot = _hudRect.Contains(me.Location);
-                    if (hot != _hudHot) { _hudHot = hot; Invalidate(GetHudInvalidateRect()); }
+                    _hudHot = inside;
+                    Invalidate(GetHudInvalidateRect());
+                }
+
+                // カーソル更新
+                if (canClick && !_hudCursorIsHand)
+                {
+                    Cursor = Cursors.Hand;
+                    _hudCursorIsHand = true;
+                }
+                else if (!canClick && _hudCursorIsHand)
+                {
+                    Cursor = Cursors.Default;
+                    _hudCursorIsHand = false;
                 }
             };
-            this.MouseLeave += (s, e) => HideOverlay();
+
+            this.MouseLeave += (s, e) =>
+            {
+                HideOverlay();
+                if (_hudCursorIsHand)
+                {
+                    Cursor = Cursors.Default;
+                    _hudCursorIsHand = false;
+                }
+            };
         }
+
         private void ShowOverlay()
         {
             if (_hudRect.IsEmpty)
@@ -206,10 +237,17 @@ namespace Kiritori.Views.LiveCapture
 
         private void HideOverlay()
         {
-            _hudHot = _hudDown = false;        // 状態リセット
+            _hudHot = _hudDown = false;
             _hudTargetAlpha = 0;
             if (!_fadeTimer.Enabled) _fadeTimer.Start();
+
+            if (_hudCursorIsHand)
+            {
+                Cursor = Cursors.Default;
+                _hudCursorIsHand = false;
+            }
         }
+
 
 
         private void FadeOutOverlay()
@@ -303,34 +341,47 @@ namespace Kiritori.Views.LiveCapture
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
             g.CompositingQuality = CompositingQuality.HighQuality;
 
-            int d = _hudRect.Width;                // 円の直径
-            float a = Math.Min(_hudAlpha, 200);    // 背景の最大濃度
-            
+            int d = _hudRect.Width;                 // 円の直径
+            float a = Math.Min(_hudAlpha, 200);     // 背景の最大濃度
+
             // --- 背景：黒い円
             using (var bg = new SolidBrush(Color.FromArgb((int)a, 0, 0, 0)))
                 g.FillEllipse(bg, _hudRect);
 
-            // ほのかな外周ハイライト
+            // ホバー時に薄い内側グロー
+            if (_hudHot)
+            {
+                int shrink = (int)Math.Round(d * 0.06);
+                using (var glow = new SolidBrush(Color.FromArgb((int)(a * 0.10f), 255, 255, 255)))
+                    g.FillEllipse(glow, Rectangle.Inflate(_hudRect, -shrink, -shrink));
+            }
+
+            // 外周白枠（ホバー時は少し明るく・押下時はさらに明るく）
             float penW = Math.Max(1f, d * 0.012f);
-            using (var pen = new Pen(Color.FromArgb((int)(a * 0.35f), 255, 255, 255), penW))
+            float ringBoost = _hudDown ? 0.70f : (_hudHot ? 0.50f : 0.35f);
+            using (var pen = new Pen(Color.FromArgb((int)(a * ringBoost), 255, 255, 255), penW))
             {
                 var rStroke = new RectangleF(_hudRect.X, _hudRect.Y, _hudRect.Width, _hudRect.Height);
-                rStroke.Inflate(-penW / 2f, -penW / 2f);  // ストロークが外に出ないよう内側へ
+                rStroke.Inflate(-penW / 2f, -penW / 2f); // 外側にはみ出さないよう内側へ
                 g.DrawEllipse(pen, rStroke);
             }
 
-            // --- アイコン領域
-            int margin = (int)Math.Round(d * 0.22); 
+            // --- アイコン領域（ホバー時はわずかに拡大）
+            double scale = _hudDown ? 0.98 : (_hudHot ? 1.06 : 1.00); // 押下で微縮小、ホバーで微拡大
+            int marginBase = (int)Math.Round(d * 0.22);
+            int margin = (int)Math.Round(marginBase / scale); // 拡大に合わせて余白を減らす
+
             var iconRect = new Rectangle(
                 _hudRect.X + margin, _hudRect.Y + margin,
                 _hudRect.Width - margin * 2, _hudRect.Height - margin * 2);
 
-            float fgBoost = _hudDown ? 1.00f : (_hudHot ? 0.92f : 0.85f);
+            // 前景色の明るさ（ホバー/押下で強調）
+            float fgBoost = _hudDown ? 1.00f : (_hudHot ? 0.96f : 0.85f);
             int fgA = (int)(255 * fgBoost);
 
             if (_paused)
             {
-                // ▶（重心中央補正版）
+                // ▶（重心が中央に来るよう非対称余白）
                 float W = iconRect.Width;
                 float H = iconRect.Height;
 

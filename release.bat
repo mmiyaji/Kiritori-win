@@ -3,11 +3,11 @@ setlocal EnableExtensions EnableDelayedExpansion
 REM ============================================================
 REM  Kiritori リリースパッケージ作成
 REM  使い方:
-REM    1) ダブルクリック → バージョンを聞かれる → 終了時に pause
+REM    1) ダブルクリック → バージョンを聞かれる → 終了時 no-pause
 REM    2) コマンドライン:  release.bat 1.1.3 [--pause|--no-pause]
 REM ============================================================
 
-REM ---- 既定の動作: 対話実行(引数なし)なら pause、引数ありなら no-pause
+REM ---- 既定の動作: 明示 --pause のときだけ pause、他は no-pause
 set "PAUSE_AT_END="
 
 if "%~1"=="" (
@@ -16,10 +16,8 @@ if "%~1"=="" (
   REM
   if "!VERSION!"=="" (
     echo [ERROR] バージョンが指定されませんでした。
-    set "PAUSE_AT_END=1"
     goto :end_fail
   )
-  set "PAUSE_AT_END=1"
 ) else (
   set "VERSION=%~1"
 )
@@ -47,7 +45,6 @@ echo [INFO] Out Dir    : %OUTDIR%
 REM ---- 入力確認
 if not exist "%EXE%" (
   echo [ERROR] 実行ファイルが見つかりません: %EXE%
-  set "PAUSE_AT_END=1"
   goto :end_fail
 )
 
