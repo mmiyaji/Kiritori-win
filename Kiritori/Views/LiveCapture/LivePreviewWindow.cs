@@ -72,7 +72,9 @@ namespace Kiritori.Views.LiveCapture
         [DllImport("user32.dll")]
         static extern bool RedrawWindow(IntPtr hWnd, IntPtr lprcUpdate, IntPtr hrgnUpdate, uint flags);
         const uint RDW_INVALIDATE=0x0001, RDW_UPDATENOW=0x0100, RDW_FRAME=0x0400, RDW_ALLCHILDREN=0x0080;
-
+// 影トグル用
+        private bool _shadowTabless = false;          // 既定OFF（お好みで true に）
+        private ToolStripMenuItem _miShadow;          // メニュー項目
         private int _origStyle = 0;
         private bool _captionHidden = false;
         [StructLayout(LayoutKind.Sequential)]
@@ -104,6 +106,17 @@ namespace Kiritori.Views.LiveCapture
                 (int)Math.Round(CaptureRect.Width  * _zoom),
                 (int)Math.Round(CaptureRect.Height * _zoom)
             );
+        private void ApplyTablessShadow(bool enable)
+        {
+            try
+            {
+                var m = enable
+                    ? new MARGINS { cxLeftWidth = 1, cxRightWidth = 1, cyTopHeight = 1, cyBottomHeight = 1 }
+                    : new MARGINS(); // 0 で解除
+                DwmExtendFrameIntoClientArea(this.Handle, ref m);
+            }
+            catch { /* 非対応OSは無視 */ }
+        }
 
         protected override void OnHandleCreated(EventArgs e)
         {
@@ -257,6 +270,25 @@ namespace Kiritori.Views.LiveCapture
             _miPref = new ToolStripMenuItem(SR.T("Menu.Preferences", "Preferences")); _miPref.Click += (s, e) => ShowPreferences();
             _miExit = new ToolStripMenuItem(SR.T("Menu.Exit", "Exit Kiritori")); _miExit.Click += (s, e) => Application.Exit();
 
+            _miShadow = new ToolStripMenuItem("Drop shadow (tabless)")
+            {
+                Checked = _shadowTabless,
+                CheckOnClick = true
+            };
+            _miShadow.CheckedChanged += (s, e) =>
+            {
+                _shadowTabless = _miShadow.Checked;
+
+                // いまタブなし表示中なら即反映
+                if (_captionHidden && IsHandleCreated)
+                {
+                    ApplyTablessShadow(_shadowTabless);
+                    // 念のため再計算＆再描画（環境差対策）
+                    ForceRefreshNonClient();
+                }
+            };
+
+
             _ctx.Items.AddRange(new ToolStripItem[] {
                 _miPauseResume,
                 _miTabbar,
@@ -267,6 +299,7 @@ namespace Kiritori.Views.LiveCapture
                 _miZoomOut,
                 _miZoomPct,
                 _miOpacity,
+                _miShadow,
                 new ToolStripSeparator(),
                 _miRealign,
                 _miTopMost,
@@ -276,12 +309,16 @@ namespace Kiritori.Views.LiveCapture
             });
 
             this.ContextMenuStrip = _ctx;
+            UpdateShadowMenuState();
 
             // メニューウィンドウもキャプチャ除外
             _ctx.Opened += (s, e) =>
             {
                 if (_ctx != null && _ctx.Handle != IntPtr.Zero)
+                {
                     TryExcludeFromCapture(_ctx.Handle);
+                }
+                UpdateShadowMenuState();
             };
             _ctx.Closed += (s, e) =>
             {
@@ -296,7 +333,6 @@ namespace Kiritori.Views.LiveCapture
                     }));
                 }
             };
-
             // ドロップダウン（サブメニュー）にも適用するヘルパ
             void MarkDropDownExclusion(ToolStripDropDownItem item)
             {
@@ -377,13 +413,14 @@ namespace Kiritori.Views.LiveCapture
 
                 // 差分だけ位置補正（左/上）
                 int dx = oldInsets.Left - newInsets.Left;   // 左枠が薄くなったら +dx で右へ、厚くなったら -dx で左へ
-                int dy = oldInsets.Top  - newInsets.Top;    // これまでのdyと同じ理屈
+                int dy = oldInsets.Top - newInsets.Top;    // これまでのdyと同じ理屈
 
                 if (dx != 0 || dy != 0)
                 {
                     SetWindowPos(this.Handle, IntPtr.Zero, this.Left + dx, this.Top + dy,
                         0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
                 }
+                UpdateShadowMenuState();
             };
 
             if (_ctx != null && _ctx.Visible)
@@ -466,6 +503,8 @@ namespace Kiritori.Views.LiveCapture
             }
 
             _captionHidden = true;
+            ApplyTablessShadow(_shadowTabless);
+            UpdateShadowMenuState();
 
             // ★ 追加：全辺 1px のガラス延長 → DWM の影が出る
             var m = new MARGINS { cxLeftWidth = 1, cxRightWidth = 1, cyTopHeight = 1, cyBottomHeight = 1 };
@@ -486,11 +525,19 @@ namespace Kiritori.Views.LiveCapture
                 RedrawWindow(h, IntPtr.Zero, IntPtr.Zero, RDW_INVALIDATE | RDW_UPDATENOW | RDW_FRAME | RDW_ALLCHILDREN);
             }
             _captionHidden = false;
+            ApplyTablessShadow(false);
+            UpdateShadowMenuState();
 
             // ★ 追加：延長を 0 に戻して通常の枠に
             var m = new MARGINS(); // 全て 0
             try { DwmExtendFrameIntoClientArea(this.Handle, ref m); } catch { }
     
+        }
+        private void UpdateShadowMenuState()
+        {
+            if (_miShadow == null) return;
+            // タブなし（_captionHidden=true）のときだけ操作可能
+            _miShadow.Enabled = _captionHidden;
         }
         private bool _pendingNcRefresh = false;
 
