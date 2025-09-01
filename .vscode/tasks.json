@@ -1,0 +1,17 @@
+    {
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Kiritori (Debug)",
+            "type": "shell",
+            "command": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe",
+            "args": [
+                "Kiritori.sln",
+                "/p:Configuration=Debug",
+                "/m:1"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": { "kind": "build", "isDefault": true }
+        }
+    ]
+}

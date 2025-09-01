@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Kiritori",
+            "type": "clr",                // .NET Framework 用
+            "request": "launch",
+            "program": "${workspaceFolder}/Kiritori/bin/Debug/Kiritori.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}/Kiritori",
+            "console": "internalConsole",
+            "preLaunchTask": "Build Kiritori (Debug)"
+        }
+    ]
+}

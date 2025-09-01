@@ -18,13 +18,75 @@ namespace Kiritori.Views.LiveCapture
         private ToolStripMenuItem
             _miOriginal, _miZoomIn, _miZoomOut, _miZoomPct,
             _miOpacity, _miPauseResume, _miRealign, _miTopMost, _miClose,
-            _miPref, _miExit;
+            _miPref, _miExit, _miTabbar;
 
         private float _zoom = 1.0f;     // 表示倍率（1.0=100%）
         private bool _paused = false;
         public object MainApp { get; set; }
         private TitleIconBadger _iconBadge;
 
+        // ---- Win32 定義
+        const int GWL_STYLE = -16;
+        const int WS_CAPTION = 0x00C00000;
+        const int WS_THICKFRAME = 0x00040000;
+        const int WS_BORDER = 0x00800000;
+
+        const uint SWP_NOSIZE = 0x0001;
+        const uint SWP_NOMOVE = 0x0002;
+        const uint SWP_NOZORDER = 0x0004;
+        const uint SWP_NOACTIVATE = 0x0010;
+        const uint SWP_FRAMECHANGED = 0x0020;
+
+        const int WM_NCLBUTTONDOWN = 0x00A1;
+        const int WM_LBUTTONDOWN   = 0x0201;
+        const int WM_NCCALCSIZE    = 0x0083;
+        const int WM_NCHITTEST     = 0x0084;
+
+        const int HTCLIENT=1, HTCAPTION=2;
+        const int HTLEFT=10, HTRIGHT=11, HTTOP=12, HTTOPLEFT=13, HTTOPRIGHT=14, HTBOTTOM=15, HTBOTTOMLEFT=16, HTBOTTOMRIGHT=17;
+
+        // 影オプション（メニューから切替可能にする想定）
+        private bool _shadowWhenTabless = true;
+        private ToolStripMenuItem _miShadow;
+
+        // タブを隠す直前に測った左右・下の枠厚
+        private int _savedNcLeft = 0, _savedNcRight = 0, _savedNcBottom = 0;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+        [DllImport("user32.dll")] static extern bool ReleaseCapture();
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        static extern IntPtr SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+
+        [StructLayout(LayoutKind.Sequential)]
+        struct RECT { public int Left, Top, Right, Bottom; }
+
+        [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+        [DllImport("user32.dll")]
+        static extern bool RedrawWindow(IntPtr hWnd, IntPtr lprcUpdate, IntPtr hrgnUpdate, uint flags);
+        const uint RDW_INVALIDATE=0x0001, RDW_UPDATENOW=0x0100, RDW_FRAME=0x0400, RDW_ALLCHILDREN=0x0080;
+
+        [DllImport("dwmapi.dll", PreserveSig = true)]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+        // Win11+（10一部ビルドでも有効）：ボーダー色
+        private const int DWMWA_BORDER_COLOR = 34; // COLORREF（0x00BBGGRR）で指定
+        private int _origStyle = 0;
+        private bool _captionHidden = false;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MARGINS { public int cxLeftWidth, cxRightWidth, cyTopHeight, cyBottomHeight; }
+
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS margins);
         public LivePreviewWindow()
         {
             InitializeComponent();
@@ -37,6 +99,12 @@ namespace Kiritori.Views.LiveCapture
             this.Opacity = 0.0; // 初回白チラ防止
             this.BackColor = Color.Black;
         }
+
+        private Size GetDesiredClient() =>
+            new Size(
+                (int)Math.Round(CaptureRect.Width  * _zoom),
+                (int)Math.Round(CaptureRect.Height * _zoom)
+            );
 
         protected override void OnHandleCreated(EventArgs e)
         {
@@ -178,6 +246,8 @@ namespace Kiritori.Views.LiveCapture
 
             // 実用操作
             _miPauseResume = new ToolStripMenuItem(SR.T("Menu.Pause", "Pause")); _miPauseResume.Click += (s, e) => TogglePause();
+            _miTabbar = new ToolStripMenuItem(SR.T("Menu.Tabbar", "Show Tabbar")); _miTabbar.Click += (s, e) => ToggleTabbar();
+            _miTabbar.Checked = true;
             _miRealign = new ToolStripMenuItem(SR.T("Menu.OriginalLocation", "Move to the initial position")); _miRealign.Click += (s, e) => RealignToKiritori();
 
             // 固定・終了
@@ -188,8 +258,23 @@ namespace Kiritori.Views.LiveCapture
             _miPref = new ToolStripMenuItem(SR.T("Menu.Preferences", "Preferences")); _miPref.Click += (s, e) => ShowPreferences();
             _miExit = new ToolStripMenuItem(SR.T("Menu.Exit", "Exit Kiritori")); _miExit.Click += (s, e) => Application.Exit();
 
+            _miShadow = new ToolStripMenuItem("Shadow in tabless mode") { Checked = _shadowWhenTabless, CheckOnClick = true };
+            _miShadow.CheckedChanged += (s, e) =>
+            {
+                _shadowWhenTabless = _miShadow.Checked;
+                if (_captionHidden)
+                {
+                    // 影ONになったら透明化適用、OFFなら全域クライアントで線は出ない
+                    if (_shadowWhenTabless) SetDwmBorderTransparent(); else ResetDwmBorderColor();
+
+                    ForceRefreshNonClient();
+                    ResizeToKeepClient(GetDesiredClient());
+                }
+            };
+
             _ctx.Items.AddRange(new ToolStripItem[] {
                 _miPauseResume,
+                _miTabbar,
                 _miClose,
                 new ToolStripSeparator(),
                 _miOriginal,
@@ -197,6 +282,7 @@ namespace Kiritori.Views.LiveCapture
                 _miZoomOut,
                 _miZoomPct,
                 _miOpacity,
+                _miShadow,
                 new ToolStripSeparator(),
                 _miRealign,
                 _miTopMost,
@@ -212,6 +298,19 @@ namespace Kiritori.Views.LiveCapture
             {
                 if (_ctx != null && _ctx.Handle != IntPtr.Zero)
                     TryExcludeFromCapture(_ctx.Handle);
+            };
+            _ctx.Closed += (s, e) =>
+            {
+                if (_pendingNcRefresh)
+                {
+                    _pendingNcRefresh = false;
+                    var desiredClient = GetDesiredClient();
+                    BeginInvoke((Action)(() =>
+                    {
+                        ForceRefreshNonClient();
+                        ResizeToKeepClient(desiredClient);
+                    }));
+                }
             };
 
             // ドロップダウン（サブメニュー）にも適用するヘルパ
@@ -272,6 +371,98 @@ namespace Kiritori.Views.LiveCapture
             // バックエンドは動かしたまま、描画だけ止める（カク付き最小）
             if (!_paused) Invalidate();
         }
+        private void ToggleTabbar()
+        {
+            var desiredClient = GetDesiredClient();
+
+            // 切替「前」の枠厚（左・上）を実測
+            var oldInsets = GetNcInsets();
+
+            if (_miTabbar.Checked) HideCaptionBarTemporarily();
+            else                   RestoreCaptionBar();
+            _miTabbar.Checked = !_miTabbar.Checked;
+
+            Action apply = () =>
+            {
+                // フレーム再計算 → クライアント寸法を維持（位置はまだ触らない）
+                ForceRefreshNonClient();
+                ResizeToKeepClient(desiredClient);
+
+                // 切替「後」の枠厚（左・上）を実測
+                var newInsets = GetNcInsets();
+
+                // 差分だけ位置補正（左/上）
+                int dx = oldInsets.Left - newInsets.Left;   // 左枠が薄くなったら +dx で右へ、厚くなったら -dx で左へ
+                int dy = oldInsets.Top  - newInsets.Top;    // これまでのdyと同じ理屈
+
+                if (dx != 0 || dy != 0)
+                {
+                    SetWindowPos(this.Handle, IntPtr.Zero, this.Left + dx, this.Top + dy,
+                        0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+                }
+            };
+
+            if (_ctx != null && _ctx.Visible)
+            {
+                _pendingNcRefresh = true;
+                _ctx.Closed += (s, e) =>
+                {
+                    if (_pendingNcRefresh)
+                    {
+                        _pendingNcRefresh = false;
+                        BeginInvoke(apply);
+                    }
+                };
+            }
+            else
+            {
+                BeginInvoke(apply);
+            }
+        }
+        private void SetDwmBorderTransparent()
+        {
+            try
+            {
+                // COLORREF 0 = 透明扱い
+                int transparent = 0x00000000;
+                DwmSetWindowAttribute(this.Handle, DWMWA_BORDER_COLOR, ref transparent, sizeof(int));
+            }
+            catch { /* 非対応OSは無視 */ }
+        }
+
+        private void ResetDwmBorderColor()
+        {
+            try
+            {
+                // -1 にすると DWM 既定に戻る挙動（非公開だが実機で一般的に使われる）
+                int defaultColor = -1;
+                DwmSetWindowAttribute(this.Handle, DWMWA_BORDER_COLOR, ref defaultColor, sizeof(int));
+            }
+            catch { /* 非対応OSは無視 */ }
+        }
+
+        // public void HideCaptionBarTemporarily()
+        // {
+        //     // …（あなたの既存処理：枠厚保存、WS_CAPTION解除、FRAMECHANGED、Redraw、1pxナッジ）…
+
+        //     _captionHidden = true;
+
+        //     // 影ありモードのときだけ、DWMのボーダーを透明化（左右・下の影はそのまま）
+        //     if (_shadowWhenTabless) SetDwmBorderTransparent();
+        // }
+
+        // public void RestoreCaptionBar()
+        // {
+        //     if (!_captionHidden || this.IsDisposed || !this.IsHandleCreated) return;
+
+        //     // …（あなたの既存処理：_origStyle 復帰、FRAMECHANGED、Redraw）…
+
+        //     _captionHidden = false;
+
+        //     // 既定のボーダー色へ戻す
+        //     ResetDwmBorderColor();
+        // }
+
 
         // FrameArrived 側で停止中は無視
         private void OnFrameArrived(Bitmap bmp)
@@ -294,6 +485,320 @@ namespace Kiritori.Views.LiveCapture
         {
             const uint WDA_EXCLUDEFROMCAPTURE = 0x11; // Win10 2004+
             try { SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE); } catch { /* 古いOSは無視 */ }
+        }
+
+        // タイトルバーを隠す
+        // public void HideCaptionBarTemporarily()
+        // {
+        //     Debug.WriteLine($"[LivePreview] HideCaptionBarTemporarily");
+        //     if (_captionHidden || this.IsDisposed || !this.IsHandleCreated) return;
+
+        //     var prevState = this.WindowState;
+        //     if (prevState == FormWindowState.Maximized) this.WindowState = FormWindowState.Normal;
+
+        //     var h = this.Handle;
+        //     _origStyle = GetWindowLong(h, GWL_STYLE);
+
+        //     int style = _origStyle & ~WS_CAPTION;
+        //     if ((style & WS_THICKFRAME) == 0 && (style & WS_BORDER) == 0)
+        //         style |= WS_THICKFRAME;
+
+        //     SetWindowLong(h, GWL_STYLE, style);
+
+        //     // ① FRAMECHANGED で非クライアント再計算
+        //     SetWindowPos(h, IntPtr.Zero, 0, 0, 0, 0,
+        //         SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+
+        //     // ② フレーム再描画を強制（線が残る環境向け）
+        //     RedrawWindow(h, IntPtr.Zero, IntPtr.Zero, RDW_INVALIDATE | RDW_UPDATENOW | RDW_FRAME | RDW_ALLCHILDREN);
+
+        //     // ③ それでも残る場合の“最終兵器”：1px ナッジ（元サイズに戻す）
+        //     RECT rc;
+        //     if (GetWindowRect(h, out rc))
+        //     {
+        //         int w = rc.Right - rc.Left;
+        //         int hgt = rc.Bottom - rc.Top;
+        //         // +1
+        //         SetWindowPos(this.Handle, IntPtr.Zero, this.Left, this.Top, w + 1, hgt + 1, SWP_NOZORDER | SWP_NOACTIVATE);
+        //         // -1（元に戻す & FRAMECHANGED）
+        //         SetWindowPos(this.Handle, IntPtr.Zero, this.Left, this.Top, w, hgt,
+        //             SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+        //     }
+
+        //     _captionHidden = true;
+        // }
+        private void ApplyTopGlassBand(int px)
+        {
+            try
+            {
+                var m = new MARGINS { cxLeftWidth = 0, cxRightWidth = 0, cyTopHeight = px, cyBottomHeight = 0 };
+                DwmExtendFrameIntoClientArea(this.Handle, ref m);
+            }
+            catch { /* 非対応OSは無視 */ }
+        }
+
+        private void ClearGlassExtension()
+        {
+            try
+            {
+                var m = new MARGINS { cxLeftWidth = 0, cxRightWidth = 0, cyTopHeight = 0, cyBottomHeight = 0 };
+                DwmExtendFrameIntoClientArea(this.Handle, ref m);
+            }
+            catch { }
+        }
+
+        public void RestoreCaptionBar()
+        {
+            if (!_captionHidden || this.IsDisposed || !this.IsHandleCreated) return;
+            var h = this.Handle;
+
+            if (_origStyle != 0)
+            {
+                SetWindowLong(h, GWL_STYLE, _origStyle);
+                SetWindowPos(h, IntPtr.Zero, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+                RedrawWindow(h, IntPtr.Zero, IntPtr.Zero, RDW_INVALIDATE | RDW_UPDATENOW | RDW_FRAME | RDW_ALLCHILDREN);
+            }
+            _captionHidden = false;
+            ResetDwmBorderColor();
+            ClearGlassExtension();
+        }
+        private bool _pendingNcRefresh = false;
+
+        private void ForceRefreshNonClient()
+        {
+            if (!IsHandleCreated || IsDisposed) return;
+            var h = this.Handle;
+
+            // 非クライアント再計算
+            SetWindowPos(h, IntPtr.Zero, 0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+
+            // フレーム再描画
+            RedrawWindow(h, IntPtr.Zero, IntPtr.Zero,
+                RDW_INVALIDATE | RDW_UPDATENOW | RDW_FRAME | RDW_ALLCHILDREN);
+
+            // それでも残る環境向けの 1px ナッジ
+            RECT rc;
+            if (GetWindowRect(h, out rc))
+            {
+                int w = rc.Right - rc.Left;
+                int hgt = rc.Bottom - rc.Top;
+                SetWindowPos(h, IntPtr.Zero, this.Left, this.Top, w + 1, hgt + 1,
+                    SWP_NOZORDER | SWP_NOACTIVATE);
+                SetWindowPos(h, IntPtr.Zero, this.Left, this.Top, w, hgt,
+                    SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+            }
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            const int WM_LBUTTONDOWN = 0x0201;
+            const int WM_NCHITTEST   = 0x0084;
+            const int HTCLIENT=1, HTCAPTION=2;
+            const int HTLEFT=10, HTRIGHT=11, HTTOP=12, HTTOPLEFT=13, HTTOPRIGHT=14, HTBOTTOM=15, HTBOTTOMLEFT=16, HTBOTTOMRIGHT=17;
+
+            // --- 既存の WM_NCCALCSIZE ブロックはそのまま ---
+
+            // ★ ここを「常時」有効化（_captionHidden 条件を外す）
+            if (m.Msg == WM_LBUTTONDOWN)
+            {
+                // クライアントのリサイズ帯は除外（端を掴んだらリサイズを優先）
+                int grip = Math.Max(8, this.DeviceDpi * 8 / 96);
+                var pt = this.PointToClient(Cursor.Position);
+                int w = this.ClientSize.Width, h = this.ClientSize.Height;
+
+                bool nearEdge = (pt.X <= grip) || (pt.X >= w - grip) || (pt.Y <= grip) || (pt.Y >= h - grip);
+                if (!nearEdge)
+                {
+                    ReleaseCapture();
+                    SendMessage(this.Handle, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+                    return; // ドラッグ開始
+                }
+                // 端ならリサイズへ（下の NCHITTEST 補強に任せる）
+            }
+
+            // --- リサイズのヒットテスト補強（既存のまま／必要なら残す） ---
+            if (m.Msg == WM_NCHITTEST)
+            {
+                base.WndProc(ref m);
+                int res = (int)m.Result;
+                if (res != HTCLIENT) return;
+
+                int grip = Math.Max(8, this.DeviceDpi * 8 / 96);
+                int x = unchecked((short)((long)m.LParam & 0xFFFF));
+                int y = unchecked((short)(((long)m.LParam >> 16) & 0xFFFF));
+                var p = PointToClient(new System.Drawing.Point(x, y));
+                int w = this.ClientSize.Width, h = this.ClientSize.Height;
+
+                bool left = p.X <= grip, right = p.X >= w - grip, top = p.Y <= grip, bottom = p.Y >= h - grip;
+
+                if (top && left)      { m.Result = (IntPtr)HTTOPLEFT;  return; }
+                if (top && right)     { m.Result = (IntPtr)HTTOPRIGHT; return; }
+                if (bottom && left)   { m.Result = (IntPtr)HTBOTTOMLEFT;  return; }
+                if (bottom && right)  { m.Result = (IntPtr)HTBOTTOMRIGHT; return; }
+                if (left)             { m.Result = (IntPtr)HTLEFT;     return; }
+                if (right)            { m.Result = (IntPtr)HTRIGHT;    return; }
+                if (top)              { m.Result = (IntPtr)HTTOP;      return; }
+                if (bottom)           { m.Result = (IntPtr)HTBOTTOM;   return; }
+
+                return; // クライアント中央などはそのまま（上の WM_LBUTTONDOWN がドラッグ開始）
+            }
+
+            base.WndProc(ref m);
+        }
+
+
+        // WM_NCCALCSIZE 用の構造体宣言（Win32準拠）
+        [StructLayout(LayoutKind.Sequential)]
+        private struct NCCALCSIZE_PARAMS
+        {
+            public RECT rgrc0;
+            public RECT rgrc1;
+            public RECT rgrc2;
+            public IntPtr lppos;
+        }
+
+
+        const int GWL_EXSTYLE = -20;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern bool AdjustWindowRectEx(ref RECT lpRect, int dwStyle, bool bMenu, int dwExStyle);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern bool AdjustWindowRectExForDpi(ref RECT lpRect, int dwStyle, bool bMenu, int dwExStyle, uint dpi);
+
+        // 既存のヘルパ（あればそのまま）
+        private static bool TryAdjustWindowRectForDpi(ref RECT rc, int style, int exstyle, uint dpi)
+        {
+            try { return AdjustWindowRectExForDpi(ref rc, style, false, exstyle, dpi); }
+            catch { return false; }
+        }
+
+        private void ResizeToKeepClient(Size client)
+        {
+            Debug.WriteLine($"ResizeToKeepClient: {client}");
+            if (!IsHandleCreated) return;
+
+            var h = this.Handle;
+
+            // タブバーON/OFF切り替え後の現在スタイル
+            int style   = GetWindowLong(h, GWL_STYLE);
+            int exstyle = GetWindowLong(h, GWL_EXSTYLE);
+
+            int newW, newH;
+
+            if (_captionHidden)
+            {
+                // 非クライアント=0のため、外枠＝クライアントでOK
+                newW = client.Width;
+                newH = client.Height;
+            }
+            else
+            {
+                // タブバー表示中は枠ぶんを加算
+                var rc = new RECT { Left = 0, Top = 0, Right = client.Width, Bottom = client.Height };
+                uint dpi = (uint)this.DeviceDpi;
+                bool ok = TryAdjustWindowRectForDpi(ref rc, style, exstyle, dpi);
+                if (!ok) AdjustWindowRectEx(ref rc, style, false, exstyle);
+
+                newW = rc.Right - rc.Left;
+                newH = rc.Bottom - rc.Top;
+                Debug.WriteLine($"  -> new outer size(calc): {newW}x{newH} (dpi={dpi})");
+            }
+
+            // 左上固定のまま外枠サイズ適用
+            SetWindowPos(h, IntPtr.Zero, this.Left, this.Top, newW, newH,
+                SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+
+            // 念のためフレーム再描画（あなたの ForceRefreshNonClient でOK）
+            ForceRefreshNonClient();
+
+            Debug.WriteLine($"  -> actual outer size: {this.Size} (client={this.ClientSize})");
+        }
+        public void HideCaptionBarTemporarily()
+        {
+            Debug.WriteLine("[LivePreview] HideCaptionBarTemporarily");
+            if (_captionHidden || this.IsDisposed || !this.IsHandleCreated) return;
+
+            var inset = MeasureNcInsets();
+            _savedNcLeft = inset.Left;
+            _savedNcRight = inset.Right;
+            _savedNcBottom = inset.Bottom;
+
+            if (this.WindowState == FormWindowState.Maximized)
+                this.WindowState = FormWindowState.Normal;
+
+            var h = this.Handle;
+            _origStyle = GetWindowLong(h, GWL_STYLE);
+
+            // ★ WS_CAPTION と一緒に WS_BORDER も剥がす（細線の主因）
+            int style = _origStyle & ~(WS_CAPTION | WS_BORDER);
+
+            // リサイズ維持のために THICKFRAME は必ず付ける
+            if ((style & WS_THICKFRAME) == 0) style |= WS_THICKFRAME;
+
+            SetWindowLong(h, GWL_STYLE, style);
+
+            // 枠再計算＋再描画＋1pxナッジ（既存どおり）
+            SetWindowPos(h, IntPtr.Zero, 0, 0, 0, 0,
+                SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+
+            RedrawWindow(h, IntPtr.Zero, IntPtr.Zero,
+                RDW_INVALIDATE | RDW_UPDATENOW | RDW_FRAME | RDW_ALLCHILDREN);
+
+            if (GetWindowRect(h, out var rc))
+            {
+                int w = rc.Right - rc.Left, hgt = rc.Bottom - rc.Top;
+                SetWindowPos(h, IntPtr.Zero, this.Left, this.Top, w + 1, hgt + 1, SWP_NOZORDER | SWP_NOACTIVATE);
+                SetWindowPos(h, IntPtr.Zero, this.Left, this.Top, w, hgt,
+                    SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+            }
+
+            _captionHidden = true;
+
+            // 影ありモードなら念のためボーダー色も透明化（環境依存対策）
+            if (_shadowWhenTabless)
+            {
+                SetDwmBorderTransparent(); // 念のため
+                ApplyTopGlassBand(1);       // ★ トップ1px延長で線を覆う
+            }
+        }
+
+
+        [DllImport("user32.dll")] static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
+        [DllImport("user32.dll")] static extern int  MapWindowPoints(IntPtr hWndFrom, IntPtr hWndTo, ref RECT lpPoints, int cPoints);
+
+        private struct NcInsets { public int Left, Top, Right, Bottom; }
+        private NcInsets MeasureNcInsets()
+        {
+            RECT wrc; GetWindowRect(this.Handle, out wrc);
+            RECT crc; GetClientRect(this.Handle, out crc);
+            MapWindowPoints(this.Handle, IntPtr.Zero, ref crc, 2);
+            return new NcInsets {
+                Left   = crc.Left  - wrc.Left,
+                Top    = crc.Top   - wrc.Top,
+                Right  = wrc.Right - crc.Right,
+                Bottom = wrc.Bottom- crc.Bottom
+            };
+        }
+
+        private NcInsets GetNcInsets()
+        {
+            // ウィンドウ外枠（スクリーン座標）
+            RECT wrc; GetWindowRect(this.Handle, out wrc);
+
+            // クライアント矩形（クライアント座標）→スクリーン座標へ変換
+            RECT crc; GetClientRect(this.Handle, out crc);
+            MapWindowPoints(this.Handle, IntPtr.Zero, ref crc, 2);
+
+            return new NcInsets
+            {
+                Left   = crc.Left  - wrc.Left,
+                Top    = crc.Top   - wrc.Top,
+                Right  = wrc.Right - crc.Right,
+                Bottom = wrc.Bottom- crc.Bottom
+            };
         }
 
         [DllImport("user32.dll")] private static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);

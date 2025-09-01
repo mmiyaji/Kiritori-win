@@ -1,0 +1,5 @@
+{
+    "omnisharp.useModernNet": false,
+    "omnisharp.enableMsBuildLoadProjectsOnDemand": true,
+    "omnisharp.loggingLevel": "information"
+}
