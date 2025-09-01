@@ -67,7 +67,7 @@ namespace Kiritori.Views.LiveCapture
             _backend.Start();
 
             _iconBadge = new TitleIconBadger(this);
-            _iconBadge.SetState(LiveBadgeState.Recording, blink: true); // ライブ開始 → 録画中バッジ
+            _iconBadge.SetState(LiveBadgeState.Recording); // ライブ開始 → 録画中バッジ
         }
 
         private bool _firstFrameShown = false;
@@ -91,6 +91,8 @@ namespace Kiritori.Views.LiveCapture
 
             try { _iconBadge?.Dispose(); } catch { }
             _iconBadge = null;
+
+            try { _ctx?.Dispose(); } catch { }   // ★ これを追加（ContextMenuStrip を明示破棄）
 
             base.OnFormClosed(e);
         }
@@ -243,8 +245,7 @@ namespace Kiritori.Views.LiveCapture
         {
             _paused = !_paused;
             _miPauseResume.Text = _paused ? SR.T("Menu.Resume", "Resume") : SR.T("Menu.Pause", "Pause");
-            _iconBadge?.SetState(_paused ? LiveBadgeState.Paused : LiveBadgeState.Recording,
-                        blink: !_paused);
+            _iconBadge?.SetState(_paused ? LiveBadgeState.Paused : LiveBadgeState.Recording);
             // バックエンドは動かしたまま、描画だけ止める（カク付き最小）
             if (!_paused) Invalidate();
         }

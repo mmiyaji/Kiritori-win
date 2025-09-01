@@ -31,18 +31,11 @@ namespace Kiritori.Views.LiveCapture
             };
         }
 
-        public void SetState(LiveBadgeState state, bool blink)
+        public void SetState(LiveBadgeState state)
         {
+            if (_disposed) return;
+            if (_state == state) return; // 変化なしなら何もしない
             _state = state;
-            if (blink && state == LiveBadgeState.Recording)
-            {
-                if (!_blinkTimer.Enabled) { _blinkOn = true; _blinkTimer.Start(); }
-            }
-            else
-            {
-                _blinkTimer.Stop();
-                _blinkOn = true; // 停止時は常時表示
-            }
             Apply();
         }
 
@@ -50,46 +43,62 @@ namespace Kiritori.Views.LiveCapture
         {
             if (_disposed || _form.IsDisposed) return;
 
-            var small = SystemInformation.SmallIconSize;     // タイトルバー用（通常16x16）
-            var large = new Size(32, 32);                    // タスクバー/Alt+Tab向け簡易
+            // 状態×サイズだけをキーに（点滅は無し）
+            var size = SystemInformation.SmallIconSize;
+            var ico = BuildIconForSizeAndState(size, _state) ?? _baseIcon;
 
-            var icoSmall = BuildIconForSize(small);
-            var icoLarge = BuildIconForSize(large);
-
-            // Windowsは複数サイズ入りICOが理想だが、ここでは小を優先して設定
-            // 大きい方は NotifyIcon 等で使いたい場合に取り出せるように返すだけでもOK
-            // フォームに設定
-            _form.Icon = icoSmall ?? _baseIcon;
+            // 同一参照なら再設定しない
+            if (!ReferenceEquals(_form.Icon, ico))
+                _form.Icon = ico;
         }
 
-        private Icon BuildIconForSize(Size size)
+        private Icon BuildIconForSizeAndState(Size size, LiveBadgeState state)
         {
-            string key = $"{size.Width}x{size.Height}-{_state}-{(_blinkOn ? 1 : 0)}";
-            Icon cached;
-            if (_cache.TryGetValue(key, out cached)) return cached;
+            var key = $"{size.Width}x{size.Height}-{state}";
+            if (_cache.TryGetValue(key, out var cached)) return cached;
 
-            // 元アイコン → 指定サイズに描画した下地
             using (var bmp = new Bitmap(size.Width, size.Height, System.Drawing.Imaging.PixelFormat.Format32bppPArgb))
             using (var g = Graphics.FromImage(bmp))
             {
                 g.SmoothingMode = SmoothingMode.AntiAlias;
-                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
                 g.Clear(Color.Transparent);
 
                 if (_baseIcon != null)
                     g.DrawIcon(_baseIcon, new Rectangle(Point.Empty, size));
                 else
-                    DrawFallbackBase(g, size); // 万一アイコンが無い場合の無地
+                    DrawFallbackBase(g, size);
 
-                // バッジ描画
-                DrawBadge(g, size, _state, _blinkOn);
+                DrawBadge(g, size, state, on:true); // 点滅なし＝常時 on
 
-                // ビットマップ→アイコン
-                var hIcon = bmp.GetHicon();
-                var ico = Icon.FromHandle(hIcon);
-                _cache[key] = ico;
-                return ico;
+                IntPtr h = bmp.GetHicon();
+                try
+                {
+                    using (var tmp = Icon.FromHandle(h))
+                    {
+                        var clone = (Icon)tmp.Clone(); // マネージド実体
+                        _cache[key] = clone;
+                        return clone;
+                    }
+                }
+                finally
+                {
+                    DestroyIcon(h); // 生成直後に必ず解放
+                }
             }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            // 元アイコンへ戻す（任意）
+            if (!_form.IsDisposed) _form.Icon = _baseIcon;
+
+            // キャッシュ破棄（Clone は Dispose でOK）
+            foreach (var ico in _cache.Values) try { ico.Dispose(); } catch { }
+            _cache.Clear();
         }
 
         private static void DrawFallbackBase(Graphics g, Size size)
@@ -144,21 +153,6 @@ namespace Kiritori.Views.LiveCapture
             }
         }
 
-        public void Dispose()
-        {
-            if (_disposed) return;
-            _disposed = true;
-            _blinkTimer.Stop();
-            _blinkTimer.Dispose();
-            // 元アイコンに戻す
-            if (!_form.IsDisposed) _form.Icon = _baseIcon;
-            // キャッシュのアイコンハンドル解放
-            foreach (var kv in _cache)
-            {
-                try { DestroyIcon(kv.Value.Handle); } catch { }
-            }
-            _cache.Clear();
-        }
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool DestroyIcon(IntPtr hIcon);
