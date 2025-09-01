@@ -75,6 +75,17 @@ namespace Kiritori.Views.LiveCapture
 
         private int _origStyle = 0;
         private bool _captionHidden = false;
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MARGINS
+        {
+            public int cxLeftWidth;
+            public int cxRightWidth;
+            public int cyTopHeight;
+            public int cyBottomHeight;
+        }
+
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS margins);
         public LivePreviewWindow()
         {
             InitializeComponent();
@@ -455,6 +466,11 @@ namespace Kiritori.Views.LiveCapture
             }
 
             _captionHidden = true;
+
+            // ★ 追加：全辺 1px のガラス延長 → DWM の影が出る
+            var m = new MARGINS { cxLeftWidth = 1, cxRightWidth = 1, cyTopHeight = 1, cyBottomHeight = 1 };
+            try { DwmExtendFrameIntoClientArea(this.Handle, ref m); } catch { /* 非対応OSは無視 */ }
+            
         }
 
         public void RestoreCaptionBar()
@@ -470,6 +486,11 @@ namespace Kiritori.Views.LiveCapture
                 RedrawWindow(h, IntPtr.Zero, IntPtr.Zero, RDW_INVALIDATE | RDW_UPDATENOW | RDW_FRAME | RDW_ALLCHILDREN);
             }
             _captionHidden = false;
+
+            // ★ 追加：延長を 0 に戻して通常の枠に
+            var m = new MARGINS(); // 全て 0
+            try { DwmExtendFrameIntoClientArea(this.Handle, ref m); } catch { }
+    
         }
         private bool _pendingNcRefresh = false;
 
