@@ -206,6 +206,29 @@ namespace Kiritori.Views.LiveCapture
             });
 
             this.ContextMenuStrip = _ctx;
+
+            // メニューウィンドウもキャプチャ除外
+            _ctx.Opened += (s, e) =>
+            {
+                if (_ctx != null && _ctx.Handle != IntPtr.Zero)
+                    TryExcludeFromCapture(_ctx.Handle);
+            };
+
+            // ドロップダウン（サブメニュー）にも適用するヘルパ
+            void MarkDropDownExclusion(ToolStripDropDownItem item)
+            {
+                if (item == null) return;
+                item.DropDownOpened += (ss, ee) =>
+                {
+                    var dd = item.DropDown;
+                    if (dd != null && dd.Handle != IntPtr.Zero)
+                        TryExcludeFromCapture(dd.Handle);
+                };
+            }
+
+            // サブメニューを持つ項目にフック
+            MarkDropDownExclusion(_miZoomPct);
+            MarkDropDownExclusion(_miOpacity);
         }
         private void ShowPreferences()
         {
@@ -286,35 +309,5 @@ namespace Kiritori.Views.LiveCapture
                                             IntPtr hdcSrc, int nXSrc, int nYSrc, int dwRop);
         }
 
-        // 論理⇔物理（左上モニタDPI採用）
-        internal static class DpiUtil
-        {
-            [DllImport("Shcore.dll")] private static extern int GetDpiForMonitor(IntPtr hmonitor, int dpiType, out uint dpiX, out uint dpiY);
-            [DllImport("user32.dll")] private static extern IntPtr MonitorFromPoint(POINT pt, uint flags);
-            private const int MDT_EFFECTIVE_DPI = 0;
-            private const uint MONITOR_DEFAULTTONEAREST = 2;
-
-            [StructLayout(LayoutKind.Sequential)] private struct POINT { public int X, Y; }
-
-            private static uint GetEffectiveDpiAt(int x, int y)
-            {
-                var mon = MonitorFromPoint(new POINT { X = x, Y = y }, MONITOR_DEFAULTTONEAREST);
-                uint dx, dy;
-                if (GetDpiForMonitor(mon, MDT_EFFECTIVE_DPI, out dx, out dy) == 0 && dx != 0) return dx;
-                return 96;
-            }
-
-            public static Rectangle LogicalToPhysical(Rectangle logical)
-            {
-                var dpi = GetEffectiveDpiAt(logical.Left, logical.Top);
-                float s = dpi / 96f;
-                return new Rectangle(
-                    (int)Math.Round(logical.Left * s),
-                    (int)Math.Round(logical.Top  * s),
-                    (int)Math.Round(logical.Width  * s),
-                    (int)Math.Round(logical.Height * s)
-                );
-            }
-        }
     }
 }
