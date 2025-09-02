@@ -384,6 +384,7 @@ namespace Kiritori.Views.LiveCapture
                 _hudHot = _hudDown = false;
                 _hoverTargetAlpha = HOVER_ALPHA_OFF;
                 if (!_fadeTimer.Enabled) _fadeTimer.Start();
+                FadeOutOverlay();
 
                 var inv = Rectangle.Union(GetHudInvalidateRect(), GetHoverInvalidateRect());
                 if (!inv.IsEmpty) Invalidate(inv);
