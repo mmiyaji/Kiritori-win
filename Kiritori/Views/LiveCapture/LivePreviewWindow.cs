@@ -12,7 +12,7 @@ namespace Kiritori.Views.LiveCapture
     {
         private LiveCaptureBackend _backend;
         private Bitmap _latest;
-
+        private readonly object _frameSync = new object();
         public Rectangle CaptureRect { get; set; }   // 論理px（スクリーン座標）
         public bool AutoTopMost { get; set; } = true;
         private ContextMenuStrip _ctx;
@@ -335,11 +335,23 @@ namespace Kiritori.Views.LiveCapture
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            if (_latest == null) return;
 
-            var dst = this.ClientRectangle;
-            e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            e.Graphics.DrawImage(_latest, dst);
+            Bitmap frame = null;
+            lock (_frameSync)
+            {
+                if (_latest != null)
+                    frame = (Bitmap)_latest.Clone();
+            }
+
+            if (frame != null)
+            {
+                try
+                {
+                    e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    e.Graphics.DrawImage(frame, this.ClientRectangle);
+                }
+                finally { frame.Dispose(); }
+            }
 
             DrawHud(e.Graphics);
         }
@@ -539,12 +551,19 @@ namespace Kiritori.Views.LiveCapture
             try { _backend?.Dispose(); } catch { }
             _backend = null;
 
-            if (_latest != null) { _latest.Dispose(); _latest = null; }
+            lock (_frameSync)
+            {
+                _latest?.Dispose();
+                _latest = null;
+            }
 
             try { _iconBadge?.Dispose(); } catch { }
             _iconBadge = null;
 
-            try { _ctx?.Dispose(); } catch { }   // ContextMenuStrip を明示破棄
+            try { _fadeTimer?.Stop(); _fadeTimer?.Dispose(); } catch { }
+            _fadeTimer = null;
+
+            try { _ctx?.Dispose(); } catch { }
 
             base.OnFormClosed(e);
         }
@@ -857,17 +876,20 @@ namespace Kiritori.Views.LiveCapture
         {
             if (_paused) return;
 
-            // 最大FPS制御をここで行う（RefreshPreview は未使用なので）
             if (_maxFps > 0)
             {
                 double minIntervalMs = 1000.0 / _maxFps;
-                if (_fpsWatch.ElapsedMilliseconds < minIntervalMs)
-                    return;
+                if (_fpsWatch.ElapsedMilliseconds < minIntervalMs) return;
                 _fpsWatch.Restart();
             }
 
-            var old = _latest;
-            _latest = (Bitmap)bmp.Clone();
+            Bitmap old = null;
+            // 受け取った bmp はバックエンド側がイベント復帰後に破棄するので、ここで必ず Clone します
+            lock (_frameSync)
+            {
+                old = _latest;
+                _latest = (Bitmap)bmp.Clone();
+            }
             if (old != null) old.Dispose();
 
             if (IsHandleCreated) BeginInvoke((Action)(() =>
