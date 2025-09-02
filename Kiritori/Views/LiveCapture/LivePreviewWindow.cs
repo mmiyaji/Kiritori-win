@@ -98,6 +98,10 @@ namespace Kiritori.Views.LiveCapture
         private ToolStripMenuItem _miShadow;          // メニュー項目
         private int _origStyle = 0;
         private bool _captionHidden = false;
+        // クリック→ドラッグ判定用
+        private bool _maybeDrag = false;
+        private System.Drawing.Point _downClient;
+
 
         [StructLayout(LayoutKind.Sequential)]
         private struct MARGINS
@@ -305,9 +309,10 @@ namespace Kiritori.Views.LiveCapture
 
             var gdi = new GdiCaptureBackend
             {
-                MaxFps = 0, // ← 無制限にしてUI側の _maxFps で制御する
+                MaxFps = _maxFps,
                 CaptureRect = this.CaptureRect
             };
+
             gdi.ExcludeWindow = this.Handle;
             gdi.FrameArrived += OnFrameArrived;
             _backend = gdi;
@@ -455,22 +460,16 @@ namespace Kiritori.Views.LiveCapture
 
         public int MaxFps
         {
-            get { return _maxFps; }
+            get => _maxFps;
             set
             {
                 if (value < 0) value = 0;
                 _maxFps = value;
                 UpdateFpsMenuChecks();
+                _fpsWatch.Restart(); // UI用の経過計測は不要なら消してOK
 
-                // 変更直後の体感を良くするためにリスタート
-                _fpsWatch.Restart();
-
-                try
-                {
-                    Properties.Settings.Default.LivePreviewMaxFps = _maxFps;
-                    Properties.Settings.Default.Save();
-                }
-                catch { /* 設定が無い場合は無視 */ }
+                if (_backend is GdiCaptureBackend gdi)
+                    gdi.MaxFps = _maxFps;  // ← ここで反映
             }
         }
         private void EnsureContextMenuWithFps()
@@ -532,6 +531,13 @@ namespace Kiritori.Views.LiveCapture
             MaxFps = fps;
         }
 
+        private bool IsNearResizeEdge(System.Drawing.Point ptClient)
+        {
+            int grip = Math.Max(8, this.DeviceDpi * 8 / 96);
+            int w = this.ClientSize.Width, h = this.ClientSize.Height;
+            return (ptClient.X <= grip) || (ptClient.X >= w - grip) ||
+                (ptClient.Y <= grip) || (ptClient.Y >= h - grip);
+        }
 
         // 角丸矩形（int版）
         private static GraphicsPath RoundedRect(Rectangle r, int radius)
@@ -1016,6 +1022,11 @@ namespace Kiritori.Views.LiveCapture
 
         protected override void WndProc(ref Message m)
         {
+            const int WM_ENTERSIZEMOVE = 0x0231; // 既存ならそのまま
+            const int WM_EXITSIZEMOVE  = 0x0232;
+            const int WM_MOUSEMOVE     = 0x0200;
+            const int WM_LBUTTONDBLCLK = 0x0203;
+
             // タブなし＝全域クライアント化
             if (_captionHidden && m.Msg == WM_NCCALCSIZE && m.WParam != IntPtr.Zero)
             {
@@ -1023,10 +1034,28 @@ namespace Kiritori.Views.LiveCapture
                 return;
             }
 
+            // ★ ダブルクリックで Pause/Resume
+            if (m.Msg == WM_LBUTTONDBLCLK)
+            {
+                var pt = this.PointToClient(Cursor.Position);
+                if (!IsHudInteractable() || !_hudRect.Contains(pt)) // HUDの上なら HUD に任せる
+                {
+                    if (!IsNearResizeEdge(pt)) // リサイズ帯は除外
+                    {
+                        TogglePause();
+                        Invalidate(GetHudInvalidateRect());
+                        _maybeDrag = false; // ドラッグ待機解除
+                        return;
+                    }
+                }
+            }
+
             // HUD 上のクリック処理（ドラッグ開始を抑止）
             if (m.Msg == WM_LBUTTONDOWN)
             {
                 var pt = this.PointToClient(Cursor.Position);
+
+                // HUD内なら従来どおり
                 if (_hudAlpha > 0 && _hudRect.Contains(pt))
                 {
                     _hudDown = true;
@@ -1034,14 +1063,36 @@ namespace Kiritori.Views.LiveCapture
                     return; // ドラッグ開始させない
                 }
 
-                int grip = Math.Max(8, this.DeviceDpi * 8 / 96);
-                int w = this.ClientSize.Width, h = this.ClientSize.Height;
-                bool nearEdge = (pt.X <= grip) || (pt.X >= w - grip) || (pt.Y <= grip) || (pt.Y >= h - grip);
-                if (!nearEdge)
+                // リサイズ帯はそのまま既定処理へ
+                if (IsNearResizeEdge(pt))
                 {
-                    ReleaseCapture();
-                    SendMessage(this.Handle, WM_NCLBUTTONDOWN, HTCAPTION, 0);
-                    return; // ドラッグ開始
+                    base.WndProc(ref m);
+                    return;
+                }
+
+                // ★ ここからは「ドラッグかもしれない」状態で待機
+                _maybeDrag = true;
+                _downClient = pt;
+
+                // ダブルクリック検出のためにも既定処理を通す
+                base.WndProc(ref m);
+                return;
+            }
+            else if (m.Msg == WM_MOUSEMOVE)
+            {
+                if (_maybeDrag && (Control.MouseButtons & MouseButtons.Left) != 0)
+                {
+                    var pt = this.PointToClient(Cursor.Position);
+                    var drag = SystemInformation.DragSize;
+                    if (Math.Abs(pt.X - _downClient.X) >= drag.Width / 2 ||
+                        Math.Abs(pt.Y - _downClient.Y) >= drag.Height / 2)
+                    {
+                        // ★ ここで初めてドラッグ開始（従来は LBUTTONDOWN 直後に開始していた）
+                        _maybeDrag = false;
+                        ReleaseCapture();
+                        SendMessage(this.Handle, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+                        return;
+                    }
                 }
             }
             else if (m.Msg == WM_LBUTTONUP)
@@ -1055,6 +1106,7 @@ namespace Kiritori.Views.LiveCapture
                     if (inside) { TogglePause(); }
                     return;
                 }
+                _maybeDrag = false; // ドラッグ待機解除
             }
 
             // リサイズ帯のヒットテスト（従来どおり）
@@ -1089,6 +1141,7 @@ namespace Kiritori.Views.LiveCapture
 
             base.WndProc(ref m);
         }
+
 
         const int GWL_EXSTYLE = -20;
 

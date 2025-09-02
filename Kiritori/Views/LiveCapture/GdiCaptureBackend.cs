@@ -8,7 +8,8 @@ namespace Kiritori.Views.LiveCapture
     internal class GdiCaptureBackend : LiveCaptureBackend, IDisposable
     {
         public event Action<Bitmap> FrameArrived;
-        public int MaxFps { get; set; } = 30;
+        private volatile int _maxFps = 15;
+        public int MaxFps { get => _maxFps; set => _maxFps = value; }
 
         public IntPtr ExcludeWindow { get; set; } // 使わないなら未設定でOK
 
