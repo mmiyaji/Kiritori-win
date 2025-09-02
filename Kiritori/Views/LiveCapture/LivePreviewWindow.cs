@@ -61,6 +61,13 @@ namespace Kiritori.Views.LiveCapture
         private bool IsHudInteractable() => _hudAlpha >= HUD_INTERACTABLE_ALPHA && !_hudRect.IsEmpty;
 
 
+        private System.Diagnostics.Stopwatch _fpsWatch = new System.Diagnostics.Stopwatch();
+        private int _maxFps = 15; // 0 = 無制限
+        private ToolStripMenuItem _miFpsRoot;
+        private ToolStripMenuItem[] _miFpsItems;
+        private readonly int[] _fpsChoices = new[] { 5, 10, 15, 30, 60, 0 }; // 0=無制限
+
+
         // タブを隠す直前に測った左右・下の枠厚
         private int _savedNcLeft = 0, _savedNcRight = 0, _savedNcBottom = 0;
 
@@ -109,6 +116,12 @@ namespace Kiritori.Views.LiveCapture
             InitializeComponent();
             this.DoubleBuffered = true;
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint, true);
+            try
+            {
+                var v = Properties.Settings.Default.LivePreviewMaxFps;
+                if (v >= 0) _maxFps = v; else _maxFps = 15;
+            }
+            catch { _maxFps = 15; }
 
             BuildOverlay();        // HUD 初期化
             WireHoverHandlers();   // ホバー/フェード
@@ -118,6 +131,8 @@ namespace Kiritori.Views.LiveCapture
 
             this.Opacity = 0.0; // 初回白チラ防止
             this.BackColor = Color.Black;
+
+            _fpsWatch.Start();
         }
 
         // 背景消去しない（_latest を全面に描く & フリッカ抑制）
@@ -284,27 +299,24 @@ namespace Kiritori.Views.LiveCapture
         {
             base.OnLoad(e);
 
-            // 表示前に位置合わせ（論理pxでOK）
             WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: AutoTopMost);
-
-            // 初回だけ同期で1フレーム取って白画面を回避
             TrySyncFirstCaptureIntoLatest(CaptureRect);
-            Invalidate(); // 直ちに描画
+            Invalidate();
 
-            // バックエンド開始（ここで初めて生成＆設定→Start）
             var gdi = new GdiCaptureBackend
             {
-                MaxFps = 24,
+                MaxFps = 0, // ← 無制限にしてUI側の _maxFps で制御する
                 CaptureRect = this.CaptureRect
             };
-            gdi.ExcludeWindow = this.Handle; // 自己キャプチャ避け
+            gdi.ExcludeWindow = this.Handle;
             gdi.FrameArrived += OnFrameArrived;
             _backend = gdi;
             _backend.Start();
 
             _iconBadge = new TitleIconBadger(this);
-            _iconBadge.SetState(LiveBadgeState.Recording); // ライブ開始 → 録画中バッジ
+            _iconBadge.SetState(LiveBadgeState.Recording);
         }
+
 
         private bool _firstFrameShown = false;
 
@@ -429,6 +441,46 @@ namespace Kiritori.Views.LiveCapture
             }
         }
 
+        public int MaxFps
+        {
+            get { return _maxFps; }
+            set
+            {
+                if (value < 0) value = 0;
+                _maxFps = value;
+                UpdateFpsMenuChecks();
+
+                // 変更直後の体感を良くするためにリスタート
+                _fpsWatch.Restart();
+
+                try
+                {
+                    Properties.Settings.Default.LivePreviewMaxFps = _maxFps;
+                    Properties.Settings.Default.Save();
+                }
+                catch { /* 設定が無い場合は無視 */ }
+            }
+        }
+
+        private void UpdateFpsMenuChecks()
+        {
+            if (_miFpsItems == null) return;
+            for (int i = 0; i < _miFpsItems.Length; i++)
+            {
+                var mi = _miFpsItems[i];
+                int fps = (int)mi.Tag;
+                mi.Checked = (fps == _maxFps);
+            }
+        }
+
+        private void OnFpsMenuClick(object sender, EventArgs e)
+        {
+            var mi = sender as ToolStripMenuItem;
+            if (mi == null) return;
+            int fps = (int)mi.Tag;
+            MaxFps = fps;
+        }
+
 
         // 角丸矩形（int版）
         private static GraphicsPath RoundedRect(Rectangle r, int radius)
@@ -538,6 +590,22 @@ namespace Kiritori.Views.LiveCapture
                 _miOpacity.DropDownItems.Add(mi);
             }
 
+            // === ここから FPS サブメニュー（EnsureContextMenuWithFps を統合） ===
+            _miFpsRoot = new ToolStripMenuItem(SR.T("Menu.MaxFPS", "最大 FPS")) { Tag = "fps-root" };
+            _miFpsItems = new ToolStripMenuItem[_fpsChoices.Length];
+            for (int i = 0; i < _fpsChoices.Length; i++)
+            {
+                int fps = _fpsChoices[i];
+                string text = (fps == 0) ? SR.T("Menu.FPS.Unlimited", "Unlimited") : (fps.ToString() + " fps");
+
+                var mi = new ToolStripMenuItem(text) { Tag = fps };
+                mi.Click += OnFpsMenuClick;
+
+                _miFpsItems[i] = mi;
+                _miFpsRoot.DropDownItems.Add(mi);
+            }
+            // === FPS サブメニューここまで ===
+
             // 実用操作
             _miPauseResume = new ToolStripMenuItem(SR.T("Menu.Pause", "Pause")); _miPauseResume.Click += (s, e) => TogglePause();
             _miTitlebar = new ToolStripMenuItem(SR.T("Menu.Titlebar", "Show Title bar")); _miTitlebar.Click += (s, e) => ToggleTitlebar();
@@ -570,10 +638,11 @@ namespace Kiritori.Views.LiveCapture
                 }
             };
 
+            // 並び：Pause/Titlebar/Close | View系(Zoom/Opacity/FPS/Shadow) | Realign/TopMost | Pref/Exit
             _ctx.Items.AddRange(new ToolStripItem[] {
                 _miPauseResume,
                 _miTitlebar,
-                _miClose,
+                _miFpsRoot,
                 new ToolStripSeparator(),
                 _miOriginal,
                 _miZoomIn,
@@ -586,11 +655,13 @@ namespace Kiritori.Views.LiveCapture
                 _miTopMost,
                 new ToolStripSeparator(),
                 _miPref,
+                _miClose,
                 _miExit
             });
 
             this.ContextMenuStrip = _ctx;
             UpdateShadowMenuState();
+            UpdateFpsMenuChecks(); // ← 初期チェック反映
 
             // メニューウィンドウもキャプチャ除外
             _ctx.Opened += (s, e) =>
@@ -600,6 +671,7 @@ namespace Kiritori.Views.LiveCapture
                     TryExcludeFromCapture(_ctx.Handle);
                 }
                 UpdateShadowMenuState();
+                UpdateFpsMenuChecks(); // 開くたび最新のチェック状態に
             };
             _ctx.Closed += (s, e) =>
             {
@@ -614,6 +686,7 @@ namespace Kiritori.Views.LiveCapture
                     }));
                 }
             };
+
             // ドロップダウン（サブメニュー）にも適用するヘルパ
             void MarkDropDownExclusion(ToolStripDropDownItem item)
             {
@@ -629,7 +702,9 @@ namespace Kiritori.Views.LiveCapture
             // サブメニューを持つ項目にフック
             MarkDropDownExclusion(_miZoomPct);
             MarkDropDownExclusion(_miOpacity);
+            MarkDropDownExclusion(_miFpsRoot);
         }
+
 
         private void ShowPreferences()
         {
@@ -727,10 +802,19 @@ namespace Kiritori.Views.LiveCapture
             }
         }
 
-        // FrameArrived 側で停止中は無視
+        // FrameArrived 側で停止中は無視＋最大FPSでスロットリング
         private void OnFrameArrived(Bitmap bmp)
         {
             if (_paused) return;
+
+            // 最大FPS制御をここで行う（RefreshPreview は未使用なので）
+            if (_maxFps > 0)
+            {
+                double minIntervalMs = 1000.0 / _maxFps;
+                if (_fpsWatch.ElapsedMilliseconds < minIntervalMs)
+                    return;
+                _fpsWatch.Restart();
+            }
 
             var old = _latest;
             _latest = (Bitmap)bmp.Clone();
@@ -739,9 +823,14 @@ namespace Kiritori.Views.LiveCapture
             if (IsHandleCreated) BeginInvoke((Action)(() =>
             {
                 Invalidate();
-                if (!_firstFrameShown) { _firstFrameShown = true; if (this.Opacity < 1.0) this.Opacity = 1.0; }
+                if (!_firstFrameShown)
+                {
+                    _firstFrameShown = true;
+                    if (this.Opacity < 1.0) this.Opacity = 1.0;
+                }
             }));
         }
+
 
         // ---- 自己キャプチャ除外 ----
         private static void TryExcludeFromCapture(IntPtr hwnd)

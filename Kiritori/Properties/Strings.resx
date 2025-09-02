@@ -552,4 +552,13 @@
   <data name="Menu.Titlebar" xml:space="preserve">
     <value>Show title bar</value>
   </data>
+  <data name="Menu.MaxFPS" xml:space="preserve">
+    <value>Max FPS</value>
+  </data>
+  <data name="Menu.FPS.Unlimited" xml:space="preserve">
+    <value>Unlimited</value>
+  </data>
+  <data name="Menu.ShowFPS" xml:space="preserve">
+    <value>Show FPS</value>
+  </data>
 </root>

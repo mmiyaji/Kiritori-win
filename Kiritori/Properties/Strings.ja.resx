@@ -552,4 +552,13 @@
   <data name="Menu.Titlebar" xml:space="preserve">
     <value>タイトルバーを表示</value>
   </data>
+  <data name="Menu.MaxFPS" xml:space="preserve">
+    <value>最大 FPS</value>
+  </data>
+  <data name="Menu.FPS.Unlimited" xml:space="preserve">
+    <value>無制限</value>
+  </data>
+  <data name="Menu.ShowFPS" xml:space="preserve">
+    <value>FPS表示</value>
+  </data>
 </root>

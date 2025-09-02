@@ -71,5 +71,8 @@
     <Setting Name="HotkeyLive" Type="System.String" Scope="User">
       <Value Profile="(Default)">Ctrl+Shift+6</Value>
     </Setting>
+    <Setting Name="LivePreviewMaxFps" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">15</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

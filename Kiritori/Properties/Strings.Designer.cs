@@ -205,6 +205,24 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Unlimited に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_FPS_Unlimited {
+            get {
+                return ResourceManager.GetString("Menu.FPS.Unlimited", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Max FPS に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_MaxFPS {
+            get {
+                return ResourceManager.GetString("Menu.MaxFPS", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Minimize に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_Minimize {
@@ -309,6 +327,15 @@ namespace Kiritori.Properties {
         internal static string Menu_SaveImage {
             get {
                 return ResourceManager.GetString("Menu.SaveImage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Show FPS に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_ShowFPS {
+            get {
+                return ResourceManager.GetString("Menu.ShowFPS", resourceCulture);
             }
         }
         

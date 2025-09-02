@@ -298,5 +298,17 @@ namespace Kiritori.Properties {
                 this["HotkeyLive"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("15")]
+        public int LivePreviewMaxFps {
+            get {
+                return ((int)(this["LivePreviewMaxFps"]));
+            }
+            set {
+                this["LivePreviewMaxFps"] = value;
+            }
+        }
     }
 }
