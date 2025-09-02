@@ -152,7 +152,7 @@ namespace Kiritori.Views.LiveCapture
             _fpsWindowWatch.Start();
 
             // 1秒ごとにCPU/メモリ更新
-            _perfTimer = new System.Threading.Timer(UpdatePerf, null, 1000, 1000);
+            // _perfTimer = new System.Threading.Timer(UpdatePerf, null, 1000, 1000);
             _lastCpuTime = Process.GetCurrentProcess().TotalProcessorTime;
             
             EnsureContextMenuWithFps();
@@ -442,8 +442,19 @@ namespace Kiritori.Views.LiveCapture
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
+            if (_perfTimer == null)
+                _perfTimer = new System.Threading.Timer(UpdatePerf, null, 1000, 1000);
+            else
+                _perfTimer.Change(1000, 1000);
             TryExcludeFromCapture(this.Handle);
         }
+        protected override void OnHandleDestroyed(EventArgs e)
+        {
+            // 破棄中にタイマーが走らないよう即停止
+            try { _perfTimer?.Change(Timeout.Infinite, Timeout.Infinite); } catch { }
+            base.OnHandleDestroyed(e);
+        }
+
 
         protected override void OnLoad(EventArgs e)
         {
@@ -817,6 +828,10 @@ namespace Kiritori.Views.LiveCapture
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            try { _perfTimer?.Change(Timeout.Infinite, Timeout.Infinite); } catch { }
+            try { _perfTimer?.Dispose(); } catch { }
+            _perfTimer = null;
+
             try { _backend?.Dispose(); } catch { }
             _backend = null;
 
@@ -1191,18 +1206,25 @@ namespace Kiritori.Views.LiveCapture
         private void UpdatePerf(object state)
         {
             if (!_showStats) return;
-            var proc = Process.GetCurrentProcess();
+            if (IsDisposed || !IsHandleCreated) return;
+            try
+            {
+                var proc = Process.GetCurrentProcess();
 
-            // CPU計算
-            var newCpuTime = proc.TotalProcessorTime;
-            var elapsed = 1.0; // 秒間隔なので1秒
-            _cpuUsage = (newCpuTime - _lastCpuTime).TotalMilliseconds / (Environment.ProcessorCount * 1000.0) * 100.0;
-            _lastCpuTime = newCpuTime;
+                // CPU計算
+                var newCpuTime = proc.TotalProcessorTime;
+                var elapsed = 1.0; // 秒間隔なので1秒
+                _cpuUsage = (newCpuTime - _lastCpuTime).TotalMilliseconds / (Environment.ProcessorCount * 1000.0) * 100.0;
+                _lastCpuTime = newCpuTime;
 
-            // メモリ
-            _memUsage = proc.WorkingSet64;
+                // メモリ
+                _memUsage = proc.WorkingSet64;
 
-            this.BeginInvoke((Action)(() => this.Invalidate()));
+                this.BeginInvoke((Action)(() => this.Invalidate()));
+            }
+            catch (ObjectDisposedException) { /* ignore: 閉じた直後の競合 */ }
+            catch (InvalidOperationException) { /* ignore: ハンドル競合 */ }
+
         }
         // ---- 自己キャプチャ除外 ----
         private static void TryExcludeFromCapture(IntPtr hwnd)

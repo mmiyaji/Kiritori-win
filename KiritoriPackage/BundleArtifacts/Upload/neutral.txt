@@ -1,2 +1,6 @@
 MainPackage=C:\Users\mail\Documents\git\Kiritori-win\KiritoriPackage\bin\AnyCPU\Release\Upload\KiritoriPackage_1.1.0.0_AnyCPU.msix
 SymbolPackage=C:\Users\mail\Documents\git\Kiritori-win\KiritoriPackage\bin\AnyCPU\Release\Upload\KiritoriPackage_1.1.0.0\KiritoriPackage_1.1.0.0_AnyCPU.appxsym
+ResourcePack=C:\Users\mail\Documents\git\Kiritori-win\KiritoriPackage\bin\AnyCPU\Release\Upload\KiritoriPackage_1.1.0.0_scale-100.msix
+ResourcePack=C:\Users\mail\Documents\git\Kiritori-win\KiritoriPackage\bin\AnyCPU\Release\Upload\KiritoriPackage_1.1.0.0_scale-125.msix
+ResourcePack=C:\Users\mail\Documents\git\Kiritori-win\KiritoriPackage\bin\AnyCPU\Release\Upload\KiritoriPackage_1.1.0.0_scale-150.msix
+ResourcePack=C:\Users\mail\Documents\git\Kiritori-win\KiritoriPackage\bin\AnyCPU\Release\Upload\KiritoriPackage_1.1.0.0_scale-400.msix
