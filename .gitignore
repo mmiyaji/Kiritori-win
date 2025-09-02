@@ -115,3 +115,6 @@ Thumbs.db
 dist/
 MigrationBackup/
 *_temp_*
+neutral.txt
+BundleArtifacts/
+/KiritoriPackage/BundleArtifacts
