@@ -167,8 +167,8 @@ namespace Kiritori
             // 
             this.viewParentMenu.DropDownItems.AddRange(new ToolStripItem[] {
                 this.originalSizeToolStripMenuItem,
-                this.zoomInToolStripMenuItem,
                 this.zoomOutToolStripMenuItem,
+                this.zoomInToolStripMenuItem,
                 this.zoomParentMenu,
                 new ToolStripSeparator(),
                 this.opacityParentMenu,
