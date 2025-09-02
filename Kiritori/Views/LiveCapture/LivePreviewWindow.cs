@@ -116,12 +116,6 @@ namespace Kiritori.Views.LiveCapture
             InitializeComponent();
             this.DoubleBuffered = true;
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint, true);
-            try
-            {
-                var v = Properties.Settings.Default.LivePreviewMaxFps;
-                if (v >= 0) _maxFps = v; else _maxFps = 15;
-            }
-            catch { _maxFps = 15; }
 
             BuildOverlay();        // HUD 初期化
             WireHoverHandlers();   // ホバー/フェード
@@ -131,8 +125,14 @@ namespace Kiritori.Views.LiveCapture
 
             this.Opacity = 0.0; // 初回白チラ防止
             this.BackColor = Color.Black;
-
+            try
+            {
+                var v = Properties.Settings.Default.LivePreviewMaxFps;
+                if (v >= 0) _maxFps = v; else _maxFps = 15;
+            }
+            catch { _maxFps = 15; }
             _fpsWatch.Start();
+            EnsureContextMenuWithFps();
         }
 
         // 背景消去しない（_latest を全面に描く & フリッカ抑制）
@@ -461,6 +461,45 @@ namespace Kiritori.Views.LiveCapture
                 catch { /* 設定が無い場合は無視 */ }
             }
         }
+        private void EnsureContextMenuWithFps()
+        {
+            if (this.ContextMenuStrip == null)
+                this.ContextMenuStrip = new ContextMenuStrip();
+
+            // 既存メニューに区切り線を入れて FPS サブメニューを追加（重複生成防止）
+            bool needSep = true;
+            foreach (ToolStripItem it in this.ContextMenuStrip.Items)
+            {
+                if (it.Tag as string == "fps-root")
+                {
+                    needSep = false;
+                    break;
+                }
+            }
+            if (!needSep) return;
+
+            this.ContextMenuStrip.Items.Add(new ToolStripSeparator());
+
+            _miFpsRoot = new ToolStripMenuItem(SR.T("Menu.MaxFPS","最大 FPS"));
+            _miFpsRoot.Tag = "fps-root";
+
+            _miFpsItems = new ToolStripMenuItem[_fpsChoices.Length];
+            for (int i = 0; i < _fpsChoices.Length; i++)
+            {
+                int fps = _fpsChoices[i];
+                string text = (fps == 0) ? SR.T("Menu.FPS.Unlimited","Unlimited") : (fps.ToString() + " fps");
+
+                var mi = new ToolStripMenuItem(text);
+                mi.Tag = fps; // 数値を保持
+                mi.Click += OnFpsMenuClick;
+
+                _miFpsItems[i] = mi;
+                _miFpsRoot.DropDownItems.Add(mi);
+            }
+
+            this.ContextMenuStrip.Items.Add(_miFpsRoot);
+            UpdateFpsMenuChecks();
+        }
 
         private void UpdateFpsMenuChecks()
         {
@@ -590,22 +629,6 @@ namespace Kiritori.Views.LiveCapture
                 _miOpacity.DropDownItems.Add(mi);
             }
 
-            // === ここから FPS サブメニュー（EnsureContextMenuWithFps を統合） ===
-            _miFpsRoot = new ToolStripMenuItem(SR.T("Menu.MaxFPS", "最大 FPS")) { Tag = "fps-root" };
-            _miFpsItems = new ToolStripMenuItem[_fpsChoices.Length];
-            for (int i = 0; i < _fpsChoices.Length; i++)
-            {
-                int fps = _fpsChoices[i];
-                string text = (fps == 0) ? SR.T("Menu.FPS.Unlimited", "Unlimited") : (fps.ToString() + " fps");
-
-                var mi = new ToolStripMenuItem(text) { Tag = fps };
-                mi.Click += OnFpsMenuClick;
-
-                _miFpsItems[i] = mi;
-                _miFpsRoot.DropDownItems.Add(mi);
-            }
-            // === FPS サブメニューここまで ===
-
             // 実用操作
             _miPauseResume = new ToolStripMenuItem(SR.T("Menu.Pause", "Pause")); _miPauseResume.Click += (s, e) => TogglePause();
             _miTitlebar = new ToolStripMenuItem(SR.T("Menu.Titlebar", "Show Title bar")); _miTitlebar.Click += (s, e) => ToggleTitlebar();
@@ -638,11 +661,42 @@ namespace Kiritori.Views.LiveCapture
                 }
             };
 
-            // 並び：Pause/Titlebar/Close | View系(Zoom/Opacity/FPS/Shadow) | Realign/TopMost | Pref/Exit
+            if (this.ContextMenuStrip == null)
+                this.ContextMenuStrip = new ContextMenuStrip();
+
+            // 既存メニューに区切り線を入れて FPS サブメニューを追加（重複生成防止）
+            bool needSep = true;
+            foreach (ToolStripItem it in this.ContextMenuStrip.Items)
+            {
+                if (it.Tag as string == "fps-root")
+                {
+                    needSep = false;
+                    break;
+                }
+            }
+            if (!needSep) return;
+
+            _miFpsRoot = new ToolStripMenuItem(SR.T("Menu.MaxFPS", "最大 FPS"));
+            _miFpsRoot.Tag = "fps-root";
+            _miFpsItems = new ToolStripMenuItem[_fpsChoices.Length];
+            for (int i = 0; i < _fpsChoices.Length; i++)
+            {
+                int fps = _fpsChoices[i];
+                string text = (fps == 0) ? SR.T("Menu.FPS.Unlimited", "Unlimited") : (fps.ToString() + " fps");
+
+                var mi = new ToolStripMenuItem(text);
+                mi.Tag = fps; // 数値を保持
+                mi.Click += OnFpsMenuClick;
+
+                _miFpsItems[i] = mi;
+                _miFpsRoot.DropDownItems.Add(mi);
+            }
+
             _ctx.Items.AddRange(new ToolStripItem[] {
                 _miPauseResume,
                 _miTitlebar,
                 _miFpsRoot,
+                _miClose,
                 new ToolStripSeparator(),
                 _miOriginal,
                 _miZoomIn,
@@ -655,13 +709,12 @@ namespace Kiritori.Views.LiveCapture
                 _miTopMost,
                 new ToolStripSeparator(),
                 _miPref,
-                _miClose,
                 _miExit
             });
 
             this.ContextMenuStrip = _ctx;
             UpdateShadowMenuState();
-            UpdateFpsMenuChecks(); // ← 初期チェック反映
+            UpdateFpsMenuChecks();
 
             // メニューウィンドウもキャプチャ除外
             _ctx.Opened += (s, e) =>
@@ -671,7 +724,6 @@ namespace Kiritori.Views.LiveCapture
                     TryExcludeFromCapture(_ctx.Handle);
                 }
                 UpdateShadowMenuState();
-                UpdateFpsMenuChecks(); // 開くたび最新のチェック状態に
             };
             _ctx.Closed += (s, e) =>
             {
@@ -686,7 +738,6 @@ namespace Kiritori.Views.LiveCapture
                     }));
                 }
             };
-
             // ドロップダウン（サブメニュー）にも適用するヘルパ
             void MarkDropDownExclusion(ToolStripDropDownItem item)
             {
@@ -704,7 +755,6 @@ namespace Kiritori.Views.LiveCapture
             MarkDropDownExclusion(_miOpacity);
             MarkDropDownExclusion(_miFpsRoot);
         }
-
 
         private void ShowPreferences()
         {

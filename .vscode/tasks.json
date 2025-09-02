@@ -11,7 +11,7 @@
                 "/m:1"
             ],
             "problemMatcher": "$msCompile",
-            "group": { "kind": "build", "isDefault": true }
+            "group": { "kind": "build", "isDefault": false }
         },
         {
             "label": "Build Kiritori (Release)",
@@ -33,7 +33,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Open dist folder",
+            "label": "(ALL)Open dist folder",
             "type": "shell",
             "command": "explorer",
             "args": [".\\dist"],
