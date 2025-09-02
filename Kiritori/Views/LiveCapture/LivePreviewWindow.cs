@@ -84,9 +84,6 @@ namespace Kiritori.Views.LiveCapture
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         static extern IntPtr SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
 
-        [StructLayout(LayoutKind.Sequential)]
-        struct RECT { public int Left, Top, Right, Bottom; }
-
         [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
         [DllImport("user32.dll")]
@@ -102,6 +99,9 @@ namespace Kiritori.Views.LiveCapture
         private bool _maybeDrag = false;
         private System.Drawing.Point _downClient;
         private bool _inSizingLoop = false;
+        private bool _aspectLockOnShift = true;     // Shiftで縦横比ロック
+        private float _aspectRatio = 0f;            // 0 のときは都度計算（初回）
+        private bool _useImageAspectIfAvailable = false; // 最新フレームの比率を優先
 
         [StructLayout(LayoutKind.Sequential)]
         private struct MARGINS
@@ -325,7 +325,33 @@ namespace Kiritori.Views.LiveCapture
             _iconBadge.SetState(LiveBadgeState.Recording);
         }
 
+        private float GetCurrentAspect()
+        {
+            try
+            {
+                if (_useImageAspectIfAvailable && _latest != null && _latest.Width > 0 && _latest.Height > 0)
+                    return (float)_latest.Width / _latest.Height;
 
+                var cs = this.ClientSize;
+                if (cs.Width > 0 && cs.Height > 0) return (float)cs.Width / cs.Height;
+            }
+            catch { }
+            return 1.0f; // フォールバック
+        }
+
+        protected override void OnResizeBegin(EventArgs e)
+        {
+            base.OnResizeBegin(e);
+            // リサイズ開始時点の比率を固定したい場合はここでキャプチャ
+            _aspectRatio = GetCurrentAspect();
+        }
+
+        protected override void OnResizeEnd(EventArgs e)
+        {
+            base.OnResizeEnd(e);
+            // 終了後は毎回再計算する運用に戻すなら 0 にしておく
+            _aspectRatio = 0f;
+        }
         private bool _firstFrameShown = false;
 
         protected override void OnResize(EventArgs e)
@@ -1030,6 +1056,7 @@ namespace Kiritori.Views.LiveCapture
             const int WM_LBUTTONDBLCLK = 0x0203;
             const int WM_ENTERSIZEMOVE = 0x0231;
             const int WM_EXITSIZEMOVE  = 0x0232;
+            const int WM_SIZING        = 0x0214;
 
             // タブなし＝全域クライアント化
             if (_captionHidden && m.Msg == WM_NCCALCSIZE && m.WParam != IntPtr.Zero)
@@ -1053,7 +1080,29 @@ namespace Kiritori.Views.LiveCapture
                     }
                 }
             }
+            if (m.Msg == WM_SIZING && _aspectLockOnShift && IsShiftDown())
+            {
+                // 1) 現在の比率（開始時固定 or 毎回動的）
+                var aspect = _aspectRatio > 0f ? _aspectRatio : GetCurrentAspect();
 
+                // 2) 変更中の矩形を取得
+                RECT rc = (RECT)Marshal.PtrToStructure(m.LParam, typeof(RECT));
+
+                // 3) どの辺/隅をドラッグしているか
+                int edge = m.WParam.ToInt32();
+
+                // 4) 最小サイズ（必要ならフォームの MinimumSize を考慮）
+                int minW = Math.Max(1, this.MinimumSize.Width);
+                int minH = Math.Max(1, this.MinimumSize.Height);
+
+                // 5) 比率維持で補正
+                ApplyAspectSizing(ref rc, edge, aspect, minW, minH);
+
+                // 6) 反映して処理済みにする
+                Marshal.StructureToPtr(rc, m.LParam, false);
+                m.Result = IntPtr.Zero;
+                return;
+            }
             // HUD 上のクリック処理（ドラッグ開始を抑止）
             if (m.Msg == WM_LBUTTONDOWN)
             {
@@ -1074,7 +1123,6 @@ namespace Kiritori.Views.LiveCapture
                     return;
                 }
 
-                // ★ ここからは「ドラッグかもしれない」状態で待機
                 _maybeDrag = true;
                 _downClient = pt;
 
@@ -1167,7 +1215,99 @@ namespace Kiritori.Views.LiveCapture
             }
             base.WndProc(ref m);
         }
+        private static bool IsShiftDown()
+        {
+            const int VK_SHIFT = 0x10;
+            short s = GetKeyState(VK_SHIFT);
+            return (s & 0x8000) != 0; // 最上位ビットが押下
+        }
 
+        private static void ApplyAspectSizing(ref RECT rc, int edge, float aspect, int minW, int minH)
+        {
+            // 幅・高さを算出
+            int w = Math.Max(minW, rc.Right - rc.Left);
+            int h = Math.Max(minH, rc.Bottom - rc.Top);
+
+            // Edge 種別（Win32 定数）
+            const int WMSZ_LEFT = 1, WMSZ_RIGHT = 2, WMSZ_TOP = 3, WMSZ_TOPLEFT = 4,
+                    WMSZ_TOPRIGHT = 5, WMSZ_BOTTOM = 6, WMSZ_BOTTOMLEFT = 7, WMSZ_BOTTOMRIGHT = 8;
+
+            // 角のとき：高さ基準で幅を決める（自然に感じやすい）
+            // 辺のとき：動かしている辺に応じて高さ or 幅を従属させる
+            switch (edge)
+            {
+                case WMSZ_LEFT:
+                case WMSZ_RIGHT:
+                {
+                    // 幅主導 → 高さ = 幅 / aspect
+                    h = (int)Math.Round(w / aspect);
+                    h = Math.Max(h, minH);
+                    if (edge == WMSZ_RIGHT)
+                        rc.Bottom = rc.Top + h;
+                    else
+                        rc.Top = rc.Bottom - h;
+                    break;
+                }
+                case WMSZ_TOP:
+                case WMSZ_BOTTOM:
+                {
+                    // 高さ主導 → 幅 = 高さ * aspect
+                    w = (int)Math.Round(h * aspect);
+                    w = Math.Max(w, minW);
+                    if (edge == WMSZ_BOTTOM)
+                        rc.Right = rc.Left + w;
+                    else
+                        rc.Left = rc.Right - w;
+                    break;
+                }
+                case WMSZ_TOPLEFT:
+                case WMSZ_TOPRIGHT:
+                case WMSZ_BOTTOMLEFT:
+                case WMSZ_BOTTOMRIGHT:
+                {
+                    // 角は高さ主導にするとドラッグ方向に素直に追従しやすい
+                    w = (int)Math.Round(h * aspect);
+                    w = Math.Max(w, minW);
+                    h = (int)Math.Round(w / aspect); // 丸め直しで崩れ防止
+
+                    if (edge == WMSZ_TOPLEFT)
+                    {
+                        rc.Left = rc.Right - w;
+                        rc.Top = rc.Bottom - h;
+                    }
+                    else if (edge == WMSZ_TOPRIGHT)
+                    {
+                        rc.Right = rc.Left + w;
+                        rc.Top = rc.Bottom - h;
+                    }
+                    else if (edge == WMSZ_BOTTOMLEFT)
+                    {
+                        rc.Left = rc.Right - w;
+                        rc.Bottom = rc.Top + h;
+                    }
+                    else // BOTTOMRIGHT
+                    {
+                        rc.Right = rc.Left + w;
+                        rc.Bottom = rc.Top + h;
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Win32 ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        [DllImport("user32.dll")]
+        private static extern short GetKeyState(int nVirtKey);
 
         const int GWL_EXSTYLE = -20;
 
