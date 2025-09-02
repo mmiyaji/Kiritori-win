@@ -69,7 +69,7 @@ namespace Kiritori.Views.LiveCapture
 
 
         // タブを隠す直前に測った左右・下の枠厚
-        private int _savedNcLeft = 0, _savedNcRight = 0, _savedNcBottom = 0;
+        // private int _savedNcLeft = 0, _savedNcRight = 0, _savedNcBottom = 0;
 
         [DllImport("user32.dll", SetLastError = true)]
         static extern int GetWindowLong(IntPtr hWnd, int nIndex);
@@ -101,7 +101,7 @@ namespace Kiritori.Views.LiveCapture
         // クリック→ドラッグ判定用
         private bool _maybeDrag = false;
         private System.Drawing.Point _downClient;
-
+        private bool _inSizingLoop = false;
 
         [StructLayout(LayoutKind.Sequential)]
         private struct MARGINS
@@ -167,6 +167,8 @@ namespace Kiritori.Views.LiveCapture
         private int DpiScale(int px) => (int)Math.Round(px * this.DeviceDpi / 96.0);
         private void CenterOverlay()
         {
+            if (_inSizingLoop) return;
+            Debug.WriteLine($"CenterOverlay: {this.ClientSize}");
             int clientW = this.ClientSize.Width;
             int clientH = this.ClientSize.Height;
 
@@ -242,6 +244,7 @@ namespace Kiritori.Views.LiveCapture
 
         private void ShowOverlay()
         {
+            if (_inSizingLoop) return;
             if (_hudRect.IsEmpty)
             {
                 // 収まらない場合は常に非表示
@@ -363,6 +366,7 @@ namespace Kiritori.Views.LiveCapture
 
         private void DrawHud(Graphics g)
         {
+            if (_inSizingLoop) return;
             if (_hudAlpha <= 0 || _hudRect.IsEmpty) return;
 
             g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -1022,10 +1026,10 @@ namespace Kiritori.Views.LiveCapture
 
         protected override void WndProc(ref Message m)
         {
-            const int WM_ENTERSIZEMOVE = 0x0231; // 既存ならそのまま
-            const int WM_EXITSIZEMOVE  = 0x0232;
             const int WM_MOUSEMOVE     = 0x0200;
             const int WM_LBUTTONDBLCLK = 0x0203;
+            const int WM_ENTERSIZEMOVE = 0x0231;
+            const int WM_EXITSIZEMOVE  = 0x0232;
 
             // タブなし＝全域クライアント化
             if (_captionHidden && m.Msg == WM_NCCALCSIZE && m.WParam != IntPtr.Zero)
@@ -1034,7 +1038,7 @@ namespace Kiritori.Views.LiveCapture
                 return;
             }
 
-            // ★ ダブルクリックで Pause/Resume
+            // ダブルクリックで Pause/Resume
             if (m.Msg == WM_LBUTTONDBLCLK)
             {
                 var pt = this.PointToClient(Cursor.Position);
@@ -1139,6 +1143,28 @@ namespace Kiritori.Views.LiveCapture
                 return; // 中央は HTCLIENT
             }
 
+            if (m.Msg == WM_ENTERSIZEMOVE)
+            {
+                _inSizingLoop = true;
+
+                // 直前の HUD を消す
+                var oldInv = GetHudInvalidateRect();
+                _hudTargetAlpha = 0;
+                _hudHot = _hudDown = false;
+                if (_hudCursorIsHand) { Cursor = Cursors.Default; _hudCursorIsHand = false; }
+
+                Invalidate(oldInv);
+                _hudRect = Rectangle.Empty;
+            }
+            else if (m.Msg == WM_EXITSIZEMOVE)
+            {
+                _inSizingLoop = false;
+
+                // 新しいサイズで HUD を再配置＆必要ならフェードイン
+                CenterOverlay();
+                ShowOverlay();
+                Invalidate(GetHudInvalidateRect());
+            }
             base.WndProc(ref m);
         }
 
