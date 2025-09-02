@@ -561,4 +561,7 @@
   <data name="Menu.ShowFPS" xml:space="preserve">
     <value>Show FPS</value>
   </data>
+  <data name="Menu.ShowStats" xml:space="preserve">
+    <value>Show Stats (FPS/CPU/MEM)</value>
+  </data>
 </root>

@@ -340,6 +340,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Show Stats (FPS/CPU/MEM) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_ShowStats {
+            get {
+                return ResourceManager.GetString("Menu.ShowStats", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Size 10% に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_Size10 {

@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using System.Threading;
 
 namespace Kiritori.Views.LiveCapture
 {
@@ -19,7 +20,7 @@ namespace Kiritori.Views.LiveCapture
         private ToolStripMenuItem
             _miOriginal, _miZoomIn, _miZoomOut, _miZoomPct,
             _miOpacity, _miPauseResume, _miRealign, _miTopMost, _miClose,
-            _miPref, _miExit, _miTitlebar;
+            _miPref, _miExit, _miTitlebar, _miShowStats;
 
         private float _zoom = 1.0f;     // 表示倍率（1.0=100%）
         private bool _paused = false;
@@ -48,7 +49,7 @@ namespace Kiritori.Views.LiveCapture
         const int HTLEFT=10, HTRIGHT=11, HTTOP=12, HTTOPLEFT=13, HTTOPRIGHT=14, HTBOTTOM=15, HTBOTTOMLEFT=16, HTBOTTOMRIGHT=17;
 
         // ---- HUD（Pause/Resume）描画用
-        private Timer _fadeTimer;
+        private System.Windows.Forms.Timer _fadeTimer;
         private int _hudAlpha = 0, _hudTargetAlpha = 0; // 0..200
         private Rectangle _hudRect;
         private bool _hudHot = false, _hudDown = false;
@@ -67,7 +68,7 @@ namespace Kiritori.Views.LiveCapture
         private const int HOVER_ALPHA_ON  = 160;
         private const int HOVER_ALPHA_OFF = 0;
 
-        private System.Diagnostics.Stopwatch _fpsWatch = new System.Diagnostics.Stopwatch();
+        // private Stopwatch _fpsWatch = new Stopwatch();
         private int _maxFps = 15; // 0 = 無制限
         private ToolStripMenuItem _miFpsRoot;
         private ToolStripMenuItem[] _miFpsItems;
@@ -99,6 +100,16 @@ namespace Kiritori.Views.LiveCapture
         private const int MOVE_STEP = 3;
         private const int SHIFT_MOVE_STEP = MOVE_STEP * 10;
 
+        // プロセス表示
+        private bool _showStats = true;
+        private int _frameCount = 0;
+        private int _fps = 0;
+        private System.Threading.Timer _perfTimer;
+        private readonly Stopwatch _presentWatch = new Stopwatch(); // スロットリング用
+        private readonly Stopwatch _fpsWindowWatch = new Stopwatch(); // 1秒ウィンドウ用
+        private TimeSpan _lastCpuTime;
+        private double _cpuUsage = 0;
+        private long _memUsage = 0;
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS margins);
@@ -136,8 +147,16 @@ namespace Kiritori.Views.LiveCapture
                 _maxFps = (v >= 0) ? v : 15;
             }
             catch { _maxFps = 15; }
-            _fpsWatch.Start();
+            // _fpsWatch.Start();
+            _presentWatch.Start();
+            _fpsWindowWatch.Start();
+
+            // 1秒ごとにCPU/メモリ更新
+            _perfTimer = new System.Threading.Timer(UpdatePerf, null, 1000, 1000);
+            _lastCpuTime = Process.GetCurrentProcess().TotalProcessorTime;
+            
             EnsureContextMenuWithFps();
+
         }
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
@@ -197,6 +216,26 @@ namespace Kiritori.Views.LiveCapture
                     this.Close(); return true;
                 case (int)HOTS.SPACE:   // Space
                     TogglePause(); return true; 
+                case (int)HOTS.INFO:    // Ctrl + I
+                    _showStats = !_showStats;
+                    // 表示ON：タイマー開始（未作成なら作る）
+                    if (_showStats)
+                    {
+                        if (_perfTimer == null)
+                        {
+                            _lastCpuTime = Process.GetCurrentProcess().TotalProcessorTime;
+                            _perfTimer = new System.Threading.Timer(UpdatePerf, null, 1000, 1000);
+                        }
+                    }
+                    else
+                    {
+                        // 表示OFF：タイマー停止（必要なら軽量化）
+                        try { _perfTimer?.Change(Timeout.Infinite, Timeout.Infinite); } catch { }
+                        // 値は残しておいてOK（次回ON時にすぐ表示される）
+                    }
+
+                    Invalidate(); // 画面更新
+                    return true;
 
                 default:
                     return base.ProcessCmdKey(ref msg, keyData);
@@ -259,7 +298,7 @@ namespace Kiritori.Views.LiveCapture
         {
             CenterOverlay();
 
-            _fadeTimer = new Timer { Interval = 16 }; // ~60fps
+            _fadeTimer = new System.Windows.Forms.Timer { Interval = 16 }; // ~60fps
             _fadeTimer.Tick += (s, e) =>
             {
                 bool anyChanged = false;
@@ -316,10 +355,14 @@ namespace Kiritori.Views.LiveCapture
 
         private void WireHoverHandlers()
         {
-            this.MouseEnter += (s, e) => ShowOverlay();
-            this.MouseMove  += (s, e) =>
+            this.MouseEnter += (s, e) =>
             {
-                ShowOverlay();
+                ShowOverlay(); // ← PAUSE中でも通常どおり点灯
+            };
+
+            this.MouseMove += (s, e) =>
+            {
+                ShowOverlay(); // ← PAUSE中でも通常どおり点灯
 
                 var me = (MouseEventArgs)e;
                 bool inside = !_hudRect.IsEmpty && _hudRect.Contains(me.Location);
@@ -337,7 +380,14 @@ namespace Kiritori.Views.LiveCapture
 
             this.MouseLeave += (s, e) =>
             {
-                HideOverlay();
+                // ←★ PAUSE中でもフェードアウトさせる
+                _hudHot = _hudDown = false;
+                _hoverTargetAlpha = HOVER_ALPHA_OFF;
+                if (!_fadeTimer.Enabled) _fadeTimer.Start();
+
+                var inv = Rectangle.Union(GetHudInvalidateRect(), GetHoverInvalidateRect());
+                if (!inv.IsEmpty) Invalidate(inv);
+
                 if (_hudCursorIsHand) { Cursor = Cursors.Default; _hudCursorIsHand = false; }
             };
         }
@@ -347,8 +397,6 @@ namespace Kiritori.Views.LiveCapture
             if (_inSizingLoop) return;
 
             _hudTargetAlpha = _hudRect.IsEmpty ? 0 : 140;
-
-            // SnapWindow 互換の外観（色/太さ/α）で枠を表示
             _hoverTargetAlpha = HOVER_ALPHA_ON;
 
             if (!_fadeTimer.Enabled) _fadeTimer.Start();
@@ -482,8 +530,41 @@ namespace Kiritori.Views.LiveCapture
             }
 
             DrawHud(e.Graphics);
-            DrawHoverFrame(e.Graphics);   // ← SnapWindow互換の強調枠
+            DrawHoverFrame(e.Graphics);
+
+            if (_showStats)
+            {
+                var g = e.Graphics;
+                if (_paused)
+                {
+                    using (var font = new Font("Segoe UI", 12, FontStyle.Bold))
+                    using (var brush = new SolidBrush(Color.Yellow))
+                    using (var shadow = new SolidBrush(Color.FromArgb(160, 0, 0, 0)))
+                    {
+                        string msg = "PAUSED";
+                        var size = g.MeasureString(msg, font);
+                        var loc = new Point((int)(10), (int)(10));
+                        g.DrawString(msg, font, shadow, loc.X + 2, loc.Y + 2);
+                        g.DrawString(msg, font, brush, loc);
+                    }
+                }
+                else
+                {
+                    string info = string.Format("FPS: {0}  CPU: {1:F1}%  MEM: {2} MB",
+                        _fps, _cpuUsage, _memUsage / 1024 / 1024);
+
+                    using (var font = new Font("Segoe UI", 9))
+                    using (var brush = new SolidBrush(Color.White))
+                    using (var shadow = new SolidBrush(Color.FromArgb(128, 0, 0, 0)))
+                    {
+                        var loc = new Point(10, 10);
+                        g.DrawString(info, font, shadow, loc.X + 1, loc.Y + 1);
+                        g.DrawString(info, font, brush, loc);
+                    }
+                }
+            }
         }
+
 
         private void DrawHud(Graphics g)
         {
@@ -666,12 +747,16 @@ namespace Kiritori.Views.LiveCapture
                 if (value < 0) value = 0;
                 _maxFps = value;
                 UpdateFpsMenuChecks();
-                _fpsWatch.Restart();
+
+                // 間引きの基準時計をリセット
+                _presentWatch.Reset();
+                _presentWatch.Start();
 
                 if (_backend is GdiCaptureBackend gdi)
                     gdi.MaxFps = _maxFps;
             }
         }
+
         private void EnsureContextMenuWithFps()
         {
             if (this.ContextMenuStrip == null)
@@ -878,12 +963,41 @@ namespace Kiritori.Views.LiveCapture
                 _miFpsItems[i] = mi;
                 _miFpsRoot.DropDownItems.Add(mi);
             }
+            _miShowStats = new ToolStripMenuItem(SR.T("Menu.ShowStats", "Show Stats (FPS/CPU/MEM)"))
+            {
+                Checked = _showStats,
+                CheckOnClick = true
+            };
+            _miShowStats.CheckedChanged += (s, e) =>
+            {
+                // キー操作と同じ挙動に合わせる
+                _showStats = _miShowStats.Checked;
+                if (_showStats)
+                {
+                    if (_perfTimer == null)
+                    {
+                        _lastCpuTime = Process.GetCurrentProcess().TotalProcessorTime;
+                        _perfTimer = new System.Threading.Timer(UpdatePerf, null, 1000, 1000);
+                    }
+                    else
+                    {
+                        try { _perfTimer.Change(1000, 1000); } catch { }
+                    }
+                }
+                else
+                {
+                    try { _perfTimer?.Change(Timeout.Infinite, Timeout.Infinite); } catch { }
+                }
+                Invalidate();
+            };
+            _miShowStats.ShortcutKeys = (Keys)HOTS.INFO;
 
             _ctx.Items.AddRange(new ToolStripItem[] {
+                _miClose,
                 _miPauseResume,
                 _miTitlebar,
                 _miFpsRoot,
-                _miClose,
+                _miShowStats,
                 new ToolStripSeparator(),
                 _miOriginal,
                 _miZoomOut,
@@ -1034,13 +1148,26 @@ namespace Kiritori.Views.LiveCapture
         {
             if (_paused) return;
 
+            // 1) MaxFPSによる間引き（描画の表示タイミングを決める）
             if (_maxFps > 0)
             {
                 double minIntervalMs = 1000.0 / _maxFps;
-                if (_fpsWatch.ElapsedMilliseconds < minIntervalMs) return;
-                _fpsWatch.Restart();
+                if (_presentWatch.ElapsedMilliseconds < minIntervalMs)
+                    return; // 表示しない（カウントもしない）
+                _presentWatch.Restart();
             }
 
+            // 2) ここに来たら「実際に表示するフレーム」なので FPS カウント
+            Interlocked.Increment(ref _frameCount);
+
+            // 3) 1秒ごとに表示FPSを更新（無制限でも動く）
+            if (_fpsWindowWatch.ElapsedMilliseconds >= 1000)
+            {
+                _fps = Interlocked.Exchange(ref _frameCount, 0);
+                _fpsWindowWatch.Restart();
+            }
+
+            // 4) 以降は元の適用処理
             Bitmap old = null;
             lock (_frameSync)
             {
@@ -1060,6 +1187,23 @@ namespace Kiritori.Views.LiveCapture
             }));
         }
 
+
+        private void UpdatePerf(object state)
+        {
+            if (!_showStats) return;
+            var proc = Process.GetCurrentProcess();
+
+            // CPU計算
+            var newCpuTime = proc.TotalProcessorTime;
+            var elapsed = 1.0; // 秒間隔なので1秒
+            _cpuUsage = (newCpuTime - _lastCpuTime).TotalMilliseconds / (Environment.ProcessorCount * 1000.0) * 100.0;
+            _lastCpuTime = newCpuTime;
+
+            // メモリ
+            _memUsage = proc.WorkingSet64;
+
+            this.BeginInvoke((Action)(() => this.Invalidate()));
+        }
         // ---- 自己キャプチャ除外 ----
         private static void TryExcludeFromCapture(IntPtr hwnd)
         {

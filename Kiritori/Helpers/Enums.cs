@@ -44,7 +44,8 @@ namespace Kiritori.Helpers
         CUT = Keys.Control | Keys.X,
         OCR = Keys.Control | Keys.T,
         PRINT = Keys.Control | Keys.P,
-        MINIMIZE = Keys.Control | Keys.H
+        MINIMIZE = Keys.Control | Keys.H,
+        INFO = Keys.Control | Keys.I,
     }
     [Flags]
     public enum MOD_KEY : int
