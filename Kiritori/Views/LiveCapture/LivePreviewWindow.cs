@@ -469,29 +469,31 @@ namespace Kiritori.Views.LiveCapture
             if (!ShouldShowInlineClose()) return;
 
             _closeBtnRect = GetCloseRect();
-            // ホバー時の背景(わずかに暗い丸)と X の描画
+
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
-            if (_hoverClose)
+            // 常時背景（薄いグレー透明丸）
+            int baseAlpha = 40;  // 非ホバー時の背景透明度（0=なし, 255=不透明）
+            int hoverAlpha = 90; // ホバー時の背景透明度
+
+            int alpha = _hoverClose ? hoverAlpha : baseAlpha;
+            using (var bg = new SolidBrush(Color.FromArgb(alpha, 0, 0, 0)))
             {
-                using (var bg = new SolidBrush(Color.FromArgb(90, 0, 0, 0)))
-                {
-                    g.FillEllipse(bg, _closeBtnRect);
-                }
+                g.FillEllipse(bg, _closeBtnRect);
             }
 
-            // X の線（ホバー時は少し太く）
+            // X の線（ホバー時は太く）
             int inset = Math.Max(2, DpiScale(4));
             var r = Rectangle.Inflate(_closeBtnRect, -inset, -inset);
-            float w = _hoverClose 
-                ? Math.Max(2f, (float)DpiScale(2)) 
-                : Math.Max(1.5f, (float)DpiScale((int)1.5));
+            float w = _hoverClose
+                ? Math.Max(2f, (float)DpiScale(2))
+                : Math.Max(1.5f, (float)DpiScale(1)); // ← int キャスト注意
             using (var pen = new Pen(Color.White, w))
             {
                 pen.StartCap = pen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
-                g.DrawLine(pen, r.Left,  r.Top,    r.Right, r.Bottom);
-                g.DrawLine(pen, r.Right, r.Top,    r.Left,  r.Bottom);
+                g.DrawLine(pen, r.Left, r.Top, r.Right, r.Bottom);
+                g.DrawLine(pen, r.Right, r.Top, r.Left, r.Bottom);
             }
 
             // 枠のガイド（うっすら）

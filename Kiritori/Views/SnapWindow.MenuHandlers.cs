@@ -186,25 +186,37 @@ namespace Kiritori
 
             // 右上クローズ
             if (_hoverWindow &&
-                pictureBox1.ClientSize.Width >= MIN_WIDTH &&
-                pictureBox1.ClientSize.Height >= MIN_HEIGHT)
+                pictureBox1.ClientSize.Width >= 100 &&
+                pictureBox1.ClientSize.Height >= 50)
             {
-                var pair = GetCloseBitmapsForDpi(this.DeviceDpi);
-                var img = _hoverClose ? pair.hover : pair.normal;
+                _closeBtnRect = GetCloseRect();
 
-                float scale = this.DeviceDpi / 96f;
-                int marginPx = (int)Math.Round(8 * scale);
+                // 常時うっすら背景（白地でも視認）＋ ホバー時は濃く
+                int baseAlpha  = 40;  // 非ホバー時
+                int hoverAlpha = 90;  // ホバー時
+                int alpha = _hoverClose ? hoverAlpha : baseAlpha;
 
-                int x = pictureBox1.ClientSize.Width - img.Width - marginPx;
-                int y = marginPx;
+                using (var bg = new SolidBrush(Color.FromArgb(alpha, 0, 0, 0)))
+                    g.FillEllipse(bg, _closeBtnRect);
 
-                _closeBtnRect = new Rectangle(x, y, img.Width, img.Height);
+                // X（ホバー時は太め）
+                int inset = Math.Max(2, DpiScale(4));
+                var r = Rectangle.Inflate(_closeBtnRect, -inset, -inset);
 
-                int pad = (int)Math.Round(1 * scale);
-                using (var bg = new SolidBrush(Color.FromArgb(_hoverClose ? 160 : 50, 0, 0, 0)))
-                    g.FillEllipse(bg, Rectangle.Inflate(_closeBtnRect, pad, pad));
+                float w = _hoverClose
+                    ? Math.Max(2f, (float)DpiScale(2))
+                    : Math.Max(1.5f, (float)DpiScale(1));   // ← int キャスト注意
 
-                g.DrawImage(img, _closeBtnRect);
+                using (var pen = new Pen(Color.White, w))
+                {
+                    pen.StartCap = pen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+                    g.DrawLine(pen, r.Left,  r.Top,    r.Right, r.Bottom);
+                    g.DrawLine(pen, r.Right, r.Top,    r.Left,  r.Bottom);
+                }
+
+                // うっすら外周（ガイド）
+                using (var guide = new Pen(Color.FromArgb(70, 255, 255, 255), 1))
+                    g.DrawEllipse(guide, _closeBtnRect);
             }
             else
             {
@@ -215,18 +227,21 @@ namespace Kiritori
 
         private void PictureBox1_MouseMove_Icon(object sender, MouseEventArgs e)
         {
-            bool now = _closeBtnRect.Contains(e.Location);
+            var rect = GetCloseRect();       // ここで毎回最新を計算
+            _closeBtnRect = rect;            // フィールドも更新
+            bool now = rect.Contains(e.Location);
             if (now != _hoverClose)
             {
                 _hoverClose = now;
-                pictureBox1.Invalidate(_closeBtnRect);
+                pictureBox1.Invalidate(rect);
+                Cursor = _hoverClose ? Cursors.Hand : Cursors.Default;
             }
         }
 
         private void PictureBox1_MouseClick_Icon(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left && _closeBtnRect.Contains(e.Location))
-                this.Close();
+            if (e.Button != MouseButtons.Left) return;
+            if (GetCloseRect().Contains(e.Location)) this.Close();
         }
 
         public void printImage()
@@ -296,6 +311,15 @@ namespace Kiritori
             this._originalLocation = this.Location;
             Debug.WriteLine($"Original Location: {this._originalLocation}");
         }
+        private int DpiScale(int px) => (int)Math.Round(px * this.DeviceDpi / 96.0);
+
+        private Rectangle GetCloseRect()
+        {
+            int pad = DpiScale(6);
+            int sz  = DpiScale(20);
+            return new Rectangle(pictureBox1.ClientSize.Width - pad - sz, pad, sz, sz);
+        }
+
 
         #endregion
 
