@@ -202,11 +202,24 @@ namespace Kiritori.Views.LiveCapture
                 float s = dpi / 96f;
                 return new Rectangle(
                     (int)Math.Round(logical.Left * s),
-                    (int)Math.Round(logical.Top  * s),
-                    (int)Math.Round(logical.Width  * s),
+                    (int)Math.Round(logical.Top * s),
+                    (int)Math.Round(logical.Width * s),
                     (int)Math.Round(logical.Height * s)
                 );
             }
+
+            public static Rectangle PhysicalToLogical(Rectangle physical)
+            {
+                var dpi = GetEffectiveDpiAt(physical.Left, physical.Top);
+                float s = dpi / 96f;
+                return new Rectangle(
+                    (int)Math.Round(physical.Left / s),
+                    (int)Math.Round(physical.Top / s),
+                    (int)Math.Round(physical.Width / s),
+                    (int)Math.Round(physical.Height / s)
+                );
+            }
+
         }
     }
 }

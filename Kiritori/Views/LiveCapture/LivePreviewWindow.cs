@@ -1,5 +1,6 @@
 ﻿using Kiritori.Helpers;
 using System;
+using System.IO;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -111,6 +112,14 @@ namespace Kiritori.Views.LiveCapture
         private double _cpuUsage = 0;
         private long _memUsage = 0;
 
+        // 閉じるボタン
+        private Rectangle _closeBtnRect = Rectangle.Empty;
+        private bool _hoverClose = false;
+        private bool _closeDown = false;
+        private bool _windowHot = false; // マウスがウィンドウ上にあるか
+        // タイトルバーがある時は OS の×があるので自前は非表示にする
+        private bool ShouldShowInlineClose() => _captionHidden && _windowHot;
+
         [DllImport("dwmapi.dll")]
         private static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS margins);
 
@@ -118,6 +127,9 @@ namespace Kiritori.Views.LiveCapture
         {
             InitializeComponent();
             this.DoubleBuffered = true;
+            this.AutoScaleMode = AutoScaleMode.Dpi;
+            this.AutoScaleDimensions = new SizeF(96F, 96F);
+
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint, true);
 
             this.KeyPreview = true;
@@ -158,20 +170,49 @@ namespace Kiritori.Views.LiveCapture
             EnsureContextMenuWithFps();
 
         }
+        // ==== LivePreview 用デバッグロガー（%TEMP%\Kiritori.LivePreview.log + Debug） ====
+        private static class LPLog
+        {
+            private static readonly string LogPath =
+                Path.Combine(Path.GetTempPath(), "Kiritori.LivePreview.log");
+
+            public static void Info(string msg)
+            {
+                var line = $"{DateTime.Now:HH:mm:ss.fff} [LP] {msg}";
+                System.Diagnostics.Debug.WriteLine(line);
+                try { File.AppendAllText(LogPath, line + Environment.NewLine); } catch { /* ignore */ }
+            }
+        }
+        private static string RectStr(Rectangle r) => $"({r.X},{r.Y}) {r.Width}x{r.Height}";
+        private static string RectStr(RECT r) => $"({r.Left},{r.Top}) {r.Right - r.Left}x{r.Bottom - r.Top}";
+        private static string InsetsStr(NcInsets i) => $"L{i.Left} T{i.Top} R{i.Right} B{i.Bottom}";
+        // ===========================================================================
+        // LivePreviewWindow クラス内どこかに追加
+        private void MoveThenResizePhysicalWithLogs(string tag, bool topMost)
+        {
+            // 位置合わせ（※これが内部で“論理サイズ”に変えるので、この後でサイズを上書きする）
+            WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: topMost);
+            LPLog.Info($"{tag}: after Move: Client={this.ClientSize.Width}x{this.ClientSize.Height}, Bounds=({this.Left},{this.Top}) {this.Width}x{this.Height}, Insets {InsetsStr(GetNcInsets())}");
+
+            // 物理サイズへ上書き
+            ResizeToKeepClient(GetDesiredClientPhysical());
+            LPLog.Info($"{tag}: after ResizePhysical: Client={this.ClientSize.Width}x{this.ClientSize.Height}, Bounds=({this.Left},{this.Top}) {this.Width}x{this.Height}, Insets {InsetsStr(GetNcInsets())}");
+        }
+
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
             switch ((int)keyData)
             {
                 // ==== 矢印移動（Ctrl不要 / Shiftで加速） ====
-                case (int)HOTS.MOVE_LEFT:        NudgeWindowBy(-MOVE_STEP, 0); return true;
-                case (int)HOTS.MOVE_RIGHT:       NudgeWindowBy(+MOVE_STEP, 0); return true;
-                case (int)HOTS.MOVE_UP:          NudgeWindowBy(0, -MOVE_STEP); return true;
-                case (int)HOTS.MOVE_DOWN:        NudgeWindowBy(0, +MOVE_STEP); return true;
+                case (int)HOTS.MOVE_LEFT: NudgeWindowBy(-MOVE_STEP, 0); return true;
+                case (int)HOTS.MOVE_RIGHT: NudgeWindowBy(+MOVE_STEP, 0); return true;
+                case (int)HOTS.MOVE_UP: NudgeWindowBy(0, -MOVE_STEP); return true;
+                case (int)HOTS.MOVE_DOWN: NudgeWindowBy(0, +MOVE_STEP); return true;
 
-                case (int)HOTS.SHIFT_MOVE_LEFT:  NudgeWindowBy(-SHIFT_MOVE_STEP, 0); return true;
+                case (int)HOTS.SHIFT_MOVE_LEFT: NudgeWindowBy(-SHIFT_MOVE_STEP, 0); return true;
                 case (int)HOTS.SHIFT_MOVE_RIGHT: NudgeWindowBy(+SHIFT_MOVE_STEP, 0); return true;
-                case (int)HOTS.SHIFT_MOVE_UP:    NudgeWindowBy(0, -SHIFT_MOVE_STEP); return true;
-                case (int)HOTS.SHIFT_MOVE_DOWN:  NudgeWindowBy(0, +SHIFT_MOVE_STEP); return true;
+                case (int)HOTS.SHIFT_MOVE_UP: NudgeWindowBy(0, -SHIFT_MOVE_STEP); return true;
+                case (int)HOTS.SHIFT_MOVE_DOWN: NudgeWindowBy(0, +SHIFT_MOVE_STEP); return true;
 
                 // ==== 効果/フラグ ====
                 // Ctrl + A : 最前面固定 ON/OFF（SnapWindowの FLOAT 相当）
@@ -215,7 +256,7 @@ namespace Kiritori.Views.LiveCapture
                 case (int)HOTS.ESCAPE:  // Esc
                     this.Close(); return true;
                 case (int)HOTS.SPACE:   // Space
-                    TogglePause(); return true; 
+                    TogglePause(); return true;
                 case (int)HOTS.INFO:    // Ctrl + I
                     _showStats = !_showStats;
                     // 表示ON：タイマー開始（未作成なら作る）
@@ -271,23 +312,14 @@ namespace Kiritori.Views.LiveCapture
         private void BeginDragHighlight()
         {
             _isDraggingWindow = true;
-            // ドラッグ中は常に点灯
-            _hoverTargetAlpha = HOVER_ALPHA_ON;
-            if (!_fadeTimer.Enabled) _fadeTimer.Start();
-            Invalidate(GetHoverInvalidateRect());
+            SetHoverInstant(true);     // 即時ON
         }
 
         private void EndDragHighlight()
         {
             _isDraggingWindow = false;
-
-            // マウス位置で復帰先を決定：中にいれば通常のホバー点灯、外なら消灯
             var ptClient = PointToClient(Cursor.Position);
-            bool inside = this.ClientRectangle.Contains(ptClient);
-
-            _hoverTargetAlpha = inside ? HOVER_ALPHA_ON : HOVER_ALPHA_OFF;
-            if (!_fadeTimer.Enabled) _fadeTimer.Start();
-            Invalidate(GetHoverInvalidateRect());
+            SetHoverInstant(this.ClientRectangle.Contains(ptClient)); // 中ならON/外ならOFF
         }
 
         // 背景消去しない（_latest を全面に描く & フリッカ抑制）
@@ -311,12 +343,12 @@ namespace Kiritori.Views.LiveCapture
                 if (curHud != _hudAlpha) { _hudAlpha = curHud; anyChanged = true; }
 
                 // 強調枠 補間（SnapWindowは即時だが、LivePreviewはフェードを維持）
-                int curHover = _hoverAlpha;
-                int stepHover = 24;
-                if (curHover < _hoverTargetAlpha) curHover = Math.Min(_hoverTargetAlpha, curHover + stepHover);
-                else if (curHover > _hoverTargetAlpha) curHover = Math.Max(_hoverTargetAlpha, curHover - stepHover);
-                if (curHover != _hoverAlpha) { _hoverAlpha = curHover; anyChanged = true; }
-
+                // int curHover = _hoverAlpha;
+                // int stepHover = 24;
+                // if (curHover < _hoverTargetAlpha) curHover = Math.Min(_hoverTargetAlpha, curHover + stepHover);
+                // else if (curHover > _hoverTargetAlpha) curHover = Math.Max(_hoverTargetAlpha, curHover - stepHover);
+                // if (curHover != _hoverAlpha) { _hoverAlpha = curHover; anyChanged = true; }
+                if (_hoverAlpha != _hoverTargetAlpha) { _hoverAlpha = _hoverTargetAlpha; anyChanged = true; }
                 if (anyChanged)
                 {
                     var inv = Rectangle.Union(GetHudInvalidateRect(), GetHoverInvalidateRect());
@@ -357,6 +389,7 @@ namespace Kiritori.Views.LiveCapture
         {
             this.MouseEnter += (s, e) =>
             {
+                _windowHot = true;
                 ShowOverlay(); // ← PAUSE中でも通常どおり点灯
             };
 
@@ -373,6 +406,7 @@ namespace Kiritori.Views.LiveCapture
                     _hudHot = inside;
                     Invalidate(GetHudInvalidateRect());
                 }
+                UpdateCloseHover(me.Location);
 
                 if (canClick && !_hudCursorIsHand) { Cursor = Cursors.Hand; _hudCursorIsHand = true; }
                 else if (!canClick && _hudCursorIsHand) { Cursor = Cursors.Default; _hudCursorIsHand = false; }
@@ -380,7 +414,9 @@ namespace Kiritori.Views.LiveCapture
 
             this.MouseLeave += (s, e) =>
             {
-                // ←★ PAUSE中でもフェードアウトさせる
+                _windowHot = false;
+                if (_hoverClose) { _hoverClose = false; Invalidate(GetCloseRect()); }
+
                 _hudHot = _hudDown = false;
                 _hoverTargetAlpha = HOVER_ALPHA_OFF;
                 if (!_fadeTimer.Enabled) _fadeTimer.Start();
@@ -397,30 +433,88 @@ namespace Kiritori.Views.LiveCapture
         {
             if (_inSizingLoop) return;
 
-            _hudTargetAlpha = _hudRect.IsEmpty ? 0 : 140;
-            _hoverTargetAlpha = HOVER_ALPHA_ON;
+            _hudTargetAlpha = _hudRect.IsEmpty ? 0 : 140;  // ← HUDは従来通りフェード
+            SetHoverInstant(true);                         // ← ホバーは即時ON
 
-            if (!_fadeTimer.Enabled) _fadeTimer.Start();
+            if (!_fadeTimer.Enabled) _fadeTimer.Start();   // HUD用
         }
 
         private void HideOverlay()
         {
             _hudHot = _hudDown = false;
-            _hudTargetAlpha = 0;
+            _hudTargetAlpha = 0;       // HUDはフェードアウト
+            SetHoverInstant(false);    // ホバーは即時OFF
 
-            _hoverTargetAlpha = HOVER_ALPHA_OFF;
-
-            if (!_fadeTimer.Enabled) _fadeTimer.Start();
-
+            if (!_fadeTimer.Enabled) _fadeTimer.Start();   // HUD用
             if (_hudCursorIsHand) { Cursor = Cursors.Default; _hudCursorIsHand = false; }
         }
 
         private void FadeOutOverlay()
         {
-            _hudTargetAlpha = 0;
-            _hoverTargetAlpha = HOVER_ALPHA_OFF;
+            _hudTargetAlpha = 0;       // HUDのみフェード
+            SetHoverInstant(false);    // ホバーは即時OFF
             if (!_fadeTimer.Enabled) _fadeTimer.Start();
         }
+        private Rectangle GetCloseRect()
+        {
+            // DPI 対応のパディングとサイズ（SnapWindow と同等の見え方）
+            int pad = DpiScale(6);
+            int sz  = DpiScale(20);
+            // クライアント右上に配置（タイトルバー非表示時のみ）
+            return new Rectangle(ClientSize.Width - pad - sz, pad, sz, sz);
+        }
+
+        private void DrawInlineClose(Graphics g)
+        {
+            if (!ShouldShowInlineClose()) return;
+
+            _closeBtnRect = GetCloseRect();
+            // ホバー時の背景(わずかに暗い丸)と X の描画
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+            if (_hoverClose)
+            {
+                using (var bg = new SolidBrush(Color.FromArgb(90, 0, 0, 0)))
+                {
+                    g.FillEllipse(bg, _closeBtnRect);
+                }
+            }
+
+            // X の線（ホバー時は少し太く）
+            int inset = Math.Max(2, DpiScale(4));
+            var r = Rectangle.Inflate(_closeBtnRect, -inset, -inset);
+            float w = _hoverClose 
+                ? Math.Max(2f, (float)DpiScale(2)) 
+                : Math.Max(1.5f, (float)DpiScale((int)1.5));
+            using (var pen = new Pen(Color.White, w))
+            {
+                pen.StartCap = pen.EndCap = System.Drawing.Drawing2D.LineCap.Round;
+                g.DrawLine(pen, r.Left,  r.Top,    r.Right, r.Bottom);
+                g.DrawLine(pen, r.Right, r.Top,    r.Left,  r.Bottom);
+            }
+
+            // 枠のガイド（うっすら）
+            using (var guide = new Pen(Color.FromArgb(70, 255, 255, 255), 1))
+            {
+                g.DrawEllipse(guide, _closeBtnRect);
+            }
+        }
+
+        private void UpdateCloseHover(Point clientPt)
+        {
+            bool old = _hoverClose;
+            _hoverClose = ShouldShowInlineClose() && GetCloseRect().Contains(clientPt);
+
+            if (old != _hoverClose)
+            {
+                Invalidate(GetCloseRect());
+                if (_hoverClose) Cursor = Cursors.Hand;
+                else if (_hudCursorIsHand) { /* HUDの手カーソルは既存で戻す */ }
+                else Cursor = Cursors.Default;
+            }
+        }
+
 
         private Size GetDesiredClient() =>
             new Size(
@@ -461,9 +555,28 @@ namespace Kiritori.Views.LiveCapture
         {
             base.OnLoad(e);
 
-            WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: AutoTopMost);
+            // WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: AutoTopMost);
+            // ResizeToKeepClient(GetDesiredClient());
+            // 先に物理サイズを決めてから、クライアント左上=CaptureRectへ位置合わせ
+            // ResizeToKeepClient(GetDesiredClientPhysical());
+            // WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: AutoTopMost);
+            // MoveThenResizePhysicalWithLogs("OnLoad", AutoTopMost);
+            ResizeToKeepClient(GetDesiredClientPhysical());
+            AlignClientTopLeftPhysical("OnLoad", AutoTopMost);
             TrySyncFirstCaptureIntoLatest(CaptureRect);
             Invalidate();
+
+            try
+            {
+                var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
+                LPLog.Info($"OnLoad: DeviceDpi={this.DeviceDpi}, CaptionHidden={_captionHidden}, TopMost={this.TopMost}");
+                LPLog.Info($"OnLoad: CaptureRect logical={RectStr(CaptureRect)} physical={RectStr(rPhys)}");
+                var ins = GetNcInsets();
+                LPLog.Info($"OnLoad: Insets {InsetsStr(ins)}");
+                LPLog.Info($"OnLoad: Client={this.ClientSize.Width}x{this.ClientSize.Height}, Bounds={RectStr(new Rectangle(this.Left, this.Top, this.Width, this.Height))}");
+            }
+            catch { /* no-op */ }
+            // ---- 追加ここまで ----
 
             var gdi = new GdiCaptureBackend
             {
@@ -547,159 +660,216 @@ namespace Kiritori.Views.LiveCapture
             if (_showStats)
             {
                 var g = e.Graphics;
+
+                // 角丸チップ用パラメータ（DPI対応）
+                int padX = DpiScale(6);
+                int padY = DpiScale(4);
+                int radius = DpiScale(0);
+                // 背景は少し透過した黒
+                int bgA = 130;
+
                 if (_paused)
                 {
                     using (var font = new Font("Segoe UI", 12, FontStyle.Bold))
-                    using (var brush = new SolidBrush(Color.Yellow))
+                    using (var fg = new SolidBrush(Color.Yellow))
                     using (var shadow = new SolidBrush(Color.FromArgb(160, 0, 0, 0)))
+                    using (var bg = new SolidBrush(Color.FromArgb(bgA, 0, 0, 0)))
                     {
                         string msg = "PAUSED";
-                        var size = g.MeasureString(msg, font);
-                        var loc = new Point((int)(10), (int)(10));
+                        var loc = new Point(DpiScale(10), DpiScale(10));
+
+                        // テキストサイズから背景矩形を計算
+                        var sz = g.MeasureString(msg, font);
+                        var bgRect = new Rectangle(
+                            loc.X - padX, loc.Y - padY,
+                            (int)Math.Ceiling(sz.Width) + padX * 2,
+                            (int)Math.Ceiling(sz.Height) + padY * 2
+                        );
+
+                        g.SmoothingMode = SmoothingMode.AntiAlias;
+                        using (var path = RoundedRect(bgRect, radius))
+                            g.FillPath(bg, path);
+
+                        // 影 + 本体
                         g.DrawString(msg, font, shadow, loc.X + 2, loc.Y + 2);
-                        g.DrawString(msg, font, brush, loc);
+                        g.DrawString(msg, font, fg, loc);
                     }
                 }
                 else
                 {
-                    string info = string.Format("FPS: {0}  CPU: {1:F1}%  MEM: {2} MB",
+                    string info = string.Format("FPS: {0}  CPU: {1:F1}%  MEM(Commit): {2} MB",
                         _fps, _cpuUsage, _memUsage / 1024 / 1024);
 
                     using (var font = new Font("Segoe UI", 9))
-                    using (var brush = new SolidBrush(Color.White))
+                    using (var fg = new SolidBrush(Color.White))
                     using (var shadow = new SolidBrush(Color.FromArgb(128, 0, 0, 0)))
+                    using (var bg = new SolidBrush(Color.FromArgb(bgA, 0, 0, 0)))
                     {
-                        var loc = new Point(10, 10);
+                        var loc = new Point(DpiScale(10), DpiScale(10));
+
+                        // テキストサイズから背景矩形を計算
+                        var sz = g.MeasureString(info, font);
+                        var bgRect = new Rectangle(
+                            loc.X - padX, loc.Y - padY,
+                            (int)Math.Ceiling(sz.Width) + padX * 2,
+                            (int)Math.Ceiling(sz.Height) + padY * 2
+                        );
+
+                        g.SmoothingMode = SmoothingMode.AntiAlias;
+                        using (var path = RoundedRect(bgRect, radius))
+                            g.FillPath(bg, path);
+
+                        // 影 + 本体
                         g.DrawString(info, font, shadow, loc.X + 1, loc.Y + 1);
-                        g.DrawString(info, font, brush, loc);
+                        g.DrawString(info, font, fg, loc);
                     }
                 }
             }
-        }
+            DrawInlineClose(e.Graphics);
 
+        }
+        private void SetHoverInstant(bool on)
+        {
+            _hoverTargetAlpha = on ? HOVER_ALPHA_ON : HOVER_ALPHA_OFF;
+            // ← アニメ禁止：ターゲットに即座に合わせる
+            int before = _hoverAlpha;
+            _hoverAlpha = _hoverTargetAlpha;
+            if (before != _hoverAlpha)
+                Invalidate(GetHoverInvalidateRect());
+        }
 
         private void DrawHud(Graphics g)
         {
-            if (_inSizingLoop) return;
-            if (_hudAlpha <= 0 || _hudRect.IsEmpty) return;
-
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.CompositingMode = CompositingMode.SourceOver;
-            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-            g.CompositingQuality = CompositingQuality.HighQuality;
-
-            int d = _hudRect.Width;
-            float a = Math.Min(_hudAlpha, 200);
-
-            using (var bg = new SolidBrush(Color.FromArgb((int)a, 0, 0, 0)))
-                g.FillEllipse(bg, _hudRect);
-
-            if (_hudHot)
+            var st = g.Save();
+            try
             {
-                int shrink = (int)Math.Round(d * 0.06);
-                using (var glow = new SolidBrush(Color.FromArgb((int)(a * 0.10f), 255, 255, 255)))
-                    g.FillEllipse(glow, Rectangle.Inflate(_hudRect, -shrink, -shrink));
-            }
+                if (_inSizingLoop) return;
+                if (_hudAlpha <= 0 || _hudRect.IsEmpty) return;
 
-            float penW = Math.Max(1f, d * 0.012f);
-            float ringBoost = _hudDown ? 0.70f : (_hudHot ? 0.50f : 0.35f);
-            using (var pen = new Pen(Color.FromArgb((int)(a * ringBoost), 255, 255, 255), penW))
-            {
-                var rStroke = new RectangleF(_hudRect.X, _hudRect.Y, _hudRect.Width, _hudRect.Height);
-                rStroke.Inflate(-penW / 2f, -penW / 2f);
-                g.DrawEllipse(pen, rStroke);
-            }
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.CompositingMode = CompositingMode.SourceOver;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                g.CompositingQuality = CompositingQuality.HighQuality;
 
-            double scale = _hudDown ? 0.98 : (_hudHot ? 1.06 : 1.00);
-            int marginBase = (int)Math.Round(d * 0.22);
-            int margin = (int)Math.Round(marginBase / scale);
+                int d = _hudRect.Width;
+                float a = Math.Min(_hudAlpha, 200);
 
-            var iconRect = new Rectangle(
-                _hudRect.X + margin, _hudRect.Y + margin,
-                _hudRect.Width - margin * 2, _hudRect.Height - margin * 2);
+                using (var bg = new SolidBrush(Color.FromArgb((int)a, 0, 0, 0)))
+                    g.FillEllipse(bg, _hudRect);
 
-            float fgBoost = _hudDown ? 1.00f : (_hudHot ? 0.96f : 0.85f);
-            int fgA = (int)(255 * fgBoost);
-
-            if (_paused)
-            {
-                float W = iconRect.Width;
-                float H = iconRect.Height;
-
-                float leftPadRatio  = 0.30f;
-                float rightPadRatio = Math.Max(0f, 2f * leftPadRatio - 0.5f);
-
-                float L = iconRect.Left  + leftPadRatio  * W;
-                float R = iconRect.Right - rightPadRatio * W;
-
-                float vPad = H * 0.08f;
-                float top = iconRect.Top + vPad;
-                float bottom = iconRect.Bottom - vPad;
-                float cy = iconRect.Top + H / 2f;
-
-                using (var path = new GraphicsPath())
-                using (var br = new SolidBrush(Color.FromArgb(fgA, 255, 255, 255)))
+                if (_hudHot)
                 {
-                    path.AddPolygon(new[]
+                    int shrink = (int)Math.Round(d * 0.06);
+                    using (var glow = new SolidBrush(Color.FromArgb((int)(a * 0.10f), 255, 255, 255)))
+                        g.FillEllipse(glow, Rectangle.Inflate(_hudRect, -shrink, -shrink));
+                }
+
+                float penW = Math.Max(1f, d * 0.012f);
+                float ringBoost = _hudDown ? 0.70f : (_hudHot ? 0.50f : 0.35f);
+                using (var pen = new Pen(Color.FromArgb((int)(a * ringBoost), 255, 255, 255), penW))
+                {
+                    var rStroke = new RectangleF(_hudRect.X, _hudRect.Y, _hudRect.Width, _hudRect.Height);
+                    rStroke.Inflate(-penW / 2f, -penW / 2f);
+                    g.DrawEllipse(pen, rStroke);
+                }
+
+                double scale = _hudDown ? 0.98 : (_hudHot ? 1.06 : 1.00);
+                int marginBase = (int)Math.Round(d * 0.22);
+                int margin = (int)Math.Round(marginBase / scale);
+
+                var iconRect = new Rectangle(
+                    _hudRect.X + margin, _hudRect.Y + margin,
+                    _hudRect.Width - margin * 2, _hudRect.Height - margin * 2);
+
+                float fgBoost = _hudDown ? 1.00f : (_hudHot ? 0.96f : 0.85f);
+                int fgA = (int)(255 * fgBoost);
+
+                if (_paused)
+                {
+                    float W = iconRect.Width;
+                    float H = iconRect.Height;
+
+                    float leftPadRatio = 0.30f;
+                    float rightPadRatio = Math.Max(0f, 2f * leftPadRatio - 0.5f);
+
+                    float L = iconRect.Left + leftPadRatio * W;
+                    float R = iconRect.Right - rightPadRatio * W;
+
+                    float vPad = H * 0.08f;
+                    float top = iconRect.Top + vPad;
+                    float bottom = iconRect.Bottom - vPad;
+                    float cy = iconRect.Top + H / 2f;
+
+                    using (var path = new GraphicsPath())
+                    using (var br = new SolidBrush(Color.FromArgb(fgA, 255, 255, 255)))
                     {
-                        new PointF(L, top),
-                        new PointF(L, bottom),
-                        new PointF(R, cy)
-                    });
-                    g.FillPath(br, path);
+                        path.AddPolygon(new[]
+                        {
+                            new PointF(L, top),
+                            new PointF(L, bottom),
+                            new PointF(R, cy)
+                        });
+                        g.FillPath(br, path);
+                    }
                 }
-            }
-            else
-            {
-                int barW = (int)Math.Round(d * 0.14);
-                int gap  = (int)Math.Round(d * 0.12);
-                int barH = (int)Math.Round(d * 0.52);
-                int y    = _hudRect.Y + (_hudRect.Height - barH) / 2;
-                int xL   = _hudRect.X + (_hudRect.Width - (barW * 2 + gap)) / 2;
-                int xR   = xL + barW + gap;
-                int r    = Math.Max(2, barW / 2);
-
-                using (var br = new SolidBrush(Color.FromArgb(fgA, 255, 255, 255)))
-                using (var left  = RoundedRect(new Rectangle(xL, y, barW, barH), r))
-                using (var right = RoundedRect(new Rectangle(xR, y, barW, barH), r))
+                else
                 {
-                    g.FillPath(br, left);
-                    g.FillPath(br, right);
+                    int barW = (int)Math.Round(d * 0.14);
+                    int gap = (int)Math.Round(d * 0.12);
+                    int barH = (int)Math.Round(d * 0.52);
+                    int y = _hudRect.Y + (_hudRect.Height - barH) / 2;
+                    int xL = _hudRect.X + (_hudRect.Width - (barW * 2 + gap)) / 2;
+                    int xR = xL + barW + gap;
+                    int r = Math.Max(2, barW / 2);
+
+                    using (var br = new SolidBrush(Color.FromArgb(fgA, 255, 255, 255)))
+                    using (var left = RoundedRect(new Rectangle(xL, y, barW, barH), r))
+                    using (var right = RoundedRect(new Rectangle(xR, y, barW, barH), r))
+                    {
+                        g.FillPath(br, left);
+                        g.FillPath(br, right);
+                    }
                 }
             }
+            finally { g.Restore(st); }
         }
 
         // === SnapWindow風 強調枠（色/太さ/αはフィールドから、Insetで内側） ===
         private void DrawHoverFrame(Graphics g)
         {
-            // if (_inSizingLoop) return;
-            if (_hoverAlpha <= 0) return;
-
-            var rc = this.ClientRectangle;
-            if (rc.Width <= 0 || rc.Height <= 0) return;
-
-            g.SmoothingMode = SmoothingMode.AntiAlias;
-            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-
-            int corner = DpiScale(8);
-            int rTL = _captionHidden ? corner : 0;
-            int rTR = _captionHidden ? corner : 0;
-            int rBR = corner;
-            int rBL = corner;
-            // 端の切れ防止にわずかに内側へ
-            Rectangle inner = Rectangle.Inflate(rc, -1, -1);
-
-            using (var path = RoundedRectEach(inner, rTL, rTR, rBR, rBL))
-            using (var pen  = MakeHoverPen())
+            var st = g.Save();
+            try
             {
-                // フェード中はアルファを上書き（見た目の滑らかさ用）
-                int fadeA = Math.Min(255, _hoverAlpha);
-                var baseCol = pen.Color;
-                var col = Color.FromArgb(Math.Min(255, Math.Max(baseCol.A, fadeA)), baseCol.R, baseCol.G, baseCol.B);
-                pen.Color = col;
+                // if (_inSizingLoop) return;
+                if (_hoverAlpha <= 0) return;
 
-                g.DrawPath(pen, path);
+                var rc = this.ClientRectangle;
+                if (rc.Width <= 0 || rc.Height <= 0) return;
+
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+                int corner = DpiScale(8);
+                int rTL = _captionHidden ? corner : 0;
+                int rTR = _captionHidden ? corner : 0;
+                int rBR = corner;
+                int rBL = corner;
+                // 端の切れ防止にわずかに内側へ
+                Rectangle inner = Rectangle.Inflate(rc, -1, -1);
+
+                using (var path = RoundedRectEach(inner, rTL, rTR, rBR, rBL))
+                using (var pen = MakeHoverPen())
+                {
+                    // フェード中はアルファを上書き（見た目の滑らかさ用）
+                    int fadeA = Math.Min(255, _hoverAlpha);
+                    var baseCol = pen.Color;
+                    var col = Color.FromArgb(Math.Min(255, Math.Max(baseCol.A, fadeA)), baseCol.R, baseCol.G, baseCol.B);
+                    pen.Color = col;
+
+                    g.DrawPath(pen, path);
+                }
             }
+            finally { g.Restore(st); }
         }
 
         // SnapWindow互換の太さ（DPI反映）
@@ -884,14 +1054,23 @@ namespace Kiritori.Views.LiveCapture
 
             if (this.Opacity < 1.0) this.Opacity = 1.0;
             _firstFrameShown = true;
+            LPLog.Info($"FirstCapture: logical={RectStr(rLogical)} physical={RectStr(rPhysical)} bmp={_latest?.Width}x{_latest?.Height}");
         }
 
+        // private void RealignToKiritori()
+        // {
+        //     WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: _miTopMost?.Checked ?? true);
+        //     Invalidate();
+        // }
         private void RealignToKiritori()
         {
-            WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: _miTopMost?.Checked ?? true);
+            // ResizeToKeepClient(GetDesiredClient());
+            // WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: _miTopMost?.Checked ?? true);
+            // MoveThenResizePhysicalWithLogs("Realign", _miTopMost?.Checked ?? true);
+            ResizeToKeepClient(GetDesiredClientPhysical());
+            AlignClientTopLeftPhysical("Realign", _miTopMost?.Checked ?? true);
             Invalidate();
         }
-
         private void BuildContextMenu()
         {
             _ctx = new ContextMenuStrip();
@@ -1096,15 +1275,17 @@ namespace Kiritori.Views.LiveCapture
                 );
             }
 
-            WindowAligner.ResizeFormClientKeepTopLeft(
-                this,
-                newClient,
-                topMost: _miTopMost?.Checked ?? this.TopMost
-            );
-
+            // WindowAligner.ResizeFormClientKeepTopLeft(
+            //     this,
+            //     newClient,
+            //     topMost: _miTopMost?.Checked ?? this.TopMost
+            // );
+            // タイトルバー/枠を含めた DPI 正確なサイズに調整（左上は維持）
+            ResizeToKeepClient(GetDesiredClientPhysical());
+            // TopMost は必要なら維持
+            this.TopMost = _miTopMost?.Checked ?? this.TopMost;
             Invalidate();
         }
-
         private void TogglePause()
         {
             _paused = !_paused;
@@ -1114,7 +1295,6 @@ namespace Kiritori.Views.LiveCapture
             if (!_paused) Invalidate();
             Invalidate(GetHudInvalidateRect());
         }
-
         private void ToggleTitlebar()
         {
             var desiredClient = GetDesiredClient();
@@ -1139,6 +1319,11 @@ namespace Kiritori.Views.LiveCapture
                         0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
                 }
                 UpdateShadowMenuState();
+
+                // ---- 追加ログ ----
+                LPLog.Info($"ToggleTitlebar: CaptionHidden={_captionHidden}, DeviceDpi={this.DeviceDpi}");
+                LPLog.Info($"ToggleTitlebar: Insets(before) {InsetsStr(oldInsets)} -> (after) {InsetsStr(newInsets)}");
+                LPLog.Info($"ToggleTitlebar: ClientNow={this.ClientSize.Width}x{this.ClientSize.Height}, BoundsNow={RectStr(new Rectangle(this.Left, this.Top, this.Width, this.Height))}");
             };
 
             if (_ctx != null && _ctx.Visible)
@@ -1157,6 +1342,45 @@ namespace Kiritori.Views.LiveCapture
             {
                 BeginInvoke(apply);
             }
+        }
+
+        // 既存ヘルパの近くに追加
+        private Size GetDesiredClientPhysical()
+        {
+            // CaptureRect は論理px。ソース側モニタDPIで物理pxへ。
+            var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
+            int w = (int)Math.Round(rPhys.Width  * _zoom);
+            int h = (int)Math.Round(rPhys.Height * _zoom);
+            LPLog.Info($"DesiredClient: logical={CaptureRect.Width}x{CaptureRect.Height} -> physical={w}x{h} (zoom={_zoom:F2})");
+            return new Size(w, h);
+        }
+        private System.Drawing.Point GetClientTopLeftOnScreen()
+        {
+            RECT crc; GetClientRect(this.Handle, out crc);
+            MapWindowPoints(this.Handle, IntPtr.Zero, ref crc, 2);
+            return new System.Drawing.Point(crc.Left, crc.Top);
+        }
+
+        // クライアント左上を「物理pxの CaptureRect.X/Y」に合わせる
+        private void AlignClientTopLeftPhysical(string tag, bool topMost)
+        {
+            var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
+            var ins = GetNcInsets();
+            float sDst = this.DeviceDpi / 96f; // このウィンドウが今いるモニタのスケール
+
+            // 目的のクライアント左上（このモニタの“論理px”）= 物理 / sDst
+            int clientL = (int)Math.Round(rPhys.X / sDst);
+            int clientT = (int)Math.Round(rPhys.Y / sDst);
+
+            int newLeft = clientL - ins.Left;
+            int newTop  = clientT - ins.Top;
+
+            SetWindowPos(this.Handle, IntPtr.Zero, newLeft, newTop, 0, 0,
+                SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+
+            var cur = GetClientTopLeftOnScreen();
+            LPLog.Info($"{tag}: AlignPhysical: wantPhysTL=({rPhys.X},{rPhys.Y}), sDst={sDst:F2}, set LeftTop=({newLeft},{newTop}), " +
+                    $"clientTL(after)=({cur.X},{cur.Y})");
         }
 
         // FrameArrived：一部省略（元実装のまま）
@@ -1214,7 +1438,7 @@ namespace Kiritori.Views.LiveCapture
 
                 // CPU計算
                 var newCpuTime = proc.TotalProcessorTime;
-                var elapsed = 1.0; // 秒間隔なので1秒
+                //var elapsed = 1.0; // 秒間隔なので1秒
                 _cpuUsage = (newCpuTime - _lastCpuTime).TotalMilliseconds / (Environment.ProcessorCount * 1000.0) * 100.0;
                 _lastCpuTime = newCpuTime;
 
@@ -1334,7 +1558,32 @@ namespace Kiritori.Views.LiveCapture
             const int WM_ENTERSIZEMOVE = 0x0231;
             const int WM_EXITSIZEMOVE  = 0x0232;
             const int WM_SIZING        = 0x0214;
+            // const int WM_DPICHANGED    = 0x02E0;
 
+            // if (m.Msg == WM_DPICHANGED)
+            // {
+            //     try
+            //     {
+            //         long w = m.WParam.ToInt64();
+            //         int newDpiX = (int)(w & 0xFFFF);
+            //         int newDpiY = (int)((w >> 16) & 0xFFFF);
+            //         var rc = (RECT)Marshal.PtrToStructure(m.LParam, typeof(RECT));
+            //         LPLog.Info($"WM_DPICHANGED: DeviceDpi {this.DeviceDpi} -> {newDpiX}/{newDpiY}, suggested={RectStr(rc)}");
+            //     }
+            //     catch { }
+
+            //     try
+            //     {
+            //         // 位置→サイズ（物理）
+            //         // MoveThenResizePhysicalWithLogs("WM_DPICHANGED", _miTopMost?.Checked ?? this.TopMost);
+            //         ResizeToKeepClient(GetDesiredClientPhysical());
+            //         AlignClientTopLeftPhysical("WM_DPICHANGED", _miTopMost?.Checked ?? this.TopMost);
+            //     }
+            //     catch (Exception ex)
+            //     {
+            //         LPLog.Info("WM_DPICHANGED: reapply failed: " + ex.Message);
+            //     }
+            // }
             if (_captionHidden && m.Msg == WM_NCCALCSIZE && m.WParam != IntPtr.Zero)
             {
                 m.Result = IntPtr.Zero;
@@ -1344,6 +1593,15 @@ namespace Kiritori.Views.LiveCapture
             if (m.Msg == WM_LBUTTONDBLCLK)
             {
                 var pt = this.PointToClient(Cursor.Position);
+
+                // Close button
+                if (ShouldShowInlineClose() && GetCloseRect().Contains(pt))
+                {
+                    _closeDown = true;
+                    Invalidate(GetCloseRect());
+                    return;
+                }
+                // HUD area(pause/resume)
                 if (!IsHudInteractable() || !_hudRect.Contains(pt))
                 {
                     if (!IsNearResizeEdge(pt))
@@ -1373,6 +1631,12 @@ namespace Kiritori.Views.LiveCapture
             {
                 var pt = this.PointToClient(Cursor.Position);
 
+                if (ShouldShowInlineClose() && GetCloseRect().Contains(pt))
+                {
+                    _closeDown = true;
+                    Invalidate(GetCloseRect());
+                    return;
+                }
                 if (_hudAlpha > 0 && _hudRect.Contains(pt))
                 {
                     _hudDown = true;
@@ -1393,6 +1657,7 @@ namespace Kiritori.Views.LiveCapture
             }
             else if (m.Msg == WM_MOUSEMOVE)
             {
+                UpdateCloseHover(this.PointToClient(Cursor.Position));
                 if (_maybeDrag && (Control.MouseButtons & MouseButtons.Left) != 0)
                 {
                     var pt = this.PointToClient(Cursor.Position);
@@ -1410,6 +1675,13 @@ namespace Kiritori.Views.LiveCapture
             }
             else if (m.Msg == WM_LBUTTONUP)
             {
+                if (_closeDown)
+                {
+                    _closeDown = false;
+                    bool inside = GetCloseRect().Contains(this.PointToClient(Cursor.Position));
+                    Invalidate(GetCloseRect());
+                    if (inside) { this.Close(); return; }
+                }
                 if (_hudDown)
                 {
                     _hudDown = false;
@@ -1456,33 +1728,20 @@ namespace Kiritori.Views.LiveCapture
             if (m.Msg == WM_ENTERSIZEMOVE)
             {
                 _inSizingLoop = true;
-
                 var oldInv = Rectangle.Union(GetHudInvalidateRect(), GetHoverInvalidateRect());
-                _hudTargetAlpha = 0;
-                // _hoverTargetAlpha = HOVER_ALPHA_OFF;
-                _hoverTargetAlpha = _isDraggingWindow ? HOVER_ALPHA_ON : HOVER_ALPHA_OFF;
+                _hudTargetAlpha = 0;             // HUDはフェードアウト
+                SetHoverInstant(_isDraggingWindow); // ホバーはドラッグ中なら即時ON, それ以外OFF
                 _hudHot = _hudDown = false;
                 if (_hudCursorIsHand) { Cursor = Cursors.Default; _hudCursorIsHand = false; }
-
                 if (!oldInv.IsEmpty) Invalidate(oldInv);
                 _hudRect = Rectangle.Empty;
             }
             else if (m.Msg == WM_EXITSIZEMOVE)
             {
                 _inSizingLoop = false;
-
                 CenterOverlay();
-                // ShowOverlay();
-                // var inv = Rectangle.Union(GetHudInvalidateRect(), GetHoverInvalidateRect());
-                // if (!inv.IsEmpty) Invalidate(inv);
-                if (_isDraggingWindow)
-                {
-                    EndDragHighlight();  // ドラッグ終了で復帰
-                }
-                else
-                {
-                    ShowOverlay();       // リサイズ終了時は従来挙動
-                }
+                if (_isDraggingWindow) EndDragHighlight(); // 即時復帰
+                else ShowOverlay();                        // 通常（HUDはフェード、ホバーは即時ON）
                 var inv = Rectangle.Union(GetHudInvalidateRect(), GetHoverInvalidateRect());
                 if (!inv.IsEmpty) Invalidate(inv);
             }
@@ -1554,7 +1813,7 @@ namespace Kiritori.Views.LiveCapture
 
         private Rectangle GetHoverInvalidateRect()
         {
-            return (_hoverAlpha > 0 || _hoverTargetAlpha > 0) ? this.ClientRectangle : Rectangle.Empty;
+            return (_hoverAlpha > 0) ? this.ClientRectangle : Rectangle.Empty;
         }
 
         // ===== Win32 =====
@@ -1609,8 +1868,11 @@ namespace Kiritori.Views.LiveCapture
         private void ResizeToKeepClient(Size client)
         {
             if (!IsHandleCreated) return;
-
             var h = this.Handle;
+
+            // ---- 追加ログ：入口 ----
+            LPLog.Info($"ResizeToKeepClient: reqClient={client.Width}x{client.Height}, CaptionHidden={_captionHidden}, DeviceDpi={this.DeviceDpi}");
+
             int style   = GetWindowLong(h, GWL_STYLE);
             int exstyle = GetWindowLong(h, GWL_EXSTYLE);
 
@@ -1620,22 +1882,59 @@ namespace Kiritori.Views.LiveCapture
             {
                 newW = client.Width;
                 newH = client.Height;
-            }
-            else
-            {
-                var rc = new RECT { Left = 0, Top = 0, Right = client.Width, Bottom = client.Height };
-                uint dpi = (uint)this.DeviceDpi;
-                bool ok = TryAdjustWindowRectForDpi(ref rc, style, exstyle, dpi);
-                if (!ok) AdjustWindowRectEx(ref rc, style, false, exstyle);
 
-                newW = rc.Right - rc.Left;
-                newH = rc.Bottom - rc.Top;
+                SetWindowPos(h, IntPtr.Zero, this.Left, this.Top,
+                            newW, newH,
+                            SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+
+                ForceRefreshNonClient();
+
+                var insH = GetNcInsets();
+                LPLog.Info($"ResizeToKeepClient(hidden): applied outer={newW}x{newH}, Insets {InsetsStr(insH)}");
+                if (GetClientRect(h, out RECT crcH))
+                {
+                    LPLog.Info($"ResizeToKeepClient(hidden): realClient={crcH.Right - crcH.Left}x{crcH.Bottom - crcH.Top}");
+                }
+                return;
             }
+
+            // ① 現在の実測インセットで一度サイズを当てる
+            var ins = GetNcInsets();
+            newW = client.Width  + ins.Left + ins.Right;
+            newH = client.Height + ins.Top  + ins.Bottom;
+
+            LPLog.Info($"ResizeToKeepClient: current Insets {InsetsStr(ins)} => target outer={newW}x{newH} (style=0x{style:X8}, ex=0x{exstyle:X8})");
 
             SetWindowPos(h, IntPtr.Zero, this.Left, this.Top, newW, newH,
-                SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+                        SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+
+            // ② 実測クライアントと要求との差を見て微調整
+            if (GetClientRect(h, out RECT crc))
+            {
+                int curW = crc.Right  - crc.Left;
+                int curH = crc.Bottom - crc.Top;
+                int dW = client.Width  - curW;
+                int dH = client.Height - curH;
+
+                LPLog.Info($"ResizeToKeepClient: after1 realClient={curW}x{curH} -> delta dW={dW}, dH={dH}");
+
+                if (dW != 0 || dH != 0)
+                {
+                    SetWindowPos(h, IntPtr.Zero, this.Left, this.Top,
+                                newW + dW, newH + dH,
+                                SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+                }
+            }
 
             ForceRefreshNonClient();
+
+            // ③ 最終状態を記録
+            var ins2 = GetNcInsets();
+            LPLog.Info($"ResizeToKeepClient: final Insets {InsetsStr(ins2)}");
+            if (GetClientRect(h, out RECT crc2))
+            {
+                LPLog.Info($"ResizeToKeepClient: final realClient={crc2.Right - crc2.Left}x{crc2.Bottom - crc2.Top}, Bounds={RectStr(new Rectangle(this.Left, this.Top, this.Width, this.Height))}");
+            }
         }
 
         private static class NativeMethods
