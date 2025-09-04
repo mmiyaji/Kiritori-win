@@ -23,6 +23,8 @@ namespace Kiritori
     {
         #region ===== クリックイベントから呼ばれる関数（イベントハンドラ群） =====
         private void captureToolStripMenuItem_Click(object sender, EventArgs e) { this.ma.openScreen(); }
+        private void captureOCRToolStripMenuItem_Click(object sender, EventArgs e) { this.ma.openScreenOCR(); }
+        private void livePreviewToolStripMenuItem_Click(object sender, EventArgs e) { this.ma.openScreenLive(); }
         private void closeESCToolStripMenuItem_Click(object sender, EventArgs e) { this.Close(); }
         private void cutCtrlXToolStripMenuItem_Click(object sender, EventArgs e) { Clipboard.SetImage(this.pictureBox1.Image); this.Close(); }
         private void copyCtrlCToolStripMenuItem_Click(object sender, EventArgs e) { Clipboard.SetImage(this.pictureBox1.Image); ShowOverlay("Copy"); }

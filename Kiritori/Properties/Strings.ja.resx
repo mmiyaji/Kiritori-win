@@ -541,7 +541,7 @@
     <value>一時停止</value>
   </data>
   <data name="Text.LivePreview" xml:space="preserve">
-    <value>[ベータ版]ライブプレビュー(リアルタイム表示)</value>
+    <value>ライブプレビュー(リアルタイム表示)</value>
   </data>
   <data name="Prefs.Hotkey.DuplicateLive" xml:space="preserve">
     <value>他のホットキーが競合しています</value>
@@ -563,5 +563,8 @@
   </data>
   <data name="Menu.ShowStats" xml:space="preserve">
     <value>パフォーマンス表示</value>
+  </data>
+  <data name="Menu.LivePreview" xml:space="preserve">
+    <value>ライブプレビュー(リアルタイム表示)</value>
   </data>
 </root>

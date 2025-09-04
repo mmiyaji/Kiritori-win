@@ -108,6 +108,12 @@ namespace Kiritori
                 case (int)HOTS.MINIMIZE:
                     minimizeWindow();
                     break;
+                case (int)HOTS.SETTING:
+                    PrefForm.ShowSingleton(this.ma);
+                    break;
+                // case (int)HOTS.EXIT:
+                //     exitApp();
+                //     break;
 
                 default:
                     return base.ProcessCmdKey(ref msg, keyData);

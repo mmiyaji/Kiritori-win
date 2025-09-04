@@ -214,6 +214,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Live Preview (Realtime) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_LivePreview {
+            get {
+                return ResourceManager.GetString("Menu.LivePreview", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Max FPS に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_MaxFPS {
@@ -970,7 +979,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   [Beta] Live preview (Realtime) に類似しているローカライズされた文字列を検索します。
+        ///   Live Preview (Realtime) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_LivePreview {
             get {
@@ -1024,7 +1033,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   OCR capture に類似しているローカライズされた文字列を検索します。
+        ///   OCR Capture(no image) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_OCRCapture {
             get {

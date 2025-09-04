@@ -30,10 +30,13 @@
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
     <WebPage>publish.htm</WebPage>
     <ApplicationRevision>0</ApplicationRevision>
-    <ApplicationVersion>1.1.9.%2a</ApplicationVersion>
+    <ApplicationVersion>1.2.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <PublishWizardCompleted>true</PublishWizardCompleted>
     <BootstrapperEnabled>true</BootstrapperEnabled>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RuntimeIdentifiers>win;win-x64;win-x86</RuntimeIdentifiers>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -56,6 +59,7 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
+
   <PropertyGroup>
     <ApplicationIcon>kiritori.ico</ApplicationIcon>
   </PropertyGroup>
@@ -92,6 +96,20 @@
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+
+  <!-- >>> added: Version defaults & build-year (overridable from msbuild /p:...) -->
+  <PropertyGroup>
+    <!-- /p:Version を受け取らなければ 1.0.0 を既定に -->
+    <Version Condition="'$(Version)'==''">1.0.0</Version>
+    <AssemblyVersion Condition="'$(AssemblyVersion)'==''">$(Version).0</AssemblyVersion>
+    <FileVersion Condition="'$(FileVersion)'==''">$(Version).0</FileVersion>
+    <InformationalVersion Condition="'$(InformationalVersion)'==''">$(Version)</InformationalVersion>
+
+    <!-- ビルド年を Copyright に利用 -->
+    <BuildYear>$([System.DateTime]::Now.ToString("yyyy"))</BuildYear>
+  </PropertyGroup>
+  <!-- <<< added -->
+
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
@@ -104,6 +122,7 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
   </ItemGroup>
+
   <ItemGroup>
     <Compile Include="Helpers\DebugUiOptions.cs" />
     <Compile Include="Helpers\DpiUtil.cs" />
@@ -180,6 +199,11 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+
+    <!-- >>> added: 生成されるバージョン情報コードをコンパイルに含める -->
+    <Compile Include="Properties\VersionInfo.g.cs" Condition="Exists('Properties\VersionInfo.g.cs')" />
+    <!-- <<< added -->
+
     <Compile Include="Startup\StartupManager.cs" />
     <Compile Include="Startup\ShellLinkWriter.cs" />
     <Compile Include="Views\SnapWindow.DragDrop.cs">
@@ -246,6 +270,7 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
   </ItemGroup>
+
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
@@ -277,6 +302,28 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup />
+
+  <!-- >>> added: g.cs 生成（ビルド前）＆ クリーン時の削除 -->
+  <Target Name="GenerateVersionInfo" BeforeTargets="BeforeBuild">
+    <PropertyGroup>
+      <_tmpl>Properties\VersionInfo.Template.cs</_tmpl>
+      <_out>Properties\VersionInfo.g.cs</_out>
+    </PropertyGroup>
+
+    <!-- テンプレが無い場合は明示エラー -->
+    <Error Condition="!Exists('$(_tmpl)')" Text="Missing $(_tmpl). Add the template file." />
+
+    <Message Text="Embedding version: AV=$(AssemblyVersion), FV=$(FileVersion), IV=$(InformationalVersion), YEAR=$(BuildYear)" Importance="High" />
+
+    <!-- ※ ^ を使わず 1 行で渡す。; 区切りで十分です -->
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$t=Get-Content '$(_tmpl)' -Raw; $t=$t -replace '\$ASMVER\$', '$(AssemblyVersion)'; $t=$t -replace '\$FILEVER\$', '$(FileVersion)'; $t=$t -replace '\$INFOVER\$', '$(InformationalVersion)'; $t=$t -replace '\$YEAR\$', '$(BuildYear)'; Set-Content '$(_out)' $t -Encoding UTF8;&quot;" />
+  </Target>
+
+  <Target Name="CleanGeneratedVersionInfo" AfterTargets="Clean">
+    <Delete Files="Properties\VersionInfo.g.cs" ContinueOnError="true" />
+  </Target>
+  <!-- <<< added -->
+
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

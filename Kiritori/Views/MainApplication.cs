@@ -250,6 +250,14 @@ namespace Kiritori
         {
             this.openScreen();
         }
+        private void captureOCRToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.openScreenOCR();
+        }
+        private void livePreviewToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.openScreenLive();
+        }
 
         public void openScreen()
         {

@@ -19,13 +19,15 @@ namespace Kiritori.Views.LiveCapture
         public bool AutoTopMost { get; set; } = true;
         private ContextMenuStrip _ctx;
         private ToolStripMenuItem
+            _miCapture, _miOCR, _miLivePreview,
+            _miFileRoot, _miEditRoot, _miViewRoot, _miWindowRoot, _miZoomRoot,
             _miOriginal, _miZoomIn, _miZoomOut, _miZoomPct,
             _miOpacity, _miPauseResume, _miRealign, _miTopMost, _miClose,
             _miPref, _miExit, _miTitlebar, _miShowStats;
 
         private float _zoom = 1.0f;     // 表示倍率（1.0=100%）
         private bool _paused = false;
-        public object MainApp { get; set; }
+        public MainApplication MainApp { get; set; }
         private TitleIconBadger _iconBadge;
 
         // ---- Win32 定義
@@ -166,8 +168,8 @@ namespace Kiritori.Views.LiveCapture
             // 1秒ごとにCPU/メモリ更新
             // _perfTimer = new System.Threading.Timer(UpdatePerf, null, 1000, 1000);
             _lastCpuTime = Process.GetCurrentProcess().TotalProcessorTime;
-            
-            EnsureContextMenuWithFps();
+
+            // EnsureContextMenuWithFps();
 
         }
         // ==== LivePreview 用デバッグロガー（%TEMP%\Kiritori.LivePreview.log + Debug） ====
@@ -187,7 +189,6 @@ namespace Kiritori.Views.LiveCapture
         private static string RectStr(RECT r) => $"({r.Left},{r.Top}) {r.Right - r.Left}x{r.Bottom - r.Top}";
         private static string InsetsStr(NcInsets i) => $"L{i.Left} T{i.Top} R{i.Right} B{i.Bottom}";
         // ===========================================================================
-        // LivePreviewWindow クラス内どこかに追加
         private void MoveThenResizePhysicalWithLogs(string tag, bool topMost)
         {
             // 位置合わせ（※これが内部で“論理サイズ”に変えるので、この後でサイズを上書きする）
@@ -941,39 +942,39 @@ namespace Kiritori.Views.LiveCapture
             }
         }
 
-        private void EnsureContextMenuWithFps()
-        {
-            if (this.ContextMenuStrip == null)
-                this.ContextMenuStrip = new ContextMenuStrip();
+        // private void EnsureContextMenuWithFps()
+        // {
+        //     if (this.ContextMenuStrip == null)
+        //         this.ContextMenuStrip = new ContextMenuStrip();
 
-            bool needSep = true;
-            foreach (ToolStripItem it in this.ContextMenuStrip.Items)
-            {
-                if (it.Tag as string == "fps-root") { needSep = false; break; }
-            }
-            if (!needSep) return;
+        //     bool needSep = true;
+        //     foreach (ToolStripItem it in this.ContextMenuStrip.Items)
+        //     {
+        //         if (it.Tag as string == "fps-root") { needSep = false; break; }
+        //     }
+        //     if (!needSep) return;
 
-            this.ContextMenuStrip.Items.Add(new ToolStripSeparator());
+        //     this.ContextMenuStrip.Items.Add(new ToolStripSeparator());
 
-            _miFpsRoot = new ToolStripMenuItem(SR.T("Menu.MaxFPS","最大 FPS"));
-            _miFpsRoot.Tag = "fps-root";
+        //     _miFpsRoot = new ToolStripMenuItem(SR.T("Menu.MaxFPS","最大 FPS"));
+        //     _miFpsRoot.Tag = "fps-root";
 
-            _miFpsItems = new ToolStripMenuItem[_fpsChoices.Length];
-            for (int i = 0; i < _fpsChoices.Length; i++)
-            {
-                int fps = _fpsChoices[i];
-                string text = (fps == 0) ? SR.T("Menu.FPS.Unlimited","Unlimited") : (fps + " fps");
+        //     _miFpsItems = new ToolStripMenuItem[_fpsChoices.Length];
+        //     for (int i = 0; i < _fpsChoices.Length; i++)
+        //     {
+        //         int fps = _fpsChoices[i];
+        //         string text = (fps == 0) ? SR.T("Menu.FPS.Unlimited","Unlimited") : (fps + " fps");
 
-                var mi = new ToolStripMenuItem(text) { Tag = fps };
-                mi.Click += OnFpsMenuClick;
+        //         var mi = new ToolStripMenuItem(text) { Tag = fps };
+        //         mi.Click += OnFpsMenuClick;
 
-                _miFpsItems[i] = mi;
-                _miFpsRoot.DropDownItems.Add(mi);
-            }
+        //         _miFpsItems[i] = mi;
+        //         _miFpsRoot.DropDownItems.Add(mi);
+        //     }
 
-            this.ContextMenuStrip.Items.Add(_miFpsRoot);
-            UpdateFpsMenuChecks();
-        }
+        //     this.ContextMenuStrip.Items.Add(_miFpsRoot);
+        //     UpdateFpsMenuChecks();
+        // }
 
         private void UpdateFpsMenuChecks()
         {
@@ -1077,6 +1078,21 @@ namespace Kiritori.Views.LiveCapture
         {
             _ctx = new ContextMenuStrip();
 
+            _miCapture = new ToolStripMenuItem(SR.T("Menu.Capture", "Capture"));
+            _miCapture.Click += (s, e) => startCapture();
+            _miCapture.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.D5)));
+            _miOCR = new ToolStripMenuItem(SR.T("Menu.OCR", "OCR"));
+            _miOCR.Click += (s, e) => startOCR();
+            _miOCR.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.D4)));
+            _miLivePreview = new ToolStripMenuItem(SR.T("Menu.LivePreview", "Live Preview"));
+            _miLivePreview.Click += (s, e) => startLivePreview();
+            _miLivePreview.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.D6)));
+
+
+            // ---------- 既存アイテム初期化 ----------
             _miOriginal = new ToolStripMenuItem(SR.T("Menu.OriginalSize", "Original Size"));
             _miOriginal.Click += (s, e) => SetZoom(1.0f, false, true);
             _miOriginal.ShortcutKeys = (Keys)HOTS.ZOOM_ORIGIN_MAIN;
@@ -1086,7 +1102,7 @@ namespace Kiritori.Views.LiveCapture
             _miZoomOut.ShortcutKeys = (Keys)HOTS.ZOOM_OUT;
             _miZoomOut.ShortcutKeyDisplayString = "Ctrl+'-'";
 
-            _miZoomIn  = new ToolStripMenuItem(SR.T("Menu.ZoomIn",  "Zoom In(+10%)"));
+            _miZoomIn = new ToolStripMenuItem(SR.T("Menu.ZoomIn", "Zoom In(+10%)"));
             _miZoomIn.Click += (s, e) => SetZoom(_zoom + 0.10f, false, true);
             _miZoomIn.ShortcutKeys = (Keys)HOTS.ZOOM_IN;
             _miZoomIn.ShortcutKeyDisplayString = "Ctrl+'+'";
@@ -1111,27 +1127,36 @@ namespace Kiritori.Views.LiveCapture
                 _miOpacity.DropDownItems.Add(mi);
             }
 
-            _miPauseResume = new ToolStripMenuItem(SR.T("Menu.Pause", "Pause")); _miPauseResume.Click += (s, e) => TogglePause();
+            _miPauseResume = new ToolStripMenuItem(SR.T("Menu.Pause", "Pause"));
+            _miPauseResume.Click += (s, e) => TogglePause();
             _miPauseResume.ShortcutKeyDisplayString = "Space";
 
-            _miTitlebar   = new ToolStripMenuItem(SR.T("Menu.Titlebar", "Show Title bar")); _miTitlebar.Click += (s, e) => ToggleTitlebar();
+            _miTitlebar = new ToolStripMenuItem(SR.T("Menu.Titlebar", "Show Title bar"));
+            _miTitlebar.Click += (s, e) => ToggleTitlebar();
             _miTitlebar.Checked = true;
             _miTitlebar.ShortcutKeys = (Keys)HOTS.TITLEBAR;
 
-            _miRealign   = new ToolStripMenuItem(SR.T("Menu.OriginalLocation", "Move to the initial position")); _miRealign.Click += (s, e) => RealignToKiritori();
+            _miRealign = new ToolStripMenuItem(SR.T("Menu.OriginalLocation", "Move to the initial position"));
+            _miRealign.Click += (s, e) => RealignToKiritori();
             _miRealign.ShortcutKeys = (Keys)HOTS.LOCATE_ORIGIN_MAIN;
 
             _miTopMost = new ToolStripMenuItem(SR.T("Menu.TopMost", "Keep on top")) { Checked = true, CheckOnClick = true };
             _miTopMost.CheckedChanged += (s, e) => this.TopMost = _miTopMost.Checked;
             _miTopMost.ShortcutKeys = (Keys)HOTS.FLOAT;
 
-            _miClose = new ToolStripMenuItem(SR.T("Menu.CloseWindow", "Close Window")); _miClose.Click += (s, e) => this.Close();
+            _miClose = new ToolStripMenuItem(SR.T("Menu.CloseWindow", "Close Window"));
+            _miClose.Click += (s, e) => this.Close();
             _miClose.ShortcutKeys = (Keys)HOTS.CLOSE;
 
-            _miPref  = new ToolStripMenuItem(SR.T("Menu.Preferences", "Preferences"));  _miPref.Click  += (s, e) => ShowPreferences();
+            _miPref = new ToolStripMenuItem(SR.T("Menu.Preferences", "Preferences"));
+            _miPref.Click += (s, e) => ShowPreferences();
+            _miPref.ShortcutKeys = (Keys)HOTS.SETTING;
+            _miPref.ShortcutKeyDisplayString = "Ctrl+,";
 
-            _miExit  = new ToolStripMenuItem(SR.T("Menu.Exit", "Exit Kiritori"));       _miExit.Click  += (s, e) => Application.Exit();
+            _miExit = new ToolStripMenuItem(SR.T("Menu.Exit", "Exit Kiritori"));
+            _miExit.Click += (s, e) => Application.Exit();
 
+            // DropShadow（タブなしのみ）
             _miShadow = new ToolStripMenuItem(SR.T("Menu.DropShadow", "Drop shadow (tabless)"))
             {
                 Checked = _shadowTabless,
@@ -1148,7 +1173,7 @@ namespace Kiritori.Views.LiveCapture
             };
             _miShadow.ShortcutKeys = (Keys)HOTS.SHADOW;
 
-            // FPS
+            // FPS/Stats
             _miFpsRoot = new ToolStripMenuItem(SR.T("Menu.MaxFPS", "MAX FPS")) { Tag = "fps-root" };
             _miFpsItems = new ToolStripMenuItem[_fpsChoices.Length];
             for (int i = 0; i < _fpsChoices.Length; i++)
@@ -1160,6 +1185,7 @@ namespace Kiritori.Views.LiveCapture
                 _miFpsItems[i] = mi;
                 _miFpsRoot.DropDownItems.Add(mi);
             }
+
             _miShowStats = new ToolStripMenuItem(SR.T("Menu.ShowStats", "Show Stats (FPS/CPU/MEM)"))
             {
                 Checked = _showStats,
@@ -1167,7 +1193,6 @@ namespace Kiritori.Views.LiveCapture
             };
             _miShowStats.CheckedChanged += (s, e) =>
             {
-                // キー操作と同じ挙動に合わせる
                 _showStats = _miShowStats.Checked;
                 if (_showStats)
                 {
@@ -1189,22 +1214,49 @@ namespace Kiritori.Views.LiveCapture
             };
             _miShowStats.ShortcutKeys = (Keys)HOTS.INFO;
 
-            _ctx.Items.AddRange(new ToolStripItem[] {
-                _miClose,
-                _miPauseResume,
-                _miTitlebar,
-                _miFpsRoot,
-                _miShowStats,
-                new ToolStripSeparator(),
+            // ---------- サブメニュー（SnapWindow 構成に寄せる） ----------
+            var miFile   = new ToolStripMenuItem("File");   // いまは LivePreview 既存機能なし。将来 Save/Copy Frame 等をここに
+            miFile.Enabled = false;
+            var miEdit   = new ToolStripMenuItem("Edit");   // 予備（将来の編集系コマンド用）
+            miEdit.Enabled = false;
+
+            var miView   = new ToolStripMenuItem("View");
+            miView.DropDownItems.AddRange(new ToolStripItem[] {
                 _miOriginal,
                 _miZoomOut,
                 _miZoomIn,
                 _miZoomPct,
+                new ToolStripSeparator(),
                 _miOpacity,
+                new ToolStripSeparator(),
+                _miShowStats,
+            });
+
+            var miWindow = new ToolStripMenuItem("Window");
+            miWindow.DropDownItems.AddRange(new ToolStripItem[] {
+                _miTitlebar,
+                _miTopMost,
                 _miShadow,
                 new ToolStripSeparator(),
                 _miRealign,
-                _miTopMost,
+            });
+
+            // ---------- ルート構成（SnapWindow 風の順序） ----------
+            _ctx.Items.AddRange(new ToolStripItem[] {
+                // 上段は SnapWindow では 「Image Capture / OCR / Live Preview / Close Window」だが
+                // LivePreview ではまず Close のみを同位置に配置（後で統合可能）
+                _miClose,
+                _miPauseResume,
+                _miFpsRoot,
+                new ToolStripSeparator(),
+                _miCapture,
+                _miOCR,
+                _miLivePreview,
+                new ToolStripSeparator(),
+                miFile,
+                miEdit,
+                miView,
+                miWindow,
                 new ToolStripSeparator(),
                 _miPref,
                 _miExit
@@ -1233,6 +1285,7 @@ namespace Kiritori.Views.LiveCapture
                 }
             };
 
+            // --- ドロップダウンはキャプチャ除外（LivePreview への線描画対策）
             void MarkDropDownExclusion(ToolStripDropDownItem item)
             {
                 if (item == null) return;
@@ -1252,6 +1305,21 @@ namespace Kiritori.Views.LiveCapture
         {
             try { PrefForm.ShowSingleton((IWin32Window)this.MainApp); }
             catch { PrefForm.ShowSingleton(this); }
+        }
+        private void startCapture()
+        {
+            try { this.MainApp.openScreen(); }
+            catch {  }
+        }
+        private void startOCR()
+        {
+            try { this.MainApp.openScreenOCR(); }
+            catch {  }
+        }
+        private void startLivePreview()
+        {
+            try { this.MainApp.openScreenLive(); }
+            catch {  }
         }
 
         private void SetZoom(float z, bool aspectRatioLocked = false, bool force = false)

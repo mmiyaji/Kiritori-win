@@ -33,6 +33,8 @@
             this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
             this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.captureToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.captureOCRToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.livePreviewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.openToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.hideAllWindowsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showAllWindowsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -56,6 +58,8 @@
             // 
             this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.captureToolStripMenuItem,
+            this.captureOCRToolStripMenuItem,
+            this.livePreviewToolStripMenuItem,
             this.openToolStripMenuItem,
             this.historyToolStripMenuItem1,
             this.hideAllWindowsToolStripMenuItem,
@@ -75,6 +79,26 @@
             this.captureToolStripMenuItem.Text = "Image Capture";
             this.captureToolStripMenuItem.Tag = "loc:Text.ImageCapture";
             this.captureToolStripMenuItem.Click += new System.EventHandler(this.captureToolStripMenuItem_Click);
+            // 
+            // captureOCRToolStripMenuItem
+            // 
+            this.captureOCRToolStripMenuItem.Name = "captureOCRToolStripMenuItem";
+            this.captureOCRToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.D5)));
+            this.captureOCRToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
+            this.captureOCRToolStripMenuItem.Text = "OCR Capture";
+            this.captureOCRToolStripMenuItem.Tag = "loc:Text.OCRCapture";
+            this.captureOCRToolStripMenuItem.Click += new System.EventHandler(this.captureOCRToolStripMenuItem_Click);
+            // 
+            // livePreviewToolStripMenuItem
+            // 
+            this.livePreviewToolStripMenuItem.Name = "livePreviewToolStripMenuItem";
+            this.livePreviewToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.D6)));
+            this.livePreviewToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
+            this.livePreviewToolStripMenuItem.Text = "Live Preview";
+            this.livePreviewToolStripMenuItem.Tag = "loc:Text.LivePreview";
+            this.livePreviewToolStripMenuItem.Click += new System.EventHandler(this.livePreviewToolStripMenuItem_Click);
             // 
             // openToolStripMenuItem
             // 
@@ -149,6 +173,8 @@
         private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
         private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem captureToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem captureOCRToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem livePreviewToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem hideAllWindowsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showAllWindowsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem closeAllWindowsToolStripMenuItem;

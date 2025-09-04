@@ -499,7 +499,7 @@
     <value>Run OCR (copy result)</value>
   </data>
   <data name="Text.OCRCapture" xml:space="preserve">
-    <value>OCR capture</value>
+    <value>OCR Capture(no image)</value>
   </data>
   <data name="Prefs.Hotkey.DuplicateCapture" xml:space="preserve">
     <value>Duplicate with another hotkey</value>
@@ -541,7 +541,7 @@
     <value>Pause</value>
   </data>
   <data name="Text.LivePreview" xml:space="preserve">
-    <value>[Beta] Live preview (Realtime)</value>
+    <value>Live Preview (Realtime)</value>
   </data>
   <data name="Prefs.Hotkey.DuplicateLive" xml:space="preserve">
     <value>Duplicate with another hotkey</value>
@@ -563,5 +563,8 @@
   </data>
   <data name="Menu.ShowStats" xml:space="preserve">
     <value>Show Stats (FPS/CPU/MEM)</value>
+  </data>
+  <data name="Menu.LivePreview" xml:space="preserve">
+    <value>Live Preview (Realtime)</value>
   </data>
 </root>

@@ -1,19 +1,18 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 REM ============================================================
-REM  Kiritori リリースパッケージ作成
+REM  Kiritori リリースパッケージ作成（ビルド→同梱→ZIP）
 REM  使い方:
-REM    1) ダブルクリック → バージョンを聞かれる → 終了時 no-pause
-REM    2) コマンドライン:  release.bat 1.1.3 [--pause|--no-pause]
+REM    1) ダブルクリック → バージョン入力 → 既定 no-pause
+REM    2) コマンド:  release.bat 1.2.1 [--pause|--no-pause]
 REM ============================================================
 
-REM ---- 既定の動作: 明示 --pause のときだけ pause、他は no-pause
+REM ---- 既定: 明示 --pause のときだけ pause、他は no-pause
 set "PAUSE_AT_END="
 
 if "%~1"=="" (
-  echo バージョン番号を入力してください（例: 1.1.3）:
+  echo バージョン番号を入力してください（例: 1.2.1）:
   set /p VERSION=Version: 
-  REM
   if "!VERSION!"=="" (
     echo [ERROR] バージョンが指定されませんでした。
     goto :end_fail
@@ -28,59 +27,100 @@ if /I "%~2"=="--no-pause"  set "PAUSE_AT_END="
 
 REM ---- パス
 set "ROOT=%~dp0"
-set "BIN=%ROOT%KiritoriPackage\bin\AnyCPU\Release\Kiritori"
+set "SLN=%ROOT%Kiritori.sln"
+
+REM ---- Git 短縮ハッシュ → InformationalVersion に付与（任意）
+@REM for /f %%G in ('git rev-parse --short HEAD 2^>nul') do set "GITHASH=%%G"
+if defined GITHASH (
+  set "INFOVER=%VERSION%+g%GITHASH%"
+) else (
+  set "INFOVER=%VERSION%"
+)
+
+echo [INFO] Version        : %VERSION%  (IV=%INFOVER%)
+echo [INFO] Solution       : %SLN%
+
+REM ---- msbuild 検出（PATH → vswhere）
+set "MSBUILD_EXE=msbuild"
+where %MSBUILD_EXE% >nul 2>&1
+if errorlevel 1 (
+  set "MSBUILD_EXE="
+  if exist "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" (
+    for /f "usebackq tokens=*" %%I in (`
+      "%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe
+    `) do set "MSBUILD_EXE=%%I"
+  )
+)
+if not defined MSBUILD_EXE (
+  echo [ERROR] msbuild が見つかりません。Developer Command Prompt で実行してください。
+  goto :end_fail
+)
+
+REM ---- Rebuild（Release/Any CPU）＋ バージョン注入（ここが肝！）
+echo [INFO] Building (Rebuild Release)...
+"%MSBUILD_EXE%" "%SLN%" /t:Rebuild /v:m ^
+  /p:Configuration=Release /p:Platform="Any CPU" ^
+  /p:Version=%VERSION% ^
+  /p:AssemblyVersion=%VERSION%.0 ^
+  /p:FileVersion=%VERSION%.0 ^
+  /p:InformationalVersion=%INFOVER%
+if errorlevel 1 (
+  echo [ERROR] ビルドに失敗しました。
+  goto :end_fail
+)
+
+REM ---- 成果物の場所（優先: Package 出力 → 次: 直下の bin\Release）
+set "BIN1=%ROOT%KiritoriPackage\bin\AnyCPU\Release\Kiritori"
+set "BIN2=%ROOT%Kiritori\bin\Release"
+set "BIN="
+if exist "%BIN1%\Kiritori.exe" set "BIN=%BIN1%"
+if not defined BIN if exist "%BIN2%\Kiritori.exe" set "BIN=%BIN2%"
+if not defined BIN (
+  echo [ERROR] 実行ファイルが見つかりません:
+  echo        試行1: %BIN1%\Kiritori.exe
+  echo        試行2: %BIN2%\Kiritori.exe
+  goto :end_fail
+)
+
 set "EXE=%BIN%\Kiritori.exe"
 set "SAT_JA_DIR=%BIN%\ja"
 
 set "README=%ROOT%README.md"
-
 set "OUTBASE=%ROOT%dist"
 set "OUTDIR=%OUTBASE%\Kiritori-%VERSION%"
 set "ZIP=%OUTBASE%\Kiritori-%VERSION%.zip"
 
-echo [INFO] Version    : %VERSION%
-echo [INFO] Build Dir  : %BIN%
-echo [INFO] Out Dir    : %OUTDIR%
+echo [INFO] Build Dir     : %BIN%
+echo [INFO] Out Dir       : %OUTDIR%
 
-REM ---- 入力確認
-if not exist "%EXE%" (
-  echo [ERROR] 実行ファイルが見つかりません: %EXE%
-  goto :end_fail
-)
-
-REM ---- 出力ディレクトリの用意
+REM ---- dist 上書き（同じバージョンでも必ず消して作り直す）
 if not exist "%OUTBASE%" mkdir "%OUTBASE%" >nul 2>&1
 if exist "%OUTDIR%" rd /s /q "%OUTDIR%" >nul 2>&1
 mkdir "%OUTDIR%" || goto :end_fail
+if exist "%ZIP%" del "%ZIP%" >nul 2>&1
 
-REM ---- ファイル配置
-REM 1) EXE
+REM ---- 配置
 copy /y "%EXE%" "%OUTDIR%\Kiritori.exe" >nul || goto :end_fail
 
-REM 2) EXE.config（あれば）
 if exist "%EXE%.config" (
   copy /y "%EXE%.config" "%OUTDIR%\Kiritori.exe.config" >nul
   echo [INFO] EXE.config を同梱しました。
 )
 
-REM 2) DLL（BIN 直下の *.dll をすべて同梱。*.pdb / *.config はそもそも対象外）
-REM    robocopy の戻り値は 0-7 を成功とみなす
 robocopy "%BIN%" "%OUTDIR%" *.dll /R:0 /W:0 /NFL /NDL /NJH /NJS /NP >nul
 if errorlevel 8 (
   echo [ERROR] DLL コピーに失敗しました。
   goto :end_fail
 ) else (
-  echo [INFO] DLL を同梱しました（BIN 直下の *.dll）。
+  echo [INFO] DLL を同梱しました（%BIN%\*.dll）。
 )
 
-REM 3) README（あれば）
 if exist "%README%" (
   copy /y "%README%" "%OUTDIR%\README.md" >nul
 ) else (
   echo [WARN ] README.md が見つかりませんでした（同梱スキップ）。
 )
 
-REM 4) サテライト DLL(ja) 同梱
 if exist "%SAT_JA_DIR%\" (
   mkdir "%OUTDIR%\ja" >nul 2>&1
   xcopy /y /q "%SAT_JA_DIR%\*.resources.dll" "%OUTDIR%\ja\" >nul
@@ -89,13 +129,14 @@ if exist "%SAT_JA_DIR%\" (
   echo [INFO] ja サテライト DLL は見つかりませんでした（スキップ）。
 )
 
-REM ---- SHA-256 ハッシュ
-echo [INFO] 生成: Kiritori.exe.sha256
+REM ---- 埋め込まれたバージョンの確認（ログ出力用）
 powershell -NoProfile -Command ^
-  "$h=(Get-FileHash -Algorithm SHA256 -Path '%OUTDIR%\Kiritori.exe').Hash;" ^
-  "$line=$h + ' *Kiritori.exe';" ^
-  "Set-Content -Path '%OUTDIR%\Kiritori.exe.sha256' -Value $line -Encoding ASCII;" ^
-  "Write-Host ('SHA256=' + $h)"
+  "$v=[System.Diagnostics.FileVersionInfo]::GetVersionInfo('%OUTDIR%\Kiritori.exe');" ^
+  "Write-Host ('[INFO] FileVersion=' + $v.FileVersion + '  ProductVersion=' + $v.ProductVersion)"
+
+REM ---- SHA-256
+echo [INFO] 生成: Kiritori.exe.sha256
+powershell -NoProfile -Command "$h=(Get-FileHash -Algorithm SHA256 -Path '%OUTDIR%\Kiritori.exe').Hash; $line=$h + ' *Kiritori.exe'; Set-Content -Path '%OUTDIR%\Kiritori.exe.sha256' -Value $line -Encoding ASCII; Write-Host ('SHA256=' + $h)"
 if errorlevel 1 (
   echo [WARN ] PowerShell 失敗。certutil を試します…
   for /f "usebackq tokens=1" %%A in (`certutil -hashfile "%OUTDIR%\Kiritori.exe" SHA256 ^| findstr /r /i "^[0-9A-F][0-9A-F]*$"`) do set "HASH=%%A"
@@ -107,11 +148,9 @@ if errorlevel 1 (
   echo [INFO] SHA256=%HASH%
 )
 
-REM ---- ZIP（フォルダごと）
-if exist "%ZIP%" del "%ZIP%" >nul 2>&1
+REM ---- ZIP（フォルダごと。既存があれば上書き）
 echo [INFO] ZIP 作成: %ZIP%
-powershell -NoProfile -Command ^
-  "Compress-Archive -Path '%OUTDIR%' -DestinationPath '%ZIP%' -Force"
+powershell -NoProfile -Command "Compress-Archive -Path '%OUTDIR%' -DestinationPath '%ZIP%' -Force"
 if errorlevel 1 (
   echo [WARN ] PowerShell の圧縮に失敗。tar を試します…
   tar.exe -a -c -f "%ZIP%" -C "%OUTBASE%" "Kiritori-%VERSION%"

@@ -15,6 +15,9 @@ namespace Kiritori
         private ToolStripMenuItem windowParentMenu;
         private ToolStripMenuItem zoomParentMenu;
         private ToolStripMenuItem captureToolStripMenuItem;
+        private ToolStripMenuItem captureOCRToolStripMenuItem;
+        private ToolStripMenuItem livePreviewToolStripMenuItem;
+        
         private ToolStripMenuItem closeESCToolStripMenuItem;
         private ToolStripMenuItem cutCtrlXToolStripMenuItem;
         private ToolStripMenuItem copyCtrlCToolStripMenuItem;
@@ -76,6 +79,8 @@ namespace Kiritori
             this.zoomParentMenu = new ToolStripMenuItem();
             this.windowParentMenu = new ToolStripMenuItem();
             this.captureToolStripMenuItem = new ToolStripMenuItem();
+            this.captureOCRToolStripMenuItem = new ToolStripMenuItem();
+            this.livePreviewToolStripMenuItem = new ToolStripMenuItem();
             this.closeESCToolStripMenuItem = new ToolStripMenuItem();
             this.cutCtrlXToolStripMenuItem = new ToolStripMenuItem();
             this.copyCtrlCToolStripMenuItem = new ToolStripMenuItem();
@@ -123,8 +128,11 @@ namespace Kiritori
             // contextMenuStrip1
             // 
             this.contextMenuStrip1.Items.AddRange(new ToolStripItem[] {
-                this.captureToolStripMenuItem,
                 this.closeESCToolStripMenuItem,
+                new ToolStripSeparator(),
+                this.captureToolStripMenuItem,
+                this.captureOCRToolStripMenuItem,
+                this.livePreviewToolStripMenuItem,
                 new ToolStripSeparator(),
                 this.fileParentMenu,
                 this.editParentMenu,
@@ -172,7 +180,6 @@ namespace Kiritori
                 this.zoomParentMenu,
                 new ToolStripSeparator(),
                 this.opacityParentMenu,
-                this.originalLocationToolStripMenuItem,
             });
             this.viewParentMenu.Name = "viewParentMenu";
             this.viewParentMenu.Size = new System.Drawing.Size(231, 22);
@@ -186,6 +193,7 @@ namespace Kiritori
                 this.dropShadowToolStripMenuItem,
                 new ToolStripSeparator(),
                 this.minimizeToolStripMenuItem,
+                this.originalLocationToolStripMenuItem,
                 // this.closeESCToolStripMenuItem,
             });
             this.windowParentMenu.Name = "windowParentMenu";
@@ -217,6 +225,26 @@ namespace Kiritori
             this.captureToolStripMenuItem.Text = "Capture";
             this.captureToolStripMenuItem.Tag = "loc:Menu.Capture";
             this.captureToolStripMenuItem.Click += new System.EventHandler(this.captureToolStripMenuItem_Click);
+            // 
+            // captureOCRToolStripMenuItem
+            // 
+            this.captureOCRToolStripMenuItem.Name = "captureOCRToolStripMenuItem";
+            this.captureOCRToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.D4)));
+            this.captureOCRToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
+            this.captureOCRToolStripMenuItem.Text = "OCR(text recognition)";
+            this.captureOCRToolStripMenuItem.Tag = "loc:Menu.OCR";
+            this.captureOCRToolStripMenuItem.Click += new System.EventHandler(this.captureOCRToolStripMenuItem_Click);
+            // 
+            // livePreviewToolStripMenuItem
+            // 
+            this.livePreviewToolStripMenuItem.Name = "livePreviewToolStripMenuItem";
+            this.livePreviewToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            | System.Windows.Forms.Keys.D6)));
+            this.livePreviewToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
+            this.livePreviewToolStripMenuItem.Text = "Live Preview";
+            this.livePreviewToolStripMenuItem.Tag = "loc:Menu.LivePreview";
+            this.livePreviewToolStripMenuItem.Click += new System.EventHandler(this.livePreviewToolStripMenuItem_Click);
             // 
             // closeESCToolStripMenuItem
             // 
@@ -449,6 +477,8 @@ namespace Kiritori
             this.preferencesToolStripMenuItem.Text = "Preferences";
             this.preferencesToolStripMenuItem.Tag = "loc:Menu.Preferences";
             this.preferencesToolStripMenuItem.Click += new System.EventHandler(this.preferencesToolStripMenuItem_Click);
+            this.preferencesToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.Oemcomma)));
+            this.preferencesToolStripMenuItem.ShortcutKeyDisplayString = "Ctrl+,";
             // 
             // printToolStripMenuItem
             // 

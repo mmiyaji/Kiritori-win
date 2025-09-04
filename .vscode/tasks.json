@@ -1,35 +1,20 @@
 {
     "version": "2.0.0",
+    "inputs": [
+    {
+        "id": "relVersion",
+        "type": "promptString",
+        "description": "Release version (e.g. 1.2.3)",
+        "default": "1.2.0"
+    }
+    ],
     "tasks": [
         {
-            "label": "Build Kiritori (Debug)",
+            "label": "Package Kiritori (build inside)",
             "type": "shell",
-            "command": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe",
-            "args": [
-                "Kiritori.sln",
-                "/p:Configuration=Debug",
-                "/m:1"
-            ],
-            "problemMatcher": "$msCompile",
-            "group": { "kind": "build", "isDefault": false }
-        },
-        {
-            "label": "Build Kiritori (Release)",
-            "type": "shell",
-            "command": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe",
-            "args": [
-                "Kiritori.sln",
-                "/p:Configuration=Release",
-                "/m:1"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "Package Kiritori",
-            "type": "shell",
-            "command": ".\\release.bat",   // プロジェクト直下の release.bat
-            "group": "build",
-            "dependsOn": "Build Kiritori (Release)",
+            "command": ".\\release.bat",
+            "args": ["${input:relVersion}", "--no-pause"],
+            "options": { "cwd": "${workspaceFolder}" },
             "problemMatcher": []
         },
         {
@@ -38,8 +23,36 @@
             "command": "explorer",
             "args": [".\\dist"],
             "problemMatcher": [],
-            "dependsOn": "Package Kiritori",
+            "dependsOn": "Package Kiritori (build inside)",
             "group": { "kind": "build", "isDefault": true }
+        },
+        {
+            "label": "Restore (Solution)",
+            "command": "${env:ProgramFiles(x86)}\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe",
+            "type": "process",
+            "args": [
+                "${workspaceFolder}\\Kiritori.sln",
+                "/t:Restore",
+                "/p:RestorePackages=true"
+            ],
+            "problemMatcher": "$msCompile",
+            "presentation": { "reveal": "always" }
+        },
+        /* 開発中に手動でビルドだけしたい場合の補助タスク（任意） */
+        {
+            "label": "Build Kiritori (Debug)",
+            "type": "shell",
+            "command": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe",
+            "args": ["Kiritori.sln", "/p:Configuration=Debug", "/m:1"],
+            "problemMatcher": "$msCompile",
+            "group": { "kind": "build", "isDefault": false }
+        },
+        {
+            "label": "Build Kiritori (Release)",
+            "type": "shell",
+            "command": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe",
+            "args": ["Kiritori.sln", "/p:Configuration=Release", "/m:1"],
+            "problemMatcher": "$msCompile"
         }
     ]
 }

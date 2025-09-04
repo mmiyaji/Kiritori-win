@@ -305,7 +305,11 @@ namespace Kiritori
         private void btnExitApp_Click(object sender, EventArgs e)
         {
             Debug.WriteLine("Exit button clicked");
+            exitApp();
 
+        }
+        private void exitApp()
+        {
             if (_isDirty)
             {
                 int total;
@@ -357,6 +361,7 @@ namespace Kiritori
                 AppShutdown.ExitConfirmed = true;
                 Application.Exit();
             }
+
         }
 
         private void btnOpenStartupSettings_Click(object sender, EventArgs e)
