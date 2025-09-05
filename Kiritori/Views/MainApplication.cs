@@ -25,6 +25,9 @@ namespace Kiritori
     {
         public string Path;
         public Bitmap Thumb;
+        public DateTime LoadedAt;     // いつ履歴に積んだか
+        public Size     Resolution;   // 画像解像度
+        public LoadMethod Method;     // Path / Capture / Clipboard
     }
     public partial class MainApplication : Form
     {
@@ -33,7 +36,12 @@ namespace Kiritori
         private int _screenOpenGate = 0;
         private readonly AppStartupOptions _opt;
         private static readonly string HistoryTempDir = Path.Combine(Path.GetTempPath(), "Kiritori", "History");
-
+        private static readonly string HistoryIndexPath = Path.Combine(HistoryTempDir, "history.index.tsv");
+        private const int IDX_COL_PATH      = 0;
+        private const int IDX_COL_LOADEDAT  = 1;   // ticks(long)
+        private const int IDX_COL_WIDTH     = 2;
+        private const int IDX_COL_HEIGHT    = 3;
+        private const int IDX_COL_METHOD    = 4;   // enum int
         private bool _allowShow = false;
         private readonly System.Windows.Forms.Timer _bootTimer;
 
@@ -94,6 +102,16 @@ namespace Kiritori
             {
                 _bootTimer.Enabled = false;
                 await EnsureStartupAsync();
+                try
+                {
+                    Directory.CreateDirectory(HistoryTempDir);
+                    LoadHistoryFromIndex();           // インデックスからメニュー復元
+                    PruneHistoryFilesBeyondLimit();   // 上限超過や孤児ファイルを削除
+                }
+                catch (Exception ex)
+                {
+                    Log.Debug($"History restore/prune error: {ex}", "History");
+                }
                 MaybeShowPreferencesOnStartup();
             };
             Properties.Settings.Default.PropertyChanged += (s, e) =>
@@ -232,12 +250,13 @@ namespace Kiritori
             try
             {
                 if (notifyIcon1 == null) return;
-                ClearHistoryMenu();
+                // ClearHistoryMenu();
                 if (notifyIcon1 != null) notifyIcon1.Dispose();
                 if (this.Icon != null) this.Icon.Dispose();
 
                 UnregisterHotKey(this.Handle, HOTKEY_ID_CAPTURE);
                 UnregisterHotKey(this.Handle, HOTKEY_ID_OCR);
+                SaveHistoryToIndex();
             }
             catch { }
         }
@@ -389,7 +408,6 @@ namespace Kiritori
             var srcForThumb = (Image)(sw.thumbnail_image ?? sw.main_image);
             Bitmap thumb = CreateThumb(srcForThumb, TH_W, TH_H, Color.Transparent);
 
-            var entry = new HistoryEntry { Path = path, Thumb = thumb };
 
             // 表示テキスト：ファイルならファイル名1行＋詳細1行 / それ以外は「キャプチャー/クリップボード」
             // sw.CurrentLoadMethod が History の場合は、path が実在すれば Path扱い、なければ Capture扱い等でOK
@@ -400,6 +418,14 @@ namespace Kiritori
                         ? LoadMethod.Clipboard
                         : LoadMethod.Capture);
 
+            var entry = new HistoryEntry
+            {
+                Path = path,
+                Thumb = thumb,
+                LoadedAt = DateTime.Now,
+                Resolution = new Size(sw.main_image.Width, sw.main_image.Height),
+                Method = displayMethod
+            };
             // 表示用の path は、Path 扱いのときだけ渡す
             var text = FormatHistoryText(
                 path: (displayMethod == LoadMethod.Path) ? path : null,
@@ -428,7 +454,7 @@ namespace Kiritori
             item.Click += historyToolStripMenuItem1_item_Click;
             historyToolStripMenuItem1.DropDownItems.Insert(0, item);
 
-            // 上限掃除（既存のDispose順でOK）
+            // 履歴上限掃除
             while (historyToolStripMenuItem1.DropDownItems.Count > limit)
             {
                 int lastIdx = historyToolStripMenuItem1.DropDownItems.Count - 1;
@@ -436,16 +462,18 @@ namespace Kiritori
                 historyToolStripMenuItem1.DropDownItems.RemoveAt(lastIdx);
                 if (last != null)
                 {
-                    if (last.Tag is HistoryEntry he)
+                    if (last.Tag is HistoryEntry he2)
                     {
-                        if (IsHistoryTempPath(he.Path)) SafeDelete(he.Path);
-                        he.Thumb?.Dispose();
+                        if (IsHistoryTempPath(he2.Path)) SafeDelete(he2.Path);
+                        he2.Thumb?.Dispose();
                         last.Tag = null;
                     }
                     last.Image?.Dispose();
                     last.Dispose();
                 }
             }
+            SaveHistoryToIndex();
+            PruneHistoryFilesBeyondLimit();
         }
         private static Bitmap CreateThumb(Image src, int maxW, int maxH, Color? bg = null)
         {
@@ -476,22 +504,241 @@ namespace Kiritori
         private static string FormatHistoryText(string path, LoadMethod method, Size res, DateTime loadedAt)
         {
             Log.Debug($"FormatHistoryText: {path}, {method}, {res}, {loadedAt}", "History");
-            // 1行目：ファイルならファイル名（長ければ省略）／それ以外は種別
-            // 2行目：解像度 + 読み込み時刻
-            string text = $"[{loadedAt:yyyy/MM/dd HH:mm:ss}] ({res.Width}x{res.Height})";
+            var sb = new StringBuilder();
+            sb.Append('[').Append(loadedAt.ToString("yyyy/MM/dd HH:mm:ss")).Append(']');
 
-            if (method == LoadMethod.Path && !string.IsNullOrEmpty(path) && File.Exists(path))
+            if (res.Width > 0 && res.Height > 0)
+                sb.Append(' ').Append('(').Append(res.Width).Append('x').Append(res.Height).Append(')');
+
+            string text = sb.ToString();
+
+            // ★変更点：method に関係なく、実在ファイルなら常に2行目にファイル名
+            if (!string.IsNullOrEmpty(path) && File.Exists(path))
             {
                 var name = Path.GetFileName(path);
-                text += Environment.NewLine + MiddleEllipsis(name, 32);   // 例：32文字に中省略
+                text += Environment.NewLine + MiddleEllipsis(name, 32);
             }
-            // else
-            // {
-            //     // 日本語表示（必要なら SR.T(...) に置き換え）
-            //     line1 = (method == LoadMethod.Clipboard) ? "クリップボード" : "キャプチャー";
-            // }
-            
+
             return text;
+        }
+
+
+        // ========== 履歴インデックス ==========
+
+        // 現在のメニューの上から順に TSV で保存
+        private void SaveHistoryToIndex()
+        {
+            try
+            {
+                Directory.CreateDirectory(HistoryTempDir);
+                var sb = new StringBuilder();
+
+                foreach (ToolStripItem tsi in historyToolStripMenuItem1.DropDownItems)
+                {
+                    var mi = tsi as ToolStripMenuItem;
+                    if (mi?.Tag is HistoryEntry he && !string.IsNullOrEmpty(he.Path))
+                    {
+                        // 失効ファイルはスキップ
+                        if (!File.Exists(he.Path)) continue;
+
+                        long ticks = he.LoadedAt.Ticks;
+                        int w = he.Resolution.Width;
+                        int h = he.Resolution.Height;
+                        int method = (int)he.Method;
+
+                        // path \t ticks \t w \t h \t method
+                        sb.Append(he.Path.Replace('\t', ' ')); sb.Append('\t');
+                        sb.Append(ticks.ToString(CultureInfo.InvariantCulture)); sb.Append('\t');
+                        sb.Append(w.ToString(CultureInfo.InvariantCulture)); sb.Append('\t');
+                        sb.Append(h.ToString(CultureInfo.InvariantCulture)); sb.Append('\t');
+                        sb.Append(method.ToString(CultureInfo.InvariantCulture));
+                        sb.AppendLine();
+                    }
+                }
+
+                File.WriteAllText(HistoryIndexPath, sb.ToString(), Encoding.UTF8);
+                Log.Debug($"History index saved: {HistoryIndexPath}", "History");
+            }
+            catch (Exception ex)
+            {
+                Log.Debug($"SaveHistoryToIndex error: {ex}", "History");
+            }
+        }
+
+        // ★読込：TSV を読み、存在するファイルのみ復元してメニューを作り直す
+        private void LoadHistoryFromIndex()
+        {
+            try
+            {
+                if (!File.Exists(HistoryIndexPath))
+                {
+                    Log.Debug("History index not found.", "History");
+                    return;
+                }
+
+                var lines = File.ReadAllLines(HistoryIndexPath, Encoding.UTF8);
+                if (lines.Length == 0) return;
+
+                // まず現在のメニューをクリア（Disposeは既存メソッド利用）
+                ClearHistoryMenu();
+
+                int limit = Properties.Settings.Default.HistoryLimit;
+                int count = 0;
+
+                foreach (var line in lines)
+                {
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+
+                    var cols = line.Split('\t');
+                    if (cols.Length < 5) continue;
+
+                    string p = cols[IDX_COL_PATH];
+                    if (string.IsNullOrWhiteSpace(p) || !File.Exists(p)) continue;
+
+                    long ticks;
+                    int w, h, methodInt;
+                    if (!long.TryParse(cols[IDX_COL_LOADEDAT], NumberStyles.Integer, CultureInfo.InvariantCulture, out ticks)) ticks = DateTime.Now.Ticks;
+                    if (!int.TryParse(cols[IDX_COL_WIDTH], NumberStyles.Integer, CultureInfo.InvariantCulture, out w)) w = 0;
+                    if (!int.TryParse(cols[IDX_COL_HEIGHT], NumberStyles.Integer, CultureInfo.InvariantCulture, out h)) h = 0;
+                    if (!int.TryParse(cols[IDX_COL_METHOD], NumberStyles.Integer, CultureInfo.InvariantCulture, out methodInt)) methodInt = (int)LoadMethod.Path;
+
+                    var he = new HistoryEntry
+                    {
+                        Path = p,
+                        LoadedAt = new DateTime(ticks),
+                        Resolution = new Size(w, h),
+                        Method = (LoadMethod)methodInt
+                    };
+
+                    // サムネ生成
+                    const int TH_W = 64, TH_H = 64;
+                    using (var img = SafeLoadImageForThumb(p))
+                    {
+                        he.Thumb = (img != null) ? CreateThumb(img, TH_W, TH_H, Color.Transparent) : null;
+                    }
+
+                    // 表示テキスト
+                    var text = FormatHistoryText(
+                        path: (he.Method == LoadMethod.Path) ? he.Path : null,
+                        method: he.Method,
+                        res: (he.Resolution.Width > 0 && he.Resolution.Height > 0) ? he.Resolution : new Size(0, 0),
+                        loadedAt: he.LoadedAt
+                    );
+
+                    var mi = new ToolStripMenuItem
+                    {
+                        Image = he.Thumb,
+                        Text = text,
+                        DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
+                        ImageAlign = ContentAlignment.MiddleLeft,
+                        ImageScaling = ToolStripItemImageScaling.None,
+                        Tag = he,
+                        AutoSize = true
+                    };
+                    if (he.Method == LoadMethod.Path)
+                    {
+                        mi.AutoToolTip = true;
+                        mi.ToolTipText = he.Path;
+                    }
+                    mi.Click += historyToolStripMenuItem1_item_Click;
+
+                    historyToolStripMenuItem1.DropDownItems.Add(mi);
+                    count++;
+                    if (limit > 0 && count >= limit) break;
+                }
+
+                Log.Debug($"History restored: {count} items.", "History");
+            }
+            catch (Exception ex)
+            {
+                Log.Debug($"LoadHistoryFromIndex error: {ex}", "History");
+            }
+        }
+
+        // ★補助: サムネ用に安全に画像を開く（ロックしない）
+        private static Image SafeLoadImageForThumb(string path)
+        {
+            try
+            {
+                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var ms = new MemoryStream())
+                {
+                    fs.CopyTo(ms);
+                    ms.Position = 0;
+                    return Image.FromStream(ms);
+                }
+            }
+            catch { return null; }
+        }
+
+        // ★掃除：履歴フォルダ内の管理対象外や上限超過を削除
+        private void PruneHistoryFilesBeyondLimit()
+        {
+            try
+            {
+                int limit = Properties.Settings.Default.HistoryLimit;
+                Directory.CreateDirectory(HistoryTempDir);
+
+                // 現在インデックスで管理しているパスの集合
+                var managed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                if (File.Exists(HistoryIndexPath))
+                {
+                    foreach (var line in File.ReadAllLines(HistoryIndexPath, Encoding.UTF8))
+                    {
+                        var cols = line.Split('\t');
+                        if (cols.Length > 0)
+                        {
+                            var p = cols[IDX_COL_PATH];
+                            if (!string.IsNullOrWhiteSpace(p))
+                                managed.Add(Path.GetFullPath(p));
+                        }
+                    }
+                }
+
+                // フォルダ内の PNG (他形式を使うなら拡張)
+                var all = new DirectoryInfo(HistoryTempDir)
+                            .EnumerateFiles("*.*", SearchOption.TopDirectoryOnly)
+                            .Where(fi => IsImageExt(fi.Extension))
+                            .OrderBy(fi => fi.CreationTimeUtc)
+                            .ToList();
+
+                // 1) 管理対象外（インデックスに無い）を削除
+                foreach (var fi in all)
+                {
+                    var full = fi.FullName;
+                    if (!managed.Contains(Path.GetFullPath(full)))
+                    {
+                        SafeDelete(full);
+                    }
+                }
+
+                // 2) 管理対象だとしても、フォルダ内のファイル総数が上限超過なら古いものから削除
+                //    （上限=履歴件数。フォルダ内のショットを丸ごと履歴保管にしている前提）
+                var remaining = new DirectoryInfo(HistoryTempDir)
+                                    .EnumerateFiles("*.*", SearchOption.TopDirectoryOnly)
+                                    .Where(fi => IsImageExt(fi.Extension))
+                                    .OrderByDescending(fi => fi.CreationTimeUtc)
+                                    .ToList();
+
+                if (limit > 0 && remaining.Count > limit)
+                {
+                    foreach (var fi in remaining.Skip(limit))
+                    {
+                        SafeDelete(fi.FullName);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Debug($"PruneHistoryFilesBeyondLimit error: {ex}", "History");
+            }
+        }
+
+        private static bool IsImageExt(string ext)
+        {
+            if (string.IsNullOrEmpty(ext)) return false;
+            ext = ext.Trim().ToLowerInvariant();
+            return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".bmp" || ext == ".gif";
         }
 
         private static string MiddleEllipsis(string s, int max)
