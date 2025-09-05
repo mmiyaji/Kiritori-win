@@ -23,7 +23,8 @@ namespace Kiritori.Views.LiveCapture
             _miFileRoot, _miEditRoot, _miViewRoot, _miWindowRoot, _miZoomRoot,
             _miOriginal, _miZoomIn, _miZoomOut, _miZoomPct,
             _miOpacity, _miPauseResume, _miRealign, _miTopMost, _miClose,
-            _miPref, _miExit, _miTitlebar, _miShowStats;
+            _miPref, _miExit, _miTitlebar, _miShowStats,
+            _miPolicyRoot, _miPolicyAlways, _miPolicyHash;
 
         private float _zoom = 1.0f;     // 表示倍率（1.0=100%）
         private bool _paused = false;
@@ -118,6 +119,26 @@ namespace Kiritori.Views.LiveCapture
         private double _cpuUsage = 0;
         private long _memUsage = 0;
 
+        // 画面ハッシュ（差分検出用）
+        private ulong _lastHash = 0;
+        private int _lastW = 0, _lastH = 0;
+        private int _consecutiveSkips = 0; // (任意) 連続スキップ数の統計
+        private int _lastFrameHash = -1;               // 直近に「表示した」フレームのハッシュ
+        private Size _lastFrameSize = Size.Empty;      // 直近に「表示した」フレームの元画像サイズ
+        private Size _lastPresentedClientSize = Size.Empty; // 直近に「表示した」時点の ClientSize
+        private const int GOLDEN_RATIO = unchecked((int)0x9e3779b9);
+        private RenderPolicy _policy = RenderPolicy.AlwaysDraw;
+        private bool _forceDrawOnResize = true;
+        // スキップ用の基準
+        private Bitmap _lastPresentedFrame;
+
+        // メトリクス（ログ用 任意）
+        private long _hashTimeTotal = 0, _drawTimeTotal = 0;
+        private int _hashCount = 0, _drawCount = 0, _skipCount = 0;
+        private int _srcCount = 0;   // 1秒窓の“入力(到来)”フレーム数
+        private int _dispCount = 0;  // 1秒窓の“描画”フレーム数
+        private int _srcFps = 0;     // 表示用：直近1秒の入力FPS
+        private int _dispFps = 0;    // 表示用：直近1秒の描画FPS
         // 閉じるボタン
         private Rectangle _closeBtnRect = Rectangle.Empty;
         private bool _hoverClose = false;
@@ -151,6 +172,28 @@ namespace Kiritori.Views.LiveCapture
                     Invalidate();
                 }
             };
+            try
+            {
+                var v = Properties.Settings.Default.LivePreviewMaxFps;
+                _maxFps = (v >= 0) ? v : 15;
+            }
+            catch { _maxFps = 15; }
+            try
+            {
+                int v = Properties.Settings.Default.LivePreviewRenderPolicy;
+                _policy = (v == 0) ? RenderPolicy.AlwaysDraw : RenderPolicy.HashSkip;
+            }
+            catch { _policy = RenderPolicy.AlwaysDraw; }
+            Properties.Settings.Default.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(Properties.Settings.Default.LivePreviewRenderPolicy))
+                {
+                    int nv = Properties.Settings.Default.LivePreviewRenderPolicy;
+                    _policy = (nv == 0) ? RenderPolicy.AlwaysDraw : RenderPolicy.HashSkip;
+                    LPLog.Info($"RenderPolicy changed to: {_policy}");
+                }
+            };
+
             BuildOverlay();
             WireHoverHandlers();
 
@@ -159,12 +202,7 @@ namespace Kiritori.Views.LiveCapture
 
             this.Opacity = 0.0; // 初回白チラ防止
             this.BackColor = Color.Black;
-            try
-            {
-                var v = Properties.Settings.Default.LivePreviewMaxFps;
-                _maxFps = (v >= 0) ? v : 15;
-            }
-            catch { _maxFps = 15; }
+
             // _fpsWatch.Start();
             _presentWatch.Start();
             _fpsWindowWatch.Start();
@@ -172,9 +210,6 @@ namespace Kiritori.Views.LiveCapture
             // 1秒ごとにCPU/メモリ更新
             // _perfTimer = new System.Threading.Timer(UpdatePerf, null, 1000, 1000);
             _lastCpuTime = Process.GetCurrentProcess().TotalProcessorTime;
-
-            // EnsureContextMenuWithFps();
-
         }
         // ==== LivePreview 用デバッグロガー（%TEMP%\Kiritori.LivePreview.log + Debug） ====
         private static class LPLog
@@ -630,6 +665,7 @@ namespace Kiritori.Views.LiveCapture
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
+
             var oldInv = GetHudInvalidateRect();
             CenterOverlay();
             var newInv = GetHudInvalidateRect();
@@ -638,7 +674,12 @@ namespace Kiritori.Views.LiveCapture
 
             if (_hudAlpha > 0 && _hudRect.IsEmpty) HideOverlay();
             if (_hoverAlpha > 0) Invalidate(GetHoverInvalidateRect());
+
+            // 表示サイズが変わったら、次の OnFrameArrived では必ず描画させる
+            if (_forceDrawOnResize)
+                _lastPresentedClientSize = Size.Empty;  // フォース再描画のトリガ
         }
+
 
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -704,9 +745,10 @@ namespace Kiritori.Views.LiveCapture
                 }
                 else
                 {
-                    string info = string.Format("FPS: {0}  CPU: {1:F1}%  MEM(Commit): {2} MB",
-                        _fps, _cpuUsage, _memUsage / 1024 / 1024);
-
+                    // string info = string.Format("FPS: {0}  CPU: {1:F1}%  MEM(Commit): {2} MB",
+                    //     _fps, _cpuUsage, _memUsage / 1024 / 1024);
+                    string info = string.Format("FPS: {0} / {1}  CPU: {2:F1}%  MEM: {3} MB",
+                        _dispFps, _srcFps, _cpuUsage, _memUsage / 1024 / 1024);
                     using (var font = new Font("Segoe UI", 9))
                     using (var fg = new SolidBrush(Color.White))
                     using (var shadow = new SolidBrush(Color.FromArgb(128, 0, 0, 0)))
@@ -946,39 +988,54 @@ namespace Kiritori.Views.LiveCapture
             }
         }
 
-        // private void EnsureContextMenuWithFps()
-        // {
-        //     if (this.ContextMenuStrip == null)
-        //         this.ContextMenuStrip = new ContextMenuStrip();
+        private void ResetFpsWindow()
+        {
+            _srcCount = _dispCount = 0;
+            _srcFps = _dispFps = 0;
+            _fpsWindowWatch.Reset();
+            _fpsWindowWatch.Start();
+            _skipCount = 0;
+        }
 
-        //     bool needSep = true;
-        //     foreach (ToolStripItem it in this.ContextMenuStrip.Items)
-        //     {
-        //         if (it.Tag as string == "fps-root") { needSep = false; break; }
-        //     }
-        //     if (!needSep) return;
+        private static int ComputeFastHash(Bitmap bmp, int step = 8)
+        {
+            // できるだけ軽く
+            var rect = new Rectangle(0, 0, bmp.Width, bmp.Height);
+            var data = bmp.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadOnly,
+                                    System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+            try
+            {
+                int hash = 17;
+                int stride = data.Stride;
+                int width = rect.Width;
+                int height = rect.Height;
+                IntPtr scan0 = data.Scan0;
 
-        //     this.ContextMenuStrip.Items.Add(new ToolStripSeparator());
+                // 8px ごとに 1 ピクセル読む（ARGB 4byte）
+                for (int y = 0; y < height; y += step)
+                {
+                    int rowOffset = y * stride;
+                    for (int x = 0; x < width; x += step)
+                    {
+                        // x*4 バイト先の 32bit を読む
+                        int pixel = Marshal.ReadInt32(scan0, rowOffset + (x << 2));
+                        // 適当に混ぜる（十分軽くて衝突しづらい程度でOK）
+                        unchecked
+                        {
+                            hash = (hash * 31) ^ pixel;
+                            // hash ^= (x + 0x9e3779b9) + (hash << 6) + (hash >> 2);
+                            hash ^= (x + GOLDEN_RATIO) + (hash << 6) + (hash >> 2);
+                        }
+                    }
+                }
+                return hash;
+            }
+            finally
+            {
+                bmp.UnlockBits(data);
+            }
+        }
 
-        //     _miFpsRoot = new ToolStripMenuItem(SR.T("Menu.MaxFPS","最大 FPS"));
-        //     _miFpsRoot.Tag = "fps-root";
-
-        //     _miFpsItems = new ToolStripMenuItem[_fpsChoices.Length];
-        //     for (int i = 0; i < _fpsChoices.Length; i++)
-        //     {
-        //         int fps = _fpsChoices[i];
-        //         string text = (fps == 0) ? SR.T("Menu.FPS.Unlimited","Unlimited") : (fps + " fps");
-
-        //         var mi = new ToolStripMenuItem(text) { Tag = fps };
-        //         mi.Click += OnFpsMenuClick;
-
-        //         _miFpsItems[i] = mi;
-        //         _miFpsRoot.DropDownItems.Add(mi);
-        //     }
-
-        //     this.ContextMenuStrip.Items.Add(_miFpsRoot);
-        //     UpdateFpsMenuChecks();
-        // }
 
         private void UpdateFpsMenuChecks()
         {
@@ -1218,6 +1275,49 @@ namespace Kiritori.Views.LiveCapture
             };
             _miShowStats.ShortcutKeys = (Keys)HOTS.INFO;
 
+            _miPolicyRoot = new ToolStripMenuItem("Rendering");
+            _miPolicyAlways = new ToolStripMenuItem("Always draw") { CheckOnClick = true };
+            _miPolicyHash   = new ToolStripMenuItem("Skip by hash") { CheckOnClick = true };
+            void SyncPolicyChecks()
+            {
+                if (_policy == RenderPolicy.AlwaysDraw)
+                {
+                    _miPolicyAlways.Checked = true;
+                    _miPolicyHash.Checked = false;
+                }
+                else if (_policy == RenderPolicy.HashSkip)
+                {
+                    _miPolicyAlways.Checked = false;
+                    _miPolicyHash.Checked = true;
+                }
+                else
+                {
+                    _miPolicyAlways.Checked = true;
+                    _miPolicyHash.Checked = false;
+                }
+            }
+            _miPolicyAlways.Click += (s, e) =>
+            {
+                _policy = RenderPolicy.AlwaysDraw;
+                Properties.Settings.Default.LivePreviewRenderPolicy = 0;
+                Properties.Settings.Default.Save();
+                SyncPolicyChecks();
+                ResetFpsWindow();
+                LPLog.Info("RenderPolicy -> AlwaysDraw");
+            };
+            _miPolicyHash.Click += (s, e) =>
+            {
+                _policy = RenderPolicy.HashSkip;
+                Properties.Settings.Default.LivePreviewRenderPolicy = 1;
+                Properties.Settings.Default.Save();
+                SyncPolicyChecks();
+                ResetFpsWindow();
+                LPLog.Info("RenderPolicy -> HashSkip");
+            };
+            _miPolicyRoot.DropDownItems.AddRange(new ToolStripItem[] { _miPolicyAlways, _miPolicyHash });
+            // 既存の _ctx.Items.AddRange(...) に混ぜる場所へ
+            SyncPolicyChecks();
+
             // ---------- サブメニュー（SnapWindow 構成に寄せる） ----------
             var miFile = new ToolStripMenuItem("File");   // いまは LivePreview 既存機能なし。将来 Save/Copy Frame 等をここに
             miFile.Enabled = false;
@@ -1252,6 +1352,7 @@ namespace Kiritori.Views.LiveCapture
                 _miClose,
                 _miPauseResume,
                 _miFpsRoot,
+                _miPolicyRoot,
                 new ToolStripSeparator(),
                 _miCapture,
                 _miOCR,
@@ -1358,6 +1459,7 @@ namespace Kiritori.Views.LiveCapture
             ResizeToKeepClient(GetDesiredClientPhysical());
             // TopMost は必要なら維持
             this.TopMost = _miTopMost?.Checked ?? this.TopMost;
+            _lastPresentedClientSize = Size.Empty;
             Invalidate();
         }
         private void TogglePause()
@@ -1457,50 +1559,101 @@ namespace Kiritori.Views.LiveCapture
                     $"clientTL(after)=({cur.X},{cur.Y})");
         }
 
-        // FrameArrived：一部省略（元実装のまま）
         private void OnFrameArrived(Bitmap bmp)
         {
             if (_paused) return;
+            Interlocked.Increment(ref _srcCount);
 
-            // 1) MaxFPSによる間引き（描画の表示タイミングを決める）
+            if (_fpsWindowWatch.ElapsedMilliseconds >= 1000)
+            {
+                _srcFps  = Interlocked.Exchange(ref _srcCount, 0);
+                _dispFps = Interlocked.Exchange(ref _dispCount, 0);
+                _fps     = _dispFps;
+                _fpsWindowWatch.Restart();
+                LogPerfStats();
+                if (IsHandleCreated) BeginInvoke((Action)(() => Invalidate())); // オーバーレイ更新
+            }
+            // MaxFPS 間引き
             if (_maxFps > 0)
             {
                 double minIntervalMs = 1000.0 / _maxFps;
-                if (_presentWatch.ElapsedMilliseconds < minIntervalMs)
-                    return; // 表示しない（カウントもしない）
-                _presentWatch.Restart();
+                if (_presentWatch.ElapsedMilliseconds < minIntervalMs) return;
             }
+            _presentWatch.Restart();
 
-            // 2) ここに来たら「実際に表示するフレーム」なので FPS カウント
-            Interlocked.Increment(ref _frameCount);
+            bool forceBySize = (_lastPresentedClientSize != this.ClientSize);
+            bool shouldDraw;
 
-            // 3) 1秒ごとに表示FPSを更新（無制限でも動く）
-            if (_fpsWindowWatch.ElapsedMilliseconds >= 1000)
+            if (_policy == RenderPolicy.AlwaysDraw)
             {
-                _fps = Interlocked.Exchange(ref _frameCount, 0);
-                _fpsWindowWatch.Restart();
+                shouldDraw = true;
+            }
+            else // HashSkip
+            {
+                if (forceBySize || _lastPresentedFrame == null || _lastPresentedFrame.Size != bmp.Size)
+                {
+                    shouldDraw = true; // サイズ変化・初回・サイズ不一致は描画
+                }
+                else
+                {
+                    var sw = Stopwatch.StartNew();
+                    int curHash = ComputeFastHash(bmp, step: 8);
+                    sw.Stop(); _hashTimeTotal += sw.ElapsedMilliseconds; _hashCount++;
+
+                    shouldDraw = (curHash != _lastFrameHash);
+                    // 必要なら差分率チェックも追加可能（ここではハッシュのみ）
+                }
             }
 
-            // 4) 以降は元の適用処理
+            if (!shouldDraw)
+            {
+                _skipCount++;
+                return;
+            }
+
+            var swDraw = Stopwatch.StartNew();
+
             Bitmap old = null;
             lock (_frameSync)
             {
                 old = _latest;
                 _latest = (Bitmap)bmp.Clone();
-            }
-            if (old != null) old.Dispose();
 
-            if (IsHandleCreated) BeginInvoke((Action)(() =>
+                // 基準フレーム/ハッシュを更新（HashSkip時のみ必要だが常に更新してもOK）
+                _lastPresentedFrame?.Dispose();
+                _lastPresentedFrame = (Bitmap)_latest.Clone();
+                _lastFrameHash = ComputeFastHash(_latest, step: 8);
+                _lastFrameSize = _latest.Size;
+
+                _lastPresentedClientSize = this.ClientSize; // サイズ基準を更新
+            }
+            old?.Dispose();
+            Interlocked.Increment(ref _dispCount);
+            if (IsHandleCreated)
             {
-                Invalidate();
-                if (!_firstFrameShown)
+                BeginInvoke((Action)(() =>
                 {
-                    _firstFrameShown = true;
-                    if (this.Opacity < 1.0) this.Opacity = 1.0;
-                }
-            }));
+                    Invalidate();
+                    if (!_firstFrameShown)
+                    {
+                        _firstFrameShown = true;
+                        if (this.Opacity < 1.0) this.Opacity = 1.0;
+                    }
+                }));
+            }
+
+            swDraw.Stop();
+            _drawTimeTotal += swDraw.ElapsedMilliseconds; _drawCount++;
         }
 
+        private void LogPerfStats()
+        {
+            double hashAvg = (_hashCount > 0) ? (double)_hashTimeTotal / _hashCount : 0;
+            double drawAvg = (_drawCount > 0) ? (double)_drawTimeTotal / _drawCount : 0;
+            LPLog.Info($"PerfStats: DrawFPS={_dispFps}, SrcFPS={_srcFps}, Policy={_policy}, Skip={_skipCount}, HashAvg={hashAvg:F3}ms, DrawAvg={drawAvg:F3}ms (hashCount={_hashCount}, drawCount={_drawCount})");
+            _hashTimeTotal = _drawTimeTotal = 0;
+            _hashCount = _drawCount = _skipCount = 0;
+        }
 
         private void UpdatePerf(object state)
         {

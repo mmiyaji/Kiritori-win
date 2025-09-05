@@ -310,5 +310,17 @@ namespace Kiritori.Properties {
                 this["LivePreviewMaxFps"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int LivePreviewRenderPolicy {
+            get {
+                return ((int)(this["LivePreviewRenderPolicy"]));
+            }
+            set {
+                this["LivePreviewRenderPolicy"] = value;
+            }
+        }
     }
 }
