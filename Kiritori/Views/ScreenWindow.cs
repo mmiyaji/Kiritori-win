@@ -1,3 +1,7 @@
+using Kiritori.Views.LiveCapture;
+using Kiritori.Helpers;
+using Kiritori.Services.Notifications;
+using Kiritori.Services.Logging;
 using System;
 using System.Collections;
 using System.ComponentModel;
@@ -13,9 +17,6 @@ using CommunityToolkit.WinUI.Notifications;
 using System.Diagnostics;
 using System.Security.Principal;
 using Windows.UI.Notifications;
-using Kiritori.Views.LiveCapture;
-using Kiritori.Helpers;
-using Kiritori.Services.Notifications;
 using System.IO;
 using System.Threading;
 //using static Kiritori.Helpers;
@@ -251,6 +252,7 @@ namespace Kiritori
         // ====== 画面表示 ======
         public void showScreenAll()
         {
+            Log.Info("Screen capture started", "Capture");
             this.Opacity = 1.0;
             this.isOpen = true;
             DisposeCaptureSurface();
@@ -259,6 +261,7 @@ namespace Kiritori
 
             var vs = GetVirtualScreenPhysical();
             x = vs.X; y = vs.Y; w = vs.W; h = vs.H;
+            Log.Debug($"Virtual screen (physical): {x},{y} {w}x{h}", "DPI");
 
             this.SetBounds(x, y, w, h);
             bmp = new Bitmap(w, h);
@@ -281,11 +284,13 @@ namespace Kiritori
         }
         public void showScreenOCR()
         {
+            Log.Info("set OCR mode", "Capture");
             this._ocr_mode = true;
             showScreenAll();
         }
         public void showScreenLive()
         {
+            Log.Info("set Live mode", "Capture");
             this._live_mode = true;
             showScreenAll();
         }
@@ -305,6 +310,7 @@ namespace Kiritori
                 startPoint = new Point(e.X, e.Y);
                 startPointPhys = new Point(e.X + x, e.Y + y);
                 isPressed = true;
+                Log.Debug($"MouseDown at {startPoint} (physical: {startPointPhys})", "Capture");
             }
         }
 
@@ -413,6 +419,7 @@ namespace Kiritori
                 {
                     // 1) 安全クロップ（baseBmp の範囲に収める）
                     Rectangle crop = Rectangle.Intersect(rc, new Rectangle(0, 0, baseBmp.Width, baseBmp.Height));
+                    Log.Info($"crop={crop}", "Capture");
                     if (crop.Width > 0 && crop.Height > 0)
                     {
                         // 透明化：画面上に残らないように（自己キャプチャ抑止にも有効）
@@ -441,7 +448,7 @@ namespace Kiritori
                                 {
                                     if (sub == null)
                                     {
-                                        System.Diagnostics.Debug.WriteLine("[OCR] sub image is null.");
+                                        Log.Debug("sub image is null.", "OCR");
                                         NotifyOcrError();
                                         return;
                                     }
@@ -523,7 +530,7 @@ namespace Kiritori
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("[ScreenWindow_MouseUp] " + ex);
+                Log.Debug("[ScreenWindow_MouseUp] " + ex);
             }
             finally
             {
@@ -569,13 +576,13 @@ namespace Kiritori
                     var toast = new ToastNotification(xml) { Tag = "kiritori-capture", Group = "kiritori" };
 
                     // ここで AUMID（Startメニューのショートカットと一致するID）を指定
-                    Debug.WriteLine("[Toast] Show() called: " + NotificationService.GetAppAumid());
+                    Log.Debug("Show() called: " + NotificationService.GetAppAumid(), "Toast");
                     ToastNotificationManager.CreateToastNotifier(NotificationService.GetAppAumid()).Show(toast);
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Trace.WriteLine("[Toast] Show() failed: " + ex);
+                Log.Debug("Show() failed: " + ex, "Toast");
                 var main = Application.OpenForms["MainApplication"] as Kiritori.MainApplication;
                 main?.NotifyIcon?.ShowBalloonTip(2500, "Kiritori", "キャプチャを保存しました", ToolTipIcon.None);
             }
@@ -860,7 +867,7 @@ namespace Kiritori
             }
             catch (System.Exception ex)
             {
-                System.Diagnostics.Trace.WriteLine("[OCR] failed: " + ex);
+                Log.Trace("[OCR] failed: " + ex, "OCR");
                 NotifyOcrError();
             }
         }
@@ -981,7 +988,7 @@ namespace Kiritori
             }
             catch (System.Exception ex)
             {
-                System.Diagnostics.Trace.WriteLine("[OCR] failed: " + ex);
+                Log.Trace("[OCR] failed: " + ex, "OCR");
                 NotifyOcrError();
             }
         }

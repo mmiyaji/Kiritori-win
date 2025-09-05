@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using CommunityToolkit.WinUI.Notifications; // DesktopNotificationManagerCompat, ToastArguments
 using Kiritori.Helpers;
+using Kiritori.Services.Logging;
 
 namespace Kiritori.Services.Notifications
 {
@@ -20,7 +21,7 @@ namespace Kiritori.Services.Notifications
 
         internal static void Initialize()
         {
-            Debug.WriteLine("[ToastBootstrapper] Initialize: " + Aumid);
+            Log.Debug($"Initialize: {Aumid}", "Toast");
             if (_initialized) return;
             _initialized = true;
 
@@ -81,7 +82,7 @@ namespace Kiritori.Services.Notifications
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine("[Toast OnActivated] " + ex);
+                    Log.Debug($"[Toast OnActivated] {ex}", "Toast");
                 }
             };
         }

@@ -1,17 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Kiritori.Helpers;
+using Kiritori.Startup;
+using Kiritori.Services.Logging;
+using System;
+using System.IO;
+using System.Linq;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
-//using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Configuration;
-using Kiritori.Helpers;
-using Kiritori.Startup;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace Kiritori
 {
@@ -57,6 +57,14 @@ namespace Kiritori
         [STAThread]
         static void Main(string[] args)
         {
+            var logopt = LoggerSettingsLoader.LoadFromSettings();
+#if DEBUG
+    if (!logopt.WriteToDebug) logopt.WriteToDebug = true; // Debugビルドはデバッグ出力をデフォルトONに
+#endif
+            Log.Configure(logopt);
+            Application.ApplicationExit += (s, e) => Log.Shutdown();
+            Log.Info($"Kiritori starting (v{Application.ProductVersion})", "Startup");
+
             try
             {
                 Thread.CurrentThread.CurrentUICulture = new CultureInfo(Properties.Settings.Default.UICulture);
@@ -97,7 +105,7 @@ namespace Kiritori
             {
                 int v; GetProcessDpiAwareness(GetCurrentProcess(), out v);
                 // 0:Unaware 1:System 2:PerMonitor
-                System.Diagnostics.Debug.WriteLine($"[DPI] Awareness={v}");
+                Log.Debug($"[DPI] Awareness={v}", "Startup");
             }
             catch { }
 
@@ -108,7 +116,7 @@ namespace Kiritori
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            Debug.WriteLine($"[Startup] Args: {string.Join(" ", args ?? Array.Empty<string>())}");
+            Log.Info($"Args: {string.Join(" ", args ?? Array.Empty<string>())}", "Startup");
             var opt = ParseArgs(args);
             using (var mutex = new Mutex(true, SingleInstance.MutexName, out bool isNew))
                 {
@@ -153,7 +161,7 @@ namespace Kiritori
                 .Distinct()
                 .ToArray();
 
-            Debug.WriteLine($"[Startup] Parsed files: {string.Join(", ", files)}");
+            Log.Info($"Parsed files: {string.Join(", ", files)}", "Startup");
 
             return files.Length > 0
                 ? new AppStartupOptions { Mode = AppStartupMode.Viewer, ImagePaths = files }
@@ -188,7 +196,7 @@ namespace Kiritori
             catch (Exception ex)
             {
                 // 失敗時はログだけ（必要ならバルーンでエラー表示）
-                System.Diagnostics.Debug.WriteLine("[CopyImageToClipboardSafe] " + ex);
+                Log.Debug("[CopyImageToClipboardSafe] " + ex, "Startup");
             }
         }
         static void HealUserConfig()
@@ -206,11 +214,40 @@ namespace Kiritori
                     try { File.Delete(bad); } catch { }
                     Kiritori.Properties.Settings.Default.Reload();
                     Kiritori.Properties.Settings.Default.Save();
-                    Debug.WriteLine("[Settings] user.config reset: " + bad);
+                    Log.Debug("user.config reset: " + bad, "Startup");
                 }
             }
         }
     }
+    public static class LoggerSettingsLoader
+    {
+        public static Kiritori.Services.Logging.LoggerOptions LoadFromSettings()
+        {
+            var o = new Kiritori.Services.Logging.LoggerOptions();
+            try
+            {
+                // ※ Properties.Settings.Default に追加した設定項目を読み取る
+                var s = Properties.Settings.Default;
+                o.Enabled           = s.Logger_Enabled;
+                o.MinLevel          = (Kiritori.Services.Logging.LogLevel) s.Logger_MinLevel;
+                o.WriteToDebug      = s.Logger_WriteToDebug;
+                o.WriteToFile       = s.Logger_WriteToFile;
+                o.FilePath          = string.IsNullOrEmpty(s.Logger_FilePath)
+                                    ? o.FilePath : s.Logger_FilePath;
+                o.MaxFileSizeBytes  = s.Logger_MaxFileSizeBytes;
+                o.MaxRollFiles      = s.Logger_MaxRollFiles;
+                o.IncludeTimestamp  = s.Logger_IncludeTimestamp;
+                o.IncludeThreadId   = s.Logger_IncludeThreadId;
+                o.IncludeProcessId  = s.Logger_IncludeProcessId;
+                o.IncludeCategoryTag= s.Logger_IncludeCategoryTag;
+                o.TimestampFormat   = string.IsNullOrEmpty(s.Logger_TimestampFormat)
+                                    ? o.TimestampFormat : s.Logger_TimestampFormat;
+            }
+            catch { /* 既定値で継続 */ }
+            return o;
+        }
+    }
+
     #pragma warning disable CS0618
     [ComVisible(true)]
     [Guid("013AE16E-2760-4474-845B-7F47DF556826")]

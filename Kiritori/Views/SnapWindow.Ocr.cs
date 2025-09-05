@@ -1,3 +1,7 @@
+using Kiritori.Helpers;
+using Kiritori.Services.Notifications;
+using Kiritori.Services.Ocr;
+using Kiritori.Services.Logging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -12,9 +16,6 @@ using System.Security.Principal;
 using System.Text;
 using System.Windows.Forms;
 using CommunityToolkit.WinUI.Notifications;
-using Kiritori.Helpers;
-using Kiritori.Services.Notifications;
-using Kiritori.Services.Ocr;
 using Windows.UI.Notifications;
 
 namespace Kiritori
@@ -66,7 +67,7 @@ namespace Kiritori
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("RunOcrOnCurrentImage error: " + ex.Message);
+                Log.Debug("RunOcrOnCurrentImage error: " + ex.Message, "SnapWindow");
                 ShowOverlay("OCR failed");
             }
             finally
@@ -111,7 +112,7 @@ namespace Kiritori
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Trace.WriteLine("[Toast] Show() failed: " + ex);
+                Log.Trace("Show() failed: " + ex, "Toast");
                 var main = Application.OpenForms["MainApplication"] as Kiritori.MainApplication;
                 main?.NotifyIcon?.ShowBalloonTip(1000, "Kiritori - OCR", snippet, ToolTipIcon.None);
             }

@@ -1,3 +1,7 @@
+using Kiritori.Helpers;
+using Kiritori.Services.Notifications;
+using Kiritori.Services.Ocr;
+using Kiritori.Services.Logging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -12,9 +16,6 @@ using System.Security.Principal;
 using System.Text;
 using System.Windows.Forms;
 using CommunityToolkit.WinUI.Notifications;
-using Kiritori.Helpers;
-using Kiritori.Services.Notifications;
-using Kiritori.Services.Ocr;
 using Windows.UI.Notifications;
 
 namespace Kiritori
@@ -123,7 +124,7 @@ namespace Kiritori
                     }
                     catch
                     {
-                        Debug.WriteLine("Failed to load edited image: " + _paintEditPath);
+                        Log.Debug("Failed to load edited image: " + _paintEditPath, "SnapWindow");
                     }
                 };
             }
@@ -311,7 +312,7 @@ namespace Kiritori
         {
             base.OnShown(e);
             this._originalLocation = this.Location;
-            Debug.WriteLine($"Original Location: {this._originalLocation}");
+            Log.Debug($"Original Location: {this._originalLocation}", "SnapWindow");
         }
         private int DpiScale(int px) => (int)Math.Round(px * this.DeviceDpi / 96.0);
 

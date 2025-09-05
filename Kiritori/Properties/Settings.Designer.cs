@@ -322,5 +322,149 @@ namespace Kiritori.Properties {
                 this["LivePreviewRenderPolicy"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool Logger_Enabled {
+            get {
+                return ((bool)(this["Logger_Enabled"]));
+            }
+            set {
+                this["Logger_Enabled"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        public int Logger_MinLevel {
+            get {
+                return ((int)(this["Logger_MinLevel"]));
+            }
+            set {
+                this["Logger_MinLevel"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool Logger_WriteToDebug {
+            get {
+                return ((bool)(this["Logger_WriteToDebug"]));
+            }
+            set {
+                this["Logger_WriteToDebug"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool Logger_WriteToFile {
+            get {
+                return ((bool)(this["Logger_WriteToFile"]));
+            }
+            set {
+                this["Logger_WriteToFile"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string Logger_FilePath {
+            get {
+                return ((string)(this["Logger_FilePath"]));
+            }
+            set {
+                this["Logger_FilePath"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("5242880")]
+        public int Logger_MaxFileSizeBytes {
+            get {
+                return ((int)(this["Logger_MaxFileSizeBytes"]));
+            }
+            set {
+                this["Logger_MaxFileSizeBytes"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("3")]
+        public int Logger_MaxRollFiles {
+            get {
+                return ((int)(this["Logger_MaxRollFiles"]));
+            }
+            set {
+                this["Logger_MaxRollFiles"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool Logger_IncludeTimestamp {
+            get {
+                return ((bool)(this["Logger_IncludeTimestamp"]));
+            }
+            set {
+                this["Logger_IncludeTimestamp"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool Logger_IncludeThreadId {
+            get {
+                return ((bool)(this["Logger_IncludeThreadId"]));
+            }
+            set {
+                this["Logger_IncludeThreadId"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool Logger_IncludeProcessId {
+            get {
+                return ((bool)(this["Logger_IncludeProcessId"]));
+            }
+            set {
+                this["Logger_IncludeProcessId"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool Logger_IncludeCategoryTag {
+            get {
+                return ((bool)(this["Logger_IncludeCategoryTag"]));
+            }
+            set {
+                this["Logger_IncludeCategoryTag"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("yyyy-MM-dd HH:mm:ss.fff")]
+        public string Logger_TimestampFormat {
+            get {
+                return ((string)(this["Logger_TimestampFormat"]));
+            }
+            set {
+                this["Logger_TimestampFormat"] = value;
+            }
+        }
     }
 }

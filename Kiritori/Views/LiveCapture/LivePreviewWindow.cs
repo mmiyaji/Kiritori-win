@@ -1,4 +1,5 @@
 ﻿using Kiritori.Helpers;
+using Kiritori.Services.Logging;
 using System;
 using System.IO;
 using System.Diagnostics;
@@ -190,7 +191,7 @@ namespace Kiritori.Views.LiveCapture
                 {
                     int nv = Properties.Settings.Default.LivePreviewRenderPolicy;
                     _policy = (nv == 0) ? RenderPolicy.AlwaysDraw : RenderPolicy.HashSkip;
-                    LPLog.Info($"RenderPolicy changed to: {_policy}");
+                    Log.Debug($"RenderPolicy changed to: {_policy}", "LivePreview");
                 }
             };
 
@@ -211,19 +212,6 @@ namespace Kiritori.Views.LiveCapture
             // _perfTimer = new System.Threading.Timer(UpdatePerf, null, 1000, 1000);
             _lastCpuTime = Process.GetCurrentProcess().TotalProcessorTime;
         }
-        // ==== LivePreview 用デバッグロガー（%TEMP%\Kiritori.LivePreview.log + Debug） ====
-        private static class LPLog
-        {
-            private static readonly string LogPath =
-                Path.Combine(Path.GetTempPath(), "Kiritori.LivePreview.log");
-
-            public static void Info(string msg)
-            {
-                var line = $"{DateTime.Now:HH:mm:ss.fff} [LP] {msg}";
-                System.Diagnostics.Debug.WriteLine(line);
-                try { File.AppendAllText(LogPath, line + Environment.NewLine); } catch { /* ignore */ }
-            }
-        }
         private static string RectStr(Rectangle r) => $"({r.X},{r.Y}) {r.Width}x{r.Height}";
         private static string RectStr(RECT r) => $"({r.Left},{r.Top}) {r.Right - r.Left}x{r.Bottom - r.Top}";
         private static string InsetsStr(NcInsets i) => $"L{i.Left} T{i.Top} R{i.Right} B{i.Bottom}";
@@ -232,11 +220,11 @@ namespace Kiritori.Views.LiveCapture
         {
             // 位置合わせ（※これが内部で“論理サイズ”に変えるので、この後でサイズを上書きする）
             WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: topMost);
-            LPLog.Info($"{tag}: after Move: Client={this.ClientSize.Width}x{this.ClientSize.Height}, Bounds=({this.Left},{this.Top}) {this.Width}x{this.Height}, Insets {InsetsStr(GetNcInsets())}");
+            Log.Debug($"{tag}: after Move: Client={this.ClientSize.Width}x{this.ClientSize.Height}, Bounds=({this.Left},{this.Top}) {this.Width}x{this.Height}, Insets {InsetsStr(GetNcInsets())}", "LivePreview");
 
             // 物理サイズへ上書き
             ResizeToKeepClient(GetDesiredClientPhysical());
-            LPLog.Info($"{tag}: after ResizePhysical: Client={this.ClientSize.Width}x{this.ClientSize.Height}, Bounds=({this.Left},{this.Top}) {this.Width}x{this.Height}, Insets {InsetsStr(GetNcInsets())}");
+            Log.Debug($"{tag}: after ResizePhysical: Client={this.ClientSize.Width}x{this.ClientSize.Height}, Bounds=({this.Left},{this.Top}) {this.Width}x{this.Height}, Insets {InsetsStr(GetNcInsets())}", "LivePreview");
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -611,11 +599,11 @@ namespace Kiritori.Views.LiveCapture
             try
             {
                 var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
-                LPLog.Info($"OnLoad: DeviceDpi={this.DeviceDpi}, CaptionHidden={_captionHidden}, TopMost={this.TopMost}");
-                LPLog.Info($"OnLoad: CaptureRect logical={RectStr(CaptureRect)} physical={RectStr(rPhys)}");
+                Log.Debug($"OnLoad: DeviceDpi={this.DeviceDpi}, CaptionHidden={_captionHidden}, TopMost={this.TopMost}", "LivePreview");
+                Log.Debug($"OnLoad: CaptureRect logical={RectStr(CaptureRect)} physical={RectStr(rPhys)}", "LivePreview");
                 var ins = GetNcInsets();
-                LPLog.Info($"OnLoad: Insets {InsetsStr(ins)}");
-                LPLog.Info($"OnLoad: Client={this.ClientSize.Width}x{this.ClientSize.Height}, Bounds={RectStr(new Rectangle(this.Left, this.Top, this.Width, this.Height))}");
+                Log.Debug($"OnLoad: Insets {InsetsStr(ins)}", "LivePreview");
+                Log.Debug($"OnLoad: Client={this.ClientSize.Width}x{this.ClientSize.Height}, Bounds={RectStr(new Rectangle(this.Left, this.Top, this.Width, this.Height))}", "LivePreview");
             }
             catch { /* no-op */ }
             // ---- 追加ここまで ----
@@ -1118,7 +1106,7 @@ namespace Kiritori.Views.LiveCapture
 
             if (this.Opacity < 1.0) this.Opacity = 1.0;
             _firstFrameShown = true;
-            LPLog.Info($"FirstCapture: logical={RectStr(rLogical)} physical={RectStr(rPhysical)} bmp={_latest?.Width}x{_latest?.Height}");
+            Log.Debug($"FirstCapture: logical={RectStr(rLogical)} physical={RectStr(rPhysical)} bmp={_latest?.Width}x{_latest?.Height}", "LivePreview");
         }
 
         // private void RealignToKiritori()
@@ -1303,7 +1291,7 @@ namespace Kiritori.Views.LiveCapture
                 Properties.Settings.Default.Save();
                 SyncPolicyChecks();
                 ResetFpsWindow();
-                LPLog.Info("RenderPolicy -> AlwaysDraw");
+                Log.Debug("RenderPolicy -> AlwaysDraw", "LivePreview");
             };
             _miPolicyHash.Click += (s, e) =>
             {
@@ -1312,7 +1300,7 @@ namespace Kiritori.Views.LiveCapture
                 Properties.Settings.Default.Save();
                 SyncPolicyChecks();
                 ResetFpsWindow();
-                LPLog.Info("RenderPolicy -> HashSkip");
+                Log.Debug("RenderPolicy -> HashSkip", "LivePreview");
             };
             _miPolicyRoot.DropDownItems.AddRange(new ToolStripItem[] { _miPolicyAlways, _miPolicyHash });
             // 既存の _ctx.Items.AddRange(...) に混ぜる場所へ
@@ -1496,10 +1484,9 @@ namespace Kiritori.Views.LiveCapture
                 }
                 UpdateShadowMenuState();
 
-                // ---- 追加ログ ----
-                LPLog.Info($"ToggleTitlebar: CaptionHidden={_captionHidden}, DeviceDpi={this.DeviceDpi}");
-                LPLog.Info($"ToggleTitlebar: Insets(before) {InsetsStr(oldInsets)} -> (after) {InsetsStr(newInsets)}");
-                LPLog.Info($"ToggleTitlebar: ClientNow={this.ClientSize.Width}x{this.ClientSize.Height}, BoundsNow={RectStr(new Rectangle(this.Left, this.Top, this.Width, this.Height))}");
+                Log.Debug($"ToggleTitlebar: CaptionHidden={_captionHidden}, DeviceDpi={this.DeviceDpi}", "LivePreview");
+                Log.Debug($"ToggleTitlebar: Insets(before) {InsetsStr(oldInsets)} -> (after) {InsetsStr(newInsets)}", "LivePreview");
+                Log.Debug($"ToggleTitlebar: ClientNow={this.ClientSize.Width}x{this.ClientSize.Height}, BoundsNow={RectStr(new Rectangle(this.Left, this.Top, this.Width, this.Height))}", "LivePreview");
             };
 
             if (_ctx != null && _ctx.Visible)
@@ -1527,7 +1514,7 @@ namespace Kiritori.Views.LiveCapture
             var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
             int w = (int)Math.Round(rPhys.Width * _zoom);
             int h = (int)Math.Round(rPhys.Height * _zoom);
-            LPLog.Info($"DesiredClient: logical={CaptureRect.Width}x{CaptureRect.Height} -> physical={w}x{h} (zoom={_zoom:F2})");
+            Log.Debug($"DesiredClient: logical={CaptureRect.Width}x{CaptureRect.Height} -> physical={w}x{h} (zoom={_zoom:F2})", "LivePreview");
             return new Size(w, h);
         }
         private System.Drawing.Point GetClientTopLeftOnScreen()
@@ -1555,8 +1542,8 @@ namespace Kiritori.Views.LiveCapture
                 SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 
             var cur = GetClientTopLeftOnScreen();
-            LPLog.Info($"{tag}: AlignPhysical: wantPhysTL=({rPhys.X},{rPhys.Y}), sDst={sDst:F2}, set LeftTop=({newLeft},{newTop}), " +
-                    $"clientTL(after)=({cur.X},{cur.Y})");
+            Log.Debug($"{tag}: AlignPhysical: wantPhysTL=({rPhys.X},{rPhys.Y}), sDst={sDst:F2}, set LeftTop=({newLeft},{newTop}), " +
+                $"clientTL(after)=({cur.X},{cur.Y})", "LivePreview");
         }
 
         private void OnFrameArrived(Bitmap bmp)
@@ -1650,7 +1637,7 @@ namespace Kiritori.Views.LiveCapture
         {
             double hashAvg = (_hashCount > 0) ? (double)_hashTimeTotal / _hashCount : 0;
             double drawAvg = (_drawCount > 0) ? (double)_drawTimeTotal / _drawCount : 0;
-            LPLog.Info($"PerfStats: DrawFPS={_dispFps}, SrcFPS={_srcFps}, Policy={_policy}, Skip={_skipCount}, HashAvg={hashAvg:F3}ms, DrawAvg={drawAvg:F3}ms (hashCount={_hashCount}, drawCount={_drawCount})");
+            Log.Debug($"PerfStats: DrawFPS={_dispFps}, SrcFPS={_srcFps}, Policy={_policy}, Skip={_skipCount}, HashAvg={hashAvg:F3}ms, DrawAvg={drawAvg:F3}ms (hashCount={_hashCount}, drawCount={_drawCount})", "LivePreview");
             _hashTimeTotal = _drawTimeTotal = 0;
             _hashCount = _drawCount = _skipCount = 0;
         }
@@ -1795,7 +1782,7 @@ namespace Kiritori.Views.LiveCapture
             //         int newDpiX = (int)(w & 0xFFFF);
             //         int newDpiY = (int)((w >> 16) & 0xFFFF);
             //         var rc = (RECT)Marshal.PtrToStructure(m.LParam, typeof(RECT));
-            //         LPLog.Info($"WM_DPICHANGED: DeviceDpi {this.DeviceDpi} -> {newDpiX}/{newDpiY}, suggested={RectStr(rc)}");
+            //         Log.Debug($"WM_DPICHANGED: DeviceDpi {this.DeviceDpi} -> {newDpiX}/{newDpiY}, suggested={RectStr(rc)}");
             //     }
             //     catch { }
 
@@ -1808,7 +1795,7 @@ namespace Kiritori.Views.LiveCapture
             //     }
             //     catch (Exception ex)
             //     {
-            //         LPLog.Info("WM_DPICHANGED: reapply failed: " + ex.Message);
+            //         Log.Debug("WM_DPICHANGED: reapply failed: " + ex.Message);
             //     }
             // }
             if (_captionHidden && m.Msg == WM_NCCALCSIZE && m.WParam != IntPtr.Zero)
@@ -2126,8 +2113,7 @@ namespace Kiritori.Views.LiveCapture
             if (!IsHandleCreated) return;
             var h = this.Handle;
 
-            // ---- 追加ログ：入口 ----
-            LPLog.Info($"ResizeToKeepClient: reqClient={client.Width}x{client.Height}, CaptionHidden={_captionHidden}, DeviceDpi={this.DeviceDpi}");
+            Log.Debug($"ResizeToKeepClient: reqClient={client.Width}x{client.Height}, CaptionHidden={_captionHidden}, DeviceDpi={this.DeviceDpi}", "LivePreview");
 
             int style = GetWindowLong(h, GWL_STYLE);
             int exstyle = GetWindowLong(h, GWL_EXSTYLE);
@@ -2146,10 +2132,10 @@ namespace Kiritori.Views.LiveCapture
                 ForceRefreshNonClient();
 
                 var insH = GetNcInsets();
-                LPLog.Info($"ResizeToKeepClient(hidden): applied outer={newW}x{newH}, Insets {InsetsStr(insH)}");
+                Log.Debug($"ResizeToKeepClient(hidden): applied outer={newW}x{newH}, Insets {InsetsStr(insH)}", "LivePreview");
                 if (GetClientRect(h, out RECT crcH))
                 {
-                    LPLog.Info($"ResizeToKeepClient(hidden): realClient={crcH.Right - crcH.Left}x{crcH.Bottom - crcH.Top}");
+                    Log.Debug($"ResizeToKeepClient(hidden): realClient={crcH.Right - crcH.Left}x{crcH.Bottom - crcH.Top}", "LivePreview");
                 }
                 return;
             }
@@ -2159,7 +2145,7 @@ namespace Kiritori.Views.LiveCapture
             newW = client.Width + ins.Left + ins.Right;
             newH = client.Height + ins.Top + ins.Bottom;
 
-            LPLog.Info($"ResizeToKeepClient: current Insets {InsetsStr(ins)} => target outer={newW}x{newH} (style=0x{style:X8}, ex=0x{exstyle:X8})");
+            Log.Debug($"ResizeToKeepClient: current Insets {InsetsStr(ins)} => target outer={newW}x{newH} (style=0x{style:X8}, ex=0x{exstyle:X8})", "LivePreview");
 
             SetWindowPos(h, IntPtr.Zero, this.Left, this.Top, newW, newH,
                         SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
@@ -2172,7 +2158,7 @@ namespace Kiritori.Views.LiveCapture
                 int dW = client.Width - curW;
                 int dH = client.Height - curH;
 
-                LPLog.Info($"ResizeToKeepClient: after1 realClient={curW}x{curH} -> delta dW={dW}, dH={dH}");
+                Log.Debug($"ResizeToKeepClient: after1 realClient={curW}x{curH} -> delta dW={dW}, dH={dH}");
 
                 if (dW != 0 || dH != 0)
                 {
@@ -2186,10 +2172,10 @@ namespace Kiritori.Views.LiveCapture
 
             // ③ 最終状態を記録
             var ins2 = GetNcInsets();
-            LPLog.Info($"ResizeToKeepClient: final Insets {InsetsStr(ins2)}");
+            Log.Debug($"ResizeToKeepClient: final Insets {InsetsStr(ins2)}");
             if (GetClientRect(h, out RECT crc2))
             {
-                LPLog.Info($"ResizeToKeepClient: final realClient={crc2.Right - crc2.Left}x{crc2.Bottom - crc2.Top}, Bounds={RectStr(new Rectangle(this.Left, this.Top, this.Width, this.Height))}");
+                Log.Debug($"ResizeToKeepClient: final realClient={crc2.Right - crc2.Left}x{crc2.Bottom - crc2.Top}, Bounds={RectStr(new Rectangle(this.Left, this.Top, this.Width, this.Height))}");
             }
         }
 

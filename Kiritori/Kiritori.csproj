@@ -134,6 +134,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Services\Logging\Log.cs" />
     <Compile Include="Services\Settings\SettingsDirtyTracker.cs" />
     <Compile Include="Views\Controls\AlphaPreviewPanel.cs">
       <SubType>Component</SubType>

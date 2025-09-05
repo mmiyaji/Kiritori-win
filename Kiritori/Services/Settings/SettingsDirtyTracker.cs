@@ -1,4 +1,5 @@
 ﻿using Kiritori.Helpers;
+using Kiritori.Services.Logging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -137,9 +138,9 @@ namespace Kiritori.Services.Settings
         }
         public static void DumpSettingsKeys()
         {
-            Debug.WriteLine("=== Settings.Keys ===");
+            Log.Debug("=== Settings.Keys ===", "Settings");
             foreach (SettingsProperty p in Kiritori.Properties.Settings.Default.Properties)
-                Debug.WriteLine($"- {p.Name} : {p.PropertyType}");
+                Log.Debug($"- {p.Name} : {p.PropertyType}", "Settings");
         }
 
     }

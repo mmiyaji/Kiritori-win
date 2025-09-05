@@ -1,3 +1,7 @@
+using Kiritori.Helpers;
+using Kiritori.Services.Notifications;
+using Kiritori.Services.Ocr;
+using Kiritori.Services.Logging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -12,9 +16,6 @@ using System.Security.Principal;
 using System.Text;
 using System.Windows.Forms;
 using CommunityToolkit.WinUI.Notifications;
-using Kiritori.Helpers;
-using Kiritori.Services.Notifications;
-using Kiritori.Services.Ocr;
 using Windows.UI.Notifications;
 
 namespace Kiritori
@@ -240,7 +241,7 @@ namespace Kiritori
         }
         private void RefreshFromOriginalHiQ()
         {
-            Debug.WriteLine("Resize ended");
+            Log.Debug("Resize ended", "SnapWindow");
             if (_originalImage == null) return;
 
             var vw = Math.Max(1, pictureBox1.ClientSize.Width);

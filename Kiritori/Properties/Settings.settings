@@ -77,5 +77,41 @@
     <Setting Name="LivePreviewRenderPolicy" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
     </Setting>
+    <Setting Name="Logger_Enabled" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="Logger_MinLevel" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">2</Value>
+    </Setting>
+    <Setting Name="Logger_WriteToDebug" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="Logger_WriteToFile" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="Logger_FilePath" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="Logger_MaxFileSizeBytes" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">5242880</Value>
+    </Setting>
+    <Setting Name="Logger_MaxRollFiles" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">3</Value>
+    </Setting>
+    <Setting Name="Logger_IncludeTimestamp" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="Logger_IncludeThreadId" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="Logger_IncludeProcessId" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="Logger_IncludeCategoryTag" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="Logger_TimestampFormat" Type="System.String" Scope="User">
+      <Value Profile="(Default)">yyyy-MM-dd HH:mm:ss.fff</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

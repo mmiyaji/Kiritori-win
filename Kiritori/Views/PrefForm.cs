@@ -2,6 +2,7 @@
 using Kiritori.Startup;
 using Kiritori.Views.Controls;
 using Kiritori.Services.Settings;
+using Kiritori.Services.Logging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -206,7 +207,7 @@ namespace Kiritori
 
         private async void ChkRunAtStartup_CheckedChanged(object sender, EventArgs e)
         {
-            Debug.WriteLine($"[StartupToggle] fired: init={_initStartupToggle}, handling={_handlingStartupToggle}, want={chkRunAtStartup.Checked}");
+            Log.Debug($"fired: init={_initStartupToggle}, handling={_handlingStartupToggle}, want={chkRunAtStartup.Checked}", "StartupToggle");
             if (_initStartupToggle || _handlingStartupToggle) return;
             _handlingStartupToggle = true;
 
@@ -304,7 +305,7 @@ namespace Kiritori
 
         private void btnExitApp_Click(object sender, EventArgs e)
         {
-            Debug.WriteLine("Exit button clicked");
+            Log.Debug("Exit button clicked", "PrefForm");
             exitApp();
 
         }
@@ -418,18 +419,18 @@ namespace Kiritori
 
         private void SaveHotkeyFromPicker(CaptureMode mode, HotkeyPicker picker)
         {
-            Debug.WriteLine($"[Prefs] SaveHotkeyFromPicker(mode={mode})");
-            if (picker == null) { Debug.WriteLine("[Prefs] picker is null"); return; }
-            if (picker.Value == null) { Debug.WriteLine("[Prefs] picker.Value is null"); return; }
+            Log.Debug($"SaveHotkeyFromPicker(mode={mode})", "PrefForm");
+            if (picker == null) { Log.Debug("picker is null", "PrefForm"); return; }
+            if (picker.Value == null) { Log.Debug("picker.Value is null", "PrefForm"); return; }
 
             var pickedText = HotkeyUtil.ToText(picker.Value) ?? "";
-            Debug.WriteLine($"[Prefs] picked: '{pickedText}' (Mods={picker.Value.Mods}, Key={picker.Value.Key})");
+            Log.Debug($"picked: '{pickedText}' (Mods={picker.Value.Mods}, Key={picker.Value.Key})", "PrefForm");
 
             // 現在値
             var currentCap  = Properties.Settings.Default.HotkeyCapture ?? "";
             var currentOcr  = Properties.Settings.Default.HotkeyOcr ?? "";
             var currentLive = Properties.Settings.Default.HotkeyLive ?? "";
-            Debug.WriteLine($"[Prefs] before: Cap='{currentCap}', Ocr='{currentOcr}', Live='{currentLive}'");
+            Log.Debug($"before: Cap='{currentCap}', Ocr='{currentOcr}', Live='{currentLive}'", "PrefForm");
 
             // 比較は大文字小文字を無視
             Func<string, string, bool> same = (a, b) =>
@@ -477,15 +478,14 @@ namespace Kiritori
             else
             {
                 // 未知モードは何もしない
-                Debug.WriteLine("[Prefs] unknown mode; skipped");
+                Log.Debug("unknown mode; skipped", "PrefForm");
                 return;
             }
 
             // ここで一回だけ保存
             Properties.Settings.Default.Save();
-            Debug.WriteLine(
-                $"[Prefs] saved: Cap='{Properties.Settings.Default.HotkeyCapture}', " +
-                $"Ocr='{Properties.Settings.Default.HotkeyOcr}', Live='{Properties.Settings.Default.HotkeyLive}'");
+            Log.Debug($"saved: Cap='{Properties.Settings.Default.HotkeyCapture}', " +
+                $"Ocr='{Properties.Settings.Default.HotkeyOcr}', Live='{Properties.Settings.Default.HotkeyLive}'", "PrefForm");
         }
 
         private void ResetCaptureHotkeyToDefault()
@@ -1050,13 +1050,13 @@ namespace Kiritori
         // === Settings のスナップショット（ハッシュ）を作る ===
         static void DumpControlBindings(Form f)
         {
-            Debug.WriteLine("=== Control Bindings to Settings ===");
+            Log.Debug("=== Control Bindings to Settings ===", "PrefForm");
             void Walk(Control c)
             {
                 foreach (Binding b in c.DataBindings)
                 {
                     if (object.ReferenceEquals(b.DataSource, Kiritori.Properties.Settings.Default))
-                        Debug.WriteLine($"- {c.Name}.{b.PropertyName} <= {b.BindingMemberInfo.BindingField}");
+                        Log.Debug($"- {c.Name}.{b.PropertyName} <= {b.BindingMemberInfo.BindingField}", "PrefForm");
                 }
                 foreach (Control child in c.Controls) Walk(child);
                 if (f.MainMenuStrip != null)
