@@ -43,13 +43,13 @@ namespace Kiritori.Views.LiveCapture
         const uint SWP_FRAMECHANGED = 0x0020;
 
         const int WM_NCLBUTTONDOWN = 0x00A1;
-        const int WM_LBUTTONDOWN   = 0x0201;
-        const int WM_LBUTTONUP     = 0x0202;
-        const int WM_NCCALCSIZE    = 0x0083;
-        const int WM_NCHITTEST     = 0x0084;
+        const int WM_LBUTTONDOWN = 0x0201;
+        const int WM_LBUTTONUP = 0x0202;
+        const int WM_NCCALCSIZE = 0x0083;
+        const int WM_NCHITTEST = 0x0084;
 
-        const int HTCLIENT=1, HTCAPTION=2;
-        const int HTLEFT=10, HTRIGHT=11, HTTOP=12, HTTOPLEFT=13, HTTOPRIGHT=14, HTBOTTOM=15, HTBOTTOMLEFT=16, HTBOTTOMRIGHT=17;
+        const int HTCLIENT = 1, HTCAPTION = 2;
+        const int HTLEFT = 10, HTRIGHT = 11, HTTOP = 12, HTTOPLEFT = 13, HTTOPRIGHT = 14, HTBOTTOM = 15, HTBOTTOMLEFT = 16, HTBOTTOMRIGHT = 17;
 
         // ---- HUD（Pause/Resume）描画用
         private System.Windows.Forms.Timer _fadeTimer;
@@ -62,13 +62,13 @@ namespace Kiritori.Views.LiveCapture
 
         // === SnapWindow互換：ホバー強調設定（外観） ===
         private Color _hoverColor = Color.DeepSkyBlue;  // SnapWindow同等の鮮やか系を既定に
-        private int   _hoverAlphaPercent = 60;          // 0-100（SnapWindow互換の%表現）
-        private int   _hoverThicknessPx  = 3;           // 論理px（DPIで実厚算出）
+        private int _hoverAlphaPercent = 60;          // 0-100（SnapWindow互換の%表現）
+        private int _hoverThicknessPx = 3;           // 論理px（DPIで実厚算出）
 
         // 強調枠のフェード（LivePreviewではフェードを活かす）
         private int _hoverAlpha = 0;                 // 実アルファ（0..200程度）
         private int _hoverTargetAlpha = 0;
-        private const int HOVER_ALPHA_ON  = 160;
+        private const int HOVER_ALPHA_ON = 160;
         private const int HOVER_ALPHA_OFF = 0;
 
         // private Stopwatch _fpsWatch = new Stopwatch();
@@ -91,7 +91,11 @@ namespace Kiritori.Views.LiveCapture
         private float _aspectRatio = 0f;
         private bool _useImageAspectIfAvailable = false;
         private bool _isDraggingWindow = false;
-
+        private bool _downOnHud = false;
+        private System.Drawing.Point _downScreen;
+        private int _downTick;
+        private const int DRAG_SLOP = 6;   // px
+        private const int CLICK_MS  = 300; // ms
         [StructLayout(LayoutKind.Sequential)]
         private struct MARGINS
         {
@@ -377,8 +381,8 @@ namespace Kiritori.Views.LiveCapture
             }
 
             int desiredD = DpiScale(120);
-            int maxD     = Math.Min(clientW, clientH) - safePad * 2;
-            int minD     = DpiScale(56);
+            int maxD = Math.Min(clientW, clientH) - safePad * 2;
+            int minD = DpiScale(56);
 
             int d = Math.Min(desiredD, maxD);
             if (d < minD) { _hudRect = Rectangle.Empty; return; }
@@ -460,7 +464,7 @@ namespace Kiritori.Views.LiveCapture
         {
             // DPI 対応のパディングとサイズ（SnapWindow と同等の見え方）
             int pad = DpiScale(6);
-            int sz  = DpiScale(20);
+            int sz = DpiScale(20);
             // クライアント右上に配置（タイトルバー非表示時のみ）
             return new Rectangle(ClientSize.Width - pad - sz, pad, sz, sz);
         }
@@ -898,10 +902,10 @@ namespace Kiritori.Views.LiveCapture
             var p = new GraphicsPath();
             if (d <= 0) { p.AddRectangle(r); return p; }
 
-            p.AddArc(r.Left,  r.Top,    d, d, 180, 90);
-            p.AddArc(r.Right - d, r.Top,    d, d, 270, 90);
-            p.AddArc(r.Right - d, r.Bottom - d, d, d,   0, 90);
-            p.AddArc(r.Left,  r.Bottom - d, d, d,  90, 90);
+            p.AddArc(r.Left, r.Top, d, d, 180, 90);
+            p.AddArc(r.Right - d, r.Top, d, d, 270, 90);
+            p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+            p.AddArc(r.Left, r.Bottom - d, d, d, 90, 90);
             p.CloseFigure();
             return p;
         }
@@ -1080,15 +1084,15 @@ namespace Kiritori.Views.LiveCapture
 
             _miCapture = new ToolStripMenuItem(SR.T("Menu.Capture", "Capture"));
             _miCapture.Click += (s, e) => startCapture();
-            _miCapture.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            _miCapture.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift)
             | System.Windows.Forms.Keys.D5)));
             _miOCR = new ToolStripMenuItem(SR.T("Menu.OCR", "OCR"));
             _miOCR.Click += (s, e) => startOCR();
-            _miOCR.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            _miOCR.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift)
             | System.Windows.Forms.Keys.D4)));
             _miLivePreview = new ToolStripMenuItem(SR.T("Menu.LivePreview", "Live Preview"));
             _miLivePreview.Click += (s, e) => startLivePreview();
-            _miLivePreview.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            _miLivePreview.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift)
             | System.Windows.Forms.Keys.D6)));
 
 
@@ -1215,12 +1219,12 @@ namespace Kiritori.Views.LiveCapture
             _miShowStats.ShortcutKeys = (Keys)HOTS.INFO;
 
             // ---------- サブメニュー（SnapWindow 構成に寄せる） ----------
-            var miFile   = new ToolStripMenuItem("File");   // いまは LivePreview 既存機能なし。将来 Save/Copy Frame 等をここに
+            var miFile = new ToolStripMenuItem("File");   // いまは LivePreview 既存機能なし。将来 Save/Copy Frame 等をここに
             miFile.Enabled = false;
-            var miEdit   = new ToolStripMenuItem("Edit");   // 予備（将来の編集系コマンド用）
+            var miEdit = new ToolStripMenuItem("Edit");   // 予備（将来の編集系コマンド用）
             miEdit.Enabled = false;
 
-            var miView   = new ToolStripMenuItem("View");
+            var miView = new ToolStripMenuItem("View");
             miView.DropDownItems.AddRange(new ToolStripItem[] {
                 _miOriginal,
                 _miZoomOut,
@@ -1309,17 +1313,17 @@ namespace Kiritori.Views.LiveCapture
         private void startCapture()
         {
             try { this.MainApp.openScreen(); }
-            catch {  }
+            catch { }
         }
         private void startOCR()
         {
             try { this.MainApp.openScreenOCR(); }
-            catch {  }
+            catch { }
         }
         private void startLivePreview()
         {
             try { this.MainApp.openScreenLive(); }
-            catch {  }
+            catch { }
         }
 
         private void SetZoom(float z, bool aspectRatioLocked = false, bool force = false)
@@ -1371,7 +1375,7 @@ namespace Kiritori.Views.LiveCapture
             var oldInsets = GetNcInsets();
 
             if (_miTitlebar.Checked) HideCaptionBarTemporarily();
-            else                     RestoreCaptionBar();
+            else RestoreCaptionBar();
             _miTitlebar.Checked = !_miTitlebar.Checked;
 
             Action apply = () =>
@@ -1381,7 +1385,7 @@ namespace Kiritori.Views.LiveCapture
 
                 var newInsets = GetNcInsets();
                 int dx = oldInsets.Left - newInsets.Left;
-                int dy = oldInsets.Top  - newInsets.Top;
+                int dy = oldInsets.Top - newInsets.Top;
 
                 if (dx != 0 || dy != 0)
                 {
@@ -1419,7 +1423,7 @@ namespace Kiritori.Views.LiveCapture
         {
             // CaptureRect は論理px。ソース側モニタDPIで物理pxへ。
             var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
-            int w = (int)Math.Round(rPhys.Width  * _zoom);
+            int w = (int)Math.Round(rPhys.Width * _zoom);
             int h = (int)Math.Round(rPhys.Height * _zoom);
             LPLog.Info($"DesiredClient: logical={CaptureRect.Width}x{CaptureRect.Height} -> physical={w}x{h} (zoom={_zoom:F2})");
             return new Size(w, h);
@@ -1443,7 +1447,7 @@ namespace Kiritori.Views.LiveCapture
             int clientT = (int)Math.Round(rPhys.Y / sDst);
 
             int newLeft = clientL - ins.Left;
-            int newTop  = clientT - ins.Top;
+            int newTop = clientT - ins.Top;
 
             SetWindowPos(this.Handle, IntPtr.Zero, newLeft, newTop, 0, 0,
                 SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
@@ -1623,11 +1627,11 @@ namespace Kiritori.Views.LiveCapture
 
         protected override void WndProc(ref Message m)
         {
-            const int WM_MOUSEMOVE     = 0x0200;
+            const int WM_MOUSEMOVE = 0x0200;
             const int WM_LBUTTONDBLCLK = 0x0203;
             const int WM_ENTERSIZEMOVE = 0x0231;
-            const int WM_EXITSIZEMOVE  = 0x0232;
-            const int WM_SIZING        = 0x0214;
+            const int WM_EXITSIZEMOVE = 0x0232;
+            const int WM_SIZING = 0x0214;
             // const int WM_DPICHANGED    = 0x02E0;
 
             // if (m.Msg == WM_DPICHANGED)
@@ -1701,41 +1705,53 @@ namespace Kiritori.Views.LiveCapture
             {
                 var pt = this.PointToClient(Cursor.Position);
 
+                // 閉じるボタン（既存動作は維持）
                 if (ShouldShowInlineClose() && GetCloseRect().Contains(pt))
                 {
                     _closeDown = true;
                     Invalidate(GetCloseRect());
                     return;
                 }
-                if (_hudAlpha > 0 && _hudRect.Contains(pt))
-                {
-                    _hudDown = true;
-                    Invalidate(_hudRect);
-                    return;
-                }
 
+                // HUD上でもドラッグ優先にする ---
+                _downOnHud = (_hudAlpha > 0 && _hudRect.Contains(pt) && IsHudInteractable());
+                _hudDown = _downOnHud; // 視覚フィードバックは従来通り
+                if (_hudDown) Invalidate(_hudRect);
+
+                _maybeDrag = true;
+                _downClient = pt;
+                _downScreen = Cursor.Position;
+                _downTick = Environment.TickCount;
+
+                // リサイズエッジは従来通り OS リサイズへ
                 if (IsNearResizeEdge(pt))
                 {
                     base.WndProc(ref m);
                     return;
                 }
-
-                _maybeDrag = true;
-                _downClient = pt;
-                base.WndProc(ref m);
                 return;
             }
             else if (m.Msg == WM_MOUSEMOVE)
             {
                 UpdateCloseHover(this.PointToClient(Cursor.Position));
+
                 if (_maybeDrag && (Control.MouseButtons & MouseButtons.Left) != 0)
                 {
-                    var pt = this.PointToClient(Cursor.Position);
+                    var curClient = this.PointToClient(Cursor.Position);
+
+                    // SystemInformation.DragSize/2 か固定スロップ
                     var drag = SystemInformation.DragSize;
-                    if (Math.Abs(pt.X - _downClient.X) >= drag.Width / 2 ||
-                        Math.Abs(pt.Y - _downClient.Y) >= drag.Height / 2)
+                    bool exceed =
+                        Math.Abs(curClient.X - _downClient.X) >= Math.Max(DRAG_SLOP, drag.Width  / 2) ||
+                        Math.Abs(curClient.Y - _downClient.Y) >= Math.Max(DRAG_SLOP, drag.Height / 2);
+
+                    if (exceed)
                     {
                         _maybeDrag = false;
+
+                        // HUDプレスの見た目は解除（リング押下状態を戻す）
+                        if (_hudDown) { _hudDown = false; Invalidate(_hudRect); }
+
                         ReleaseCapture();
                         BeginDragHighlight();
                         SendMessage(this.Handle, WM_NCLBUTTONDOWN, HTCAPTION, 0);
@@ -1745,23 +1761,40 @@ namespace Kiritori.Views.LiveCapture
             }
             else if (m.Msg == WM_LBUTTONUP)
             {
+                // 閉じるボタン（既存動作）
                 if (_closeDown)
                 {
                     _closeDown = false;
-                    bool inside = GetCloseRect().Contains(this.PointToClient(Cursor.Position));
+                    bool insideX = GetCloseRect().Contains(this.PointToClient(Cursor.Position));
                     Invalidate(GetCloseRect());
-                    if (inside) { this.Close(); return; }
+                    if (insideX) { this.Close(); return; }
                 }
-                if (_hudDown)
-                {
-                    _hudDown = false;
-                    var pt = this.PointToClient(Cursor.Position);
-                    bool inside = _hudRect.Contains(pt);
-                    Invalidate(_hudRect);
-                    if (inside) { TogglePause(); }
-                    return;
-                }
+
+                // クリック／ドラッグ判定 ---
+                bool wasMaybeDrag = _maybeDrag;
                 _maybeDrag = false;
+
+                // HUDの押下見た目は解除
+                if (_hudDown) { _hudDown = false; Invalidate(_hudRect); }
+
+                // “その場クリック”の判定
+                int elapsed = Environment.TickCount - _downTick;
+                var curScr  = Cursor.Position;
+                int dx = Math.Abs(curScr.X - _downScreen.X);
+                int dy = Math.Abs(curScr.Y - _downScreen.Y);
+
+                bool nearNoMove = (dx < DRAG_SLOP && dy < DRAG_SLOP);
+                bool quick      = (elapsed <= CLICK_MS);
+                bool upInsideHud = (_hudAlpha > 0 && _hudRect.Contains(this.PointToClient(Cursor.Position)) && IsHudInteractable());
+
+                if (wasMaybeDrag && _downOnHud && upInsideHud && nearNoMove && quick)
+                {
+                    TogglePause();              // ← その場クリックで再生/一時停止
+                    Invalidate(GetHudInvalidateRect());
+                }
+
+                _downOnHud = false;             // リセット
+                return;
             }
             if (m.Msg == WM_NCLBUTTONDOWN && m.WParam == (IntPtr)HTCAPTION)
             {
@@ -1779,19 +1812,19 @@ namespace Kiritori.Views.LiveCapture
                 var p = PointToClient(new System.Drawing.Point(x, y));
                 int w = this.ClientSize.Width, h = this.ClientSize.Height;
 
-                bool left   = p.X <= grip;
-                bool right  = p.X >= w - grip;
-                bool top    = p.Y <= grip;
+                bool left = p.X <= grip;
+                bool right = p.X >= w - grip;
+                bool top = p.Y <= grip;
                 bool bottom = p.Y >= h - grip;
 
-                if (top && left)      { m.Result = (IntPtr)HTTOPLEFT;  return; }
-                if (top && right)     { m.Result = (IntPtr)HTTOPRIGHT; return; }
-                if (bottom && left)   { m.Result = (IntPtr)HTBOTTOMLEFT;  return; }
-                if (bottom && right)  { m.Result = (IntPtr)HTBOTTOMRIGHT; return; }
-                if (left)             { m.Result = (IntPtr)HTLEFT;     return; }
-                if (right)            { m.Result = (IntPtr)HTRIGHT;    return; }
-                if (top)              { m.Result = (IntPtr)HTTOP;      return; }
-                if (bottom)           { m.Result = (IntPtr)HTBOTTOM;   return; }
+                if (top && left) { m.Result = (IntPtr)HTTOPLEFT; return; }
+                if (top && right) { m.Result = (IntPtr)HTTOPRIGHT; return; }
+                if (bottom && left) { m.Result = (IntPtr)HTBOTTOMLEFT; return; }
+                if (bottom && right) { m.Result = (IntPtr)HTBOTTOMRIGHT; return; }
+                if (left) { m.Result = (IntPtr)HTLEFT; return; }
+                if (right) { m.Result = (IntPtr)HTRIGHT; return; }
+                if (top) { m.Result = (IntPtr)HTTOP; return; }
+                if (bottom) { m.Result = (IntPtr)HTBOTTOM; return; }
                 return;
             }
 
@@ -1833,39 +1866,39 @@ namespace Kiritori.Views.LiveCapture
 
             const int WMSZ_LEFT = 1, WMSZ_RIGHT = 2, WMSZ_TOP = 3, WMSZ_TOPLEFT = 4,
                     WMSZ_TOPRIGHT = 5, WMSZ_BOTTOM = 6, WMSZ_BOTTOMLEFT = 7;
-                    // , WMSZ_BOTTOMRIGHT = 8;
+            // , WMSZ_BOTTOMRIGHT = 8;
 
             switch (edge)
             {
                 case WMSZ_LEFT:
                 case WMSZ_RIGHT:
-                {
-                    h = (int)Math.Round(w / aspect);
-                    h = Math.Max(h, minH);
-                    if (edge == WMSZ_RIGHT) rc.Bottom = rc.Top + h;
-                    else rc.Top = rc.Bottom - h;
-                    break;
-                }
+                    {
+                        h = (int)Math.Round(w / aspect);
+                        h = Math.Max(h, minH);
+                        if (edge == WMSZ_RIGHT) rc.Bottom = rc.Top + h;
+                        else rc.Top = rc.Bottom - h;
+                        break;
+                    }
                 case WMSZ_TOP:
                 case WMSZ_BOTTOM:
-                {
-                    w = (int)Math.Round(h * aspect);
-                    w = Math.Max(w, minW);
-                    if (edge == WMSZ_BOTTOM) rc.Right = rc.Left + w;
-                    else rc.Left = rc.Right - w;
-                    break;
-                }
+                    {
+                        w = (int)Math.Round(h * aspect);
+                        w = Math.Max(w, minW);
+                        if (edge == WMSZ_BOTTOM) rc.Right = rc.Left + w;
+                        else rc.Left = rc.Right - w;
+                        break;
+                    }
                 default:
-                {
-                    w = (int)Math.Round(h * aspect);
-                    w = Math.Max(w, minW);
-                    h = (int)Math.Round(w / aspect);
-                    if (edge == WMSZ_TOPLEFT) { rc.Left = rc.Right - w; rc.Top = rc.Bottom - h; }
-                    else if (edge == WMSZ_TOPRIGHT) { rc.Right = rc.Left + w; rc.Top = rc.Bottom - h; }
-                    else if (edge == WMSZ_BOTTOMLEFT) { rc.Left = rc.Right - w; rc.Bottom = rc.Top + h; }
-                    else { rc.Right = rc.Left + w; rc.Bottom = rc.Top + h; }
-                    break;
-                }
+                    {
+                        w = (int)Math.Round(h * aspect);
+                        w = Math.Max(w, minW);
+                        h = (int)Math.Round(w / aspect);
+                        if (edge == WMSZ_TOPLEFT) { rc.Left = rc.Right - w; rc.Top = rc.Bottom - h; }
+                        else if (edge == WMSZ_TOPRIGHT) { rc.Right = rc.Left + w; rc.Top = rc.Bottom - h; }
+                        else if (edge == WMSZ_BOTTOMLEFT) { rc.Left = rc.Right - w; rc.Bottom = rc.Top + h; }
+                        else { rc.Right = rc.Left + w; rc.Bottom = rc.Top + h; }
+                        break;
+                    }
             }
         }
 
@@ -1901,7 +1934,7 @@ namespace Kiritori.Views.LiveCapture
 
         [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
         [DllImport("user32.dll")] static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
-        [DllImport("user32.dll")] static extern int  MapWindowPoints(IntPtr hWndFrom, IntPtr hWndTo, ref RECT lpPoints, int cPoints);
+        [DllImport("user32.dll")] static extern int MapWindowPoints(IntPtr hWndFrom, IntPtr hWndTo, ref RECT lpPoints, int cPoints);
         [DllImport("user32.dll")] private static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
         [DllImport("user32.dll", SetLastError = true)] static extern int GetWindowLong(IntPtr hWnd, int nIndex);
         [DllImport("user32.dll", SetLastError = true)] static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
@@ -1910,7 +1943,7 @@ namespace Kiritori.Views.LiveCapture
         [DllImport("user32.dll", CharSet = CharSet.Auto)] static extern IntPtr SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
         [DllImport("user32.dll")] static extern bool RedrawWindow(IntPtr hWnd, IntPtr lprcUpdate, IntPtr hrgnUpdate, uint flags);
 
-        const uint RDW_INVALIDATE=0x0001, RDW_UPDATENOW=0x0100, RDW_FRAME=0x0400, RDW_ALLCHILDREN=0x0080;
+        const uint RDW_INVALIDATE = 0x0001, RDW_UPDATENOW = 0x0100, RDW_FRAME = 0x0400, RDW_ALLCHILDREN = 0x0080;
 
         private struct NcInsets { public int Left, Top, Right, Bottom; }
 
@@ -1922,10 +1955,10 @@ namespace Kiritori.Views.LiveCapture
 
             return new NcInsets
             {
-                Left   = crc.Left  - wrc.Left,
-                Top    = crc.Top   - wrc.Top,
-                Right  = wrc.Right - crc.Right,
-                Bottom = wrc.Bottom- crc.Bottom
+                Left = crc.Left - wrc.Left,
+                Top = crc.Top - wrc.Top,
+                Right = wrc.Right - crc.Right,
+                Bottom = wrc.Bottom - crc.Bottom
             };
         }
 
@@ -1943,7 +1976,7 @@ namespace Kiritori.Views.LiveCapture
             // ---- 追加ログ：入口 ----
             LPLog.Info($"ResizeToKeepClient: reqClient={client.Width}x{client.Height}, CaptionHidden={_captionHidden}, DeviceDpi={this.DeviceDpi}");
 
-            int style   = GetWindowLong(h, GWL_STYLE);
+            int style = GetWindowLong(h, GWL_STYLE);
             int exstyle = GetWindowLong(h, GWL_EXSTYLE);
 
             int newW, newH;
@@ -1970,8 +2003,8 @@ namespace Kiritori.Views.LiveCapture
 
             // ① 現在の実測インセットで一度サイズを当てる
             var ins = GetNcInsets();
-            newW = client.Width  + ins.Left + ins.Right;
-            newH = client.Height + ins.Top  + ins.Bottom;
+            newW = client.Width + ins.Left + ins.Right;
+            newH = client.Height + ins.Top + ins.Bottom;
 
             LPLog.Info($"ResizeToKeepClient: current Insets {InsetsStr(ins)} => target outer={newW}x{newH} (style=0x{style:X8}, ex=0x{exstyle:X8})");
 
@@ -1981,9 +2014,9 @@ namespace Kiritori.Views.LiveCapture
             // ② 実測クライアントと要求との差を見て微調整
             if (GetClientRect(h, out RECT crc))
             {
-                int curW = crc.Right  - crc.Left;
+                int curW = crc.Right - crc.Left;
                 int curH = crc.Bottom - crc.Top;
-                int dW = client.Width  - curW;
+                int dW = client.Width - curW;
                 int dH = client.Height - curH;
 
                 LPLog.Info($"ResizeToKeepClient: after1 realClient={curW}x{curH} -> delta dW={dW}, dH={dH}");
@@ -2017,5 +2050,6 @@ namespace Kiritori.Views.LiveCapture
             public static extern bool BitBlt(IntPtr hdcDest, int nXDest, int nYDest, int nWidth, int nHeight,
                                             IntPtr hdcSrc, int nXSrc, int nYSrc, int dwRop);
         }
+        
     }
 }
