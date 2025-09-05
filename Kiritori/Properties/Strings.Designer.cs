@@ -664,6 +664,60 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Backend に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_Advanced_Backend {
+            get {
+                return ResourceManager.GetString("Text.Advanced.Backend", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Hint に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_Advanced_BackendHint {
+            get {
+                return ResourceManager.GetString("Text.Advanced.BackendHint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Advanced に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_Advanced_LivePreview {
+            get {
+                return ResourceManager.GetString("Text.Advanced.LivePreview", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   MagMouseThrough に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_Advanced_MagMouseThrough {
+            get {
+                return ResourceManager.GetString("Text.Advanced.MagMouseThrough", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   MagNoActivate に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_Advanced_MagNoActivate {
+            get {
+                return ResourceManager.GetString("Text.Advanced.MagNoActivate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   SmoothZoom に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_Advanced_SmoothZoom {
+            get {
+                return ResourceManager.GetString("Text.Advanced.SmoothZoom", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Always on top に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_AlwaysOnTop {

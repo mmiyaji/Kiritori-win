@@ -310,5 +310,53 @@ namespace Kiritori.Properties {
                 this["LivePreviewMaxFps"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Magnifier")]
+        public string LivePreviewBackend {
+            get {
+                return ((string)(this["LivePreviewBackend"]));
+            }
+            set {
+                this["LivePreviewBackend"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool MagnifierMouseThrough {
+            get {
+                return ((bool)(this["MagnifierMouseThrough"]));
+            }
+            set {
+                this["MagnifierMouseThrough"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool MagnifierNoActivate {
+            get {
+                return ((bool)(this["MagnifierNoActivate"]));
+            }
+            set {
+                this["MagnifierNoActivate"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool SmoothZoomEnabled {
+            get {
+                return ((bool)(this["SmoothZoomEnabled"]));
+            }
+            set {
+                this["SmoothZoomEnabled"] = value;
+            }
+        }
     }
 }

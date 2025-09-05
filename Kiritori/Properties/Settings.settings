@@ -74,5 +74,17 @@
     <Setting Name="LivePreviewMaxFps" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">15</Value>
     </Setting>
+    <Setting Name="LivePreviewBackend" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Magnifier</Value>
+    </Setting>
+    <Setting Name="MagnifierMouseThrough" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="MagnifierNoActivate" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="SmoothZoomEnabled" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

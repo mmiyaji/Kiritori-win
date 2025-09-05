@@ -129,6 +129,13 @@ namespace Kiritori
 
         // ========= Advanced ==========
         private TabPage tabAdvanced;
+        // Live Preview (Advanced)
+        private GroupBox grpLivePreviewAdvanced;
+        private ComboBox cmbLiveBackend;
+        private CheckBox chkMagMouseThrough;
+        private CheckBox chkMagNoActivate;
+        private CheckBox chkSmoothZoom;
+        private Label lblBackendHint;
 
         // ========= Info ==========
         private TabPage tabInfo;
@@ -185,7 +192,7 @@ namespace Kiritori
                 this.tabGeneral,
                 this.tabAppearance,
                 this.tabShortcuts,
-                // this.tabAdvanced,
+                this.tabAdvanced,
             });
 
             // =========================================================
@@ -625,8 +632,122 @@ namespace Kiritori
             // =========================================================
             // Advanced タブ（プレースホルダ）
             // =========================================================
-            var lblAdv = new Label { Text = "Advanced settings will appear here.", AutoSize = true, Padding = new Padding(12) };
-            this.tabAdvanced.Controls.Add(lblAdv);
+            var stackAdvanced = NewStack();
+            this.tabAdvanced.Controls.Clear();
+            this.tabAdvanced.Controls.Add(stackAdvanced);
+
+            // --- Live Preview (Advanced) グループ ---
+            this.grpLivePreviewAdvanced = NewGroup("Live Preview");
+            this.grpLivePreviewAdvanced.Tag = "loc:Text.Advanced.LivePreview";
+            var tlpAdv = NewGrid(3, 2);
+
+            // 0) バックエンド選択
+            var lblBackend = NewRightLabel("Live preview backend");
+            lblBackend.Tag = "loc:Text.Advanced.Backend";
+            this.cmbLiveBackend = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 240
+            };
+            // 表示名（UI）/ 値（Settings）対応
+            this.cmbLiveBackend.Items.Add("Magnifier (GPU, light)");
+            this.cmbLiveBackend.Items.Add("GDI BitBlt (fallback)");
+            tlpAdv.Controls.Add(lblBackend, 0, 0);
+            tlpAdv.Controls.Add(this.cmbLiveBackend, 1, 0);
+
+            // 1) Magnifier オプション（横並び）
+            var lblOptions = NewRightLabel("Options");
+            lblOptions.Tag = "loc:Text.Option";
+
+            var flowMag = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                WrapContents = false,
+                Dock = DockStyle.Fill
+            };
+            this.chkMagMouseThrough = new CheckBox
+            {
+                Text = "Magnifier: mouse-through (click UI over it)",
+                AutoSize = true
+            };
+            this.chkMagMouseThrough.Tag = "loc:Text.Advanced.MagMouseThrough";
+
+            this.chkMagNoActivate = new CheckBox
+            {
+                Text = "Magnifier: do not activate window",
+                AutoSize = true
+            };
+            this.chkMagNoActivate.Tag = "loc:Text.Advanced.MagNoActivate";
+
+            this.chkSmoothZoom = new CheckBox
+            {
+                Text = "Smooth zoom animation",
+                AutoSize = true
+            };
+            this.chkSmoothZoom.Tag = "loc:Text.Advanced.SmoothZoom";
+
+            flowMag.Controls.Add(this.chkMagMouseThrough);
+            flowMag.Controls.Add(this.chkMagNoActivate);
+            flowMag.Controls.Add(this.chkSmoothZoom);
+
+            tlpAdv.Controls.Add(lblOptions, 0, 1);
+            tlpAdv.Controls.Add(flowMag, 1, 1);
+
+            // 2) ヒント
+            this.lblBackendHint = new Label
+            {
+                AutoSize = true,
+                ForeColor = SystemColors.GrayText,
+                Text = "Hint: Magnifier is fastest for live preview. Choose GDI only if Magnifier is unavailable.",
+                Margin = new Padding(0, 8, 0, 0)
+            };
+            this.lblBackendHint.Tag = "loc:Text.Advanced.BackendHint";
+            tlpAdv.Controls.Add(this.lblBackendHint, 0, 2);
+            tlpAdv.SetColumnSpan(this.lblBackendHint, 2);
+
+            this.grpLivePreviewAdvanced.Controls.Add(tlpAdv);
+            stackAdvanced.Controls.Add(this.grpLivePreviewAdvanced, 0, 0);
+
+            // ---- 設定の読み込み / バインディング ----
+            try
+            {
+                var S = Properties.Settings.Default;
+
+                // Backend 初期選択（"Magnifier" / "GDI"）
+                var backend = (S.LivePreviewBackend ?? "Magnifier").Trim();
+                this.cmbLiveBackend.SelectedIndex = 
+                    string.Equals(backend, "GDI", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+
+                // Magnifier 詳細
+                this.chkMagMouseThrough.DataBindings.Add(
+                    new Binding("Checked", S, nameof(S.MagnifierMouseThrough),
+                        true, DataSourceUpdateMode.OnPropertyChanged));
+
+                this.chkMagNoActivate.DataBindings.Add(
+                    new Binding("Checked", S, nameof(S.MagnifierNoActivate),
+                        true, DataSourceUpdateMode.OnPropertyChanged));
+
+                this.chkSmoothZoom.DataBindings.Add(
+                    new Binding("Checked", S, nameof(S.SmoothZoomEnabled),
+                        true, DataSourceUpdateMode.OnPropertyChanged));
+
+                // 変更時：設定へ保存（必要なら再起動ダイアログ等もここで）
+                this.cmbLiveBackend.SelectedIndexChanged += (s, e) =>
+                {
+                    var want = (this.cmbLiveBackend.SelectedIndex == 1) ? "GDI" : "Magnifier";
+                    if (!string.Equals(S.LivePreviewBackend, want, StringComparison.OrdinalIgnoreCase))
+                    {
+                        S.LivePreviewBackend = want;
+                        S.Save();
+                        // 反映の注意（即時反映しない設計ならヒントを出す）
+                        // MessageBox.Show("Backend changed. Please reopen Live Preview to apply.", "Kiritori",
+                        //     MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                };
+            }
+            catch { /* ignore */ }
+
 
             // =========================================================
             // Info タブ

@@ -1,4 +1,5 @@
 ﻿using Kiritori.Helpers;
+using Kiritori.Views.LiveCapture;
 using System;
 using System.IO;
 using System.Diagnostics;
@@ -12,6 +13,9 @@ namespace Kiritori.Views.LiveCapture
 {
     public partial class LivePreviewWindow : Form
     {
+        private MagPreviewHost _mag;
+        private bool _useMagnifier = true;   // Magnification API を使う/使わないの切替
+        private float _magScale = 1.0f;
         private LiveCaptureBackend _backend;
         private Bitmap _latest;
         private readonly object _frameSync = new object();
@@ -287,6 +291,19 @@ namespace Kiritori.Views.LiveCapture
                     return base.ProcessCmdKey(ref msg, keyData);
             }
         }
+        private Rectangle LogicalToDesktopPhysical(Rectangle logical)
+        {
+            // CaptureRect は論理px。DpiUtil で物理pxへ。
+            return DpiUtil.LogicalToPhysical(logical);
+        }
+
+        private void UpdateMagnifierSourceFromCaptureRect()
+        {
+            if (_mag == null) return;
+            var srcDesktopPx = LogicalToDesktopPhysical(CaptureRect);
+            _mag.SetSourceDesktopPx(srcDesktopPx);
+        }
+
         private void NudgeWindowBy(int dx, int dy)
         {
             // BeginDragHighlight();       // 動いている間は強調
@@ -562,12 +579,7 @@ namespace Kiritori.Views.LiveCapture
         {
             base.OnLoad(e);
 
-            // WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: AutoTopMost);
-            // ResizeToKeepClient(GetDesiredClient());
-            // 先に物理サイズを決めてから、クライアント左上=CaptureRectへ位置合わせ
-            // ResizeToKeepClient(GetDesiredClientPhysical());
-            // WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: AutoTopMost);
-            // MoveThenResizePhysicalWithLogs("OnLoad", AutoTopMost);
+            // 位置・サイズ（物理クライアント）を先に確定
             ResizeToKeepClient(GetDesiredClientPhysical());
             AlignClientTopLeftPhysical("OnLoad", AutoTopMost);
             TrySyncFirstCaptureIntoLatest(CaptureRect);
@@ -582,22 +594,56 @@ namespace Kiritori.Views.LiveCapture
                 LPLog.Info($"OnLoad: Insets {InsetsStr(ins)}");
                 LPLog.Info($"OnLoad: Client={this.ClientSize.Width}x{this.ClientSize.Height}, Bounds={RectStr(new Rectangle(this.Left, this.Top, this.Width, this.Height))}");
             }
-            catch { /* no-op */ }
-            // ---- 追加ここまで ----
+            catch { }
 
-            var gdi = new GdiCaptureBackend
+            // --- Magnifier 子ウィンドウ（軽いライブプレビュー）
+            if (_useMagnifier)
             {
-                MaxFps = _maxFps,
-                CaptureRect = this.CaptureRect
-            };
+                var hostBounds = new Rectangle(0, 0, this.ClientSize.Width, this.ClientSize.Height);
+                try
+                {
+                    bool mt = Properties.Settings.Default.MagnifierMouseThrough;
+                    bool na = Properties.Settings.Default.MagnifierNoActivate;
+                    _mag = new MagPreviewHost(this.Handle, hostBounds, mouseThrough: mt, noActivate: na);
+                    UpdateMagnifierSourceFromCaptureRect();
+                    _mag.SetScale(_magScale);
+                    LPLog.Info($"Magnifier: created (mouseThrough={mt}, noActivate={na}).");
+                }
+                catch (Exception ex)
+                {
+                    LPLog.Info("Magnifier: failed -> fallback to GDI. " + ex.Message);
+                    _useMagnifier = false;
+                }
+                this.Opacity = 1.0;
+            }
 
-            gdi.ExcludeWindow = this.Handle;
-            gdi.FrameArrived += OnFrameArrived;
-            _backend = gdi;
-            _backend.Start();
+            // --- 既存 GDI バックエンド（Magnifier 使用時は不要なのでスキップ）
+            if (!_useMagnifier)
+            {
+                var gdi = new GdiCaptureBackend
+                {
+                    MaxFps = _maxFps,
+                    CaptureRect = this.CaptureRect,
+                    ExcludeWindow = this.Handle
+                };
+                gdi.FrameArrived += OnFrameArrived;
+                _backend = gdi;
+                _backend.Start();
+            }
 
             _iconBadge = new TitleIconBadger(this);
             _iconBadge.SetState(LiveBadgeState.Recording);
+        }
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                var cp = base.CreateParams;
+                const int WS_CLIPCHILDREN = 0x02000000;
+                const int WS_CLIPSIBLINGS = 0x04000000;
+                cp.Style |= WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
+                return cp;
+            }
         }
 
         private float GetCurrentAspect()
@@ -626,31 +672,72 @@ namespace Kiritori.Views.LiveCapture
             _aspectRatio = 0f;
         }
         private bool _firstFrameShown = false;
+        private float ComputeZoomToFitClient()
+        {
+            if (CaptureRect.Width <= 0 || CaptureRect.Height <= 0 ||
+                ClientSize.Width   <= 0 || ClientSize.Height   <= 0)
+                return _zoom;
+
+            float zx = (float)ClientSize.Width  / CaptureRect.Width;
+            float zy = (float)ClientSize.Height / CaptureRect.Height;
+            float z  = Math.Min(zx, zy);
+            return Math.Max(0.1f, Math.Min(16f, z));
+        }
+
 
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
+
+            // 既存のHUD/枠の処理はそのまま
             var oldInv = GetHudInvalidateRect();
             CenterOverlay();
             var newInv = GetHudInvalidateRect();
             if (!oldInv.IsEmpty) Invalidate(oldInv);
             if (!newInv.IsEmpty) Invalidate(newInv);
-
             if (_hudAlpha > 0 && _hudRect.IsEmpty) HideOverlay();
             if (_hoverAlpha > 0) Invalidate(GetHoverInvalidateRect());
+
+            // --- Magnifier 追随 ---
+            if (_useMagnifier && _mag != null)
+            {
+                // 1) 子ウィンドウをクライアントにフィット
+                _mag.SetHostBounds(new Rectangle(0, 0, ClientSize.Width, ClientSize.Height));
+
+                // 2) 今のクライアントに合う倍率を常に再計算して反映
+                float z = ComputeZoomToFitClient();
+                if (Math.Abs(z - _zoom) > 0.005f)
+                {
+                    _zoom = z;
+                    _magScale = z;
+                    _mag.SetScale(_magScale);
+                    // ソースは矩形が変わってないなら不要だが、安全側で更新してもOK
+                    // UpdateMagnifierSourceFromCaptureRect();
+                }
+            }
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
 
+            // Magnifier が有効なときは、背景フレームの手描きは不要
+            if (_useMagnifier && _mag != null)
+            {
+                DrawHud(e.Graphics);
+                DrawHoverFrame(e.Graphics);
+                if (_showStats) { /* 既存の統計描画ブロックそのまま */ }
+                DrawInlineClose(e.Graphics);
+                return;
+            }
+
+            // ← 以降は従来通り（_latest を描画）
             Bitmap frame = null;
             lock (_frameSync)
             {
                 if (_latest != null)
                     frame = (Bitmap)_latest.Clone();
             }
-
             if (frame != null)
             {
                 try
@@ -1027,8 +1114,12 @@ namespace Kiritori.Views.LiveCapture
 
             try { _ctx?.Dispose(); } catch { }
 
+            try { _mag?.Dispose(); } catch { }
+            _mag = null;
+
             base.OnFormClosed(e);
         }
+
 
         // 初回同期キャプチャ
         private void TrySyncFirstCaptureIntoLatest(Rectangle rLogical)
@@ -1064,20 +1155,14 @@ namespace Kiritori.Views.LiveCapture
             LPLog.Info($"FirstCapture: logical={RectStr(rLogical)} physical={RectStr(rPhysical)} bmp={_latest?.Width}x{_latest?.Height}");
         }
 
-        // private void RealignToKiritori()
-        // {
-        //     WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: _miTopMost?.Checked ?? true);
-        //     Invalidate();
-        // }
         private void RealignToKiritori()
         {
-            // ResizeToKeepClient(GetDesiredClient());
-            // WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: _miTopMost?.Checked ?? true);
-            // MoveThenResizePhysicalWithLogs("Realign", _miTopMost?.Checked ?? true);
             ResizeToKeepClient(GetDesiredClientPhysical());
             AlignClientTopLeftPhysical("Realign", _miTopMost?.Checked ?? true);
+            if (_useMagnifier) UpdateMagnifierSourceFromCaptureRect(); // ← 追加
             Invalidate();
         }
+
         private void BuildContextMenu()
         {
             _ctx = new ContextMenuStrip();
@@ -1331,6 +1416,8 @@ namespace Kiritori.Views.LiveCapture
             z = Math.Max(0.1f, Math.Min(8.0f, z));
             if (Math.Abs(_zoom - z) < 0.0001f && !force) return;
             _zoom = z;
+            _magScale = z;
+
             Size newClient;
             if (aspectRatioLocked)
             {
@@ -1349,17 +1436,20 @@ namespace Kiritori.Views.LiveCapture
                 );
             }
 
-            // WindowAligner.ResizeFormClientKeepTopLeft(
-            //     this,
-            //     newClient,
-            //     topMost: _miTopMost?.Checked ?? this.TopMost
-            // );
-            // タイトルバー/枠を含めた DPI 正確なサイズに調整（左上は維持）
+            // フレーム（物理）を維持してサイズを確定
             ResizeToKeepClient(GetDesiredClientPhysical());
-            // TopMost は必要なら維持
             this.TopMost = _miTopMost?.Checked ?? this.TopMost;
+
+            // Magnifier が有効ならスケール/ソースを更新
+            if (_useMagnifier && _mag != null)
+            {
+                _mag.SetScale(_magScale);
+                UpdateMagnifierSourceFromCaptureRect();
+            }
+
             Invalidate();
         }
+
         private void TogglePause()
         {
             _paused = !_paused;

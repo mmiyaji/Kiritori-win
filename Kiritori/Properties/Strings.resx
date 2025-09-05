@@ -567,4 +567,22 @@
   <data name="Menu.LivePreview" xml:space="preserve">
     <value>Live Preview (Realtime)</value>
   </data>
+  <data name="Text.Advanced.LivePreview" xml:space="preserve">
+    <value>Advanced</value>
+  </data>
+  <data name="Text.Advanced.Backend" xml:space="preserve">
+    <value>Backend</value>
+  </data>
+  <data name="Text.Advanced.MagMouseThrough" xml:space="preserve">
+    <value>MagMouseThrough</value>
+  </data>
+  <data name="Text.Advanced.MagNoActivate" xml:space="preserve">
+    <value>MagNoActivate</value>
+  </data>
+  <data name="Text.Advanced.SmoothZoom" xml:space="preserve">
+    <value>SmoothZoom</value>
+  </data>
+  <data name="Text.Advanced.BackendHint" xml:space="preserve">
+    <value>Hint</value>
+  </data>
 </root>
