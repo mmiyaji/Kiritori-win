@@ -21,7 +21,7 @@ namespace Kiritori.Views.LiveCapture
         private ContextMenuStrip _ctx;
         private ToolStripMenuItem
             _miCapture, _miOCR, _miLivePreview,
-            _miFileRoot, _miEditRoot, _miViewRoot, _miWindowRoot, _miZoomRoot,
+            //_miFileRoot, _miEditRoot, _miViewRoot, _miWindowRoot, _miZoomRoot,
             _miOriginal, _miZoomIn, _miZoomOut, _miZoomPct,
             _miOpacity, _miPauseResume, _miRealign, _miTopMost, _miClose,
             _miPref, _miExit, _miTitlebar, _miShowStats,
@@ -111,7 +111,7 @@ namespace Kiritori.Views.LiveCapture
 
         // プロセス表示
         private bool _showStats = true;
-        private int _frameCount = 0;
+        //private int _frameCount = 0;
         private int _fps = 0;
         private System.Threading.Timer _perfTimer;
         private readonly Stopwatch _presentWatch = new Stopwatch(); // スロットリング用
@@ -121,9 +121,9 @@ namespace Kiritori.Views.LiveCapture
         private long _memUsage = 0;
 
         // 画面ハッシュ（差分検出用）
-        private ulong _lastHash = 0;
-        private int _lastW = 0, _lastH = 0;
-        private int _consecutiveSkips = 0; // (任意) 連続スキップ数の統計
+        //private ulong _lastHash = 0;
+        //private int _lastW = 0, _lastH = 0;
+        //private int _consecutiveSkips = 0; // (任意) 連続スキップ数の統計
         private int _lastFrameHash = -1;               // 直近に「表示した」フレームのハッシュ
         private Size _lastFrameSize = Size.Empty;      // 直近に「表示した」フレームの元画像サイズ
         private Size _lastPresentedClientSize = Size.Empty; // 直近に「表示した」時点の ClientSize
@@ -1637,7 +1637,7 @@ namespace Kiritori.Views.LiveCapture
         {
             double hashAvg = (_hashCount > 0) ? (double)_hashTimeTotal / _hashCount : 0;
             double drawAvg = (_drawCount > 0) ? (double)_drawTimeTotal / _drawCount : 0;
-            Log.Debug($"PerfStats: DrawFPS={_dispFps}, SrcFPS={_srcFps}, Policy={_policy}, Skip={_skipCount}, HashAvg={hashAvg:F3}ms, DrawAvg={drawAvg:F3}ms (hashCount={_hashCount}, drawCount={_drawCount})", "LivePreview");
+            Log.Trace($"PerfStats: DrawFPS={_dispFps}, SrcFPS={_srcFps}, Policy={_policy}, Skip={_skipCount}, HashAvg={hashAvg:F3}ms, DrawAvg={drawAvg:F3}ms (hashCount={_hashCount}, drawCount={_drawCount})", "LivePreview");
             _hashTimeTotal = _drawTimeTotal = 0;
             _hashCount = _drawCount = _skipCount = 0;
         }

@@ -58,9 +58,11 @@ namespace Kiritori
         static void Main(string[] args)
         {
             var logopt = LoggerSettingsLoader.LoadFromSettings();
-#if DEBUG
-    if (!logopt.WriteToDebug) logopt.WriteToDebug = true; // Debugビルドはデバッグ出力をデフォルトONに
-#endif
+            #if DEBUG
+            if (!logopt.WriteToDebug) logopt.WriteToDebug = true;
+            if (logopt.MinLevel > LogLevel.Debug) logopt.MinLevel = LogLevel.Debug;
+            if (!logopt.WriteToFile) logopt.WriteToFile = true;
+            #endif
             Log.Configure(logopt);
             Application.ApplicationExit += (s, e) => Log.Shutdown();
             Log.Info($"Kiritori starting (v{Application.ProductVersion})", "Startup");
