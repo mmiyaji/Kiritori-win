@@ -453,16 +453,16 @@
   <data name="Text.AndMoreNum" xml:space="preserve">
     <value>…他 {0} 件</value>
   </data>
-  <data name="Setting.Display.isStartup" xml:space="preserve">
+  <data name="Setting.Display.RunAtStartup" xml:space="preserve">
     <value>Windows サインイン時に起動</value>
   </data>
-  <data name="Setting.Display.isOpenMenuOnAppStart" xml:space="preserve">
+  <data name="Setting.Display.OpenPreferencesOnStartup" xml:space="preserve">
     <value>アプリ起動時にメニューを開く</value>
   </data>
-  <data name="Setting.Display.isScreenGuide" xml:space="preserve">
+  <data name="Setting.Display.ScreenGuideEnabled" xml:space="preserve">
     <value>ガイドラインを表示</value>
   </data>
-  <data name="Setting.Display.isHighlightWindowOnHover" xml:space="preserve">
+  <data name="Setting.Display.HoverHighlightEnabled" xml:space="preserve">
     <value>ホバーでウィンドウを強調表示</value>
   </data>
   <data name="Setting.Display.HoverHighlightColor" xml:space="preserve">
@@ -486,7 +486,7 @@
   <data name="Setting.Display.UICulture" xml:space="preserve">
     <value>表示言語</value>
   </data>
-  <data name="Setting.Display.isFirstRunShown" xml:space="preserve">
+  <data name="Setting.Display.FirstRunShown" xml:space="preserve">
     <value>初回起動状態管理</value>
   </data>
   <data name="Toast.Captured" xml:space="preserve">
@@ -572,5 +572,14 @@
   </data>
   <data name="Menu.Recording" xml:space="preserve">
     <value>録画</value>
+  </data>
+  <data name="Menu.Rendering" xml:space="preserve">
+    <value>レンダリング</value>
+  </data>
+  <data name="Menu.AlwaysDraw" xml:space="preserve">
+    <value>常に再描画</value>
+  </data>
+  <data name="Menu.SkipByHash" xml:space="preserve">
+    <value>同一ハッシュで描画スキップ</value>
   </data>
 </root>

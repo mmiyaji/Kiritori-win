@@ -26,11 +26,11 @@ namespace Kiritori
         {
             var S = Properties.Settings.Default;
 
-            isWindowShadow = S.isWindowShadow;
-            isAfloatWindow = S.isAfloatWindow;
-            isOverlay = S.isOverlay;
-            WindowAlphaPercent = S.WindowAlphaPercent / 100.0;
-            isHighlightOnHover = S.isHighlightWindowOnHover;
+            WindowShadowEnabled = S.WindowShadowEnabled;
+            AlwaysOnTop = S.AlwaysOnTop;
+            OverlayEnabled = S.OverlayEnabled;
+            WindowOpacityPercent = S.WindowOpacityPercent / 100.0;
+            isHighlightOnHover = S.HoverHighlightEnabled;
 
             var c = S.HoverHighlightColor;
             int a = S.HoverHighlightAlphaPercent;
@@ -50,12 +50,12 @@ namespace Kiritori
             if (!this.IsHandleCreated) return;
             try
             {
-                this.TopMost = isAfloatWindow;
-                this.Opacity = WindowAlphaPercent;
+                this.TopMost = AlwaysOnTop;
+                this.Opacity = WindowOpacityPercent;
                 try
                 {
-                    this.keepAfloatToolStripMenuItem.Checked = isAfloatWindow;
-                    this.dropShadowToolStripMenuItem.Checked = isWindowShadow;
+                    this.keepAfloatToolStripMenuItem.Checked = AlwaysOnTop;
+                    this.dropShadowToolStripMenuItem.Checked = WindowShadowEnabled;
                 }
                 catch { }
             }
@@ -100,11 +100,11 @@ namespace Kiritori
                     e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightColor) ||
                     e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightAlphaPercent) ||
                     e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightThickness) ||
-                    e.PropertyName == nameof(Properties.Settings.Default.isHighlightWindowOnHover) ||
-                    e.PropertyName == nameof(Properties.Settings.Default.isWindowShadow) ||
-                    e.PropertyName == nameof(Properties.Settings.Default.isAfloatWindow) ||
-                    e.PropertyName == nameof(Properties.Settings.Default.isOverlay) ||
-                    e.PropertyName == nameof(Properties.Settings.Default.WindowAlphaPercent))
+                    e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightEnabled) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.WindowShadowEnabled) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.AlwaysOnTop) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.OverlayEnabled) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.WindowOpacityPercent))
                 {
                     SafeApplySettings();
                 }

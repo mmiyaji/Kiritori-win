@@ -124,6 +124,7 @@
     <Compile Include="Helpers\Enums.cs" />
     <Compile Include="Helpers\FastBitmapHash.cs" />
     <Compile Include="Helpers\HotkeyUtil.cs" />
+    <Compile Include="Helpers\LocalizedDescriptionAttribute.cs" />
     <Compile Include="Helpers\Localizer.cs" />
     <Compile Include="Helpers\SingleInstance.cs" />
     <Compile Include="Helpers\SR.cs" />
@@ -166,6 +167,9 @@
     <Compile Include="Helpers\PackageHelper.cs" />
     <Compile Include="Views\LiveCapture\TitleIconBadger.cs" />
     <Compile Include="Views\LiveCapture\WindowAligner.cs" />
+    <Compile Include="Views\PrefForm.Advanced.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Views\PrefForm.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -186,7 +186,7 @@ namespace Kiritori
             {
                 this.Left += e.X - mousePoint.X;
                 this.Top += e.Y - mousePoint.Y;
-                this.Opacity = this.WindowAlphaPercent * DRAG_ALPHA;
+                this.Opacity = this.WindowOpacityPercent * DRAG_ALPHA;
             }
         }
 
@@ -196,7 +196,7 @@ namespace Kiritori
             if (e.Button != MouseButtons.Left) return;
 
             _isDragging = false;
-            this.Opacity = this.WindowAlphaPercent;
+            this.Opacity = this.WindowOpacityPercent;
 
             if (_isResizing)
             {
@@ -223,7 +223,7 @@ namespace Kiritori
                 pictureBox1.Cursor = Cursors.Default;
             }
             _isDragging = false;
-            this.Opacity = this.WindowAlphaPercent;
+            this.Opacity = this.WindowOpacityPercent;
         }
 
         private Dictionary<ResizeAnchor, Rectangle> GripRectsOnPB()

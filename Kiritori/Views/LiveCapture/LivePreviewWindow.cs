@@ -86,7 +86,7 @@ namespace Kiritori.Views.LiveCapture
         private ToolStripMenuItem _miShadow;
         private int _origStyle = 0;
         private bool _captionHidden = false;
-        private bool isOverlay = true;
+        private bool OverlayEnabled = true;
         private string _overlayText = null;
         private DateTime _overlayStart;
         private readonly int _overlayDurationMs = 2000;
@@ -179,8 +179,8 @@ namespace Kiritori.Views.LiveCapture
                 if (e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightColor) ||
                     e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightAlphaPercent) ||
                     e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightThickness) ||
-                    e.PropertyName == nameof(Properties.Settings.Default.isHighlightWindowOnHover) || 
-                    e.PropertyName == nameof(Properties.Settings.Default.isOverlay))
+                    e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightEnabled) || 
+                    e.PropertyName == nameof(Properties.Settings.Default.OverlayEnabled))
                 {
                     LoadHoverAppearanceFromSettings();
                     Invalidate();
@@ -339,7 +339,7 @@ namespace Kiritori.Views.LiveCapture
                 _hoverColor = Properties.Settings.Default.HoverHighlightColor;
                 _hoverAlphaPercent = Properties.Settings.Default.HoverHighlightAlphaPercent;   // 0–100 (%)
                 _hoverThicknessPx = Properties.Settings.Default.HoverHighlightThickness;    // 論理px
-                this.isOverlay = Properties.Settings.Default.isOverlay;
+                this.OverlayEnabled = Properties.Settings.Default.OverlayEnabled;
                 // あり得る不正値を軽く矯正
                 if (_hoverAlphaPercent < 0) _hoverAlphaPercent = 0;
                 if (_hoverAlphaPercent > 100) _hoverAlphaPercent = 100;
@@ -452,7 +452,7 @@ namespace Kiritori.Views.LiveCapture
         }
         public void ShowOverlay(string text)
         {
-            if (!this.isOverlay) return;
+            if (!this.OverlayEnabled) return;
 
             const int MIN_W = 100;
             const int MIN_H = 50;
@@ -1451,9 +1451,9 @@ namespace Kiritori.Views.LiveCapture
             };
             _miShowStats.ShortcutKeys = (Keys)HOTS.INFO;
 
-            _miPolicyRoot = new ToolStripMenuItem("Rendering");
-            _miPolicyAlways = new ToolStripMenuItem("Always draw") { CheckOnClick = true };
-            _miPolicyHash   = new ToolStripMenuItem("Skip by hash") { CheckOnClick = true };
+            _miPolicyRoot = new ToolStripMenuItem(SR.T("Menu.Rendering", "Rendering"));
+            _miPolicyAlways = new ToolStripMenuItem(SR.T("Menu.AlwaysDraw", "Always draw")) { CheckOnClick = true };
+            _miPolicyHash   = new ToolStripMenuItem(SR.T("Menu.SkipByHash", "Skip by hash")) { CheckOnClick = true };
             void SyncPolicyChecks()
             {
                 if (_policy == RenderPolicy.AlwaysDraw)

@@ -2,34 +2,34 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Kiritori.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
-    <Setting Name="isWindowShadow" Type="System.Boolean" Scope="User">
+    <Setting Name="WindowShadowEnabled" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="isAfloatWindow" Type="System.Boolean" Scope="User">
+    <Setting Name="AlwaysOnTop" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="WindowAlphaPercent" Type="System.Int32" Scope="User">
+    <Setting Name="WindowOpacityPercent" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">100</Value>
     </Setting>
-    <Setting Name="isStartup" Type="System.Boolean" Scope="User">
+    <Setting Name="RunAtStartup" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="HistoryLimit" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">10</Value>
     </Setting>
-    <Setting Name="isFirstRunShown" Type="System.Boolean" Scope="User">
+    <Setting Name="FirstRunShown" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
-    <Setting Name="isOpenMenuOnAppStart" Type="System.Boolean" Scope="User">
+    <Setting Name="OpenPreferencesOnStartup" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
-    <Setting Name="isOverlay" Type="System.Boolean" Scope="User">
+    <Setting Name="OverlayEnabled" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="isScreenGuide" Type="System.Boolean" Scope="User">
+    <Setting Name="ScreenGuideEnabled" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="isHighlightWindowOnHover" Type="System.Boolean" Scope="User">
+    <Setting Name="HoverHighlightEnabled" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="HoverHighlightColor" Type="System.Drawing.Color" Scope="User">
@@ -47,13 +47,13 @@
     <Setting Name="CaptureBackgroundAlphaPercent" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">60</Value>
     </Setting>
-    <Setting Name="isScreenSnap" Type="System.Boolean" Scope="User">
+    <Setting Name="SnapToEdgesEnabled" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
-    <Setting Name="isPlaySound" Type="System.Boolean" Scope="User">
+    <Setting Name="PlaySoundOnCapture" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
-    <Setting Name="isShowNotify" Type="System.Boolean" Scope="User">
+    <Setting Name="ShowNotificationOnCapture" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="UICulture" Type="System.String" Scope="User">
@@ -65,7 +65,7 @@
     <Setting Name="HotkeyOcr" Type="System.String" Scope="User">
       <Value Profile="(Default)">Ctrl+Shift+4</Value>
     </Setting>
-    <Setting Name="isShowNotifyOCR" Type="System.Boolean" Scope="User">
+    <Setting Name="ShowNotificationOnOcr" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="HotkeyLive" Type="System.String" Scope="User">
@@ -77,40 +77,40 @@
     <Setting Name="LivePreviewRenderPolicy" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
     </Setting>
-    <Setting Name="Logger_Enabled" Type="System.Boolean" Scope="User">
+    <Setting Name="LogEnabled" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="Logger_MinLevel" Type="System.Int32" Scope="User">
+    <Setting Name="LogMinLevel" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">2</Value>
     </Setting>
-    <Setting Name="Logger_WriteToDebug" Type="System.Boolean" Scope="User">
+    <Setting Name="LogWriteToDebug" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="Logger_WriteToFile" Type="System.Boolean" Scope="User">
+    <Setting Name="LogWriteToFile" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="Logger_FilePath" Type="System.String" Scope="User">
+    <Setting Name="LogFilePath" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
-    <Setting Name="Logger_MaxFileSizeBytes" Type="System.Int32" Scope="User">
+    <Setting Name="LogMaxFileSizeBytes" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">5242880</Value>
     </Setting>
-    <Setting Name="Logger_MaxRollFiles" Type="System.Int32" Scope="User">
+    <Setting Name="LogMaxRollFiles" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">3</Value>
     </Setting>
-    <Setting Name="Logger_IncludeTimestamp" Type="System.Boolean" Scope="User">
+    <Setting Name="LogIncludeTimestamp" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="Logger_IncludeThreadId" Type="System.Boolean" Scope="User">
+    <Setting Name="LogIncludeThreadId" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="Logger_IncludeProcessId" Type="System.Boolean" Scope="User">
+    <Setting Name="LogIncludeProcessId" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="Logger_IncludeCategoryTag" Type="System.Boolean" Scope="User">
+    <Setting Name="LogIncludeCategoryTag" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
-    <Setting Name="Logger_TimestampFormat" Type="System.String" Scope="User">
+    <Setting Name="LogTimestampFormat" Type="System.String" Scope="User">
       <Value Profile="(Default)">yyyy-MM-dd HH:mm:ss.fff</Value>
     </Setting>
   </Settings>

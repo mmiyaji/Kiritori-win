@@ -54,8 +54,8 @@ namespace Kiritori
 
             date = DateTime.Now;
             this.Text = date.ToString("yyyyMMdd-HHmmss") + ".png";
-            this.TopMost = this.isAfloatWindow;
-            this.Opacity = this.WindowAlphaPercent;
+            this.TopMost = this.AlwaysOnTop;
+            this.Opacity = this.WindowOpacityPercent;
 
             this.main_image = bmp;
             this.setThumbnail(bmp);
@@ -178,8 +178,8 @@ namespace Kiritori
                 if (!string.IsNullOrEmpty(titlePath))
                     this.Text = titlePath;
 
-                this.TopMost = this.isAfloatWindow;
-                this.Opacity = this.WindowAlphaPercent;
+                this.TopMost = this.AlwaysOnTop;
+                this.Opacity = this.WindowOpacityPercent;
                 this.StartPosition = FormStartPosition.Manual;
 
                 var loc = new Point(

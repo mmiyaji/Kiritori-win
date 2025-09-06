@@ -230,20 +230,20 @@ namespace Kiritori
             {
                 // ※ Properties.Settings.Default に追加した設定項目を読み取る
                 var s = Properties.Settings.Default;
-                o.Enabled           = s.Logger_Enabled;
-                o.MinLevel          = (Kiritori.Services.Logging.LogLevel) s.Logger_MinLevel;
-                o.WriteToDebug      = s.Logger_WriteToDebug;
-                o.WriteToFile       = s.Logger_WriteToFile;
-                o.FilePath          = string.IsNullOrEmpty(s.Logger_FilePath)
-                                    ? o.FilePath : s.Logger_FilePath;
-                o.MaxFileSizeBytes  = s.Logger_MaxFileSizeBytes;
-                o.MaxRollFiles      = s.Logger_MaxRollFiles;
-                o.IncludeTimestamp  = s.Logger_IncludeTimestamp;
-                o.IncludeThreadId   = s.Logger_IncludeThreadId;
-                o.IncludeProcessId  = s.Logger_IncludeProcessId;
-                o.IncludeCategoryTag= s.Logger_IncludeCategoryTag;
-                o.TimestampFormat   = string.IsNullOrEmpty(s.Logger_TimestampFormat)
-                                    ? o.TimestampFormat : s.Logger_TimestampFormat;
+                o.Enabled           = s.LogEnabled;
+                o.MinLevel          = (Kiritori.Services.Logging.LogLevel) s.LogMinLevel;
+                o.WriteToDebug      = s.LogWriteToDebug;
+                o.WriteToFile       = s.LogWriteToFile;
+                o.FilePath          = string.IsNullOrEmpty(s.LogFilePath)
+                                    ? o.FilePath : s.LogFilePath;
+                o.MaxFileSizeBytes  = s.LogMaxFileSizeBytes;
+                o.MaxRollFiles      = s.LogMaxRollFiles;
+                o.IncludeTimestamp  = s.LogIncludeTimestamp;
+                o.IncludeThreadId   = s.LogIncludeThreadId;
+                o.IncludeProcessId  = s.LogIncludeProcessId;
+                o.IncludeCategoryTag= s.LogIncludeCategoryTag;
+                o.TimestampFormat   = string.IsNullOrEmpty(s.LogTimestampFormat)
+                                    ? o.TimestampFormat : s.LogTimestampFormat;
             }
             catch { /* 既定値で継続 */ }
             return o;

@@ -169,7 +169,7 @@
     <value>Exit Kiritori</value>
   </data>
   <data name="Text.BtnSave" xml:space="preserve">
-    <value>OK</value>
+    <value>Save</value>
   </data>
   <data name="Text.BtnCancel" xml:space="preserve">
     <value>Cancel</value>
@@ -453,16 +453,16 @@
   <data name="Text.AndMoreNum" xml:space="preserve">
     <value>…and {0} more</value>
   </data>
-  <data name="Setting.Display.isStartup" xml:space="preserve">
+  <data name="Setting.Display.RunAtStartup" xml:space="preserve">
     <value>Run at Startup</value>
   </data>
-  <data name="Setting.Display.isOpenMenuOnAppStart" xml:space="preserve">
+  <data name="Setting.Display.OpenPreferencesOnStartup" xml:space="preserve">
     <value>Open Menu on App Start</value>
   </data>
-  <data name="Setting.Display.isScreenGuide" xml:space="preserve">
+  <data name="Setting.Display.ScreenGuideEnabled" xml:space="preserve">
     <value>Show Screen Guide</value>
   </data>
-  <data name="Setting.Display.isHighlightWindowOnHover" xml:space="preserve">
+  <data name="Setting.Display.HoverHighlightEnabled" xml:space="preserve">
     <value>Highlight Window on Hover</value>
   </data>
   <data name="Setting.Display.HoverHighlightColor" xml:space="preserve">
@@ -486,7 +486,7 @@
   <data name="Setting.Display.UICulture" xml:space="preserve">
     <value>Language</value>
   </data>
-  <data name="Setting.Display.isFirstRunShown" xml:space="preserve">
+  <data name="Setting.Display.FirstRunShown" xml:space="preserve">
     <value>Initial Startup State Management</value>
   </data>
   <data name="Toast.Captured" xml:space="preserve">
@@ -572,5 +572,14 @@
   </data>
   <data name="Menu.Recording" xml:space="preserve">
     <value>Recording</value>
+  </data>
+  <data name="Menu.Rendering" xml:space="preserve">
+    <value>Rendering</value>
+  </data>
+  <data name="Menu.AlwaysDraw" xml:space="preserve">
+    <value>Always draw</value>
+  </data>
+  <data name="Menu.SkipByHash" xml:space="preserve">
+    <value>Skip by hash</value>
   </data>
 </root>

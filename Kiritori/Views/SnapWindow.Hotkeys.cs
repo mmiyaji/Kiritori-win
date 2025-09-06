@@ -52,7 +52,7 @@ namespace Kiritori
                     break;
 
                 case (int)HOTS.SHADOW:
-                    ToggleShadow(!this.isWindowShadow);
+                    ToggleShadow(!this.WindowShadowEnabled);
                     break;
                 case (int)HOTS.FLOAT:
                     afloatImage(this);

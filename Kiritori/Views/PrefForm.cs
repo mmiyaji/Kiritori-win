@@ -212,7 +212,7 @@ namespace Kiritori
             _handlingStartupToggle = true;
 
             // 変更前の状態を保持（ロールバック用）
-            var before = Properties.Settings.Default.isStartup;
+            var before = Properties.Settings.Default.RunAtStartup;
             var want   = chkRunAtStartup.Checked;
 
             // UI操作中は触らせない
@@ -248,7 +248,7 @@ namespace Kiritori
                     if (ok)
                     {
                         // システム側が成功したときだけ設定値を確定
-                        Properties.Settings.Default.isStartup = want;
+                        Properties.Settings.Default.RunAtStartup = want;
                     }
                     else
                     {
@@ -281,13 +281,15 @@ namespace Kiritori
         {
             using (SuppressDirtyScope())
             {
+                ApplyAdvancedEditsToSettings();
                 Properties.Settings.Default.Save();
                 _baselineHash = SettingsDirtyTracker.ComputeSettingsHash();
                 _baselineMap = SettingsDirtyTracker.BuildSettingsSnapshotMap();
                 _isDirty = false;
+                _gridSettings?.Invalidate();
                 UpdateDirtyUI();
             }
-            this.Close();
+            // this.Close();
         }
 
         private void btnCancelSettings_Click(object sender, EventArgs e)

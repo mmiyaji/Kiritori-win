@@ -126,7 +126,7 @@ namespace Kiritori
                     e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightAlphaPercent) ||
                     e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightThickness) ||
                     e.PropertyName == "SnapGridPx" || e.PropertyName == "EdgeSnapTolerancePx" ||
-                    e.PropertyName == nameof(Properties.Settings.Default.isScreenGuide))
+                    e.PropertyName == nameof(Properties.Settings.Default.ScreenGuideEnabled))
                 {
                     ApplySettingsFromPreferences();
                     if (bmp != null) pictureBox1.Refresh();
@@ -140,18 +140,18 @@ namespace Kiritori
         private bool IsGuidesEnabled()
         {
             // Alt で反転（既定は Settings）
-            bool baseVal = Properties.Settings.Default.isScreenGuide;
+            bool baseVal = Properties.Settings.Default.ScreenGuideEnabled;
             if ((ModifierKeys & Keys.Alt) != 0) return !baseVal;
             return baseVal;
         }
 
         private bool IsSnapEnabled()
         {
-            // Ctrl で反転（既定は Settings に isScreenSnap があれば使用、無ければ false）
+            // Ctrl で反転（既定は Settings に SnapToEdgesEnabled があれば使用、無ければ false）
             bool baseVal = false;
             try
             {
-                object v = Properties.Settings.Default["isScreenSnap"];
+                object v = Properties.Settings.Default["SnapToEdgesEnabled"];
                 if (v != null) baseVal = Convert.ToBoolean(v);
             }
             catch { }
@@ -544,7 +544,7 @@ namespace Kiritori
         {
             // OCRモード時はキャプチャ完了トーストを出さない
             if (_ocr_mode) return;
-            if (!Properties.Settings.Default.isShowNotify) return;
+            if (!Properties.Settings.Default.ShowNotificationOnCapture) return;
             // 直前の連打を抑止（例: 500ms 以内は捨てる）
             var now = DateTime.Now;
             if ((now - _lastToastAt).TotalMilliseconds < 500) return;
@@ -885,7 +885,7 @@ namespace Kiritori
 
         private void NotifyOcr(string text)
         {
-            if (!Properties.Settings.Default.isShowNotifyOCR) return;
+            if (!Properties.Settings.Default.ShowNotificationOnOcr) return;
 
             // 先頭 ~80文字をプレビューに
             string preview = text ?? "";

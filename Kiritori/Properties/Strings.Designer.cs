@@ -567,45 +567,45 @@ namespace Kiritori.Properties {
         /// <summary>
         ///   Initial Startup State Management に類似しているローカライズされた文字列を検索します。
         /// </summary>
-        internal static string Setting_Display_isFirstRunShown {
+        internal static string Setting_Display_FirstRunShown {
             get {
-                return ResourceManager.GetString("Setting.Display.isFirstRunShown", resourceCulture);
+                return ResourceManager.GetString("Setting.Display.FirstRunShown", resourceCulture);
             }
         }
         
         /// <summary>
         ///   Highlight Window on Hover に類似しているローカライズされた文字列を検索します。
         /// </summary>
-        internal static string Setting_Display_isHighlightWindowOnHover {
+        internal static string Setting_Display_HoverHighlightEnabled {
             get {
-                return ResourceManager.GetString("Setting.Display.isHighlightWindowOnHover", resourceCulture);
+                return ResourceManager.GetString("Setting.Display.HoverHighlightEnabled", resourceCulture);
             }
         }
         
         /// <summary>
         ///   Open Menu on App Start に類似しているローカライズされた文字列を検索します。
         /// </summary>
-        internal static string Setting_Display_isOpenMenuOnAppStart {
+        internal static string Setting_Display_OpenPreferencesOnStartup {
             get {
-                return ResourceManager.GetString("Setting.Display.isOpenMenuOnAppStart", resourceCulture);
+                return ResourceManager.GetString("Setting.Display.OpenPreferencesOnStartup", resourceCulture);
             }
         }
         
         /// <summary>
         ///   Show Screen Guide に類似しているローカライズされた文字列を検索します。
         /// </summary>
-        internal static string Setting_Display_isScreenGuide {
+        internal static string Setting_Display_ScreenGuideEnabled {
             get {
-                return ResourceManager.GetString("Setting.Display.isScreenGuide", resourceCulture);
+                return ResourceManager.GetString("Setting.Display.ScreenGuideEnabled", resourceCulture);
             }
         }
         
         /// <summary>
         ///   Run at Startup に類似しているローカライズされた文字列を検索します。
         /// </summary>
-        internal static string Setting_Display_isStartup {
+        internal static string Setting_Display_RunAtStartup {
             get {
-                return ResourceManager.GetString("Setting.Display.isStartup", resourceCulture);
+                return ResourceManager.GetString("Setting.Display.RunAtStartup", resourceCulture);
             }
         }
         

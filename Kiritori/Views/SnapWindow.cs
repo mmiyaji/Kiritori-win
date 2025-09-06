@@ -25,9 +25,9 @@ namespace Kiritori
 public DateTime date;
 
         // 基本フラグ
-        private bool isWindowShadow = true;
-        private bool isAfloatWindow = true;
-        private bool isOverlay = true;
+        private bool WindowShadowEnabled = true;
+        private bool AlwaysOnTop = true;
+        private bool OverlayEnabled = true;
         private bool isHighlightOnHover = true;
 
         // 親参照
@@ -42,7 +42,7 @@ public DateTime date;
         private float? _imgAspect = null;
 
         // 透明度関連
-        private double WindowAlphaPercent;
+        private double WindowOpacityPercent;
         private const double DRAG_ALPHA = 0.3;
         private const double MIN_ALPHA = 0.1;
 
@@ -138,7 +138,7 @@ public DateTime date;
             get
             {
                 CreateParams cp = base.CreateParams;
-                if (this.isWindowShadow)
+                if (this.WindowShadowEnabled)
                 {
                     cp.ClassStyle |= CS_DROPSHADOW;
                 }

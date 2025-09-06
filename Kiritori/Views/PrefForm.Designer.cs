@@ -186,7 +186,7 @@ namespace Kiritori
                 this.tabGeneral,
                 this.tabAppearance,
                 this.tabShortcuts,
-                // this.tabAdvanced,
+                this.tabAdvanced,
             });
 
             // =========================================================
@@ -628,9 +628,7 @@ namespace Kiritori
             // =========================================================
             // Advanced タブ（プレースホルダ）
             // =========================================================
-            var lblAdv = new Label { Text = "Advanced settings will appear here.", AutoSize = true, Padding = new Padding(12) };
-            this.tabAdvanced.Controls.Add(lblAdv);
-
+            BuildAdvancedTab();
             // =========================================================
             // Info タブ
             // =========================================================
@@ -1059,35 +1057,35 @@ namespace Kiritori
 
             // --- その他（例） ---
             this.chkWindowShadow.DataBindings.Add(
-                new Binding("Checked", S, nameof(S.isWindowShadow), true, DataSourceUpdateMode.OnPropertyChanged));
+                new Binding("Checked", S, nameof(S.WindowShadowEnabled), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkAfloat.DataBindings.Add(
-                new Binding("Checked", S, nameof(S.isAfloatWindow), true, DataSourceUpdateMode.OnPropertyChanged));
+                new Binding("Checked", S, nameof(S.AlwaysOnTop), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkHighlightOnHover.DataBindings.Add(
-                new Binding("Checked", S, nameof(S.isHighlightWindowOnHover), true, DataSourceUpdateMode.OnPropertyChanged));
+                new Binding("Checked", S, nameof(S.HoverHighlightEnabled), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkShowOverlay.DataBindings.Add(
-                new Binding("Checked", S, nameof(S.isOverlay), true, DataSourceUpdateMode.OnPropertyChanged));
+                new Binding("Checked", S, nameof(S.OverlayEnabled), true, DataSourceUpdateMode.OnPropertyChanged));
             this.numHoverThickness.DataBindings.Add(
                 new Binding("Value", S, nameof(S.HoverHighlightThickness), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkScreenGuide.DataBindings.Add(
-                new Binding("Checked", S, nameof(S.isScreenGuide), true, DataSourceUpdateMode.OnPropertyChanged));
+                new Binding("Checked", S, nameof(S.ScreenGuideEnabled), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkTrayNotify.DataBindings.Add(
-                new Binding("Checked", S, nameof(S.isShowNotify), true, DataSourceUpdateMode.OnPropertyChanged));
+                new Binding("Checked", S, nameof(S.ShowNotificationOnCapture), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkTrayNotifyOCR.DataBindings.Add(
-                new Binding("Checked", S, nameof(S.isShowNotifyOCR), true, DataSourceUpdateMode.OnPropertyChanged));
+                new Binding("Checked", S, nameof(S.ShowNotificationOnOcr), true, DataSourceUpdateMode.OnPropertyChanged));
 
-            if (S.WindowAlphaPercent < this.trackbarDefaultOpacity.Minimum)
-                S.WindowAlphaPercent = this.trackbarDefaultOpacity.Minimum;
-            if (S.WindowAlphaPercent > this.trackbarDefaultOpacity.Maximum)
-                S.WindowAlphaPercent = this.trackbarDefaultOpacity.Maximum;
+            if (S.WindowOpacityPercent < this.trackbarDefaultOpacity.Minimum)
+                S.WindowOpacityPercent = this.trackbarDefaultOpacity.Minimum;
+            if (S.WindowOpacityPercent > this.trackbarDefaultOpacity.Maximum)
+                S.WindowOpacityPercent = this.trackbarDefaultOpacity.Maximum;
 
             this.trackbarDefaultOpacity.DataBindings.Add(
-                new Binding("Value", S, nameof(S.WindowAlphaPercent),
+                new Binding("Value", S, nameof(S.WindowOpacityPercent),
                     /* formattingEnabled */ true,
                     DataSourceUpdateMode.OnPropertyChanged));
 
             // 4) ラベルは表示専用（int → "NN%" に変換）
             var lblOpacityBinding = new Binding(
-                "Text", S, nameof(S.WindowAlphaPercent),
+                "Text", S, nameof(S.WindowOpacityPercent),
                 /* formattingEnabled */ true,
                 DataSourceUpdateMode.Never);
             lblOpacityBinding.Format += (o, e) =>
@@ -1101,14 +1099,14 @@ namespace Kiritori
             this.labelDefaultOpacityVal.DataBindings.Add(lblOpacityBinding);
 
             // Run at startup は OS 処理が絡むため表示だけ同期＋既存ハンドラで処理
-            this.chkRunAtStartup.Checked = S.isStartup;
+            this.chkRunAtStartup.Checked = S.RunAtStartup;
             this.chkRunAtStartup.CheckedChanged += (s, e) =>
             {
                 if (_initStartupToggle) return;
-                S.isStartup = chkRunAtStartup.Checked;
+                S.RunAtStartup = chkRunAtStartup.Checked;
             };
             this.chkOpenMenuOnAppStart.DataBindings.Add(
-                new Binding("Checked", S, nameof(S.isOpenMenuOnAppStart), true, DataSourceUpdateMode.OnPropertyChanged));
+                new Binding("Checked", S, nameof(S.OpenPreferencesOnStartup), true, DataSourceUpdateMode.OnPropertyChanged));
         }
         private void HookRuntimeEvents()
         {

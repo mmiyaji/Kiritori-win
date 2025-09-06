@@ -24,9 +24,9 @@ namespace Kiritori
         #region ===== 効果 / 見た目 =====
         public void ToggleShadow(bool enable)
         {
-            this.isWindowShadow = enable;
+            this.WindowShadowEnabled = enable;
             this.RecreateHandle();
-            ShowOverlay(this.isWindowShadow ? "SHADOW: ON" : "SHADOW: OFF");
+            ShowOverlay(this.WindowShadowEnabled ? "SHADOW: ON" : "SHADOW: OFF");
         }
 
         public void ToggleHoverHighlight(bool enable)
@@ -38,12 +38,12 @@ namespace Kiritori
         public void setAlpha(double alpha)
         {
             this.Opacity = alpha;
-            this.WindowAlphaPercent = alpha;
+            this.WindowOpacityPercent = alpha;
         }
 
         public void ShowOverlay(string text)
         {
-            if (!this.isOverlay) return;
+            if (!this.OverlayEnabled) return;
             const int MIN_W = 100;
             const int MIN_H = 50;
             if (this.ClientSize.Width < MIN_W || this.ClientSize.Height < MIN_H) return;

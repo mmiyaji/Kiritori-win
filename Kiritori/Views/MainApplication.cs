@@ -207,15 +207,15 @@ namespace Kiritori
                 return;
             }
             // 初回だけは強制表示
-            if (!Settings.Default.isFirstRunShown)
+            if (!Settings.Default.FirstRunShown)
             {
                 Log.Info($"First run detected", "Startup");
-                Settings.Default.isFirstRunShown = true;
+                Settings.Default.FirstRunShown = true;
                 Settings.Default.Save();
                 PrefForm.ShowSingleton(this);
                 return;
             }
-            if (Settings.Default.isOpenMenuOnAppStart)
+            if (Settings.Default.OpenPreferencesOnStartup)
             {
                 Log.Info($"Opening preferences on startup", "Startup");
                 PrefForm.ShowSingleton(this);
@@ -930,7 +930,7 @@ namespace Kiritori
         {
             try
             {
-                if (Properties.Settings.Default.isStartup)
+                if (Properties.Settings.Default.RunAtStartup)
                 {
                     if (Helpers.PackagedHelper.IsPackaged())
                     {

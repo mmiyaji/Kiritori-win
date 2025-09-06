@@ -55,7 +55,7 @@ namespace Kiritori
                     {
                         try { Clipboard.SetText(result.Text); } catch { }
                         ShowOverlay("OCR RESULT COPIED");
-                        if (Properties.Settings.Default.isShowNotifyOCR)
+                        if (Properties.Settings.Default.ShowNotificationOnOcr)
                         {
                             ShowOcrToast(result.Text ?? "");
                         }

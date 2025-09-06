@@ -18,453 +18,340 @@ namespace Kiritori.Properties {
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
         
         public static Settings Default {
-            get {
-                return defaultInstance;
-            }
+            get { return defaultInstance; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool isWindowShadow {
-            get {
-                return ((bool)(this["isWindowShadow"]));
-            }
-            set {
-                this["isWindowShadow"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Enable drop shadow effect on windows")]
+        public bool WindowShadowEnabled {
+            get { return ((bool)(this["WindowShadowEnabled"])); }
+            set { this["WindowShadowEnabled"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool isAfloatWindow {
-            get {
-                return ((bool)(this["isAfloatWindow"]));
-            }
-            set {
-                this["isAfloatWindow"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Keep window always on top")]
+        public bool AlwaysOnTop {
+            get { return ((bool)(this["AlwaysOnTop"])); }
+            set { this["AlwaysOnTop"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("100")]
-        public int WindowAlphaPercent {
-            get {
-                return ((int)(this["WindowAlphaPercent"]));
-            }
-            set {
-                this["WindowAlphaPercent"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Window opacity percentage (10–100)")]
+        public int WindowOpacityPercent {
+            get { return ((int)(this["WindowOpacityPercent"])); }
+            set { this["WindowOpacityPercent"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool isStartup {
-            get {
-                return ((bool)(this["isStartup"]));
-            }
-            set {
-                this["isStartup"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Launch Kiritori at Windows startup")]
+        public bool RunAtStartup {
+            get { return ((bool)(this["RunAtStartup"])); }
+            set { this["RunAtStartup"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("10")]
+        [global::System.ComponentModel.DescriptionAttribute("Maximum number of history items to keep")]
         public int HistoryLimit {
-            get {
-                return ((int)(this["HistoryLimit"]));
-            }
-            set {
-                this["HistoryLimit"] = value;
-            }
+            get { return ((int)(this["HistoryLimit"])); }
+            set { this["HistoryLimit"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool isFirstRunShown {
-            get {
-                return ((bool)(this["isFirstRunShown"]));
-            }
-            set {
-                this["isFirstRunShown"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Indicates whether first-run message was shown")]
+        public bool FirstRunShown {
+            get { return ((bool)(this["FirstRunShown"])); }
+            set { this["FirstRunShown"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool isOpenMenuOnAppStart {
-            get {
-                return ((bool)(this["isOpenMenuOnAppStart"]));
-            }
-            set {
-                this["isOpenMenuOnAppStart"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Open Preferences window at application startup")]
+        public bool OpenPreferencesOnStartup {
+            get { return ((bool)(this["OpenPreferencesOnStartup"])); }
+            set { this["OpenPreferencesOnStartup"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool isOverlay {
-            get {
-                return ((bool)(this["isOverlay"]));
-            }
-            set {
-                this["isOverlay"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Display overlay elements in capture windows")]
+        public bool OverlayEnabled {
+            get { return ((bool)(this["OverlayEnabled"])); }
+            set { this["OverlayEnabled"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool isScreenGuide {
-            get {
-                return ((bool)(this["isScreenGuide"]));
-            }
-            set {
-                this["isScreenGuide"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Show guide lines during screen capture")]
+        public bool ScreenGuideEnabled {
+            get { return ((bool)(this["ScreenGuideEnabled"])); }
+            set { this["ScreenGuideEnabled"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool isHighlightWindowOnHover {
-            get {
-                return ((bool)(this["isHighlightWindowOnHover"]));
-            }
-            set {
-                this["isHighlightWindowOnHover"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Highlight window when mouse hovers")]
+        public bool HoverHighlightEnabled {
+            get { return ((bool)(this["HoverHighlightEnabled"])); }
+            set { this["HoverHighlightEnabled"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("Cyan")]
+        [global::System.ComponentModel.DescriptionAttribute("Highlight color for window hover")]
         public global::System.Drawing.Color HoverHighlightColor {
-            get {
-                return ((global::System.Drawing.Color)(this["HoverHighlightColor"]));
-            }
-            set {
-                this["HoverHighlightColor"] = value;
-            }
+            get { return ((global::System.Drawing.Color)(this["HoverHighlightColor"])); }
+            set { this["HoverHighlightColor"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("80")]
+        [global::System.ComponentModel.DescriptionAttribute("Highlight alpha (%) for window hover")]
         public int HoverHighlightAlphaPercent {
-            get {
-                return ((int)(this["HoverHighlightAlphaPercent"]));
-            }
-            set {
-                this["HoverHighlightAlphaPercent"] = value;
-            }
+            get { return ((int)(this["HoverHighlightAlphaPercent"])); }
+            set { this["HoverHighlightAlphaPercent"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("6")]
+        [global::System.ComponentModel.DescriptionAttribute("Highlight border thickness (px) for window hover")]
         public int HoverHighlightThickness {
-            get {
-                return ((int)(this["HoverHighlightThickness"]));
-            }
-            set {
-                this["HoverHighlightThickness"] = value;
-            }
+            get { return ((int)(this["HoverHighlightThickness"])); }
+            set { this["HoverHighlightThickness"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("Black")]
+        [global::System.ComponentModel.DescriptionAttribute("Background color behind captured region")]
         public global::System.Drawing.Color CaptureBackgroundColor {
-            get {
-                return ((global::System.Drawing.Color)(this["CaptureBackgroundColor"]));
-            }
-            set {
-                this["CaptureBackgroundColor"] = value;
-            }
+            get { return ((global::System.Drawing.Color)(this["CaptureBackgroundColor"])); }
+            set { this["CaptureBackgroundColor"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("60")]
+        [global::System.ComponentModel.DescriptionAttribute("Background alpha (%) behind captured region")]
         public int CaptureBackgroundAlphaPercent {
-            get {
-                return ((int)(this["CaptureBackgroundAlphaPercent"]));
-            }
-            set {
-                this["CaptureBackgroundAlphaPercent"] = value;
-            }
+            get { return ((int)(this["CaptureBackgroundAlphaPercent"])); }
+            set { this["CaptureBackgroundAlphaPercent"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool isScreenSnap {
-            get {
-                return ((bool)(this["isScreenSnap"]));
-            }
-            set {
-                this["isScreenSnap"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Snap capture region to nearby edges/windows")]
+        public bool SnapToEdgesEnabled {
+            get { return ((bool)(this["SnapToEdgesEnabled"])); }
+            set { this["SnapToEdgesEnabled"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool isPlaySound {
-            get {
-                return ((bool)(this["isPlaySound"]));
-            }
-            set {
-                this["isPlaySound"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Play sound when capture completes")]
+        public bool PlaySoundOnCapture {
+            get { return ((bool)(this["PlaySoundOnCapture"])); }
+            set { this["PlaySoundOnCapture"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool isShowNotify {
-            get {
-                return ((bool)(this["isShowNotify"]));
-            }
-            set {
-                this["isShowNotify"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Show tray notification when capture completes")]
+        public bool ShowNotificationOnCapture {
+            get { return ((bool)(this["ShowNotificationOnCapture"])); }
+            set { this["ShowNotificationOnCapture"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("en")]
+        [global::System.ComponentModel.DescriptionAttribute("UI language code (e.g., en, ja)")]
         public string UICulture {
-            get {
-                return ((string)(this["UICulture"]));
-            }
-            set {
-                this["UICulture"] = value;
-            }
+            get { return ((string)(this["UICulture"])); }
+            set { this["UICulture"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("Ctrl+Shift+5")]
+        [global::System.ComponentModel.DescriptionAttribute("Hotkey for image capture")]
         public string HotkeyCapture {
-            get {
-                return ((string)(this["HotkeyCapture"]));
-            }
-            set {
-                this["HotkeyCapture"] = value;
-            }
+            get { return ((string)(this["HotkeyCapture"])); }
+            set { this["HotkeyCapture"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("Ctrl+Shift+4")]
+        [global::System.ComponentModel.DescriptionAttribute("Hotkey for OCR capture")]
         public string HotkeyOcr {
-            get {
-                return ((string)(this["HotkeyOcr"]));
-            }
-            set {
-                this["HotkeyOcr"] = value;
-            }
+            get { return ((string)(this["HotkeyOcr"])); }
+            set { this["HotkeyOcr"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool isShowNotifyOCR {
-            get {
-                return ((bool)(this["isShowNotifyOCR"]));
-            }
-            set {
-                this["isShowNotifyOCR"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Show tray notification when OCR completes")]
+        public bool ShowNotificationOnOcr {
+            get { return ((bool)(this["ShowNotificationOnOcr"])); }
+            set { this["ShowNotificationOnOcr"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("Ctrl+Shift+6")]
+        [global::System.ComponentModel.DescriptionAttribute("Hotkey to toggle Live Preview")]
         public string HotkeyLive {
-            get {
-                return ((string)(this["HotkeyLive"]));
-            }
-            set {
-                this["HotkeyLive"] = value;
-            }
+            get { return ((string)(this["HotkeyLive"])); }
+            set { this["HotkeyLive"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("15")]
+        [global::System.ComponentModel.DescriptionAttribute("Maximum FPS for Live Preview rendering")]
         public int LivePreviewMaxFps {
-            get {
-                return ((int)(this["LivePreviewMaxFps"]));
-            }
-            set {
-                this["LivePreviewMaxFps"] = value;
-            }
+            get { return ((int)(this["LivePreviewMaxFps"])); }
+            set { this["LivePreviewMaxFps"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        [global::System.ComponentModel.DescriptionAttribute("Live Preview present policy (0=Always, 1=HashSkip, 2=Throttle)")]
         public int LivePreviewRenderPolicy {
-            get {
-                return ((int)(this["LivePreviewRenderPolicy"]));
-            }
-            set {
-                this["LivePreviewRenderPolicy"] = value;
-            }
+            get { return ((int)(this["LivePreviewRenderPolicy"])); }
+            set { this["LivePreviewRenderPolicy"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool Logger_Enabled {
-            get {
-                return ((bool)(this["Logger_Enabled"]));
-            }
-            set {
-                this["Logger_Enabled"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Enable the logging service")]
+        public bool LogEnabled {
+            get { return ((bool)(this["LogEnabled"])); }
+            set { this["LogEnabled"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("2")]
-        public int Logger_MinLevel {
-            get {
-                return ((int)(this["Logger_MinLevel"]));
-            }
-            set {
-                this["Logger_MinLevel"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Minimum log level (0=Trace, 1=Debug, 2=Info, 3=Warn, 4=Error)")]
+        public int LogMinLevel {
+            get { return ((int)(this["LogMinLevel"])); }
+            set { this["LogMinLevel"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool Logger_WriteToDebug {
-            get {
-                return ((bool)(this["Logger_WriteToDebug"]));
-            }
-            set {
-                this["Logger_WriteToDebug"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Write logs to Debug output")]
+        public bool LogWriteToDebug {
+            get { return ((bool)(this["LogWriteToDebug"])); }
+            set { this["LogWriteToDebug"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool Logger_WriteToFile {
-            get {
-                return ((bool)(this["Logger_WriteToFile"]));
-            }
-            set {
-                this["Logger_WriteToFile"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Write logs to a file")]
+        public bool LogWriteToFile {
+            get { return ((bool)(this["LogWriteToFile"])); }
+            set { this["LogWriteToFile"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string Logger_FilePath {
-            get {
-                return ((string)(this["Logger_FilePath"]));
-            }
-            set {
-                this["Logger_FilePath"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Custom log file path (empty to use default)")]
+        public string LogFilePath {
+            get { return ((string)(this["LogFilePath"])); }
+            set { this["LogFilePath"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("5242880")]
-        public int Logger_MaxFileSizeBytes {
-            get {
-                return ((int)(this["Logger_MaxFileSizeBytes"]));
-            }
-            set {
-                this["Logger_MaxFileSizeBytes"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Max log file size (bytes) before rolling")]
+        public int LogMaxFileSizeBytes {
+            get { return ((int)(this["LogMaxFileSizeBytes"])); }
+            set { this["LogMaxFileSizeBytes"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("3")]
-        public int Logger_MaxRollFiles {
-            get {
-                return ((int)(this["Logger_MaxRollFiles"]));
-            }
-            set {
-                this["Logger_MaxRollFiles"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Number of rolled log files to keep")]
+        public int LogMaxRollFiles {
+            get { return ((int)(this["LogMaxRollFiles"])); }
+            set { this["LogMaxRollFiles"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool Logger_IncludeTimestamp {
-            get {
-                return ((bool)(this["Logger_IncludeTimestamp"]));
-            }
-            set {
-                this["Logger_IncludeTimestamp"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Include timestamp in each log entry")]
+        public bool LogIncludeTimestamp {
+            get { return ((bool)(this["LogIncludeTimestamp"])); }
+            set { this["LogIncludeTimestamp"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool Logger_IncludeThreadId {
-            get {
-                return ((bool)(this["Logger_IncludeThreadId"]));
-            }
-            set {
-                this["Logger_IncludeThreadId"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Include thread ID in each log entry")]
+        public bool LogIncludeThreadId {
+            get { return ((bool)(this["LogIncludeThreadId"])); }
+            set { this["LogIncludeThreadId"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool Logger_IncludeProcessId {
-            get {
-                return ((bool)(this["Logger_IncludeProcessId"]));
-            }
-            set {
-                this["Logger_IncludeProcessId"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Include process ID in each log entry")]
+        public bool LogIncludeProcessId {
+            get { return ((bool)(this["LogIncludeProcessId"])); }
+            set { this["LogIncludeProcessId"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool Logger_IncludeCategoryTag {
-            get {
-                return ((bool)(this["Logger_IncludeCategoryTag"]));
-            }
-            set {
-                this["Logger_IncludeCategoryTag"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Include category tag in each log entry")]
+        public bool LogIncludeCategoryTag {
+            get { return ((bool)(this["LogIncludeCategoryTag"])); }
+            set { this["LogIncludeCategoryTag"] = value; }
         }
-        
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("yyyy-MM-dd HH:mm:ss.fff")]
-        public string Logger_TimestampFormat {
-            get {
-                return ((string)(this["Logger_TimestampFormat"]));
-            }
-            set {
-                this["Logger_TimestampFormat"] = value;
-            }
+        [global::System.ComponentModel.DescriptionAttribute("Timestamp format string for logs")]
+        public string LogTimestampFormat {
+            get { return ((string)(this["LogTimestampFormat"])); }
+            set { this["LogTimestampFormat"] = value; }
         }
     }
 }

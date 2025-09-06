@@ -42,7 +42,7 @@ namespace Kiritori
             this.TopMost = !this.TopMost;
             ShowOverlay(this.TopMost ? "ALWAYS ON TOP" : "TOP MOST: OFF");
             this.keepAfloatToolStripMenuItem.Checked = this.TopMost;
-            this.isAfloatWindow = this.TopMost;
+            this.AlwaysOnTop = this.TopMost;
         }
         private void saveImageToolStripMenuItem_Click(object sender, EventArgs e) { saveImage(); }
         private void openImageToolStripMenuItem_Click(object sender, EventArgs e) { openImage(); }
@@ -56,7 +56,7 @@ namespace Kiritori
         private void size150ToolStripMenuItem_Click(object sender, EventArgs e) { ZoomToPercent(150); }
         private void size200ToolStripMenuItem_Click(object sender, EventArgs e) { ZoomToPercent(200); }
         private void size500ToolStripMenuItem_Click(object sender, EventArgs e) { ZoomToPercent(500); }
-        private void dropShadowToolStripMenuItem_Click(object sender, EventArgs e) { ToggleShadow(!this.isWindowShadow); }
+        private void dropShadowToolStripMenuItem_Click(object sender, EventArgs e) { ToggleShadow(!this.WindowShadowEnabled); }
         private void preferencesToolStripMenuItem_Click(object sender, EventArgs e) { PrefForm.ShowSingleton(this.ma); }
         private void printToolStripMenuItem_Click(object sender, EventArgs e) { printImage(); }
         private void opacity100toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(1.0); ShowOverlay("OPACITY 100%"); }
