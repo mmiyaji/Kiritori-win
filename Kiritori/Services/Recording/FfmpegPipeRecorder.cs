@@ -79,8 +79,12 @@ namespace Kiritori.Services.Recording
             _proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
             _proc.Exited += (s, e) =>
             {
-                try { _exitCode = _proc.ExitCode; } catch { }
-                Log.Debug($"ffmpeg Exited: code={_exitCode}", "REC");
+                try
+                {
+                    _exitCode = _proc.ExitCode;
+                    Log.Debug($"ffmpeg Exited: code={_exitCode}", "REC");
+                }
+                catch { }
             };
             _proc.ErrorDataReceived += (s, e) =>
             {
@@ -302,7 +306,7 @@ namespace Kiritori.Services.Recording
             _proc = null;
             _started = false;
 
-            Log.Debug($"Dispose: end. frames={_writtenFrames}, duration={_sinceStart.Elapsed.TotalSeconds:F1}s, out='{Options?.OutputPath}', exitCode={_exitCode}", "REC");
+            Log.Debug($"Dispose: end. frames={_writtenFrames}, duration={_sinceStart.Elapsed.TotalSeconds:F1}s, out='{Options?.OutputPath}'", "REC");
             if (_stderrBuf.Length > 0)
                 Log.Debug("ffmpeg stderr(last):\n" + _stderrBuf.ToString(), "REC");
         }

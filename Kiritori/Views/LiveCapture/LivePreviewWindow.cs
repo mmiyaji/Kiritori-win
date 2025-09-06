@@ -318,6 +318,8 @@ namespace Kiritori.Views.LiveCapture
 
                     Invalidate(); // 画面更新
                     return true;
+                case (int)HOTS.RECORD:    // Ctrl + R
+                    ToggleRecord(); return true;
 
                 default:
                     return base.ProcessCmdKey(ref msg, keyData);
@@ -703,7 +705,7 @@ namespace Kiritori.Views.LiveCapture
             _backend.Start();
 
             _iconBadge = new TitleIconBadger(this);
-            _iconBadge.SetState(LiveBadgeState.Recording);
+            _iconBadge.SetState(LiveBadgeState.Rendering);
             ShowOverlay("LIVE PREVIEW KIRITORI");
         }
 
@@ -1326,11 +1328,13 @@ namespace Kiritori.Views.LiveCapture
                         miStartRecMp4_Click(s, e);
                         Log.Debug("Recording started", "LivePreview");
                         ShowOverlay("RECORDING");
+                        _iconBadge.SetState(LiveBadgeState.Recording);
                     }
                     catch (Exception ex)
                     {
                         Log.Debug("Failed to start recording: " + ex.Message, "LivePreview");
                         _miRecoding.Checked = false; // 状態を元に戻す
+                        _iconBadge.SetState(LiveBadgeState.Rendering);
                     }
                 }
                 else
@@ -1340,16 +1344,18 @@ namespace Kiritori.Views.LiveCapture
                         miStopRec_Click(s, e);
                         Log.Debug("Recording stopped", "LivePreview");
                         ShowOverlay("STOP RECORDING");
+                        _iconBadge.SetState(LiveBadgeState.Rendering);
                     }
                     catch (Exception ex)
                     {
                         Log.Debug("Failed to stop recording: " + ex.Message, "LivePreview");
                         // 停止失敗時は再チェックに戻すかどうかは好みで
                         _miRecoding.Checked = true;
+                        _iconBadge.SetState(LiveBadgeState.Rendering);
                     }
                 }
             };
-            _miRecoding.ShortcutKeyDisplayString = "R";
+            _miRecoding.ShortcutKeys = (Keys)HOTS.RECORD;
 
             _miPauseResume = new ToolStripMenuItem(SR.T("Menu.Pause", "Pause"));
             _miPauseResume.Click += (s, e) => TogglePause();
@@ -1579,6 +1585,11 @@ namespace Kiritori.Views.LiveCapture
             MarkDropDownExclusion(_miOpacity);
             MarkDropDownExclusion(_miFpsRoot);
         }
+        private void ToggleRecord()
+        {
+            if (_miRecoding == null) return;
+            _miRecoding.Checked = !_miRecoding.Checked;
+        }
         private void miStartRecMp4_Click(object sender, EventArgs e)
         {
             var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
@@ -1662,7 +1673,7 @@ namespace Kiritori.Views.LiveCapture
         {
             _paused = !_paused;
             _miPauseResume.Text = _paused ? SR.T("Menu.Resume", "Resume") : SR.T("Menu.Pause", "Pause");
-            _iconBadge?.SetState(_paused ? LiveBadgeState.Paused : LiveBadgeState.Recording);
+            _iconBadge?.SetState(_paused ? LiveBadgeState.Paused : LiveBadgeState.Rendering);
 
             if (!_paused) Invalidate();
             Invalidate(GetHudInvalidateRect());

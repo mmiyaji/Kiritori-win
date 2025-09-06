@@ -7,14 +7,13 @@ using System.Windows.Forms;
 
 namespace Kiritori.Views.LiveCapture
 {
-    internal enum LiveBadgeState { None, Recording, Paused }
+    // Rendering（再生中/描画中）, Paused（一時停止）, Stopped（停止）, Recording（録画中）
+    internal enum LiveBadgeState { None, Rendering, Paused, Stopped, Recording }
 
     internal sealed class TitleIconBadger : IDisposable
     {
         private readonly Form _form;
-        private readonly Icon _baseIcon;          // 元のアイコンを保持
-        private readonly Timer _blinkTimer;
-        private bool _blinkOn;
+        private readonly Icon _baseIcon;          // 元のアイコン
         private LiveBadgeState _state = LiveBadgeState.None;
         private bool _disposed;
         private readonly Dictionary<string, Icon> _cache = new Dictionary<string, Icon>();
@@ -22,19 +21,13 @@ namespace Kiritori.Views.LiveCapture
         public TitleIconBadger(Form form)
         {
             _form = form ?? throw new ArgumentNullException(nameof(form));
-            _baseIcon = _form.Icon;               // nullでもOK（後段でfallback）
-            _blinkTimer = new Timer { Interval = 500 }; // 0.5秒点滅
-            _blinkTimer.Tick += (s, e) =>
-            {
-                _blinkOn = !_blinkOn;
-                Apply();
-            };
+            _baseIcon = _form.Icon;               // null可
         }
 
         public void SetState(LiveBadgeState state)
         {
             if (_disposed) return;
-            if (_state == state) return; // 変化なしなら何もしない
+            if (_state == state) return;
             _state = state;
             Apply();
         }
@@ -43,11 +36,9 @@ namespace Kiritori.Views.LiveCapture
         {
             if (_disposed || _form.IsDisposed) return;
 
-            // 状態×サイズだけをキーに（点滅は無し）
             var size = SystemInformation.SmallIconSize;
             var ico = BuildIconForSizeAndState(size, _state) ?? _baseIcon;
 
-            // 同一参照なら再設定しない
             if (!ReferenceEquals(_form.Icon, ico))
                 _form.Icon = ico;
         }
@@ -61,7 +52,7 @@ namespace Kiritori.Views.LiveCapture
             using (var g = Graphics.FromImage(bmp))
             {
                 g.SmoothingMode = SmoothingMode.AntiAlias;
-                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 g.Clear(Color.Transparent);
 
                 if (_baseIcon != null)
@@ -69,21 +60,21 @@ namespace Kiritori.Views.LiveCapture
                 else
                     DrawFallbackBase(g, size);
 
-                DrawBadge(g, size, state, on:true); // 点滅なし＝常時 on
+                DrawBadge(g, size, state);
 
                 IntPtr h = bmp.GetHicon();
                 try
                 {
                     using (var tmp = Icon.FromHandle(h))
                     {
-                        var clone = (Icon)tmp.Clone(); // マネージド実体
+                        var clone = (Icon)tmp.Clone();
                         _cache[key] = clone;
                         return clone;
                     }
                 }
                 finally
                 {
-                    DestroyIcon(h); // 生成直後に必ず解放
+                    DestroyIcon(h);
                 }
             }
         }
@@ -93,10 +84,8 @@ namespace Kiritori.Views.LiveCapture
             if (_disposed) return;
             _disposed = true;
 
-            // 元アイコンへ戻す（任意）
             if (!_form.IsDisposed) _form.Icon = _baseIcon;
 
-            // キャッシュ破棄（Clone は Dispose でOK）
             foreach (var ico in _cache.Values) try { ico.Dispose(); } catch { }
             _cache.Clear();
         }
@@ -107,52 +96,67 @@ namespace Kiritori.Views.LiveCapture
                 g.FillRectangle(br, new Rectangle(Point.Empty, size));
         }
 
-        private static void DrawBadge(Graphics g, Size size, LiveBadgeState state, bool on)
+        private static void DrawBadge(Graphics g, Size size, LiveBadgeState state)
         {
             if (state == LiveBadgeState.None) return;
 
-            // バッジ位置：右下コーナー
             var w = size.Width; var h = size.Height;
-            float d = Math.Max(6f, Math.Min(w, h) * 0.5f); // バッジ直径
+            float d = Math.Max(6f, Math.Min(w, h) * 0.5f);
             float margin = Math.Max(1f, d * 0.12f);
             float x = w - d - margin;
             float y = h - d - margin;
 
-            // 影（ドロップシャドウ）
             using (var sb = new SolidBrush(Color.FromArgb(140, 0, 0, 0)))
                 g.FillEllipse(sb, x + 1, y + 1, d, d);
 
-            switch (state)
+            using (var pen = new Pen(Color.FromArgb(230, 255, 240, 240), Math.Max(1f, d * 0.08f)))
             {
-                case LiveBadgeState.Recording:
-                    // 録画：赤い点（点滅 on/off）
-                    using (var br = new SolidBrush(on ? Color.FromArgb(230, 220, 30, 38) : Color.FromArgb(150, 180, 60, 66)))
-                        g.FillEllipse(br, x, y, d, d);
-                    using (var pen = new Pen(Color.FromArgb(230, 255, 240, 240), Math.Max(1f, d * 0.08f)))
+                switch (state)
+                {
+                    case LiveBadgeState.Recording:
+                        using (var br = new SolidBrush(Color.FromArgb(230, 220, 30, 38))) // 赤
+                            g.FillEllipse(br, x, y, d, d);
                         g.DrawEllipse(pen, x, y, d, d);
-                    break;
+                        break;
 
-                case LiveBadgeState.Paused:
-                    // 一時停止：黄色の二重バー
-                    using (var br = new SolidBrush(Color.FromArgb(235, 255, 200, 0)))
-                        g.FillEllipse(br, x, y, d, d);
-                    // pause bars
-                    float barW = d * 0.22f;
-                    float barGap = d * 0.14f;
-                    float barH = d * 0.60f;
-                    float cx = x + d / 2f;
-                    float top = y + (d - barH) / 2f;
-                    using (var br2 = new SolidBrush(Color.FromArgb(230, 80, 60, 0)))
-                    {
-                        g.FillRectangle(br2, cx - barGap / 2f - barW, top, barW, barH);
-                        g.FillRectangle(br2, cx + barGap / 2f, top, barW, barH);
-                    }
-                    using (var pen = new Pen(Color.FromArgb(230, 255, 240, 240), Math.Max(1f, d * 0.08f)))
+                    case LiveBadgeState.Rendering:
+                        using (var br = new SolidBrush(Color.FromArgb(230, 40, 190, 90))) // 緑
+                            g.FillEllipse(br, x, y, d, d);
                         g.DrawEllipse(pen, x, y, d, d);
-                    break;
+                        break;
+
+                    case LiveBadgeState.Paused:
+                        using (var br = new SolidBrush(Color.FromArgb(235, 255, 200, 0))) // 黄
+                            g.FillEllipse(br, x, y, d, d);
+
+                        float barW = d * 0.22f;
+                        float barGap = d * 0.14f;
+                        float barH = d * 0.60f;
+                        float cx = x + d / 2f;
+                        float top = y + (d - barH) / 2f;
+                        using (var br2 = new SolidBrush(Color.FromArgb(230, 80, 60, 0)))
+                        {
+                            g.FillRectangle(br2, cx - barGap / 2f - barW, top, barW, barH);
+                            g.FillRectangle(br2, cx + barGap / 2f, top, barW, barH);
+                        }
+                        g.DrawEllipse(pen, x, y, d, d);
+                        break;
+
+                    case LiveBadgeState.Stopped:
+                        using (var br = new SolidBrush(Color.FromArgb(220, 120, 120, 120))) // 灰色
+                            g.FillEllipse(br, x, y, d, d);
+
+                        float sq = d * 0.46f;
+                        float sx = x + (d - sq) / 2f;
+                        float sy = y + (d - sq) / 2f;
+                        using (var br2 = new SolidBrush(Color.FromArgb(245, 70, 70, 70)))
+                            g.FillRectangle(br2, sx, sy, sq, sq);
+
+                        g.DrawEllipse(pen, x, y, d, d);
+                        break;
+                }
             }
         }
-
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool DestroyIcon(IntPtr hIcon);
