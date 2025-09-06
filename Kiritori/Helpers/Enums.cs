@@ -71,9 +71,14 @@ namespace Kiritori.Helpers
         ocr,
         live,
     }
-    public enum RenderPolicy {
+    public enum RenderPolicy
+    {
         AlwaysDraw = 0,
         HashSkip = 1
+    }
+    public enum OutputKind {
+        Mp4,
+        Gif
     }
 
 }

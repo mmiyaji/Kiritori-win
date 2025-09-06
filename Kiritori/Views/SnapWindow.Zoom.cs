@@ -42,14 +42,14 @@ namespace Kiritori
                 _lastZoomInputUtc = DateTime.UtcNow;
 
                 StartZoomAnimationToScale(targetScale, 140);
-                ShowOverlay("Zoom " + (int)Math.Round(targetScale * 100) + "%");
+                ShowOverlay("ZOOM " + (int)Math.Round(targetScale * 100) + "%");
             }
             else
             {
                 _zoomStep++;
                 UpdateScaleFromStep();
                 ApplyZoom(false);
-                ShowOverlay("Zoom " + (int)Math.Round(_scale * 100) + "%");
+                ShowOverlay("ZOOM " + (int)Math.Round(_scale * 100) + "%");
             }
         }
 
@@ -69,14 +69,14 @@ namespace Kiritori
                 _lastZoomInputUtc = DateTime.UtcNow;
 
                 StartZoomAnimationToScale(targetScale, 140);
-                ShowOverlay("Zoom " + (int)Math.Round(targetScale * 100) + "%");
+                ShowOverlay("ZOOM " + (int)Math.Round(targetScale * 100) + "%");
             }
             else
             {
                 _zoomStep--;
                 UpdateScaleFromStep();
                 ApplyZoom(false);
-                ShowOverlay("Zoom " + (int)Math.Round(_scale * 100) + "%");
+                ShowOverlay("ZOOM " + (int)Math.Round(_scale * 100) + "%");
             }
         }
 
@@ -92,7 +92,7 @@ namespace Kiritori
                 _zoomStep = 0;
                 UpdateScaleFromStep();
                 ApplyZoom(false);
-                ShowOverlay("Zoom 100%");
+                ShowOverlay("ZOOM 100%");
             // }
         }
 
@@ -102,20 +102,20 @@ namespace Kiritori
             {
                 float targetScale = Clamp(percent / 100f, MIN_SCALE, MAX_SCALE);
                 StartZoomAnimationToScale(targetScale, 160);
-                ShowOverlay("Zoom " + percent + "%");
+                ShowOverlay("ZOOM " + percent + "%");
             }
             else
             {
                 _zoomStep = (int)Math.Round((percent - 100) / (STEP_LINEAR * 100f));
                 UpdateScaleFromStep();
                 ApplyZoom(false);
-                ShowOverlay("Zoom " + percent + "%");
+                ShowOverlay("ZOOM " + percent + "%");
             }
         }
         public void initLocation()
         {
             if(this._originalLocation!=null) this.Location = this._originalLocation;
-            ShowOverlay("Reset Location");
+            ShowOverlay("RESET LOCATION");
         }
 
         private void UpdateScaleFromStep()

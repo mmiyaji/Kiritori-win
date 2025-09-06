@@ -25,11 +25,12 @@ namespace Kiritori
         #region ===== OCR =====
         private async void RunOcrOnCurrentImage()
         {
+            Log.Info("OCR started", "SnapWindow");
             if (_ocrBusy) return;
             var src = _originalImage ?? pictureBox1?.Image as Bitmap;
             if (src == null)
             {
-                ShowOverlay("No image");
+                ShowOverlay("NO IMAGE FOR OCR");
                 return;
             }
 
@@ -53,7 +54,7 @@ namespace Kiritori
                     if (!string.IsNullOrEmpty(result.Text))
                     {
                         try { Clipboard.SetText(result.Text); } catch { }
-                        ShowOverlay("OCR copied");
+                        ShowOverlay("OCR RESULT COPIED");
                         if (Properties.Settings.Default.isShowNotifyOCR)
                         {
                             ShowOcrToast(result.Text ?? "");
@@ -61,14 +62,14 @@ namespace Kiritori
                     }
                     else
                     {
-                        ShowOverlay("OCR no text");
+                        ShowOverlay("OCR NOT DETECTED");
                     }
                 }
             }
             catch (Exception ex)
             {
                 Log.Debug("RunOcrOnCurrentImage error: " + ex.Message, "SnapWindow");
-                ShowOverlay("OCR failed");
+                ShowOverlay("OCR FAILED");
             }
             finally
             {

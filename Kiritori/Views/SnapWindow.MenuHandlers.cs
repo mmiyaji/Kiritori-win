@@ -27,13 +27,20 @@ namespace Kiritori
         private void captureOCRToolStripMenuItem_Click(object sender, EventArgs e) { this.ma.openScreenOCR(); }
         private void livePreviewToolStripMenuItem_Click(object sender, EventArgs e) { this.ma.openScreenLive(); }
         private void closeESCToolStripMenuItem_Click(object sender, EventArgs e) { this.Close(); }
-        private void cutCtrlXToolStripMenuItem_Click(object sender, EventArgs e) { Clipboard.SetImage(this.pictureBox1.Image); this.Close(); }
-        private void copyCtrlCToolStripMenuItem_Click(object sender, EventArgs e) { Clipboard.SetImage(this.pictureBox1.Image); ShowOverlay("Copy"); }
+        private void cutCtrlXToolStripMenuItem_Click(object sender, EventArgs e) {
+            Clipboard.SetImage(this.pictureBox1.Image);
+            Log.Info("Image copied to clipboard", "SnapWindow");
+            this.Close();
+        }
+        private void copyCtrlCToolStripMenuItem_Click(object sender, EventArgs e) {
+            Clipboard.SetImage(this.pictureBox1.Image);
+            ShowOverlay("COPIED");
+            Log.Info("Image copied to clipboard", "SnapWindow");}
         private void ocrCtrlTToolStripMenuItem_Click(object sender, EventArgs e) { RunOcrOnCurrentImage(); }
         private void keepAfloatToolStripMenuItem_Click(object sender, EventArgs e)
         {
             this.TopMost = !this.TopMost;
-            ShowOverlay("Keep Afloat: " + this.TopMost);
+            ShowOverlay(this.TopMost ? "ALWAYS ON TOP" : "TOP MOST: OFF");
             this.keepAfloatToolStripMenuItem.Checked = this.TopMost;
             this.isAfloatWindow = this.TopMost;
         }
@@ -52,11 +59,11 @@ namespace Kiritori
         private void dropShadowToolStripMenuItem_Click(object sender, EventArgs e) { ToggleShadow(!this.isWindowShadow); }
         private void preferencesToolStripMenuItem_Click(object sender, EventArgs e) { PrefForm.ShowSingleton(this.ma); }
         private void printToolStripMenuItem_Click(object sender, EventArgs e) { printImage(); }
-        private void opacity100toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(1.0); ShowOverlay("Opacity: 100%"); }
-        private void opacity90toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(0.9); ShowOverlay("Opacity: 90%"); }
-        private void opacity80toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(0.8); ShowOverlay("Opacity: 80%"); }
-        private void opacity50toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(0.5); ShowOverlay("Opacity: 50%"); }
-        private void opacity30toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(0.3); ShowOverlay("Opacity: 30%"); }
+        private void opacity100toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(1.0); ShowOverlay("OPACITY 100%"); }
+        private void opacity90toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(0.9); ShowOverlay("OPACITY 90%"); }
+        private void opacity80toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(0.8); ShowOverlay("OPACITY 80%"); }
+        private void opacity50toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(0.5); ShowOverlay("OPACITY 50%"); }
+        private void opacity30toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(0.3); ShowOverlay("OPACITY 30%"); }
         private void minimizeToolStripMenuItem_Click(object sender, EventArgs e) { this.minimizeWindow(); }
         private void exitToolStripMenuItem_Click(object sender, EventArgs e) { Application.Exit(); }
 
@@ -141,9 +148,10 @@ namespace Kiritori
             g.InterpolationMode = InterpolationMode.HighQualityBicubic;
             g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
-            // オーバーレイ
+            // ── Overlay ────────────────────────────────────────────────────────────────
             if (!string.IsNullOrEmpty(_overlayText))
             {
+                // fade
                 double elapsed = (DateTime.Now - _overlayStart).TotalMilliseconds;
                 int alpha = 200;
                 double remain = _overlayDurationMs - elapsed;
@@ -153,27 +161,58 @@ namespace Kiritori
                     if (alpha < 0) alpha = 0;
                 }
 
-                int padding = (int)(10 * (_dpi / 96f));
-                SizeF ts = g.MeasureString(_overlayText, _overlayFont);
-                int w = (int)Math.Ceiling(ts.Width) + padding * 2;
-                int h = (int)Math.Ceiling(ts.Height) + padding * 2;
+                // DPI
+                float scale  = this.DeviceDpi / 96f;
+                int padding  = (int)Math.Ceiling(10 * scale);
+                int margin   = (int)Math.Ceiling(12 * scale);
+                int corner   = (int)Math.Ceiling(8  * scale);
 
-                int margin = (int)(12 * (_dpi / 96f));
-                int x = pictureBox1.ClientSize.Width - w - margin;
+                // Text size (strict, no extra padding)
+                var measureFlags = TextFormatFlags.NoPadding;
+                Size ts = TextRenderer.MeasureText(g, _overlayText, _overlayFont, 
+                                                new Size(int.MaxValue, int.MaxValue), measureFlags);
+
+                int w = ts.Width  + padding * 2;
+                int h = ts.Height + padding * 2;
+
+                // bottom-right with safe clipping
+                int x = pictureBox1.ClientSize.Width  - w - margin;
                 int y = pictureBox1.ClientSize.Height - h - margin;
+                if (x < 0) x = 0;
+                if (y < 0) y = 0;
 
-                using (var path = RoundedRect(new Rectangle(x, y, w, h), (int)(8 * (_dpi / 96f))))
-                using (var bg = new SolidBrush(Color.FromArgb(alpha, 0, 0, 0)))
-                using (var pen = new Pen(Color.FromArgb(Math.Max(80, alpha), 255, 255, 255), 1f))
-                using (var txt = new SolidBrush(Color.FromArgb(Math.Max(180, alpha), 255, 255, 255)))
+                var rect  = new Rectangle(x, y, w, h);
+                var inner = Rectangle.Inflate(rect, -padding, -padding);
+
+                // Colors (fade-aware)
+                int aFill   = alpha;
+                int aStroke = Math.Max(0, (int)(alpha * 0.60));
+                int aText   = Math.Max(0, (int)(alpha * 0.90));
+                bool drawStroke = aStroke >= 8;
+
+                using (var path = RoundedRect(rect, corner))
+                using (var bg   = new SolidBrush(Color.FromArgb(aFill, 0, 0, 0)))
+                using (var pen  = drawStroke ? new Pen(Color.FromArgb(aStroke, 255, 255, 255), 1f) : null)
                 {
                     g.FillPath(bg, path);
-                    g.DrawPath(pen, path);
-                    g.DrawString(_overlayText, _overlayFont, txt, x + padding, y + padding);
+                    if (drawStroke) g.DrawPath(pen, path);
                 }
+
+                // Draw text centered (TextRenderer for crisp glyph placement)
+                var drawFlags = TextFormatFlags.NoPadding
+                            | TextFormatFlags.HorizontalCenter
+                            | TextFormatFlags.VerticalCenter
+                            | TextFormatFlags.EndEllipsis; // 長文保険（不要なら外してOK）
+
+                TextRenderer.DrawText(g,
+                                    _overlayText,
+                                    _overlayFont,
+                                    inner,
+                                    Color.FromArgb(aText, 255, 255, 255),
+                                    drawFlags);
             }
 
-            // ホバー枠
+            // ── Hover border ───────────────────────────────────────────────────────────
             if (isHighlightOnHover && _hoverWindow && _hoverAlphaPercent > 0 && _hoverThicknessPx > 0)
             {
                 using (var pen = MakeHoverPen())
@@ -187,28 +226,28 @@ namespace Kiritori
                 }
             }
 
-            // 右上クローズ
+            // ── Inline close button (top-right) ────────────────────────────────────────
             if (_hoverWindow &&
                 pictureBox1.ClientSize.Width >= 100 &&
                 pictureBox1.ClientSize.Height >= 50)
             {
                 _closeBtnRect = GetCloseRect();
 
-                // 常時うっすら背景（白地でも視認）＋ ホバー時は濃く
-                int baseAlpha  = 40;  // 非ホバー時
-                int hoverAlpha = 90;  // ホバー時
+                // subtle background always; stronger on hover
+                int baseAlpha  = 40;  // idle
+                int hoverAlpha = 90;  // hover
                 int alpha = _hoverClose ? hoverAlpha : baseAlpha;
 
                 using (var bg = new SolidBrush(Color.FromArgb(alpha, 0, 0, 0)))
                     g.FillEllipse(bg, _closeBtnRect);
 
-                // X（ホバー時は太め）
+                // X mark (thicker on hover)
                 int inset = Math.Max(2, DpiScale(4));
                 var r = Rectangle.Inflate(_closeBtnRect, -inset, -inset);
 
                 float w = _hoverClose
                     ? Math.Max(2f, (float)DpiScale(2))
-                    : Math.Max(1.5f, (float)DpiScale(1));   // ← int キャスト注意
+                    : Math.Max(1.5f, (float)DpiScale(1));   // keep float precision
 
                 using (var pen = new Pen(Color.White, w))
                 {
@@ -217,7 +256,6 @@ namespace Kiritori
                     g.DrawLine(pen, r.Right, r.Top,    r.Left,  r.Bottom);
                 }
 
-                // うっすら外周（ガイド）
                 using (var guide = new Pen(Color.FromArgb(70, 255, 255, 255), 1))
                     g.DrawEllipse(guide, _closeBtnRect);
             }
@@ -261,7 +299,7 @@ namespace Kiritori
                         pd.PrintPage += pd_PrintPage;
                         pd.Print();
                     }
-                    ShowOverlay("Printed");
+                    ShowOverlay("PRINTED");
                 }
             }
         }
@@ -275,16 +313,16 @@ namespace Kiritori
         public void minimizeWindow()
         {
             this.WindowState = FormWindowState.Minimized;
-            ShowOverlay("Minimized");
+            ShowOverlay("MINIMIZED");
         }
         public void showWindow()
         {
             this.WindowState = FormWindowState.Normal;
-            ShowOverlay("Show");
+            ShowOverlay("SHOW");
         }
         public void closeWindow()
         {
-            ShowOverlay("Close");
+            ShowOverlay("CLOSED");
             this.Close();
         }
 
@@ -294,7 +332,7 @@ namespace Kiritori
         public void editInMSPaint(object sender)
         {
             editPaintToolStripMenuItem_Click(sender, EventArgs.Empty);
-            ShowOverlay("Edit");
+            ShowOverlay("EDITED IN MSPAINT");
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)

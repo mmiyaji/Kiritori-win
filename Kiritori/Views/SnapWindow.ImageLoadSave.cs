@@ -60,7 +60,7 @@ namespace Kiritori
             this.main_image = bmp;
             this.setThumbnail(bmp);
             if (!SuppressHistory) ma.setHistory(this);
-            ShowOverlay("Kiritori");
+            ShowOverlay("KIRITORI");
         }
 
         public void openImage() => this.ma.openImage();
@@ -78,10 +78,19 @@ namespace Kiritori
                 CheckPathExists = true
             })
             {
-                if (sfd.ShowDialog() == DialogResult.OK)
+                try
                 {
-                    this.pictureBox1.Image.Save(sfd.FileName);
-                    ShowOverlay("Saved");
+                    if (sfd.ShowDialog() == DialogResult.OK)
+                    {
+                        this.pictureBox1.Image.Save(sfd.FileName);
+                        Log.Info("Image saved: " + sfd.FileName, "SnapWindow");
+                        ShowOverlay("SAVED");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Debug("Image save failed: " + ex.Message, "SnapWindow");
+                    throw;
                 }
             }
         }
@@ -99,11 +108,20 @@ namespace Kiritori
                     RestoreDirectory = true
                 })
                 {
-                    if (ofd.ShowDialog() != DialogResult.OK) return;
+                    try
+                    {
+                        if (ofd.ShowDialog() != DialogResult.OK) return;
+                        Log.Info("Image loaded: " + ofd.FileName, "SnapWindow");
 
-                    var bmp = LoadBitmapClone(ofd.FileName);
-                    ApplyImage(bmp, ofd.FileName, addHistory: !SuppressHistory, showOverlay: true);
-                    SetLoadMethod(LoadMethod.Path);
+                        var bmp = LoadBitmapClone(ofd.FileName);
+                        ApplyImage(bmp, ofd.FileName, addHistory: !SuppressHistory, showOverlay: true);
+                        SetLoadMethod(LoadMethod.Path);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug("Image load failed: " + ex.Message, "SnapWindow");
+                        throw;
+                    }
                 }
             }
             catch
@@ -175,7 +193,7 @@ namespace Kiritori
                 ApplyInitialDisplayZoomIfNeeded();
 
                 if (addHistory) ma.setHistory(this);
-                if (showOverlay) ShowOverlay("Loaded");
+                if (showOverlay) ShowOverlay("LOADED");
             }
             finally
             {

@@ -1,5 +1,6 @@
 ﻿using Kiritori.Helpers;
 using Kiritori.Services.Logging;
+using Kiritori.Services.Recording;
 using System;
 using System.IO;
 using System.Diagnostics;
@@ -25,7 +26,8 @@ namespace Kiritori.Views.LiveCapture
             _miOriginal, _miZoomIn, _miZoomOut, _miZoomPct,
             _miOpacity, _miPauseResume, _miRealign, _miTopMost, _miClose,
             _miPref, _miExit, _miTitlebar, _miShowStats,
-            _miPolicyRoot, _miPolicyAlways, _miPolicyHash;
+            _miPolicyRoot, _miPolicyAlways, _miPolicyHash,
+            _miRecoding;
 
         private float _zoom = 1.0f;     // 表示倍率（1.0=100%）
         private bool _paused = false;
@@ -84,6 +86,15 @@ namespace Kiritori.Views.LiveCapture
         private ToolStripMenuItem _miShadow;
         private int _origStyle = 0;
         private bool _captionHidden = false;
+        private bool isOverlay = true;
+        private string _overlayText = null;
+        private DateTime _overlayStart;
+        private readonly int _overlayDurationMs = 2000;
+        private readonly int _overlayFadeMs = 300;
+        private System.Windows.Forms.Timer _overlayTimer;
+        private Font _overlayFont = new Font("Segoe UI", 10f, FontStyle.Bold);
+        // private int _dpi = 96;
+
 
         // クリック→ドラッグ判定用
         private bool _maybeDrag = false;
@@ -167,7 +178,9 @@ namespace Kiritori.Views.LiveCapture
             {
                 if (e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightColor) ||
                     e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightAlphaPercent) ||
-                    e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightThickness))
+                    e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightThickness) ||
+                    e.PropertyName == nameof(Properties.Settings.Default.isHighlightWindowOnHover) || 
+                    e.PropertyName == nameof(Properties.Settings.Default.isOverlay))
                 {
                     LoadHoverAppearanceFromSettings();
                     Invalidate();
@@ -324,6 +337,7 @@ namespace Kiritori.Views.LiveCapture
                 _hoverColor = Properties.Settings.Default.HoverHighlightColor;
                 _hoverAlphaPercent = Properties.Settings.Default.HoverHighlightAlphaPercent;   // 0–100 (%)
                 _hoverThicknessPx = Properties.Settings.Default.HoverHighlightThickness;    // 論理px
+                this.isOverlay = Properties.Settings.Default.isOverlay;
                 // あり得る不正値を軽く矯正
                 if (_hoverAlphaPercent < 0) _hoverAlphaPercent = 0;
                 if (_hoverAlphaPercent > 100) _hoverAlphaPercent = 100;
@@ -386,6 +400,75 @@ namespace Kiritori.Views.LiveCapture
                 if (_hudAlpha == _hudTargetAlpha && _hoverAlpha == _hoverTargetAlpha)
                     _fadeTimer.Stop();
             };
+            _overlayTimer = new System.Windows.Forms.Timer { Interval = 33 };
+            _overlayTimer.Tick += (s, e) =>
+            {
+                if (_overlayText == null) { _overlayTimer.Stop(); return; }
+
+                if ((DateTime.Now - _overlayStart).TotalMilliseconds > _overlayDurationMs)
+                {
+                    // 終了時：前回領域も含めて消し込み
+                    if (!_overlayLastRect.IsEmpty) Invalidate(_overlayLastRect);
+                    _overlayLastRect = Rectangle.Empty;
+                    _overlayText = null;
+                    _overlayTimer.Stop();
+                    return;
+                }
+
+                // 今回の矩形を計算して、前回との和を Invalidate
+                using (var g = this.CreateGraphics())
+                {
+                    var curr = ComputeOverlayRect(g, _overlayText ?? "");
+                    var inv = _overlayLastRect.IsEmpty ? curr : Rectangle.Union(_overlayLastRect, curr);
+                    _overlayLastRect = curr;
+                    if (!inv.IsEmpty) Invalidate(inv);
+                }
+            };
+
+        }
+        private Rectangle _overlayLastRect = Rectangle.Empty;
+        private Rectangle ComputeOverlayRect(Graphics g, string text)
+        {
+            float scale = this.DeviceDpi / 96f;
+            int padding = (int)Math.Ceiling(10 * scale);
+            int margin  = (int)Math.Ceiling(12 * scale);
+
+            // 追加: パディングの無い厳密な測定
+            var flags = TextFormatFlags.NoPadding;
+            var ts = TextRenderer.MeasureText(g, text, _overlayFont, new Size(int.MaxValue, int.MaxValue), flags);
+
+            int w = ts.Width  + padding * 2;
+            int h = ts.Height + padding * 2;
+
+            int x = this.ClientSize.Width  - w - margin;
+            int y = this.ClientSize.Height - h - margin;
+
+            if (x < 0) x = 0;
+            if (y < 0) y = 0;
+
+            return new Rectangle(x, y, w, h);
+        }
+        public void ShowOverlay(string text)
+        {
+            if (!this.isOverlay) return;
+
+            const int MIN_W = 100;
+            const int MIN_H = 50;
+            if (this.ClientSize.Width < MIN_W || this.ClientSize.Height < MIN_H) return;
+
+            _overlayText = text ?? "";
+            _overlayStart = DateTime.Now;
+
+            // 初回の無効化（前回も消す）
+            using (var g = this.CreateGraphics())
+            {
+                var curr = ComputeOverlayRect(g, _overlayText);
+                var inv = _overlayLastRect.IsEmpty ? curr : Rectangle.Union(_overlayLastRect, curr);
+                _overlayLastRect = curr;
+                if (!inv.IsEmpty) Invalidate(inv);
+            }
+
+            _overlayTimer.Start();
         }
 
         private int DpiScale(int px) => (int)Math.Round(px * this.DeviceDpi / 96.0);
@@ -418,12 +501,12 @@ namespace Kiritori.Views.LiveCapture
             this.MouseEnter += (s, e) =>
             {
                 _windowHot = true;
-                ShowOverlay(); // ← PAUSE中でも通常どおり点灯
+                ShowPlaybackOverlay(); // ← PAUSE中でも通常どおり点灯
             };
 
             this.MouseMove += (s, e) =>
             {
-                ShowOverlay(); // ← PAUSE中でも通常どおり点灯
+                ShowPlaybackOverlay(); // ← PAUSE中でも通常どおり点灯
 
                 var me = (MouseEventArgs)e;
                 bool inside = !_hudRect.IsEmpty && _hudRect.Contains(me.Location);
@@ -457,7 +540,7 @@ namespace Kiritori.Views.LiveCapture
             };
         }
 
-        private void ShowOverlay()
+        private void ShowPlaybackOverlay()
         {
             if (_inSizingLoop) return;
 
@@ -621,6 +704,7 @@ namespace Kiritori.Views.LiveCapture
 
             _iconBadge = new TitleIconBadger(this);
             _iconBadge.SetState(LiveBadgeState.Recording);
+            ShowOverlay("LIVE PREVIEW KIRITORI");
         }
 
         private float GetCurrentAspect()
@@ -672,6 +756,7 @@ namespace Kiritori.Views.LiveCapture
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
+            var g = e.Graphics;
 
             Bitmap frame = null;
             lock (_frameSync)
@@ -684,19 +769,17 @@ namespace Kiritori.Views.LiveCapture
             {
                 try
                 {
-                    e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                    e.Graphics.DrawImage(frame, this.ClientRectangle);
+                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    g.DrawImage(frame, this.ClientRectangle);
                 }
                 finally { frame.Dispose(); }
             }
 
-            DrawHud(e.Graphics);
-            DrawHoverFrame(e.Graphics);
+            DrawHud(g);
+            DrawHoverFrame(g);
 
             if (_showStats)
             {
-                var g = e.Graphics;
-
                 // 角丸チップ用パラメータ（DPI対応）
                 int padX = DpiScale(6);
                 int padY = DpiScale(4);
@@ -762,6 +845,52 @@ namespace Kiritori.Views.LiveCapture
                     }
                 }
             }
+            if (!string.IsNullOrEmpty(_overlayText))
+            {
+                double elapsed = (DateTime.Now - _overlayStart).TotalMilliseconds;
+                double remain = _overlayDurationMs - elapsed;
+
+                int alpha = 200;
+                if (remain < _overlayFadeMs)
+                {
+                    double t = Math.Max(0.0, remain / _overlayFadeMs);
+                    alpha = (int)Math.Round(200 * t);
+                }
+                if (alpha <= 0)
+                {
+                    // 見えないなら何も描かない（残像防止）
+                }
+                else
+                {
+                    var rect = ComputeOverlayRect(g, _overlayText);
+
+                    int aFill = alpha;                 // 本体
+                    int aStroke = (int)(alpha * 0.60); // 枠は本体より薄く
+                    int aText = Math.Min(255, (int)(alpha * 0.90));
+
+                    // αがごく小さい時は枠線を描かない（白い縁の残り対策）
+                    bool drawStroke = aStroke >= 8;
+
+                    float scale = this.DeviceDpi / 96f;
+                    int corner = (int)Math.Ceiling(8 * scale);
+                    int padding = (int)Math.Ceiling(10 * scale);
+
+                    using (var path = RoundedRect(rect, corner))
+                    using (var bg = new SolidBrush(Color.FromArgb(aFill, 0, 0, 0)))
+                    using (var pen = drawStroke ? new Pen(Color.FromArgb(aStroke, 255, 255, 255), 1f) : null)
+                    using (var txt = new SolidBrush(Color.FromArgb(aText, 255, 255, 255)))
+                    {
+                        g.SmoothingMode = SmoothingMode.AntiAlias;
+                        g.FillPath(bg, path);
+                        if (drawStroke) g.DrawPath(pen, path);
+                        // g.DrawString(_overlayText, _overlayFont, txt, rect.X + padding, rect.Y + padding);
+                        var inner = Rectangle.Inflate(rect, -padding, -padding);
+                        var tflags = TextFormatFlags.NoPadding | TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter;
+                        TextRenderer.DrawText(g, _overlayText, _overlayFont, inner, Color.FromArgb(aText, 255, 255, 255), tflags);
+                    }
+                }
+            }
+
             DrawInlineClose(e.Graphics);
 
         }
@@ -1038,7 +1167,12 @@ namespace Kiritori.Views.LiveCapture
 
         private void OnFpsMenuClick(object sender, EventArgs e)
         {
-            if (sender is ToolStripMenuItem mi) MaxFps = (int)mi.Tag;
+            if (sender is ToolStripMenuItem mi)
+            {
+                MaxFps = (int)mi.Tag;
+                if (MaxFps == 0) ShowOverlay("MAX FPS UNLIMITED");
+                else ShowOverlay($"MAX FPS {MaxFps}");
+            }
         }
 
         private bool IsNearResizeEdge(System.Drawing.Point ptClient)
@@ -1051,6 +1185,7 @@ namespace Kiritori.Views.LiveCapture
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            StopRecording();
             try { _perfTimer?.Change(Timeout.Infinite, Timeout.Infinite); } catch { }
             try { _perfTimer?.Dispose(); } catch { }
             _perfTimer = null;
@@ -1122,6 +1257,7 @@ namespace Kiritori.Views.LiveCapture
             ResizeToKeepClient(GetDesiredClientPhysical());
             AlignClientTopLeftPhysical("Realign", _miTopMost?.Checked ?? true);
             Invalidate();
+            ShowOverlay("POSITION RESET");
         }
         private void BuildContextMenu()
         {
@@ -1172,9 +1308,48 @@ namespace Kiritori.Views.LiveCapture
                 {
                     var p = (int)((ToolStripMenuItem)s).Tag;
                     this.Opacity = Math.Max(0.05, Math.Min(1.0, p / 100.0));
+                    ShowOverlay($"OPACITY {p}%");
                 };
                 _miOpacity.DropDownItems.Add(mi);
             }
+
+            _miRecoding = new ToolStripMenuItem(SR.T("Menu.Recording", "Recording"))
+            {
+                CheckOnClick = true
+            };
+            _miRecoding.CheckedChanged += (s, e) =>
+            {
+                if (_miRecoding.Checked)
+                {
+                    try
+                    {
+                        miStartRecMp4_Click(s, e);
+                        Log.Debug("Recording started", "LivePreview");
+                        ShowOverlay("RECORDING");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug("Failed to start recording: " + ex.Message, "LivePreview");
+                        _miRecoding.Checked = false; // 状態を元に戻す
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        miStopRec_Click(s, e);
+                        Log.Debug("Recording stopped", "LivePreview");
+                        ShowOverlay("STOP RECORDING");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug("Failed to stop recording: " + ex.Message, "LivePreview");
+                        // 停止失敗時は再チェックに戻すかどうかは好みで
+                        _miRecoding.Checked = true;
+                    }
+                }
+            };
+            _miRecoding.ShortcutKeyDisplayString = "R";
 
             _miPauseResume = new ToolStripMenuItem(SR.T("Menu.Pause", "Pause"));
             _miPauseResume.Click += (s, e) => TogglePause();
@@ -1190,7 +1365,11 @@ namespace Kiritori.Views.LiveCapture
             _miRealign.ShortcutKeys = (Keys)HOTS.LOCATE_ORIGIN_MAIN;
 
             _miTopMost = new ToolStripMenuItem(SR.T("Menu.TopMost", "Keep on top")) { Checked = true, CheckOnClick = true };
-            _miTopMost.CheckedChanged += (s, e) => this.TopMost = _miTopMost.Checked;
+            _miTopMost.CheckedChanged += (s, e) =>
+            {
+                this.TopMost = _miTopMost.Checked;
+                ShowOverlay(_miTopMost.Checked ? "ALWAYS ON TOP" : "TOP MOST: OFF");
+            };
             _miTopMost.ShortcutKeys = (Keys)HOTS.FLOAT;
 
             _miClose = new ToolStripMenuItem(SR.T("Menu.CloseWindow", "Close Window"));
@@ -1218,6 +1397,7 @@ namespace Kiritori.Views.LiveCapture
                 {
                     ApplyTablessShadow(_shadowTabless);
                     ForceRefreshNonClient();
+                    ShowOverlay(_shadowTabless ? "DROP SHADOW ENABLED" : "DROP SHADOW DISABLED");
                 }
             };
             _miShadow.ShortcutKeys = (Keys)HOTS.SHADOW;
@@ -1254,10 +1434,12 @@ namespace Kiritori.Views.LiveCapture
                     {
                         try { _perfTimer.Change(1000, 1000); } catch { }
                     }
+                    ShowOverlay("STATS ON");
                 }
                 else
                 {
                     try { _perfTimer?.Change(Timeout.Infinite, Timeout.Infinite); } catch { }
+                    ShowOverlay("STATS OFF");
                 }
                 Invalidate();
             };
@@ -1272,16 +1454,19 @@ namespace Kiritori.Views.LiveCapture
                 {
                     _miPolicyAlways.Checked = true;
                     _miPolicyHash.Checked = false;
+                    ShowOverlay("RENDERING: ALWAYS DRAW");
                 }
                 else if (_policy == RenderPolicy.HashSkip)
                 {
                     _miPolicyAlways.Checked = false;
                     _miPolicyHash.Checked = true;
+                    ShowOverlay("RENDERING: HASH-SKIP");
                 }
                 else
                 {
                     _miPolicyAlways.Checked = true;
                     _miPolicyHash.Checked = false;
+                    ShowOverlay("RENDERING: ALWAYS DRAW");
                 }
             }
             _miPolicyAlways.Click += (s, e) =>
@@ -1339,6 +1524,7 @@ namespace Kiritori.Views.LiveCapture
                 // LivePreview ではまず Close のみを同位置に配置（後で統合可能）
                 _miClose,
                 _miPauseResume,
+                _miRecoding,
                 _miFpsRoot,
                 _miPolicyRoot,
                 new ToolStripSeparator(),
@@ -1393,7 +1579,28 @@ namespace Kiritori.Views.LiveCapture
             MarkDropDownExclusion(_miOpacity);
             MarkDropDownExclusion(_miFpsRoot);
         }
+        private void miStartRecMp4_Click(object sender, EventArgs e)
+        {
+            var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
+            int w = rPhys.Width;
+            int h = rPhys.Height;
+            int fps = MaxFps;
 
+            w = w & ~1;
+            h = h & ~1;
+
+            var outPath = Path.Combine(Path.GetTempPath(), "Kiritori",
+                            $"Kiritori_{DateTime.Now:yyyyMMdd_HHmmss}.mp4");
+
+            StartRecordingMp4(outPath, w, h, fps);
+            // ShowOverlay($"REC ● {w}x{h} {fps}fps");
+        }
+
+        private void miStopRec_Click(object sender, EventArgs e)
+        {
+            StopRecording();
+            // ShowOverlay("REC ■ Stopped");
+        }
         private void ShowPreferences()
         {
             try { PrefForm.ShowSingleton((IWin32Window)this.MainApp); }
@@ -1449,6 +1656,7 @@ namespace Kiritori.Views.LiveCapture
             this.TopMost = _miTopMost?.Checked ?? this.TopMost;
             _lastPresentedClientSize = Size.Empty;
             Invalidate();
+            ShowOverlay($"ZOOM {(_zoom*100):F0}%");
         }
         private void TogglePause()
         {
@@ -1458,6 +1666,8 @@ namespace Kiritori.Views.LiveCapture
 
             if (!_paused) Invalidate();
             Invalidate(GetHudInvalidateRect());
+            ShowOverlay(_paused ? "PAUSED" : "RESUMED");
+            Log.Debug($"TogglePause: paused={_paused}", "LivePreview");
         }
         private void ToggleTitlebar()
         {
@@ -1505,6 +1715,7 @@ namespace Kiritori.Views.LiveCapture
             {
                 BeginInvoke(apply);
             }
+            ShowOverlay(_captionHidden ? "TITLE BAR HIDDEN" : "TITLE BAR SHOWN");
         }
 
         // 既存ヘルパの近くに追加
@@ -1545,7 +1756,8 @@ namespace Kiritori.Views.LiveCapture
             Log.Debug($"{tag}: AlignPhysical: wantPhysTL=({rPhys.X},{rPhys.Y}), sDst={sDst:F2}, set LeftTop=({newLeft},{newTop}), " +
                 $"clientTL(after)=({cur.X},{cur.Y})", "LivePreview");
         }
-
+        private readonly Stopwatch _recFpsWatch = Stopwatch.StartNew();
+        //private long _recLastTicks;
         private void OnFrameArrived(Bitmap bmp)
         {
             if (_paused) return;
@@ -1567,6 +1779,10 @@ namespace Kiritori.Views.LiveCapture
                 if (_presentWatch.ElapsedMilliseconds < minIntervalMs) return;
             }
             _presentWatch.Restart();
+            if (_rec != null && bmp != null)
+            {
+                _rec.UpdateLatestFrame(bmp); // 到着ベースで差し替え、送出はワーカーが一定間隔で実施
+            }
 
             bool forceBySize = (_lastPresentedClientSize != this.ClientSize);
             bool shouldDraw;
@@ -1984,7 +2200,7 @@ namespace Kiritori.Views.LiveCapture
                 _inSizingLoop = false;
                 CenterOverlay();
                 if (_isDraggingWindow) EndDragHighlight(); // 即時復帰
-                else ShowOverlay();                        // 通常（HUDはフェード、ホバーは即時ON）
+                else ShowPlaybackOverlay();                        // 通常（HUDはフェード、ホバーは即時ON）
                 var inv = Rectangle.Union(GetHudInvalidateRect(), GetHoverInvalidateRect());
                 if (!inv.IsEmpty) Invalidate(inv);
             }
@@ -2178,6 +2394,30 @@ namespace Kiritori.Views.LiveCapture
                 Log.Debug($"ResizeToKeepClient: final realClient={crc2.Right - crc2.Left}x{crc2.Bottom - crc2.Top}, Bounds={RectStr(new Rectangle(this.Left, this.Top, this.Width, this.Height))}");
             }
         }
+        private FfmpegPipeRecorder _rec;
+        private void StartRecordingMp4(string path, int width, int height, int fps)
+        {
+            Log.Debug($"StartRecordingMp4 path='{path}' size={width}x{height} fps={fps}", "LivePreview");
+            _rec?.Dispose();
+            _rec = new FfmpegPipeRecorder(
+                new FfmpegPipeOptions
+                {
+                    OutputPath = path,
+                    Width = width,
+                    Height = height,
+                    Fps = fps,
+                    Kind = OutputKind.Mp4,
+                    FfmpegPath = @"C:\Users\mail\AppData\Local\Temp\Kiritori\ffmpeg.exe",
+                });
+            _rec.Start();
+        }
+
+        private void StopRecording()
+        {
+            _rec?.Dispose();
+            _rec = null;
+        }
+
 
         private static class NativeMethods
         {

@@ -26,13 +26,13 @@ namespace Kiritori
         {
             this.isWindowShadow = enable;
             this.RecreateHandle();
-            ShowOverlay(this.isWindowShadow ? "Shadow: ON" : "Shadow: OFF");
+            ShowOverlay(this.isWindowShadow ? "SHADOW: ON" : "SHADOW: OFF");
         }
 
         public void ToggleHoverHighlight(bool enable)
         {
             this.isHighlightOnHover = enable;
-            ShowOverlay(this.isHighlightOnHover ? "Hover Highlight: ON" : "Hover Highlight: OFF");
+            ShowOverlay(this.isHighlightOnHover ? "HOVER HIGHLIGHT: ON" : "HOVER HIGHLIGHT: OFF");
         }
 
         public void setAlpha(double alpha)

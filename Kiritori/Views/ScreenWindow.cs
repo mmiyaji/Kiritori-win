@@ -467,17 +467,15 @@ namespace Kiritori
                             // crop は baseBmp 内の相対座標なので、必ずキャプチャ原点 (x,y) を加算して
                             // 「スクリーン上の論理座標」に直すこと！
                             // ここで物理pxに変換しないこと（キャプチャ側だけで物理化する設計）
-                            // var rScreenLogical = new Rectangle(
-                            //     crop.X + x,
-                            //     crop.Y + y,
-                            //     crop.Width,
-                            //     crop.Height
-                            // );
+
+                            // 幅・高さを偶数に丸める
+                            int evenWidth = crop.Width & ~1;
+                            int evenHeight = crop.Height & ~1;
                             var rPhysical = new Rectangle(
                                 crop.X + x,
                                 crop.Y + y,
-                                crop.Width,
-                                crop.Height
+                                evenWidth,
+                                evenHeight
                             );
                             var rScreenLogical = Kiritori.Views.LiveCapture.GdiCaptureBackend.DpiUtil.PhysicalToLogical(rPhysical);
 

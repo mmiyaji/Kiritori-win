@@ -57,7 +57,7 @@ public DateTime date;
         private readonly int _overlayFadeMs = 300;
         private readonly Timer _overlayTimer;
         private Font _overlayFont = new Font("Segoe UI", 10f, FontStyle.Bold);
-        private int _dpi = 96;
+        // private int _dpi = 96;
 
         // 画像・ズーム関連
         private Image _originalImage;

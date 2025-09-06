@@ -93,6 +93,7 @@ namespace Kiritori
         private CheckBox chkWindowShadow;
         private CheckBox chkAfloat;
         private CheckBox chkHighlightOnHover;
+        private CheckBox chkShowOverlay;
         private Label labelHoverPreset;
         private ComboBox cmbHoverPreset;
         private Label labelHoverThickness;
@@ -464,9 +465,11 @@ namespace Kiritori
             this.chkWindowShadow = new CheckBox { Text = "Window shadow", Checked = true, AutoSize = true, Tag = "loc:Text.DropShadow" };
             this.chkAfloat = new CheckBox { Text = "Always on top", Checked = true, AutoSize = true, Tag = "loc:Text.AlwaysOnTop" };
             this.chkHighlightOnHover = new CheckBox { Text = "Highlight on hover", Checked = true, AutoSize = true, Tag = "loc:Text.HighlightOnHover" };
+            this.chkShowOverlay = new CheckBox { Text = "Show overlay", Checked = true, AutoSize = true, Tag = "loc:Text.ShowOverlay" };
             flowWinToggles.Controls.Add(this.chkWindowShadow);
             flowWinToggles.Controls.Add(this.chkAfloat);
             flowWinToggles.Controls.Add(this.chkHighlightOnHover);
+            flowWinToggles.Controls.Add(this.chkShowOverlay);
 
             tlpWin.Controls.Add(new Label { Text = "Options", AutoSize = true, TextAlign = ContentAlignment.MiddleRight, Anchor = AnchorStyles.Right, Tag = "loc:Text.Option" }, 0, 0);
             tlpWin.Controls.Add(flowWinToggles, 1, 0);
@@ -1061,6 +1064,8 @@ namespace Kiritori
                 new Binding("Checked", S, nameof(S.isAfloatWindow), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkHighlightOnHover.DataBindings.Add(
                 new Binding("Checked", S, nameof(S.isHighlightWindowOnHover), true, DataSourceUpdateMode.OnPropertyChanged));
+            this.chkShowOverlay.DataBindings.Add(
+                new Binding("Checked", S, nameof(S.isOverlay), true, DataSourceUpdateMode.OnPropertyChanged));
             this.numHoverThickness.DataBindings.Add(
                 new Binding("Value", S, nameof(S.HoverHighlightThickness), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkScreenGuide.DataBindings.Add(

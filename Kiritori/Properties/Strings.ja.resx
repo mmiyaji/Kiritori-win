@@ -567,4 +567,10 @@
   <data name="Menu.LivePreview" xml:space="preserve">
     <value>ライブプレビュー(リアルタイム表示)</value>
   </data>
+  <data name="Text.ShowOverlay" xml:space="preserve">
+    <value>オーバーレイ表示</value>
+  </data>
+  <data name="Menu.Recording" xml:space="preserve">
+    <value>録画</value>
+  </data>
 </root>
