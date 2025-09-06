@@ -163,6 +163,7 @@ namespace Kiritori
             // ---- Form basics ----
             this.AutoScaleDimensions = new SizeF(6F, 12F);
             this.AutoScaleMode = AutoScaleMode.Font;
+            this.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
             this.ClientSize = new Size(640, 460);
             this.MinimumSize = new Size(660, 500);
             this.StartPosition = FormStartPosition.CenterScreen;
@@ -404,7 +405,11 @@ namespace Kiritori
             this.chkTrayNotifyOCR = new CheckBox { Text = "Notify in tray on OCR capture", AutoSize = true, Tag = "loc:Text.NotifyTrayOCR" };
             // this.chkPlaySound = new CheckBox { Text = "Play sound on capture", AutoSize = true, Enabled = false, Tag = "loc:Text.PlaySound" };
 
-            var flowToggles = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
+            var flowToggles = new FlowLayoutPanel {
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                WrapContents = true,
+            };
             flowToggles.Controls.Add(this.chkScreenGuide);
             flowToggles.Controls.Add(this.chkTrayNotify);
             flowToggles.Controls.Add(this.chkTrayNotifyOCR);
@@ -461,7 +466,12 @@ namespace Kiritori
 
             var tlpWin = NewGrid(4, 2);
 
-            var flowWinToggles = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
+            var flowWinToggles = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                WrapContents = true,
+            };
             this.chkWindowShadow = new CheckBox { Text = "Window shadow", Checked = true, AutoSize = true, Tag = "loc:Text.DropShadow" };
             this.chkAfloat = new CheckBox { Text = "Always on top", Checked = true, AutoSize = true, Tag = "loc:Text.AlwaysOnTop" };
             this.chkHighlightOnHover = new CheckBox { Text = "Highlight on hover", Checked = true, AutoSize = true, Tag = "loc:Text.HighlightOnHover" };
@@ -680,12 +690,12 @@ namespace Kiritori
             {
                 Text = "\"Kiritori\" for Windows",
                 AutoSize = true,
-                Margin = new Padding(0, 15, 0, 10),
+                Margin = new Padding(0, 10, 0, 5),
                 Tag = "loc:App.Name"
             };
             this.labelAppName.Font = new Font(
                 this.Font.FontFamily,
-                this.Font.Size + 7,
+                this.Font.Size + 6,
                 FontStyle.Bold
             );
 
@@ -710,7 +720,7 @@ namespace Kiritori
             {
                 Text = "© 2013–2025",
                 AutoSize = true,
-                Margin = new Padding(0, 0, 0, 10)
+                Margin = new Padding(0, 0, 0, 5)
             };
 
             // リンク
@@ -758,8 +768,8 @@ namespace Kiritori
             AddShortcutInfo(tlpShortcutsInfo, "Ctrl + W, ESC",    "Close window", tagKey: "Text.CloseWindow");
             AddShortcutInfo(tlpShortcutsInfo, "Ctrl + C",         "Copy to clipboard", tagKey: "Text.CopyToClipboard");
             // AddShortcutInfo(tlpShortcutsInfo, "Ctrl + S",         "Save image", tagKey: "Text.SaveImage");
-            AddShortcutInfo(tlpShortcutsInfo, "Ctrl + T",         "Run OCR (copy result / show toast)", tagKey: "Text.RunOCRDesc");
-            AddShortcutInfo(tlpShortcutsInfo, "", "");
+            // AddShortcutInfo(tlpShortcutsInfo, "Ctrl + T",         "Run OCR (copy result / show toast)", tagKey: "Text.RunOCRDesc");
+            // AddShortcutInfo(tlpShortcutsInfo, "", "");
             AddShortcutInfo(tlpShortcutsInfo, "", "...and more. See Shortcuts", tagKey: "Text.AndMore");
             this.grpShortcuts.Controls.Clear();
             this.grpShortcuts.Controls.Add(tlpShortcutsInfo);
@@ -806,7 +816,6 @@ namespace Kiritori
                 Tag = "loc:Text.OpenMenuOnAppStart.Desc"
             };
 
-            // 追加
             tlpOnAppLaunch.Controls.Add(this.chkOpenMenuOnAppStart);
             tlpOnAppLaunch.Controls.Add(lblDesc);
             this.grpOnAppLaunch.Controls.Add(tlpOnAppLaunch);
@@ -1195,11 +1204,8 @@ namespace Kiritori
         private static void AddCustomAndSelect(ComboBox cmb)
         {
             if (cmb == null) return;
-            // 既にあるなら追加しない
             if (!cmb.Items.Cast<object>().Any(x => string.Equals(x?.ToString(), CustomPresetName, StringComparison.Ordinal)))
                 cmb.Items.Add(CustomPresetName);
-
-            // 選択（発火を避けたい場合は呼び出し側で _loadingUi true に）
             cmb.SelectedItem = CustomPresetName;
         }
 

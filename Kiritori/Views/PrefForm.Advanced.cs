@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Kiritori.Helpers;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
@@ -100,6 +101,17 @@ namespace Kiritori
             this.tabAdvanced.Controls.Clear();
             this.tabAdvanced.Controls.Add(root);
 
+            // ヘルプパネル
+            var helpLabel = new Label
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                ForeColor = SystemColors.GrayText,
+                Margin = new Padding(0, 0, 0, 0),
+                Padding = new Padding(2, 0, 0, 0),
+                Text = SR.T("Text.Advanced.Tips", "Tip: Double-click the Value cell to edit. Press Enter to commit changes.")
+            };
+            root.Controls.Add(helpLabel, 0, 0);
             // DataGridView
             _gridSettings = new DataGridView
             {
@@ -238,8 +250,8 @@ namespace Kiritori
             // 文字が詰まって見えない対策（任意）
             _gridSettings.DefaultCellStyle.WrapMode = DataGridViewTriState.False;
             _gridSettings.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
-            _gridSettings.Columns[colValue.Index].DefaultCellStyle.Font =
-                new Font(SystemFonts.MessageBoxFont, FontStyle.Regular);
+            // _gridSettings.Columns[colValue.Index].DefaultCellStyle.Font =
+            //     new Font(SystemFonts.MessageBoxFont, FontStyle.Regular);
 
             _gridSettings.CellFormatting += (s, e) =>
             {

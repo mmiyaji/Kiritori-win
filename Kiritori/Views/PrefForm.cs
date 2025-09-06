@@ -652,7 +652,6 @@ namespace Kiritori
             tlpShortcutsInfo.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             tlpShortcutsInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
 
-            // ▼ 設定から動的に
             var capText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyCapture, DEF_HOTKEY_CAP);
             var ocrGlobalText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyOcr, DEF_HOTKEY_OCR);
             var liveGlobalText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyLive, DEF_HOTKEY_LIVE);
@@ -663,9 +662,9 @@ namespace Kiritori
             AddShortcutInfo(tlpShortcutsInfo, "Ctrl + W, ESC",  "Close window",                      tagKey: "Text.CloseWindow");
             AddShortcutInfo(tlpShortcutsInfo, "Ctrl + C",       "Copy to clipboard",                 tagKey: "Text.CopyToClipboard");
             // AddShortcutInfo(tlpShortcutsInfo, "Ctrl + S",    "Save image",                         tagKey: "Text.SaveImage");
-            AddShortcutInfo(tlpShortcutsInfo, "Ctrl + T",       "Run OCR (copy result / show toast)", tagKey: "Text.RunOCRDesc");
+            // AddShortcutInfo(tlpShortcutsInfo, "Ctrl + T",       "Run OCR (copy result / show toast)", tagKey: "Text.RunOCRDesc");
 
-            AddShortcutInfo(tlpShortcutsInfo, "", "");
+            // AddShortcutInfo(tlpShortcutsInfo, "", "");
             AddShortcutInfo(tlpShortcutsInfo, "", "...and more. See Shortcuts",                       tagKey: "Text.AndMore");
 
             this.grpShortcuts.Controls.Add(tlpShortcutsInfo);
@@ -1139,7 +1138,7 @@ namespace Kiritori
             LayoutInfoTabResponsive();
         }
 
-        // PrefForm 内に追加：フォールバック付き翻訳
+        // フォールバック付き翻訳
         private static string TSafe(string key, string fallback)
         {
             try

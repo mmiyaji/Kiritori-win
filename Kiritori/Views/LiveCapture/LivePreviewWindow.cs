@@ -435,7 +435,7 @@ namespace Kiritori.Views.LiveCapture
             int padding = (int)Math.Ceiling(10 * scale);
             int margin  = (int)Math.Ceiling(12 * scale);
 
-            // 追加: パディングの無い厳密な測定
+            // パディングの無い厳密な測定
             var flags = TextFormatFlags.NoPadding;
             var ts = TextRenderer.MeasureText(g, text, _overlayFont, new Size(int.MaxValue, int.MaxValue), flags);
 
@@ -540,6 +540,26 @@ namespace Kiritori.Views.LiveCapture
 
                 if (_hudCursorIsHand) { Cursor = Cursors.Default; _hudCursorIsHand = false; }
             };
+        }
+        private void RefreshHoverStateByCursor()
+        {
+            if (_inSizingLoop) return;
+
+            // いまのカーソル位置がクライアント内か
+            var screen = Cursor.Position;
+            var client = this.PointToClient(screen);
+            bool inside = this.Visible && this.ClientRectangle.Contains(client);
+
+            _windowHot = inside;
+
+            // HUDは中にいる時だけ点灯、枠は即時 ON/OFF
+            _hudTargetAlpha = (inside && !_hudRect.IsEmpty) ? 140 : 0;
+            SetHoverInstant(inside);
+
+            if (!_fadeTimer.Enabled) _fadeTimer.Start();
+
+            var inv = Rectangle.Union(GetHudInvalidateRect(), GetHoverInvalidateRect());
+            if (!inv.IsEmpty) Invalidate(inv);
         }
 
         private void ShowPlaybackOverlay()
@@ -691,7 +711,6 @@ namespace Kiritori.Views.LiveCapture
                 Log.Debug($"OnLoad: Client={this.ClientSize.Width}x{this.ClientSize.Height}, Bounds={RectStr(new Rectangle(this.Left, this.Top, this.Width, this.Height))}", "LivePreview");
             }
             catch { /* no-op */ }
-            // ---- 追加ここまで ----
 
             var gdi = new GdiCaptureBackend
             {
@@ -733,6 +752,7 @@ namespace Kiritori.Views.LiveCapture
         {
             base.OnResizeEnd(e);
             _aspectRatio = 0f;
+            RefreshHoverStateByCursor();
         }
         private bool _firstFrameShown = false;
 
@@ -1728,8 +1748,6 @@ namespace Kiritori.Views.LiveCapture
             }
             ShowOverlay(_captionHidden ? "TITLE BAR HIDDEN" : "TITLE BAR SHOWN");
         }
-
-        // 既存ヘルパの近くに追加
         private Size GetDesiredClientPhysical()
         {
             // CaptureRect は論理px。ソース側モニタDPIで物理pxへ。
@@ -1815,7 +1833,6 @@ namespace Kiritori.Views.LiveCapture
                     sw.Stop(); _hashTimeTotal += sw.ElapsedMilliseconds; _hashCount++;
 
                     shouldDraw = (curHash != _lastFrameHash);
-                    // 必要なら差分率チェックも追加可能（ここではハッシュのみ）
                 }
             }
 
@@ -2210,8 +2227,12 @@ namespace Kiritori.Views.LiveCapture
             {
                 _inSizingLoop = false;
                 CenterOverlay();
-                if (_isDraggingWindow) EndDragHighlight(); // 即時復帰
-                else ShowPlaybackOverlay();                        // 通常（HUDはフェード、ホバーは即時ON）
+
+                if (_isDraggingWindow)
+                    EndDragHighlight();     // ← ドラッグ終わりは既存どおり即時復帰
+                else
+                    RefreshHoverStateByCursor(); // ← 以前の ShowPlaybackOverlay() をやめて、位置で決める
+
                 var inv = Rectangle.Union(GetHudInvalidateRect(), GetHoverInvalidateRect());
                 if (!inv.IsEmpty) Invalidate(inv);
             }

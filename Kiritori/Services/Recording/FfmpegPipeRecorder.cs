@@ -1,5 +1,5 @@
 ﻿using Kiritori.Helpers;
-using Kiritori.Services.Logging;  // ← 追加
+using Kiritori.Services.Logging;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;

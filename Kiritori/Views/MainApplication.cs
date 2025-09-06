@@ -45,7 +45,7 @@ namespace Kiritori
         private bool _allowShow = false;
         private readonly System.Windows.Forms.Timer _bootTimer;
 
-        // 追加: Win32 P/Invoke と定数
+        // Win32 P/Invoke と定数
         private const int WM_HOTKEY = 0x0312;
         [DllImport("user32.dll", SetLastError = true)]
         private static extern int RegisterHotKey(IntPtr hWnd, int id, int fsModifiers, int vk);

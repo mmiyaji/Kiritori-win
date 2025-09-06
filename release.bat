@@ -135,7 +135,7 @@ if exist "%SAT_JA_DIR%\" (
 )
 
 REM -----------------------------------------------------------------
-REM  ★ 追加1: ThirdParty をそのまま同梱（ffmpeg.exe を含める）
+REM  ThirdParty をそのまま同梱（ffmpeg.exe を含める）
 REM -----------------------------------------------------------------
 set "TP_DST=%OUTDIR%\%TP_DST_REL%"
 if exist "%TP_SRC%\" (
@@ -151,7 +151,7 @@ if exist "%TP_SRC%\" (
 )
 
 REM -----------------------------------------------------------------
-REM  ★ 追加2: LICENSE/README へ FFmpeg 節を自動追記
+REM  LICENSE/README へ FFmpeg 節を自動追記
 REM       - 既存 LICENSE があれば OUTDIR\LICENSE.txt としてコピーし追記
 REM       - なければ新規作成して追記
 REM       - README があれば末尾に Third-Party ライセンス節を追記

@@ -588,4 +588,7 @@
   <data name="Text.Ffmpeg.NotfoundTitle" xml:space="preserve">
     <value>FFmpegが見つかりません</value>
   </data>
+  <data name="Text.Advanced.Tips" xml:space="preserve">
+    <value>値は Value セルをダブルクリックして編集できます。Enterで確定します。</value>
+  </data>
 </root>

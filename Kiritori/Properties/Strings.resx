@@ -588,4 +588,7 @@
   <data name="Text.Ffmpeg.NotfoundTitle" xml:space="preserve">
     <value>FFmpeg not found</value>
   </data>
+  <data name="Text.Advanced.Tips" xml:space="preserve">
+    <value>Tip: Double-click the Value cell to edit. Press Enter to commit changes.</value>
+  </data>
 </root>

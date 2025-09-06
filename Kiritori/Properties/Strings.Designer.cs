@@ -700,6 +700,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Tip: Double-click the Value cell to edit. Press Enter to commit changes. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_Advanced_Tips {
+            get {
+                return ResourceManager.GetString("Text.Advanced.Tips", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Always on top に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_AlwaysOnTop {
