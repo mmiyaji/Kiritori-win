@@ -200,6 +200,7 @@ namespace Kiritori
                     _gridSettings.Columns[e.ColumnIndex].DataPropertyName == nameof(SettingRow.ValueString))
                 {
                     _gridSettings.InvalidateRow(e.RowIndex);
+                    RecomputeDirtyFromAdvancedRows();
                 }
             };
             _gridSettings.CellValueChanged += (s, e) =>
@@ -208,6 +209,7 @@ namespace Kiritori
                     _gridSettings.Columns[e.ColumnIndex].DataPropertyName == nameof(SettingRow.ValueString))
                 {
                     _gridSettings.InvalidateRow(e.RowIndex);
+                    RecomputeDirtyFromAdvancedRows();
                 }
             };
 
@@ -495,7 +497,34 @@ namespace Kiritori
                 }
             }
         }
+        // 画面の行と保存済み Settings を比較して Dirty を再計算
+        private void RecomputeDirtyFromAdvancedRows()
+        {
+            if (_rows == null) return;
 
+            bool anyDirty = false;
+            var S = Properties.Settings.Default;
+
+            foreach (var r in _rows)
+            {
+                // 読み取り専用行は無視（ユーザーが保存対象にできない）
+                if (r.ReadOnly) continue;
+
+                object persisted = null;
+                try { persisted = S[r.Name]; } catch { /* 無効キー等は差分ありとみなす */ }
+
+                if (!ValueEquals(r.RawValue, persisted, r.TypeName))
+                {
+                    anyDirty = true;
+                    break;
+                }
+            }
+
+            if (_suppressDirty > 0) return; // リロード中などは無視
+
+            _isDirty = anyDirty;
+            UpdateDirtyUI();
+        }
 
         private void ResetSelectedToDefault()
         {
@@ -507,6 +536,7 @@ namespace Kiritori
             var idx = _gridSettings.CurrentRow.Index;
             _gridSettings.InvalidateRow(idx);
             _gridSettings.Refresh();
+            RecomputeDirtyFromAdvancedRows();
         }
 
         private void ResetAllToDefault()
@@ -516,6 +546,7 @@ namespace Kiritori
                 if (!r.ReadOnly) r.RawValue = r.DefaultValue;
             }
             _gridSettings.Refresh();
+            RecomputeDirtyFromAdvancedRows();
         }
 
         private void ExportToFile()
@@ -545,6 +576,7 @@ namespace Kiritori
                     }
                 }
                 _gridSettings.Refresh();
+                RecomputeDirtyFromAdvancedRows();
             }
         }
 
@@ -553,22 +585,24 @@ namespace Kiritori
         {
             public static string Serialize(System.Collections.Generic.IDictionary<string, string> d)
             {
-                // 依存を増やさないための簡易実装
                 var sb = new System.Text.StringBuilder();
-                sb.Append("{");
+                sb.AppendLine("{");
                 bool first = true;
                 foreach (var kv in d)
                 {
-                    if (!first) sb.Append(",");
+                    if (!first) sb.AppendLine(",");
                     first = false;
-                    sb.Append("\"").Append(E(kv.Key)).Append("\":");
+
+                    sb.Append("  \"").Append(E(kv.Key)).Append("\": ");
                     sb.Append("\"").Append(E(kv.Value ?? "")).Append("\"");
                 }
+                sb.AppendLine();
                 sb.Append("}");
                 return sb.ToString();
 
                 string E(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
             }
+
 
             public static Dictionary<string, string> Deserialize(string json)
             {

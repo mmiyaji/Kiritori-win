@@ -237,7 +237,7 @@ namespace Kiritori
 
             this.btnSaveSettings = new Button
             {
-                Text = "OK",
+                Text = "Save",
                 AutoSize = true,
                 Margin = new Padding(6, 6, 0, 6),
                 Tag = "loc:Text.BtnSave"

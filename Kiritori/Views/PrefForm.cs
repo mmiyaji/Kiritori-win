@@ -39,8 +39,8 @@ namespace Kiritori
         private HotkeySpec DEF_HOTKEY_CAP   = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 };
         private HotkeySpec DEF_HOTKEY_OCR   = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 };
         private HotkeySpec DEF_HOTKEY_LIVE  = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D6 };
-
-
+        private string _saveButtonDefaultText;
+        private System.Windows.Forms.Timer _savedResetTimer;
         // =========================================================
         // ==================== Constructor ========================
         // =========================================================
@@ -52,7 +52,7 @@ namespace Kiritori
             InitializeComponent();
             _loadingUi = true;
 
-            #if DEBUG
+#if DEBUG
                 DebugUiDecorator.Apply(this, new DebugUiOptions
                 {
                     ShowBanner = true,        // 上部赤バナー
@@ -60,7 +60,7 @@ namespace Kiritori
                     PatchIcon = true,         // タスクバー/タイトルのアイコンに赤丸バッジ
                     Watermark = false,        // 透かし (大文字DEBUG) を背景に描画（必要なら true）
                 });
-            #endif
+#endif
 
             PopulatePresetCombos();
             WireUpDataBindings();
@@ -93,7 +93,7 @@ namespace Kiritori
 
             _loadingUi = false;
             HookRuntimeEvents();
-
+            WireAdvancedDirtyEvents();
             // ※ ここでは PropertyChanged を購読しない（初期化で発火するため）
             // 基準ハッシュの初期化も Load 完了後に行う
             // DumpSettingsKeys();
@@ -187,7 +187,73 @@ namespace Kiritori
                     _isDirty = (now != _baselineHash);
                     UpdateDirtyUI();
                 };
+                EnsureSavedUiInitialized();
             }
+        }
+        private bool EnsureSavedUiInitialized()
+        {
+            if (IsDisposed) return false;
+            if (btnSaveSettings == null || btnSaveSettings.IsDisposed) return false;
+
+            if (_saveButtonDefaultText == null)
+                _saveButtonDefaultText = SR.T("Text.BtnSave", "Save");
+
+            if (_savedResetTimer == null)
+            {
+                _savedResetTimer = new System.Windows.Forms.Timer { Interval = 1500 };
+                _savedResetTimer.Tick += (s, e) =>
+                {
+                    _savedResetTimer.Stop();
+                    if (!IsDisposed && btnSaveSettings != null && !btnSaveSettings.IsDisposed)
+                    {
+                        btnSaveSettings.Text = _saveButtonDefaultText;
+                    }
+                };
+            }
+            return true;
+        }
+        // 値が変わった（確定）→ Dirty ON
+        private void OnAdvCellValueChanged(object sender, DataGridViewCellEventArgs e)
+        {
+            if (_suppressDirty > 0) return;
+            _isDirty = true;
+            UpdateDirtyUI();
+        }
+
+        // 編集が終わった（確定）→ Dirty ON（保険）
+        private void OnAdvCellEndEdit(object sender, DataGridViewCellEventArgs e)
+        {
+            if (_suppressDirty > 0) return;
+            _isDirty = true;
+            UpdateDirtyUI();
+        }
+
+        // チェックボックス等：IsCurrentCellDirty の間に Commit して CellValueChanged を発火させる
+        private void OnAdvCurrentCellDirtyStateChanged(object sender, EventArgs e)
+        {
+            if (_gridSettings == null) return;
+            if (_gridSettings.IsCurrentCellDirty)
+            {
+                _gridSettings.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            }
+        }
+
+        // 入力中のテキストでも“すぐ Save を光らせたい”場合（任意）
+        private void OnAdvEditingControlShowing(object sender, DataGridViewEditingControlShowingEventArgs e)
+        {
+            var tb = e.Control as TextBox;
+            if (tb == null) return;
+
+            // 多重登録回避のため、一旦外してから付ける
+            tb.TextChanged -= AdvEditingTextChanged;
+            tb.TextChanged += AdvEditingTextChanged;
+        }
+
+        private void AdvEditingTextChanged(object sender, EventArgs e)
+        {
+            if (_suppressDirty > 0) return;
+            _isDirty = true;
+            UpdateDirtyUI();
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
@@ -997,27 +1063,65 @@ namespace Kiritori
             private readonly Action _a; public ActionOnDispose(Action a) { _a = a; }
             public void Dispose() { if (_a != null) _a(); }
         }
+        private void WireAdvancedDirtyEvents()
+        {
+            if (_gridSettings == null || _gridSettings.IsDisposed) return;
+
+            // 既存ハンドラの二重登録を避けるため一旦外す
+            _gridSettings.CellValueChanged -= OnAdvCellValueChanged;
+            _gridSettings.CurrentCellDirtyStateChanged -= OnAdvCurrentCellDirtyStateChanged;
+            _gridSettings.CellEndEdit -= OnAdvCellEndEdit;
+            _gridSettings.EditingControlShowing -= OnAdvEditingControlShowing;
+
+            // 値が変わったら Dirty
+            _gridSettings.CellValueChanged += OnAdvCellValueChanged;
+            _gridSettings.CellEndEdit += OnAdvCellEndEdit;
+
+            // チェックボックス等は Commit が必要
+            _gridSettings.CurrentCellDirtyStateChanged += OnAdvCurrentCellDirtyStateChanged;
+
+            // テキスト編集中にも（確定前に）Dirty表示したい場合
+            _gridSettings.EditingControlShowing += OnAdvEditingControlShowing;
+        }
 
         private void UpdateDirtyUI()
         {
-            if (IsDisposed) return;
+            // UIスレッド保証
+            if (this.IsHandleCreated && this.InvokeRequired)
+            {
+                try { BeginInvoke(new Action(UpdateDirtyUI)); } catch { /* フォーム終了中 */ }
+                return;
+            }
 
-            bool hasMark = Text.EndsWith(" *", StringComparison.Ordinal);
+            if (IsDisposed) return;
+            if (!EnsureSavedUiInitialized()) return;
+
+            // フォームタイトルの " *" 管理（nullセーフ）
+            var title = this.Text ?? string.Empty;
+            bool hasMark = title.EndsWith(" *", StringComparison.Ordinal);
+
+            // Saveボタンの有効・無効
+            btnSaveSettings.Enabled = _isDirty;
 
             if (_isDirty)
             {
-                if (!hasMark)
-                {
-                    Text = Text + " *";
-                }
+                if (!hasMark) this.Text = title + " *";
+
+                // Dirtyになったら即「通常表示」に戻す
+                btnSaveSettings.Text = _saveButtonDefaultText;
+                // 進行中の「Saved ✓」復帰タイマーは止める
+                _savedResetTimer.Stop();
             }
             else
             {
-                if (hasMark)
-                {
-                    // 末尾の " *" を外す
-                    Text = Text.Substring(0, Text.Length - 2);
-                }
+                if (hasMark && title.Length >= 2)
+                    this.Text = title.Substring(0, title.Length - 2);
+
+                // 保存直後の軽いフィードバック
+                btnSaveSettings.Text = _saveButtonDefaultText + " ✓";
+                btnSaveSettings.Enabled = false;
+                _savedResetTimer.Stop();
+                _savedResetTimer.Start();
             }
         }
 

@@ -320,7 +320,7 @@ namespace Kiritori.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
         [global::System.ComponentModel.DescriptionAttribute("Include thread ID in each log entry")]
         public bool LogIncludeThreadId {
             get { return ((bool)(this["LogIncludeThreadId"])); }
@@ -329,7 +329,7 @@ namespace Kiritori.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
         [global::System.ComponentModel.DescriptionAttribute("Include process ID in each log entry")]
         public bool LogIncludeProcessId {
             get { return ((bool)(this["LogIncludeProcessId"])); }
