@@ -591,4 +591,10 @@
   <data name="Text.Advanced.Tips" xml:space="preserve">
     <value>値は Value セルをダブルクリックして編集できます。Enterで確定します。</value>
   </data>
+  <data name="Menu.OpenClipboard" xml:space="preserve">
+    <value>クリップボードから開く</value>
+  </data>
+  <data name="Text.Paste" xml:space="preserve">
+    <value>クリップボードから開く</value>
+  </data>
 </root>

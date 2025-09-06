@@ -46,6 +46,7 @@ namespace Kiritori
         }
         private void saveImageToolStripMenuItem_Click(object sender, EventArgs e) { saveImage(); }
         private void openImageToolStripMenuItem_Click(object sender, EventArgs e) { openImage(); }
+        private void clipboardToolStripMenuItem_Click(object sender, EventArgs e) { openClipboard(); }
         private void originalLocationToolStripMenuItem_Click(object sender, EventArgs e) { initLocation(); }
         private void originalSizeToolStripMenuItem_Click(object sender, EventArgs e) { zoomOff(); }
         private void zoomInToolStripMenuItem_Click(object sender, EventArgs e) { zoomIn(); }

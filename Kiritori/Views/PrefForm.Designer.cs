@@ -119,6 +119,7 @@ namespace Kiritori
         private TableLayoutPanel tlpShortcutsCap;
         private Label labelOCR; private TextBox textBoxOCR;
         private Label labelCopy; private TextBox textBoxCopy;
+        private Label labelPaste; private TextBox textBoxPaste;
         private Label labelSave; private TextBox textBoxSave;
         private Label labelPrint; private TextBox textBoxPrint;
         private Label labelZoomIn; private TextBox textBoxZoomIn;
@@ -606,9 +607,10 @@ namespace Kiritori
             AddShortcutRow(this.tlpShortcutsWin, 3, "Drop shadow", out this.labelDropShadow, out this.textBoxDropShadow, "Ctrl + d", colOffset: 0, tagKey: "Text.DropShadow");
             AddShortcutRow(this.tlpShortcutsWin, 4, "Hover highlight", out this.labelHoverHighlight, out this.textBoxHoverHighlight, "Ctrl + f", colOffset: 0, tagKey: "Text.HighlightOnHover");
             AddShortcutRow(this.tlpShortcutsWin, 5, "Move", out this.labelMove, out this.textBoxMove, "up/down/left/right", colOffset: 0, tagKey: "Text.Move");
+            AddShortcutRow(this.tlpShortcutsWin, 6, "Run OCR", out this.labelOCR, out this.textBoxOCR, "Ctrl + t", colOffset: 0, tagKey: "Text.RunOCR");
 
             // 右段 (colOffset = 3 → ラベルが列3, TextBoxが列4)
-            AddShortcutRow(this.tlpShortcutsWin, 0, "Run OCR", out this.labelOCR, out this.textBoxOCR, "Ctrl + t", colOffset: 3, tagKey: "Text.RunOCR");
+            AddShortcutRow(this.tlpShortcutsWin, 0, "Paste", out this.labelPaste, out this.textBoxPaste, "Ctrl + v", colOffset: 3, tagKey: "Text.Paste");
             AddShortcutRow(this.tlpShortcutsWin, 1, "Copy", out this.labelCopy, out this.textBoxCopy, "Ctrl + c", colOffset: 3, tagKey: "Text.Copy");
             AddShortcutRow(this.tlpShortcutsWin, 2, "Save", out this.labelSave, out this.textBoxSave, "Ctrl + s", colOffset: 3, tagKey: "Text.Save");
             AddShortcutRow(this.tlpShortcutsWin, 3, "Print", out this.labelPrint, out this.textBoxPrint, "Ctrl + p", colOffset: 3, tagKey: "Text.Print");

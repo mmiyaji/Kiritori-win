@@ -49,6 +49,7 @@ namespace Kiritori.Helpers
         SETTING = Keys.Control | Keys.Oemcomma,
         EXIT = Keys.Control | Keys.Q,
         RECORD = Keys.Control | Keys.R,
+        PASTE = Keys.Control | Keys.V,
     }
     [Flags]
     public enum MOD_KEY : int

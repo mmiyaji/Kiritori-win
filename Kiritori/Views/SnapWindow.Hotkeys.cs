@@ -93,6 +93,9 @@ namespace Kiritori
                     initLocation();
                     break;
 
+                case (int)HOTS.PASTE:
+                    openClipboard();
+                    break;
                 case (int)HOTS.COPY:
                     copyImage(this);
                     break;

@@ -383,15 +383,15 @@ namespace Kiritori
             {
                 int total;
                 string diff = SettingsDirtyTracker.FormatSettingsDiff(6, out total, _baselineMap);
-                string msg = TSafe("Text.ExitWithUnsavedChanges", "Do you want to save the changes?")
+                string msg = SR.T("Text.ExitWithUnsavedChanges", "Do you want to save the changes?")
                         + Environment.NewLine + Environment.NewLine
                         + diff + (diff.Length > 0 ? Environment.NewLine : "")
-                        + TSafe("Text.ExitWithUnsavedChangesTail",
+                        + SR.T("Text.ExitWithUnsavedChangesTail",
                                 "Yes: Save and Exit / No: Discard and Exit / Cancel: Stay in the app");
 
                 var r = MessageBox.Show(
                     msg,
-                    TSafe("Text.UnsavedChangesTitle", "Unsaved Changes"),
+                    SR.T("Text.UnsavedChangesTitle", "Unsaved Changes"),
                     MessageBoxButtons.YesNoCancel,
                     MessageBoxIcon.Warning
                 );
@@ -420,8 +420,8 @@ namespace Kiritori
 
             // 通常の終了確認（1回だけ）
             var result = MessageBox.Show(
-                TSafe("Text.ConfirmExit", "Do you want to exit the application?"),
-                TSafe("Text.ConfirmExitTitle", "Confirm Exit Kiritori"),
+                SR.T("Text.ConfirmExit", "Do you want to exit the application?"),
+                SR.T("Text.ConfirmExitTitle", "Confirm Exit Kiritori"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question
             );
@@ -924,8 +924,8 @@ namespace Kiritori
             if (_isDirty)
             {
                 var r = MessageBox.Show(
-                    TSafe("Text.ConfirmSaveChanges", "Do you want to save the changes?"),
-                    TSafe("Text.ConfirmSaveChangesTitle", "Unsaved Changes"),
+                    SR.T("Text.ConfirmSaveChanges", "Do you want to save the changes?"),
+                    SR.T("Text.ConfirmSaveChangesTitle", "Unsaved Changes"),
                     MessageBoxButtons.YesNoCancel,
                     MessageBoxIcon.Question
                 );
@@ -1004,21 +1004,15 @@ namespace Kiritori
             // 別スレッド発火（CultureChanged など）に備えて UI スレッドへ
             if (InvokeRequired) { try { BeginInvoke((Action)ApplyDynamicTextsSafe); } catch { } return; }
 
-            // 翻訳キーが無い/例外でも落ちないようフォールバック
-            string T(string key, string fallback)
-            {
-                try { return SR.T(key); } catch { return fallback; }
-            }
-
             // タイトル
-            Text = string.Format("{0} - {1}", T("App.Name", "Kiritori"), T("PrefForm.Title", "Preferences"));
+            Text = string.Format("{0} - {1}", SR.T("App.Name", "Kiritori"), SR.T("PrefForm.Title", "Preferences"));
 
             // MSIX/非MSIXで変わるボタン
             if (btnOpenStartupSettings != null && !btnOpenStartupSettings.IsDisposed)
             {
                 btnOpenStartupSettings.Text = PackagedHelper.IsPackaged()
-                    ? TSafe("Text.BtnStartupSetting", "Startup settings")
-                    : TSafe("Text.BtnStartupFolder", "Open Startup folder");
+                    ? SR.T("Text.BtnStartupSetting", "Startup settings")
+                    : SR.T("Text.BtnStartupFolder", "Open Startup folder");
             }
 
             // 起動管理の説明＆ツールチップ（あれば）
@@ -1026,8 +1020,8 @@ namespace Kiritori
             {
                 if (PackagedHelper.IsPackaged())
                 {
-                    labelStartupInfo.Text = TSafe("Text.StartupManaged", "Startup is managed by Windows.");
-                    toolTip1.SetToolTip(labelStartupInfo, TSafe("Text.StartupManagedTip", "Settings > Apps > Startup"));
+                    labelStartupInfo.Text = SR.T("Text.StartupManaged", "Startup is managed by Windows.");
+                    toolTip1.SetToolTip(labelStartupInfo, SR.T("Text.StartupManagedTip", "Settings > Apps > Startup"));
                 }
                 // 非 MSIX側の表示は必要ならここに
             }
@@ -1138,19 +1132,6 @@ namespace Kiritori
             LayoutInfoTabResponsive();
         }
 
-        // フォールバック付き翻訳
-        private static string TSafe(string key, string fallback)
-        {
-            try
-            {
-                var s = SR.T(key); // 既存の単一引数版だけを前提
-                return string.IsNullOrEmpty(s) ? fallback : s;
-            }
-            catch
-            {
-                return fallback;
-            }
-        }
 
         // === Settings のスナップショット（ハッシュ）を作る ===
         static void DumpControlBindings(Form f)

@@ -31,7 +31,7 @@
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainApplication));
             this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
-            this.contextMenuStrip1 = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.trayContextMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.captureToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.captureOCRToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.livePreviewToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -41,41 +41,43 @@
             this.closeAllWindowsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.preferencesToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.historyToolStripMenuItem1 = new System.Windows.Forms.ToolStripMenuItem();
-            this.contextMenuStrip1.SuspendLayout();
+            this.historyToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.clipboardToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.trayContextMenuStrip.SuspendLayout();
             this.SuspendLayout();
             // 
             // notifyIcon1
             // 
-            this.notifyIcon1.ContextMenuStrip = this.contextMenuStrip1;
+            this.notifyIcon1.ContextMenuStrip = this.trayContextMenuStrip;
             this.notifyIcon1.MouseClick += NotifyIcon1_MouseClick;
             // this.notifyIcon1.Icon = ((System.Drawing.Icon)(resources.GetObject("notifyIcon1.Icon")));
             this.notifyIcon1.Text = "Kiritori — minimized to tray (click to open)";
             this.notifyIcon1.Tag = "loc:Tray.TrayIcon";
             this.notifyIcon1.Visible = true;
             // 
-            // contextMenuStrip1
+            // trayContextMenuStrip
             // 
-            this.contextMenuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.trayContextMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.captureToolStripMenuItem,
             this.captureOCRToolStripMenuItem,
             this.livePreviewToolStripMenuItem,
             new System.Windows.Forms.ToolStripSeparator(),
             this.openToolStripMenuItem,
-            this.historyToolStripMenuItem1,
+            this.clipboardToolStripMenuItem,
+            this.historyToolStripMenuItem,
             this.hideAllWindowsToolStripMenuItem,
             this.showAllWindowsToolStripMenuItem,
             this.closeAllWindowsToolStripMenuItem,
             new System.Windows.Forms.ToolStripSeparator(),
             this.preferencesToolStripMenuItem,
             this.exitToolStripMenuItem});
-            this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(203, 180);
+            this.trayContextMenuStrip.Name = "trayContextMenuStrip";
+            this.trayContextMenuStrip.Size = new System.Drawing.Size(203, 180);
             // 
             // captureToolStripMenuItem
             // 
             this.captureToolStripMenuItem.Name = "captureToolStripMenuItem";
-            this.captureToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            this.captureToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift)
             | System.Windows.Forms.Keys.D5)));
             this.captureToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.captureToolStripMenuItem.Text = "Image Capture";
@@ -85,7 +87,7 @@
             // captureOCRToolStripMenuItem
             // 
             this.captureOCRToolStripMenuItem.Name = "captureOCRToolStripMenuItem";
-            this.captureOCRToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            this.captureOCRToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift)
             | System.Windows.Forms.Keys.D5)));
             this.captureOCRToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.captureOCRToolStripMenuItem.Text = "OCR Capture";
@@ -95,7 +97,7 @@
             // livePreviewToolStripMenuItem
             // 
             this.livePreviewToolStripMenuItem.Name = "livePreviewToolStripMenuItem";
-            this.livePreviewToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            this.livePreviewToolStripMenuItem.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift)
             | System.Windows.Forms.Keys.D6)));
             this.livePreviewToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
             this.livePreviewToolStripMenuItem.Text = "Live Preview";
@@ -109,6 +111,14 @@
             this.openToolStripMenuItem.Text = "Open Image File";
             this.openToolStripMenuItem.Tag = "loc:Text.OpenImageFile";
             this.openToolStripMenuItem.Click += new System.EventHandler(this.openToolStripMenuItem_Click);
+            // 
+            // clipboardToolStripMenuItem
+            // 
+            this.clipboardToolStripMenuItem.Name = "clipboardToolStripMenuItem";
+            this.clipboardToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
+            this.clipboardToolStripMenuItem.Text = "Open From Clipboard";
+            this.clipboardToolStripMenuItem.Tag = "loc:Menu.OpenClipboard";
+            this.clipboardToolStripMenuItem.Click += new System.EventHandler(this.clipboardToolStripMenuItem_Click);
             // 
             // hideAllWindowsToolStripMenuItem
             // 
@@ -150,12 +160,12 @@
             this.exitToolStripMenuItem.Tag = "loc:Text.BtnExit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.exitToolStripMenuItem_Click);
             // 
-            // historyToolStripMenuItem1
+            // historyToolStripMenuItem
             // 
-            this.historyToolStripMenuItem1.Name = "historyToolStripMenuItem1";
-            this.historyToolStripMenuItem1.Size = new System.Drawing.Size(202, 22);
-            this.historyToolStripMenuItem1.Text = "History";
-            this.historyToolStripMenuItem1.Tag = "loc:Text.History";
+            this.historyToolStripMenuItem.Name = "historyToolStripMenuItem";
+            this.historyToolStripMenuItem.Size = new System.Drawing.Size(202, 22);
+            this.historyToolStripMenuItem.Text = "History";
+            this.historyToolStripMenuItem.Tag = "loc:Text.History";
             // 
             // MainApplication
             // 
@@ -164,7 +174,7 @@
             this.ClientSize = new System.Drawing.Size(284, 262);
             this.Name = "MainApplication";
             this.Text = "Kiritori - Main";
-            this.contextMenuStrip1.ResumeLayout(false);
+            this.trayContextMenuStrip.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }
@@ -172,7 +182,7 @@
         #endregion
 
         private System.Windows.Forms.NotifyIcon notifyIcon1;
-        private System.Windows.Forms.ContextMenuStrip contextMenuStrip1;
+        private System.Windows.Forms.ContextMenuStrip trayContextMenuStrip;
         private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem captureToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem captureOCRToolStripMenuItem;
@@ -182,6 +192,8 @@
         private System.Windows.Forms.ToolStripMenuItem closeAllWindowsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem preferencesToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem openToolStripMenuItem;
-        private System.Windows.Forms.ToolStripMenuItem historyToolStripMenuItem1;
+        private System.Windows.Forms.ToolStripMenuItem historyToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem clipboardToolStripMenuItem;
+        
     }
 }

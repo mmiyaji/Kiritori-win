@@ -64,6 +64,7 @@ namespace Kiritori
         }
 
         public void openImage() => this.ma.openImage();
+        public void openClipboard() => this.ma.pasteFromClipboard();
 
         public void saveImage()
         {

@@ -18,6 +18,7 @@ using System.Globalization;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Diagnostics;
+using System.Collections.Specialized;
 
 namespace Kiritori
 {
@@ -370,6 +371,70 @@ namespace Kiritori
                 s.openImage();
             }
         }
+        // クリップボードに画像/画像ファイルがあれば SnapWindow に貼り付けて表示
+        public bool pasteFromClipboard()
+        {
+            try
+            {
+                // 1) 画像そのもの
+                if (Clipboard.ContainsImage())
+                {
+                    var img = Clipboard.GetImage();
+                    if (img != null)
+                    {
+                        Directory.CreateDirectory(HistoryTempDir);
+                        string path = Path.Combine(HistoryTempDir, $"{DateTime.Now:yyyyMMdd_HHmmssfff}_clip.png");
+
+                        // ロック回避のため Bitmap にクローンして保存
+                        using (var bmp = new Bitmap(img))
+                        {
+                            bmp.Save(path, ImageFormat.Png);
+                        }
+
+                        var sw = new SnapWindow(this)
+                        {
+                            StartPosition = FormStartPosition.CenterScreen
+                        };
+
+                        // 可能なら「クリップボード由来」であることをマーク（存在しない場合は無視）
+                        // try { sw.CurrentLoadMethod = LoadMethod.Clipboard; } catch { /* no-op */ }
+
+                        sw.setImageFromPath(path);
+                        sw.Show();
+                        return true;
+                    }
+                }
+
+                // 2) 画像ファイルのパスがコピーされている場合（複数なら先頭だけ）
+                if (Clipboard.ContainsFileDropList())
+                {
+                    StringCollection files = Clipboard.GetFileDropList();
+                    foreach (string p in files)
+                    {
+                        if (File.Exists(p) && IsImageExt(Path.GetExtension(p)))
+                        {
+                            var sw = new SnapWindow(this)
+                            {
+                                StartPosition = FormStartPosition.CenterScreen
+                            };
+                            // try { sw.CurrentLoadMethod = LoadMethod.Path; } catch { /* no-op */ }
+                            sw.setImageFromPath(p);
+                            sw.Show();
+                            return true;
+                        }
+                    }
+                }
+
+                // 画像が無い
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Log.Debug($"PasteFromClipboard error: {ex}", "Clipboard");
+                return false;
+            }
+        }
+
         public void openImageFromHistory(ToolStripMenuItem item)
         {
             if (s == null)
@@ -451,15 +516,15 @@ namespace Kiritori
                 item.ToolTipText = path;
             }
 
-            item.Click += historyToolStripMenuItem1_item_Click;
-            historyToolStripMenuItem1.DropDownItems.Insert(0, item);
+            item.Click += historyToolStripMenuItem_item_Click;
+            historyToolStripMenuItem.DropDownItems.Insert(0, item);
 
             // 履歴上限掃除
-            while (historyToolStripMenuItem1.DropDownItems.Count > limit)
+            while (historyToolStripMenuItem.DropDownItems.Count > limit)
             {
-                int lastIdx = historyToolStripMenuItem1.DropDownItems.Count - 1;
-                var last = historyToolStripMenuItem1.DropDownItems[lastIdx] as ToolStripMenuItem;
-                historyToolStripMenuItem1.DropDownItems.RemoveAt(lastIdx);
+                int lastIdx = historyToolStripMenuItem.DropDownItems.Count - 1;
+                var last = historyToolStripMenuItem.DropDownItems[lastIdx] as ToolStripMenuItem;
+                historyToolStripMenuItem.DropDownItems.RemoveAt(lastIdx);
                 if (last != null)
                 {
                     if (last.Tag is HistoryEntry he2)
@@ -533,7 +598,7 @@ namespace Kiritori
                 Directory.CreateDirectory(HistoryTempDir);
                 var sb = new StringBuilder();
 
-                foreach (ToolStripItem tsi in historyToolStripMenuItem1.DropDownItems)
+                foreach (ToolStripItem tsi in historyToolStripMenuItem.DropDownItems)
                 {
                     var mi = tsi as ToolStripMenuItem;
                     if (mi?.Tag is HistoryEntry he && !string.IsNullOrEmpty(he.Path))
@@ -640,9 +705,9 @@ namespace Kiritori
                         mi.AutoToolTip = true;
                         mi.ToolTipText = he.Path;
                     }
-                    mi.Click += historyToolStripMenuItem1_item_Click;
+                    mi.Click += historyToolStripMenuItem_item_Click;
 
-                    historyToolStripMenuItem1.DropDownItems.Add(mi);
+                    historyToolStripMenuItem.DropDownItems.Add(mi);
                     count++;
                     if (limit > 0 && count >= limit) break;
                 }
@@ -778,8 +843,12 @@ namespace Kiritori
         {
             this.openImage();
         }
+        private void clipboardToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            this.pasteFromClipboard();
+        }
 
-        private void historyToolStripMenuItem1_item_Click(object sender, EventArgs e)
+        private void historyToolStripMenuItem_item_Click(object sender, EventArgs e)
         {
             var item = (ToolStripMenuItem)sender;
             if (item.Tag is HistoryEntry he && File.Exists(he.Path))
@@ -834,7 +903,7 @@ namespace Kiritori
         }
         private void ClearHistoryMenu()
         {
-            foreach (ToolStripItem tsi in historyToolStripMenuItem1.DropDownItems)
+            foreach (ToolStripItem tsi in historyToolStripMenuItem.DropDownItems)
             {
                 if (tsi is ToolStripMenuItem mi)
                 {
@@ -848,7 +917,7 @@ namespace Kiritori
                     mi.Dispose();
                 }
             }
-            historyToolStripMenuItem1.DropDownItems.Clear();
+            historyToolStripMenuItem.DropDownItems.Clear();
         }
 
 
@@ -879,8 +948,8 @@ namespace Kiritori
         private void ApplyTrayLocalization()
         {
             // メニュー（Tagベースで一括）
-            if (contextMenuStrip1 != null)
-                ApplyToolStripLocalization(contextMenuStrip1.Items);
+            if (trayContextMenuStrip != null)
+                ApplyToolStripLocalization(trayContextMenuStrip.Items);
 
             // トレイアイコンのヒント
             if (notifyIcon1 != null)

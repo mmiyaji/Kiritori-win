@@ -8,7 +8,7 @@ namespace Kiritori
         /// </summary>
         private System.ComponentModel.IContainer components = null;
         private PictureBox pictureBox1;
-        private ContextMenuStrip contextMenuStrip1;
+        private ContextMenuStrip rightContextMenuStrip;
         private ToolStripMenuItem fileParentMenu;
         private ToolStripMenuItem editParentMenu;
         private ToolStripMenuItem viewParentMenu;
@@ -24,6 +24,7 @@ namespace Kiritori
         private ToolStripMenuItem ocrCtrlTToolStripMenuItem;
         private ToolStripMenuItem saveImageToolStripMenuItem;
         private ToolStripMenuItem openImageToolStripMenuItem;
+        private ToolStripMenuItem clipboardToolStripMenuItem;
         private ToolStripMenuItem editPaintToolStripMenuItem;
         private ToolStripMenuItem originalLocationToolStripMenuItem;
         private ToolStripMenuItem originalSizeToolStripMenuItem;
@@ -72,7 +73,7 @@ namespace Kiritori
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SnapWindow));
             this.pictureBox1 = new PictureBox();
-            this.contextMenuStrip1 = new ContextMenuStrip(this.components);
+            this.rightContextMenuStrip = new ContextMenuStrip(this.components);
             this.fileParentMenu = new ToolStripMenuItem();
             this.editParentMenu = new ToolStripMenuItem();
             this.viewParentMenu = new ToolStripMenuItem();
@@ -87,6 +88,7 @@ namespace Kiritori
             this.ocrCtrlTToolStripMenuItem = new ToolStripMenuItem();
             this.saveImageToolStripMenuItem = new ToolStripMenuItem();
             this.openImageToolStripMenuItem = new ToolStripMenuItem();
+            this.clipboardToolStripMenuItem = new ToolStripMenuItem();
             this.editPaintToolStripMenuItem = new ToolStripMenuItem();
             this.originalLocationToolStripMenuItem = new ToolStripMenuItem();
             this.originalSizeToolStripMenuItem = new ToolStripMenuItem();
@@ -111,12 +113,12 @@ namespace Kiritori
             this.printToolStripMenuItem = new ToolStripMenuItem();
             this.exitToolStripMenuItem = new ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
-            this.contextMenuStrip1.SuspendLayout();
+            this.rightContextMenuStrip.SuspendLayout();
             this.SuspendLayout();
             // 
             // pictureBox1
             // 
-            this.pictureBox1.ContextMenuStrip = this.contextMenuStrip1;
+            this.pictureBox1.ContextMenuStrip = this.rightContextMenuStrip;
             this.pictureBox1.Location = new System.Drawing.Point(0, 0);
             this.pictureBox1.Margin = new Padding(0);
             this.pictureBox1.Name = "pictureBox1";
@@ -125,9 +127,9 @@ namespace Kiritori
             this.pictureBox1.TabStop = false;
             // this.pictureBox1.Click += new System.EventHandler(this.pictureBox1_Click);
             // 
-            // contextMenuStrip1
+            // rightContextMenuStrip
             // 
-            this.contextMenuStrip1.Items.AddRange(new ToolStripItem[] {
+            this.rightContextMenuStrip.Items.AddRange(new ToolStripItem[] {
                 this.closeESCToolStripMenuItem,
                 new ToolStripSeparator(),
                 this.captureToolStripMenuItem,
@@ -142,14 +144,15 @@ namespace Kiritori
                 this.preferencesToolStripMenuItem,
                 this.exitToolStripMenuItem,
             });
-            this.contextMenuStrip1.Name = "contextMenuStrip1";
-            this.contextMenuStrip1.Size = new System.Drawing.Size(232, 392);
+            this.rightContextMenuStrip.Name = "rightContextMenuStrip";
+            this.rightContextMenuStrip.Size = new System.Drawing.Size(232, 392);
             // 
             // fileParentMenu
             // 
             this.fileParentMenu.DropDownItems.AddRange(new ToolStripItem[] {
                 this.saveImageToolStripMenuItem,
                 this.openImageToolStripMenuItem,
+                this.clipboardToolStripMenuItem,
                 new ToolStripSeparator(),
                 this.printToolStripMenuItem,
             });
@@ -308,6 +311,15 @@ namespace Kiritori
             this.openImageToolStripMenuItem.Text = "Open Image";
             this.openImageToolStripMenuItem.Tag = "loc:Menu.OpenImage";
             this.openImageToolStripMenuItem.Click += new System.EventHandler(this.openImageToolStripMenuItem_Click);
+            // 
+            // clipboardToolStripMenuItem
+            // 
+            this.clipboardToolStripMenuItem.Name = "clipboardToolStripMenuItem";
+            this.clipboardToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.V)));
+            this.clipboardToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
+            this.clipboardToolStripMenuItem.Text = "Open From Clipboard";
+            this.clipboardToolStripMenuItem.Tag = "loc:Menu.OpenClipboard";
+            this.clipboardToolStripMenuItem.Click += new System.EventHandler(this.clipboardToolStripMenuItem_Click);
             // 
             // originalLocationToolStripMenuItem
             // 
@@ -516,7 +528,7 @@ namespace Kiritori
             this.Text = "Kiritori - Snap";
             this.Load += new System.EventHandler(this.SnapWindow_Load);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
-            this.contextMenuStrip1.ResumeLayout(false);
+            this.rightContextMenuStrip.ResumeLayout(false);
             this.ResumeLayout(false);
 
         }

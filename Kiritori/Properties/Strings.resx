@@ -591,4 +591,10 @@
   <data name="Text.Advanced.Tips" xml:space="preserve">
     <value>Tip: Double-click the Value cell to edit. Press Enter to commit changes.</value>
   </data>
+  <data name="Menu.OpenClipboard" xml:space="preserve">
+    <value>Open From Clipboard</value>
+  </data>
+  <data name="Text.Paste" xml:space="preserve">
+    <value>Paste(from Clipboard)</value>
+  </data>
 </root>

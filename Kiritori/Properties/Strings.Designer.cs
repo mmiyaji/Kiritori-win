@@ -268,6 +268,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Open From Clipboard に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_OpenClipboard {
+            get {
+                return ResourceManager.GetString("Menu.OpenClipboard", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Open Image に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_OpenImage {
@@ -1146,6 +1155,15 @@ namespace Kiritori.Properties {
         internal static string Text_Option {
             get {
                 return ResourceManager.GetString("Text.Option", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Paste(from Clipboard) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_Paste {
+            get {
+                return ResourceManager.GetString("Text.Paste", resourceCulture);
             }
         }
         

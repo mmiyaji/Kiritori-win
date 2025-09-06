@@ -24,7 +24,7 @@ namespace Kiritori.Services.Logging
 
         // 出力フォーマット拡張
         public bool IncludeTimestamp = true;
-        public bool IncludeThreadId = true;
+        public bool IncludeThreadId = false;
         public bool IncludeProcessId = false;
         public bool IncludeCategoryTag = true;
 
