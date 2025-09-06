@@ -115,6 +115,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   When ON (recommended), this window will not appear in screen sharing/recording apps (Zoom/OBS/etc.). に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Desc_HideFromCapture {
+            get {
+                return ResourceManager.GetString("Desc.HideFromCapture", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Always draw に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_AlwaysDraw {
@@ -327,6 +336,15 @@ namespace Kiritori.Properties {
         internal static string Menu_Print {
             get {
                 return ResourceManager.GetString("Menu.Print", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Hide from screen capture (Recommended) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_Privacy {
+            get {
+                return ResourceManager.GetString("Menu.Privacy", resourceCulture);
             }
         }
         
@@ -1159,7 +1177,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Paste(from Clipboard) に類似しているローカライズされた文字列を検索します。
+        ///   Paste (from Clipboard) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_Paste {
             get {

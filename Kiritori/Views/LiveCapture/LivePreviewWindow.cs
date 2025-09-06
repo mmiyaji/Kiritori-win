@@ -27,7 +27,7 @@ namespace Kiritori.Views.LiveCapture
             _miOpacity, _miPauseResume, _miRealign, _miTopMost, _miClose,
             _miPref, _miExit, _miTitlebar, _miShowStats,
             _miPolicyRoot, _miPolicyAlways, _miPolicyHash,
-            _miRecoding;
+            _miRecoding, _miPrivacy;
 
         private float _zoom = 1.0f;     // 表示倍率（1.0=100%）
         private bool _paused = false;
@@ -158,6 +158,7 @@ namespace Kiritori.Views.LiveCapture
         private bool _windowHot = false; // マウスがウィンドウ上にあるか
         // タイトルバーがある時は OS の×があるので自前は非表示にする
         private bool ShouldShowInlineClose() => _captionHidden && _windowHot;
+        private bool _privacyExclusionEnabled = true; // 現在の状態（true=映らない）
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS margins);
@@ -676,6 +677,8 @@ namespace Kiritori.Views.LiveCapture
                 _perfTimer = new System.Threading.Timer(UpdatePerf, null, 1000, 1000);
             else
                 _perfTimer.Change(1000, 1000);
+
+            // 自ウィンドウをキャプチャ除外に追加
             TryExcludeFromCapture(this.Handle);
         }
         protected override void OnHandleDestroyed(EventArgs e)
@@ -1428,6 +1431,45 @@ namespace Kiritori.Views.LiveCapture
             };
             _miShadow.ShortcutKeys = (Keys)HOTS.SHADOW;
 
+            // プライバシー描画設定
+            _miPrivacy = new ToolStripMenuItem(SR.T("Menu.Privacy", "Hide from screen capture")) {
+                CheckOnClick = false,
+                Checked = Properties.Settings.Default.LivePreviewPrivacyMode,
+                ToolTipText = SR.T("Desc.HideFromCapture", "When ON (recommended), this window will not appear in screen sharing/recording apps (Zoom/OBS/etc.).")
+            };
+            // _miPrivacy.CheckedChanged += (s, e) =>
+            // {
+            //     // ユーザ操作で切り替え
+            //     bool wantExclude = _miPrivacy.Checked;
+            //     if (!ApplyCaptureExclusion(wantExclude))
+            //     {
+            //         _miPrivacy.Checked = !wantExclude;
+            //         Log.Warn("Failed to toggle capture exclusion (unsupported OS or API error).", "LivePreview");
+            //     }
+            // };
+            _miPrivacy.Click += (s, e) =>
+            {
+                // 現在の状態から反転させたい
+                bool wantExclude = !_miPrivacy.Checked;
+
+                // OS 非対応なら何もしない（必要ならメッセージ表示）
+                if (!SupportsExcludeFromCapture())
+                    return;
+                Log.Debug("Toggling capture exclusion: " + (wantExclude ? "ON" : "OFF"), "LivePreview");
+                if (ApplyCaptureExclusion(wantExclude))
+                {
+                    // 適用成功時のみ UI と Settings を更新
+                    _miPrivacy.Checked = wantExclude;
+                    Properties.Settings.Default.LivePreviewPrivacyMode = wantExclude;
+                    try { Properties.Settings.Default.Save(); } catch { /* no-op */ }
+                }
+                else
+                {
+                    // 失敗時は何も変えない（Checked を触らない）→ ループしない
+                    // Logger.Warn("Failed to toggle capture exclusion.");
+                }
+            };
+
             // FPS/Stats
             _miFpsRoot = new ToolStripMenuItem(SR.T("Menu.MaxFPS", "MAX FPS")) { Tag = "fps-root" };
             _miFpsItems = new ToolStripMenuItem[_fpsChoices.Length];
@@ -1518,12 +1560,12 @@ namespace Kiritori.Views.LiveCapture
             SyncPolicyChecks();
 
             // ---------- サブメニュー（SnapWindow 構成に寄せる） ----------
-            var miFile = new ToolStripMenuItem("File");   // いまは LivePreview 既存機能なし。将来 Save/Copy Frame 等をここに
+            var miFile = new ToolStripMenuItem(SR.T("Menu.File", "File"));   // いまは LivePreview 既存機能なし。将来 Save/Copy Frame 等をここに
             miFile.Enabled = false;
-            var miEdit = new ToolStripMenuItem("Edit");   // 予備（将来の編集系コマンド用）
+            var miEdit = new ToolStripMenuItem(SR.T("Menu.Edit", "Edit"));   // 予備（将来の編集系コマンド用）
             miEdit.Enabled = false;
 
-            var miView = new ToolStripMenuItem("View");
+            var miView = new ToolStripMenuItem(SR.T("Menu.View", "View"));
             miView.DropDownItems.AddRange(new ToolStripItem[] {
                 _miOriginal,
                 _miZoomOut,
@@ -1535,11 +1577,12 @@ namespace Kiritori.Views.LiveCapture
                 _miShowStats,
             });
 
-            var miWindow = new ToolStripMenuItem("Window");
+            var miWindow = new ToolStripMenuItem(SR.T("Menu.Window", "Window"));
             miWindow.DropDownItems.AddRange(new ToolStripItem[] {
                 _miTitlebar,
                 _miTopMost,
                 _miShadow,
+                _miPrivacy,
                 new ToolStripSeparator(),
                 _miRealign,
             });
@@ -1570,7 +1613,7 @@ namespace Kiritori.Views.LiveCapture
             this.ContextMenuStrip = _ctx;
             UpdateShadowMenuState();
             UpdateFpsMenuChecks();
-
+            // ApplyCaptureExclusion(_miPrivacy.Checked);
             _ctx.Opened += (s, e) =>
             {
                 if (_ctx != null && _ctx.Handle != IntPtr.Zero) TryExcludeFromCapture(_ctx.Handle);
@@ -1604,6 +1647,28 @@ namespace Kiritori.Views.LiveCapture
             MarkDropDownExclusion(_miZoomPct);
             MarkDropDownExclusion(_miOpacity);
             MarkDropDownExclusion(_miFpsRoot);
+        }
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            Log.Debug($"LivePreview shown: Handle={this.Handle}, DeviceDpi={this.DeviceDpi}", "LivePreview");
+            if (SupportsExcludeFromCapture())
+            {
+                // 設定を実ウィンドウに同期（冪等）
+                bool desired = Properties.Settings.Default.LivePreviewPrivacyMode;
+                ApplyCaptureExclusion(desired);
+                if (_miPrivacy != null) _miPrivacy.Checked = desired; // 表示だけ合わせる
+            }
+            else
+            {
+                // サポート外：項目を無効化して誤操作を防ぐ
+                if (_miPrivacy != null)
+                {
+                    _miPrivacy.Enabled = false;
+                    _miPrivacy.Checked = false; // 見た目もOFF
+                }
+                ApplyCaptureExclusion(false); // 念のため解除
+            }
         }
         private void ToggleRecord()
         {
@@ -1912,7 +1977,6 @@ namespace Kiritori.Views.LiveCapture
         // ---- 自己キャプチャ除外 ----
         private static void TryExcludeFromCapture(IntPtr hwnd)
         {
-            const uint WDA_EXCLUDEFROMCAPTURE = 0x11; // Win10 2004+
             try { SetWindowDisplayAffinity(hwnd, WDA_EXCLUDEFROMCAPTURE); } catch { }
         }
 
@@ -2301,10 +2365,64 @@ namespace Kiritori.Views.LiveCapture
             r.Intersect(this.ClientRectangle);
             return r;
         }
+        private bool ApplyCaptureExclusion(bool exclude)
+        {
+            if (!SupportsExcludeFromCapture())
+            {
+                _privacyExclusionEnabled = false;
+                return false;
+            }
+
+            uint mode = exclude ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE;
+            try
+            {
+                if (!SetWindowDisplayAffinity(this.Handle, mode))
+                    return false;
+
+                _privacyExclusionEnabled = exclude;
+
+                // 反映を確実にするための再描画（任意）
+                try
+                {
+                    // NativeMethods.RedrawWindow(...) があるなら使う
+                    this.Invalidate(true);
+                    this.Update();
+                }
+                catch { /* no-op */ }
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private bool QueryCaptureExclusion()
+        {
+            try
+            {
+                if (GetWindowDisplayAffinity(this.Handle, out uint a))
+                    return (a == WDA_EXCLUDEFROMCAPTURE);
+            }
+            catch { /* no-op */ }
+            return false;
+        }
+
 
         private Rectangle GetHoverInvalidateRect()
         {
             return (_hoverAlpha > 0) ? this.ClientRectangle : Rectangle.Empty;
+        }
+        private static bool SupportsExcludeFromCapture()
+        {
+            return true;
+            // try
+            // {
+            //     var v = Environment.OSVersion.Version; // 10.0.19041+ を目安
+            //     return (v.Major > 10) || (v.Major == 10 && v.Build >= 19041);
+            // }
+            // catch { return false; }
         }
 
         // ===== Win32 =====
@@ -2331,6 +2449,11 @@ namespace Kiritori.Views.LiveCapture
         [DllImport("user32.dll", CharSet = CharSet.Auto)] static extern IntPtr SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
         [DllImport("user32.dll")] static extern bool RedrawWindow(IntPtr hWnd, IntPtr lprcUpdate, IntPtr hrgnUpdate, uint flags);
 
+        [DllImport("user32.dll")] private static extern bool GetWindowDisplayAffinity(IntPtr hWnd, out uint pdwAffinity);
+
+        private const uint WDA_NONE               = 0x0;
+        private const uint WDA_MONITOR            = 0x1;   // 旧式
+        private const uint WDA_EXCLUDEFROMCAPTURE = 0x11;  // 推奨（Win10 2004+）
         const uint RDW_INVALIDATE = 0x0001, RDW_UPDATENOW = 0x0100, RDW_FRAME = 0x0400, RDW_ALLCHILDREN = 0x0080;
 
         private struct NcInsets { public int Left, Top, Right, Bottom; }

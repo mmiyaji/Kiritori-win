@@ -113,5 +113,8 @@
     <Setting Name="LogTimestampFormat" Type="System.String" Scope="User">
       <Value Profile="(Default)">yyyy-MM-dd HH:mm:ss.fff</Value>
     </Setting>
+    <Setting Name="LivePreviewPrivacyMode" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

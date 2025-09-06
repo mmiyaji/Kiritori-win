@@ -597,4 +597,10 @@
   <data name="Text.Paste" xml:space="preserve">
     <value>クリップボードから開く</value>
   </data>
+  <data name="Menu.Privacy" xml:space="preserve">
+    <value>画面キャプチャに映さない (推奨)</value>
+  </data>
+  <data name="Desc.HideFromCapture" xml:space="preserve">
+    <value>ON にすると (推奨)、このウィンドウは Zoom や OBS などの画面共有/録画に映らなくなります。</value>
+  </data>
 </root>

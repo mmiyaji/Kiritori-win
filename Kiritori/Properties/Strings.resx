@@ -595,6 +595,12 @@
     <value>Open From Clipboard</value>
   </data>
   <data name="Text.Paste" xml:space="preserve">
-    <value>Paste(from Clipboard)</value>
+    <value>Paste (from Clipboard)</value>
+  </data>
+  <data name="Menu.Privacy" xml:space="preserve">
+    <value>Hide from screen capture (Recommended)</value>
+  </data>
+  <data name="Desc.HideFromCapture" xml:space="preserve">
+    <value>When ON (recommended), this window will not appear in screen sharing/recording apps (Zoom/OBS/etc.).</value>
   </data>
 </root>
