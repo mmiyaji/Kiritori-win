@@ -60,11 +60,13 @@
             this.captureToolStripMenuItem,
             this.captureOCRToolStripMenuItem,
             this.livePreviewToolStripMenuItem,
+            new System.Windows.Forms.ToolStripSeparator(),
             this.openToolStripMenuItem,
             this.historyToolStripMenuItem1,
             this.hideAllWindowsToolStripMenuItem,
             this.showAllWindowsToolStripMenuItem,
             this.closeAllWindowsToolStripMenuItem,
+            new System.Windows.Forms.ToolStripSeparator(),
             this.preferencesToolStripMenuItem,
             this.exitToolStripMenuItem});
             this.contextMenuStrip1.Name = "contextMenuStrip1";

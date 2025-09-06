@@ -2418,16 +2418,37 @@ namespace Kiritori.Views.LiveCapture
                     Height = height,
                     Fps = fps,
                     Kind = OutputKind.Mp4,
-                    FfmpegPath = @"C:\Users\mail\AppData\Local\Temp\Kiritori\ffmpeg.exe",
+                    FfmpegPath = null,
                 });
             _rec.Start();
         }
 
         private void StopRecording()
         {
-            _rec?.Dispose();
-            _rec = null;
+            try
+            {
+                _rec?.Dispose();
+
+                var outPath = _rec?.Options?.OutputPath;
+                if (!string.IsNullOrEmpty(outPath) && File.Exists(outPath))
+                {
+                    try
+                    {
+                        // エクスプローラーで選択状態で開く
+                        Process.Start("explorer.exe", $"/select,\"{outPath}\"");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug("Open Explorer EX: " + ex.Message, "LivePreview");
+                    }
+                }
+            }
+            finally
+            {
+                _rec = null;
+            }
         }
+
 
 
         private static class NativeMethods

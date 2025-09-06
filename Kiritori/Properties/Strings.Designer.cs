@@ -115,6 +115,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Always draw に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_AlwaysDraw {
+            get {
+                return ResourceManager.GetString("Menu.AlwaysDraw", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Keep on top に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_AlwaysOnTop {
@@ -322,6 +331,24 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Recording に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_Recording {
+            get {
+                return ResourceManager.GetString("Menu.Recording", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Rendering に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_Rendering {
+            get {
+                return ResourceManager.GetString("Menu.Rendering", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Resume に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_Resume {
@@ -408,6 +435,15 @@ namespace Kiritori.Properties {
         internal static string Menu_Size500 {
             get {
                 return ResourceManager.GetString("Menu.Size500", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Skip by hash に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_SkipByHash {
+            get {
+                return ResourceManager.GetString("Menu.SkipByHash", resourceCulture);
             }
         }
         
@@ -529,6 +565,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Initial Startup State Management に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_FirstRunShown {
+            get {
+                return ResourceManager.GetString("Setting.Display.FirstRunShown", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   History Limit に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Setting_Display_HistoryLimit {
@@ -556,29 +601,20 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Hover Highlight Thickness (px) に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string Setting_Display_HoverHighlightThickness {
-            get {
-                return ResourceManager.GetString("Setting.Display.HoverHighlightThickness", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Initial Startup State Management に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string Setting_Display_FirstRunShown {
-            get {
-                return ResourceManager.GetString("Setting.Display.FirstRunShown", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Highlight Window on Hover に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Setting_Display_HoverHighlightEnabled {
             get {
                 return ResourceManager.GetString("Setting.Display.HoverHighlightEnabled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Hover Highlight Thickness (px) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_HoverHighlightThickness {
+            get {
+                return ResourceManager.GetString("Setting.Display.HoverHighlightThickness", resourceCulture);
             }
         }
         
@@ -592,20 +628,20 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Show Screen Guide に類似しているローカライズされた文字列を検索します。
-        /// </summary>
-        internal static string Setting_Display_ScreenGuideEnabled {
-            get {
-                return ResourceManager.GetString("Setting.Display.ScreenGuideEnabled", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Run at Startup に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Setting_Display_RunAtStartup {
             get {
                 return ResourceManager.GetString("Setting.Display.RunAtStartup", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Show Screen Guide に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_ScreenGuideEnabled {
+            get {
+                return ResourceManager.GetString("Setting.Display.ScreenGuideEnabled", resourceCulture);
             }
         }
         
@@ -727,7 +763,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   OK に類似しているローカライズされた文字列を検索します。
+        ///   Save に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_BtnSave {
             get {
@@ -894,6 +930,24 @@ namespace Kiritori.Properties {
         internal static string Text_ExitWithUnsavedChangesTail {
             get {
                 return ResourceManager.GetString("Text.ExitWithUnsavedChangesTail", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   FFmpeg was not found. Please check your settings to install or include it. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_Ffmpeg_Notfound {
+            get {
+                return ResourceManager.GetString("Text.Ffmpeg.Notfound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   FFmpeg not found に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_Ffmpeg_NotfoundTitle {
+            get {
+                return ResourceManager.GetString("Text.Ffmpeg.NotfoundTitle", resourceCulture);
             }
         }
         
@@ -1191,6 +1245,15 @@ namespace Kiritori.Properties {
         internal static string Text_ShowGuide {
             get {
                 return ResourceManager.GetString("Text.ShowGuide", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Show Overlay に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_ShowOverlay {
+            get {
+                return ResourceManager.GetString("Text.ShowOverlay", resourceCulture);
             }
         }
         

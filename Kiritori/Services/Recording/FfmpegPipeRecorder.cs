@@ -56,12 +56,40 @@ namespace Kiritori.Services.Recording
         {
             if (_started) { Log.Debug("Start: already started", "REC"); return; }
 
-            if (!File.Exists(Options.FfmpegPath))
-                throw new FileNotFoundException("ffmpeg not found", Options.FfmpegPath);
+            // ---- ffmpeg.exe の自動解決（同梱→PATH）
+            var resolved = Options.FfmpegPath;
+            if (string.IsNullOrWhiteSpace(resolved))
+                resolved = FfmpegLocator.Resolve();
+
+            Options.FfmpegPath = resolved;
+
+            if (string.IsNullOrWhiteSpace(Options.FfmpegPath) || !File.Exists(Options.FfmpegPath))
+            {
+                var msg = SR.T("Text.Ffmpeg.Notfound",
+                            "FFmpeg was not found. Please check your settings to install or include it.");
+                var cap = SR.T("Text.Ffmpeg.NotfoundTitle", "FFmpeg not found");
+
+                try
+                {
+                    System.Windows.Forms.MessageBox.Show(
+                        msg,
+                        cap,
+                        System.Windows.Forms.MessageBoxButtons.OK,
+                        System.Windows.Forms.MessageBoxIcon.Error);
+                }
+                catch
+                {
+                    // UI スレッド以外でも安全にログだけは残す
+                    Log.Debug("FFmpeg not found: " + (Options.FfmpegPath ?? "(null)"), "REC");
+                }
+                return; // 例外を投げずに録画開始を中断
+            }
 
             Directory.CreateDirectory(Path.GetDirectoryName(Options.OutputPath) ?? ".");
+
             var args = BuildArgs(Options);
 
+            Log.Info($"Resolved ffmpeg path: '{Options.FfmpegPath}'", "REC");
             Log.Debug($"Start ffmpeg: path='{Options.FfmpegPath}' args='{args}'", "REC");
             Log.Debug($"Output='{Options.OutputPath}', {Options.Width}x{Options.Height}@{Options.Fps}fps, Kind={Options.Kind}", "REC");
 

@@ -56,7 +56,7 @@ if not defined MSBUILD_EXE (
   goto :end_fail
 )
 
-REM ---- Rebuild（Release/Any CPU）＋ バージョン注入（ここが肝！）
+REM ---- Rebuild（Release/Any CPU）＋ バージョン注入
 echo [INFO] Building (Rebuild Release)...
 "%MSBUILD_EXE%" "%SLN%" /t:Rebuild /v:m ^
   /p:Configuration=Release /p:Platform="Any CPU" ^
@@ -85,7 +85,18 @@ if not defined BIN (
 set "EXE=%BIN%\Kiritori.exe"
 set "SAT_JA_DIR=%BIN%\ja"
 
-set "README=%ROOT%README.md"
+REM ---- ThirdParty（リポジトリ側のソース配置想定）
+REM  例: Kiritori/ThirdParty/ffmpeg/ffmpeg.exe など
+set "TP_SRC=%ROOT%Kiritori\ThirdParty"
+set "TP_DST_REL=ThirdParty"                         REM OUTDIR 配下のフォルダ名
+set "TP_DST="                                       REM 後で %OUTDIR%\%TP_DST_REL%
+
+set "README_SRC=%ROOT%README.md"
+set "LICENSE_SRC="
+for %%F in ("%ROOT%LICENSE" "%ROOT%LICENSE.txt" "%ROOT%LICENSE.md") do (
+  if not defined LICENSE_SRC if exist "%%~fF" set "LICENSE_SRC=%%~fF"
+)
+
 set "OUTBASE=%ROOT%dist"
 set "OUTDIR=%OUTBASE%\Kiritori-%VERSION%"
 set "ZIP=%OUTBASE%\Kiritori-%VERSION%.zip"
@@ -99,7 +110,7 @@ if exist "%OUTDIR%" rd /s /q "%OUTDIR%" >nul 2>&1
 mkdir "%OUTDIR%" || goto :end_fail
 if exist "%ZIP%" del "%ZIP%" >nul 2>&1
 
-REM ---- 配置
+REM ---- 配置（EXE / DLL / Config / サテライト）
 copy /y "%EXE%" "%OUTDIR%\Kiritori.exe" >nul || goto :end_fail
 
 if exist "%EXE%.config" (
@@ -115,18 +126,52 @@ if errorlevel 8 (
   echo [INFO] DLL を同梱しました（%BIN%\*.dll）。
 )
 
-if exist "%README%" (
-  copy /y "%README%" "%OUTDIR%\README.md" >nul
-) else (
-  echo [WARN ] README.md が見つかりませんでした（同梱スキップ）。
-)
-
 if exist "%SAT_JA_DIR%\" (
   mkdir "%OUTDIR%\ja" >nul 2>&1
   xcopy /y /q "%SAT_JA_DIR%\*.resources.dll" "%OUTDIR%\ja\" >nul
   echo [INFO] ja サテライト DLL を同梱しました。
 ) else (
   echo [INFO] ja サテライト DLL は見つかりませんでした（スキップ）。
+)
+
+REM -----------------------------------------------------------------
+REM  ★ 追加1: ThirdParty をそのまま同梱（ffmpeg.exe を含める）
+REM -----------------------------------------------------------------
+set "TP_DST=%OUTDIR%\%TP_DST_REL%"
+if exist "%TP_SRC%\" (
+  robocopy "%TP_SRC%" "%TP_DST%" *.* /E /R:0 /W:0 /NFL /NDL /NJH /NJS /NP >nul
+  if errorlevel 8 (
+    echo [ERROR] ThirdParty コピーに失敗しました。
+    goto :end_fail
+  ) else (
+    echo [INFO] ThirdParty を同梱しました（%TP_DST_REL%\ 配下）。
+  )
+) else (
+  echo [WARN ] ThirdParty フォルダが見つかりませんでした（同梱スキップ）。
+)
+
+REM -----------------------------------------------------------------
+REM  ★ 追加2: LICENSE/README へ FFmpeg 節を自動追記
+REM       - 既存 LICENSE があれば OUTDIR\LICENSE.txt としてコピーし追記
+REM       - なければ新規作成して追記
+REM       - README があれば末尾に Third-Party ライセンス節を追記
+REM -----------------------------------------------------------------
+
+REM --- LICENSE.txt の用意（自プロジェクトの LICENSE -> OUTDIR\LICENSE.txt）
+set "OUT_LICENSE=%OUTDIR%\LICENSE.txt"
+if defined LICENSE_SRC (
+  copy /y "%LICENSE_SRC%" "%OUT_LICENSE%" >nul
+) 
+REM --- README.md のコピー（存在すれば）
+if exist "%README_SRC%" (
+  copy /y "%README_SRC%" "%OUTDIR%\README.md" >nul
+)
+REM --- ThirdParty/ffmpeg 側に原本ライセンスがあれば一緒に（任意）
+if exist "%TP_SRC%\ffmpeg\LICENSE.txt" (
+  copy /y "%TP_SRC%\ffmpeg\LICENSE.txt" "%TP_DST%\ffmpeg\LICENSE.txt" >nul
+)
+if exist "%TP_SRC%\ffmpeg\COPYING"* (
+  copy /y "%TP_SRC%\ffmpeg\COPYING"* "%TP_DST%\ffmpeg\" >nul
 )
 
 REM ---- 埋め込まれたバージョンの確認（ログ出力用）

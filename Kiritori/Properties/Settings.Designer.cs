@@ -59,7 +59,7 @@ namespace Kiritori.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("10")]
+        [global::System.Configuration.DefaultSettingValueAttribute("20")]
         [global::System.ComponentModel.DescriptionAttribute("Maximum number of history items to keep")]
         public int HistoryLimit {
             get { return ((int)(this["HistoryLimit"])); }

@@ -1,0 +1,9 @@
+------------------------------------------------------------
+# Third-Party Licenses
+------------------------------------------------------------
+FFmpeg
+This product bundles FFmpeg binaries at "%TP_DST_REL%\ffmpeg\ffmpeg.exe".
+FFmpeg is licensed under LGPL v2.1 and/or GPL v2.0 (depending on build options).
+Source code and build instructions are available at: https://ffmpeg.org/
+If the license requires, we will provide the corresponding source upon request.
+(C) the FFmpeg developers.

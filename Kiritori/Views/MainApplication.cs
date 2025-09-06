@@ -512,7 +512,7 @@ namespace Kiritori
 
             string text = sb.ToString();
 
-            // ★変更点：method に関係なく、実在ファイルなら常に2行目にファイル名
+            // method に関係なく、実在ファイルなら常に2行目にファイル名
             if (!string.IsNullOrEmpty(path) && File.Exists(path))
             {
                 var name = Path.GetFileName(path);
@@ -565,7 +565,7 @@ namespace Kiritori
             }
         }
 
-        // ★読込：TSV を読み、存在するファイルのみ復元してメニューを作り直す
+        // 読込：TSV を読み、存在するファイルのみ復元してメニューを作り直す
         private void LoadHistoryFromIndex()
         {
             try
@@ -655,7 +655,7 @@ namespace Kiritori
             }
         }
 
-        // ★補助: サムネ用に安全に画像を開く（ロックしない）
+        // サムネ用に安全に画像を開く（ロックしない）
         private static Image SafeLoadImageForThumb(string path)
         {
             try
@@ -671,7 +671,7 @@ namespace Kiritori
             catch { return null; }
         }
 
-        // ★掃除：履歴フォルダ内の管理対象外や上限超過を削除
+        // 掃除：履歴フォルダ内の管理対象外や上限超過を削除
         private void PruneHistoryFilesBeyondLimit()
         {
             try

@@ -136,6 +136,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Services\Logging\Log.cs" />
+    <Compile Include="Services\Recording\FfmpegLocator.cs" />
     <Compile Include="Services\Recording\FfmpegPipeRecorder.cs" />
     <Compile Include="Services\Settings\SettingsDirtyTracker.cs" />
     <Compile Include="Views\Controls\AlphaPreviewPanel.cs">
@@ -276,6 +277,7 @@
   <ItemGroup>
     <Content Include="kiritori.ico" />
     <Content Include="resources\kiritori.ico" />
+    <Content Include="ThirdParty\ffmpeg\LICENSE.txt" />
     <None Include="resources\icon_128x128.png" />
   </ItemGroup>
   <ItemGroup>
@@ -301,6 +303,11 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup />
+  <ItemGroup>
+    <Content Include="ThirdParty\ffmpeg\ffmpeg.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   <!-- >>> added: g.cs 生成（ビルド前）＆ クリーン時の削除 -->
   <Target Name="GenerateVersionInfo" BeforeTargets="BeforeBuild">
     <PropertyGroup>

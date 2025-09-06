@@ -582,4 +582,10 @@
   <data name="Menu.SkipByHash" xml:space="preserve">
     <value>同一ハッシュで描画スキップ</value>
   </data>
+  <data name="Text.Ffmpeg.Notfound" xml:space="preserve">
+    <value>FFmpeg が見つかりません。設定からインストール／同梱をご確認ください。</value>
+  </data>
+  <data name="Text.Ffmpeg.NotfoundTitle" xml:space="preserve">
+    <value>FFmpegが見つかりません</value>
+  </data>
 </root>

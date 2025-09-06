@@ -582,4 +582,10 @@
   <data name="Menu.SkipByHash" xml:space="preserve">
     <value>Skip by hash</value>
   </data>
+  <data name="Text.Ffmpeg.Notfound" xml:space="preserve">
+    <value>FFmpeg was not found. Please check your settings to install or include it.</value>
+  </data>
+  <data name="Text.Ffmpeg.NotfoundTitle" xml:space="preserve">
+    <value>FFmpeg not found</value>
+  </data>
 </root>
