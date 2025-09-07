@@ -21,8 +21,8 @@ namespace Kiritori
 {
     public partial class SnapWindow : Form
     {
-#region ===== フィールド/定数 =====
-public DateTime date;
+        #region ===== フィールド/定数 =====
+        public DateTime date;
 
         // 基本フラグ
         private bool WindowShadowEnabled = true;
@@ -75,11 +75,11 @@ public DateTime date;
         private float _animToScale;
         private int _animDurationMs = 80;   // 120～180ms 推奨
         private DateTime _animStartUtc;
-        private const int   INPUT_BURST_MS       = 180; // この時間内の連打は同一バースト扱い
-        private const int   MAX_PENDING_STEPS    = 6;   // 現在表示位置から“先行できる”最大ステップ
-        private const int   MIN_ANIM_MS          = 80;  // どんなに短くてもこの時間
-        private const int   MAX_ANIM_MS          = 220; // どんなに長くてもこの時間
-        private DateTime    _lastZoomInputUtc;          // 最終ズーム入力時刻
+        private const int INPUT_BURST_MS = 180; // この時間内の連打は同一バースト扱い
+        private const int MAX_PENDING_STEPS = 6;   // 現在表示位置から“先行できる”最大ステップ
+        private const int MIN_ANIM_MS = 80;  // どんなに短くてもこの時間
+        private const int MAX_ANIM_MS = 220; // どんなに長くてもこの時間
+        private DateTime _lastZoomInputUtc;          // 最終ズーム入力時刻
 
 
         // サムネイル
@@ -225,6 +225,12 @@ public DateTime date;
         public void SetLoadMethod(LoadMethod m)
         {
             CurrentLoadMethod = m;
+        }
+        internal Bitmap GetCurrentBitmapClone()
+        {
+            var src = _originalImage ?? pictureBox1?.Image as Bitmap;
+            if (src == null) return null;
+            try { return new Bitmap(src); } catch { return null; }
         }
 
         #endregion

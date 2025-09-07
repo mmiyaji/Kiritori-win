@@ -603,4 +603,16 @@
   <data name="Desc.HideFromCapture" xml:space="preserve">
     <value>When ON (recommended), this window will not appear in screen sharing/recording apps (Zoom/OBS/etc.).</value>
   </data>
+  <data name="Tab.Logs" xml:space="preserve">
+    <value>Logs</value>
+  </data>
+  <data name="Text.ClearView" xml:space="preserve">
+    <value>Clear Logview</value>
+  </data>
+  <data name="Text.AutoScrollToLatest" xml:space="preserve">
+    <value>Auto scroll to latest</value>
+  </data>
+  <data name="Text.LogLevel" xml:space="preserve">
+    <value>LogLevel</value>
+  </data>
 </root>

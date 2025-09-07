@@ -1286,7 +1286,8 @@ namespace Kiritori.Views.LiveCapture
         }
         private void BuildContextMenu()
         {
-            _ctx = new ContextMenuStrip();
+            // _ctx = new ContextMenuStrip();
+            _ctx = new ContextMenuStrip { DropShadowEnabled = false };
 
             _miCapture = new ToolStripMenuItem(SR.T("Menu.Capture", "Capture"));
             _miCapture.Click += (s, e) => startCapture();
@@ -1432,7 +1433,8 @@ namespace Kiritori.Views.LiveCapture
             _miShadow.ShortcutKeys = (Keys)HOTS.SHADOW;
 
             // プライバシー描画設定
-            _miPrivacy = new ToolStripMenuItem(SR.T("Menu.Privacy", "Hide from screen capture")) {
+            _miPrivacy = new ToolStripMenuItem(SR.T("Menu.Privacy", "Hide from screen capture"))
+            {
                 CheckOnClick = false,
                 Checked = Properties.Settings.Default.LivePreviewPrivacyMode,
                 ToolTipText = SR.T("Desc.HideFromCapture", "When ON (recommended), this window will not appear in screen sharing/recording apps (Zoom/OBS/etc.).")
@@ -1515,7 +1517,7 @@ namespace Kiritori.Views.LiveCapture
 
             _miPolicyRoot = new ToolStripMenuItem(SR.T("Menu.Rendering", "Rendering"));
             _miPolicyAlways = new ToolStripMenuItem(SR.T("Menu.AlwaysDraw", "Always draw")) { CheckOnClick = true };
-            _miPolicyHash   = new ToolStripMenuItem(SR.T("Menu.SkipByHash", "Skip by hash")) { CheckOnClick = true };
+            _miPolicyHash = new ToolStripMenuItem(SR.T("Menu.SkipByHash", "Skip by hash")) { CheckOnClick = true };
             void SyncPolicyChecks()
             {
                 if (_policy == RenderPolicy.AlwaysDraw)
@@ -1647,7 +1649,32 @@ namespace Kiritori.Views.LiveCapture
             MarkDropDownExclusion(_miZoomPct);
             MarkDropDownExclusion(_miOpacity);
             MarkDropDownExclusion(_miFpsRoot);
+            DisableShadowsRecursive(_ctx.Items);
         }
+        private static void DisableShadowsRecursive(ToolStripItemCollection items)
+        {
+            foreach (ToolStripItem it in items)
+            {
+                if (it is ToolStripDropDownItem ddi)
+                {
+                    // この時点で DropDown オブジェクト自体は生成済みなので設定可能
+                    if (ddi.DropDown != null)
+                        ddi.DropDown.DropShadowEnabled = false;
+
+                    // ネストしたサブメニューにも再帰適用
+                    if (ddi.DropDown != null)
+                        DisableShadowsRecursive(ddi.DropDown.Items);
+
+                    // 遅延生成や後から開かれる場合に備えて保険
+                    ddi.DropDownOpening += (s, e) =>
+                    {
+                        if (ddi.DropDown != null)
+                            ddi.DropDown.DropShadowEnabled = false;
+                    };
+                }
+            }
+        }
+
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
@@ -2543,10 +2570,10 @@ namespace Kiritori.Views.LiveCapture
 
             // ③ 最終状態を記録
             var ins2 = GetNcInsets();
-            Log.Debug($"ResizeToKeepClient: final Insets {InsetsStr(ins2)}");
+            Log.Debug($"ResizeToKeepClient: final Insets {InsetsStr(ins2)}", "LivePreview");
             if (GetClientRect(h, out RECT crc2))
             {
-                Log.Debug($"ResizeToKeepClient: final realClient={crc2.Right - crc2.Left}x{crc2.Bottom - crc2.Top}, Bounds={RectStr(new Rectangle(this.Left, this.Top, this.Width, this.Height))}");
+                Log.Debug($"ResizeToKeepClient: final realClient={crc2.Right - crc2.Left}x{crc2.Bottom - crc2.Top}, Bounds={RectStr(new Rectangle(this.Left, this.Top, this.Width, this.Height))}", "LivePreview");
             }
         }
         private FfmpegPipeRecorder _rec;

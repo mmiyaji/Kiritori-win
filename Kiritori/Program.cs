@@ -231,7 +231,7 @@ namespace Kiritori
                 // ※ Properties.Settings.Default に追加した設定項目を読み取る
                 var s = Properties.Settings.Default;
                 o.Enabled           = s.LogEnabled;
-                o.MinLevel          = (Kiritori.Services.Logging.LogLevel) s.LogMinLevel;
+                o.MinLevel          = (LogLevel) s.LogMinLevel;
                 o.WriteToDebug      = s.LogWriteToDebug;
                 o.WriteToFile       = s.LogWriteToFile;
                 o.FilePath          = string.IsNullOrEmpty(s.LogFilePath)

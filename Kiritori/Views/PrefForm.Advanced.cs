@@ -6,6 +6,7 @@ using System.Configuration;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using Kiritori.Services.Logging; 
 
 namespace Kiritori
 {
@@ -109,7 +110,8 @@ namespace Kiritori
                 ForeColor = SystemColors.GrayText,
                 Margin = new Padding(0, 0, 0, 0),
                 Padding = new Padding(2, 0, 0, 0),
-                Text = SR.T("Text.Advanced.Tips", "Tip: Double-click the Value cell to edit. Press Enter to commit changes.")
+                Tag = "loc:Text.Advanced.Tips"
+                // Text = SR.T("Text.Advanced.Tips", "Tip: Double-click the Value cell to edit. Press Enter to commit changes.")
             };
             root.Controls.Add(helpLabel, 0, 0);
             // DataGridView
@@ -232,7 +234,13 @@ namespace Kiritori
                 _gridSettings.CurrentCell = target;
                 _gridSettings.BeginEdit(true);
             };
-            _gridSettings.Columns.AddRange(new DataGridViewColumn[] { colName, colScope, colType, colValue, colDesc });
+            _gridSettings.Columns.AddRange(new DataGridViewColumn[] {
+                colName,
+                // colScope,
+                colType,
+                colValue,
+                colDesc,
+                });
 
             _gridSettings.ShowCellToolTips = true;
             _gridSettings.CellToolTipTextNeeded += (s, e) =>

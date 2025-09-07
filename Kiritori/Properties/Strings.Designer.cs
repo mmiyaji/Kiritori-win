@@ -718,6 +718,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Logs に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Tab_Logs {
+            get {
+                return ResourceManager.GetString("Tab.Logs", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Shortcuts に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Tab_Shortcut {
@@ -768,6 +777,15 @@ namespace Kiritori.Properties {
         internal static string Text_AppSetting {
             get {
                 return ResourceManager.GetString("Text.AppSetting", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Auto scroll to latest に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_AutoScrollToLatest {
+            get {
+                return ResourceManager.GetString("Text.AutoScrollToLatest", resourceCulture);
             }
         }
         
@@ -840,6 +858,15 @@ namespace Kiritori.Properties {
         internal static string Text_CaptureSetting {
             get {
                 return ResourceManager.GetString("Text.CaptureSetting", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Clear Logview に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_ClearView {
+            get {
+                return ResourceManager.GetString("Text.ClearView", resourceCulture);
             }
         }
         
@@ -1074,6 +1101,15 @@ namespace Kiritori.Properties {
         internal static string Text_LivePreview {
             get {
                 return ResourceManager.GetString("Text.LivePreview", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   LogLevel に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_LogLevel {
+            get {
+                return ResourceManager.GetString("Text.LogLevel", resourceCulture);
             }
         }
         

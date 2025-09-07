@@ -136,6 +136,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Services\Logging\Log.cs" />
+    <Compile Include="Services\Ocr\OcrFacade.cs" />
     <Compile Include="Services\Recording\FfmpegLocator.cs" />
     <Compile Include="Services\Recording\FfmpegPipeRecorder.cs" />
     <Compile Include="Services\Settings\SettingsDirtyTracker.cs" />
@@ -181,6 +182,9 @@
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Strings.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Views\PrefForm.Logs.cs">
+      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Views\ScreenWindow.cs">
       <SubType>Form</SubType>

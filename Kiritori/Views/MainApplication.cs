@@ -1,6 +1,7 @@
 ﻿using Kiritori.Properties;
 using Kiritori.Helpers;
 using Kiritori.Services.Logging;
+using Kiritori.Services.Ocr;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -8,10 +9,8 @@ using System.Data;
 using System.Drawing;
 using System.Linq;
 using System.Text;
-//using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
-//using System.Windows.Forms.Cursor;
 using System.IO;
 using System.Drawing.Imaging;
 using System.Globalization;
@@ -20,6 +19,7 @@ using System.Threading;
 using System.Diagnostics;
 using System.Collections.Specialized;
 
+
 namespace Kiritori
 {
     internal sealed class HistoryEntry
@@ -27,8 +27,9 @@ namespace Kiritori
         public string Path;
         public Bitmap Thumb;
         public DateTime LoadedAt;     // いつ履歴に積んだか
-        public Size     Resolution;   // 画像解像度
+        public Size Resolution;   // 画像解像度
         public LoadMethod Method;     // Path / Capture / Clipboard
+        public string Description;  // 任意の説明テキスト   
     }
     public partial class MainApplication : Form
     {
@@ -444,101 +445,168 @@ namespace Kiritori
             s.openImageFromHistory(item);
         }
 
-        public void setHistory(SnapWindow sw)
+        public void setHistory(SnapWindow sw, string description = null)
         {
-            int limit = Properties.Settings.Default.HistoryLimit;
-            if (limit == 0) return;
+            if (sw == null) return;
 
-            // 実パスの確定（既存ロジックのまま）
-            string path = sw.Text;
-            if (string.IsNullOrEmpty(path) || !File.Exists(path))
-            {
-                var tagged = sw.GetImageSourcePath();
-                if (!string.IsNullOrEmpty(tagged) && File.Exists(tagged))
-                {
-                    path = tagged;
-                }
-                else
-                {
-                    Directory.CreateDirectory(HistoryTempDir);
-                    path = Path.Combine(HistoryTempDir, $"{DateTime.Now:yyyyMMdd_HHmmssfff}.png");
-                    using (var clone = (Bitmap)sw.main_image.Clone())
-                        clone.Save(path, System.Drawing.Imaging.ImageFormat.Png);
-                    Log.Debug($"History: saved temp image to {path}", "History");
-                }
-            }
+            Bitmap src = sw.GetCurrentBitmapClone();
+            if (src == null) return;
 
-            // 小さめサムネ（前回の CreateThumb 推奨）
-            const int TH_W = 64, TH_H = 64;
-            var srcForThumb = (Image)(sw.thumbnail_image ?? sw.main_image);
-            Bitmap thumb = CreateThumb(srcForThumb, TH_W, TH_H, Color.Transparent);
-
-
-            // 表示テキスト：ファイルならファイル名1行＋詳細1行 / それ以外は「キャプチャー/クリップボード」
-            // sw.CurrentLoadMethod が History の場合は、path が実在すれば Path扱い、なければ Capture扱い等でOK
-            var displayMethod =
-                (sw.CurrentLoadMethod == LoadMethod.Path && !IsHistoryTempPath(path))
-                    ? LoadMethod.Path
-                    : (sw.CurrentLoadMethod == LoadMethod.Clipboard
-                        ? LoadMethod.Clipboard
-                        : LoadMethod.Capture);
+            // 実体PNG保存→entry作成→UI追加（ここは今のまま）
+            Directory.CreateDirectory(HistoryTempDir);
+            string path = Path.Combine(HistoryTempDir, DateTime.Now.ToString("yyyyMMdd_HHmmssfff") + ".png");
+            try { using (var saveCopy = new Bitmap(src)) saveCopy.Save(path, ImageFormat.Png); } catch { path = null; }
 
             var entry = new HistoryEntry
             {
-                Path = path,
-                Thumb = thumb,
-                LoadedAt = DateTime.Now,
-                Resolution = new Size(sw.main_image.Width, sw.main_image.Height),
-                Method = displayMethod
+                Path        = path,
+                Thumb       = MakeThumbnailSafe(src),
+                Resolution  = src.Size,
+                LoadedAt    = DateTime.Now,
+                Method      = LoadMethod.Capture,
+                Description = description   // ここは最初はだいたい null
             };
-            // 表示用の path は、Path 扱いのときだけ渡す
-            var text = FormatHistoryText(
-                path: (displayMethod == LoadMethod.Path) ? path : null,
-                method: displayMethod,
-                res: new Size(sw.main_image.Width, sw.main_image.Height),
-                loadedAt: DateTime.Now
-            );
+            AddHistoryEntryAndRefreshUI(entry);
 
-            var item = new ToolStripMenuItem
+            // フラグOFFならここで終わり（OCRは走らない）
+            if (!Properties.Settings.Default.HistoryIncludeOcr)
             {
-                Image = thumb,
+                try { src.Dispose(); } catch { }
+                return;
+            }
+
+            // 以降は今の非同期OCR（順序は src→ocrCopy→src.Dispose の順）
+            Bitmap ocrCopy = null;
+            try { ocrCopy = new Bitmap(src); } catch { }
+            try { src.Dispose(); } catch { }
+
+            if (ocrCopy == null) return;
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    string lang = Properties.Settings.Default["OcrLanguage"] as string;
+                    if (string.IsNullOrWhiteSpace(lang))
+                    {
+                        string ui = Properties.Settings.Default.UICulture;
+                        lang = !string.IsNullOrEmpty(ui) ? ui : "ja";
+                    }
+
+                    var ocrService = new OcrService();
+                    var provider   = ocrService.Get(null);
+                    var opt = new OcrOptions { LanguageTag = lang, Preprocess = true, CopyToClipboard = false };
+
+                    var result = await provider.RecognizeAsync(ocrCopy, opt).ConfigureAwait(false);
+                    var text   = result != null ? result.Text : null;
+
+                    if (!string.IsNullOrEmpty(text) && this != null && this.IsHandleCreated)
+                    {
+                        this.BeginInvoke((Action)(() =>
+                        {
+                            // 念のため、反映直前にもフラグ確認（途中で設定がOFFになったケースに配慮）
+                            if (!Properties.Settings.Default.HistoryIncludeOcr) return;
+
+                            entry.Description = text;
+                            UpdateHistoryRow(entry);
+                        }));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Debug("Async OCR in setHistory failed: " + ex.Message, "History");
+                }
+                finally
+                {
+                    try { ocrCopy.Dispose(); } catch { }
+                }
+            });
+        }
+
+        private void AddHistoryEntryAndRefreshUI(HistoryEntry entry)
+        {
+            // 表示テキストを生成（ファイル名・解像度・時刻・説明など）
+            var text = FormatHistoryText(
+                path: entry.Path,
+                method: entry.Method,
+                res: entry.Resolution,
+                loadedAt: entry.LoadedAt,
+                description: entry.Description);
+
+            var mi = new ToolStripMenuItem
+            {
+                Image = entry.Thumb,
                 Text = text,
                 DisplayStyle = ToolStripItemDisplayStyle.ImageAndText,
                 ImageAlign = ContentAlignment.MiddleLeft,
                 ImageScaling = ToolStripItemImageScaling.None,
                 Tag = entry,
-                AutoSize = true
+                AutoSize = true,
+                AutoToolTip = !string.IsNullOrEmpty(entry.Path),
+                ToolTipText = entry.Path
             };
-            // ツールチップにフルパスを出す（ファイル時のみ）
-            if (displayMethod == LoadMethod.Path)
+            mi.Click += historyToolStripMenuItem_item_Click;
+
+            // 先頭に挿入（新しい順）
+            historyToolStripMenuItem.DropDownItems.Insert(0, mi);
+
+            // 上限を超えたら末尾から削除
+            int limit = Properties.Settings.Default.HistoryLimit;
+            if (limit > 0 && historyToolStripMenuItem.DropDownItems.Count > limit)
             {
-                item.AutoToolTip = true;
-                item.ToolTipText = path;
+                var last = historyToolStripMenuItem.DropDownItems[historyToolStripMenuItem.DropDownItems.Count - 1] as ToolStripMenuItem;
+                historyToolStripMenuItem.DropDownItems.RemoveAt(historyToolStripMenuItem.DropDownItems.Count - 1);
+                try { (last?.Image as Bitmap)?.Dispose(); } catch { }
+                try { (last?.Tag as HistoryEntry)?.Thumb?.Dispose(); } catch { }
+                last?.Dispose();
             }
 
-            item.Click += historyToolStripMenuItem_item_Click;
-            historyToolStripMenuItem.DropDownItems.Insert(0, item);
+            // すぐにインデックスへも反映したいならここで保存（任意）
+            // SaveHistoryToIndex();
+        }
 
-            // 履歴上限掃除
-            while (historyToolStripMenuItem.DropDownItems.Count > limit)
+        private void UpdateHistoryRow(HistoryEntry entry)
+        {
+            // OCR完了時など、同じ参照の行だけテキストを差し替え
+            foreach (ToolStripItem tsi in historyToolStripMenuItem.DropDownItems)
             {
-                int lastIdx = historyToolStripMenuItem.DropDownItems.Count - 1;
-                var last = historyToolStripMenuItem.DropDownItems[lastIdx] as ToolStripMenuItem;
-                historyToolStripMenuItem.DropDownItems.RemoveAt(lastIdx);
-                if (last != null)
+                var mi = tsi as ToolStripMenuItem;
+                if (mi?.Tag == entry)
                 {
-                    if (last.Tag is HistoryEntry he2)
-                    {
-                        if (IsHistoryTempPath(he2.Path)) SafeDelete(he2.Path);
-                        he2.Thumb?.Dispose();
-                        last.Tag = null;
-                    }
-                    last.Image?.Dispose();
-                    last.Dispose();
+                    mi.Text = FormatHistoryText(
+                        path: (!string.IsNullOrEmpty(entry.Path) ? entry.Path : null),
+                        method: entry.Method,
+                        res: entry.Resolution,
+                        loadedAt: entry.LoadedAt,
+                        description: entry.Description);
+                    mi.AutoToolTip = !string.IsNullOrEmpty(entry.Path);
+                    mi.ToolTipText = entry.Path;
+                    break;
                 }
             }
-            SaveHistoryToIndex();
-            PruneHistoryFilesBeyondLimit();
+
+            // 変更を保存したい場合は任意で
+            // SaveHistoryToIndex();
+        }
+
+
+        private static Bitmap MakeThumbnailSafe(Image src)
+        {
+            try
+            {
+                int w = 90;
+                int h = System.Math.Max(1, src.Height * w / System.Math.Max(1, src.Width));
+                Bitmap bmp = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+                using (Graphics g = Graphics.FromImage(bmp))
+                {
+                    g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                    g.InterpolationMode  = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                    g.SmoothingMode      = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                    g.DrawImage(src, new Rectangle(0, 0, w, h));
+                }
+                return bmp;
+            }
+            catch { return null; }
         }
         private static Bitmap CreateThumb(Image src, int maxW, int maxH, Color? bg = null)
         {
@@ -566,27 +634,44 @@ namespace Kiritori
             }
             return bmp;
         }
-        private static string FormatHistoryText(string path, LoadMethod method, Size res, DateTime loadedAt)
+        private static string OneLine(string s)
         {
-            Log.Debug($"FormatHistoryText: {path}, {method}, {res}, {loadedAt}", "History");
+            if (string.IsNullOrEmpty(s)) return s;
+            s = s.Replace('\t', ' ')
+                .Replace("\r\n", " ")
+                .Replace("\n", " ")
+                .Replace("\r", " ");
+            return s;
+        }
+
+        private static string FormatHistoryText(string path, LoadMethod method, Size res, DateTime loadedAt, string description = null)
+        {
             var sb = new StringBuilder();
             sb.Append('[').Append(loadedAt.ToString("yyyy/MM/dd HH:mm:ss")).Append(']');
-
             if (res.Width > 0 && res.Height > 0)
                 sb.Append(' ').Append('(').Append(res.Width).Append('x').Append(res.Height).Append(')');
 
-            string text = sb.ToString();
-
-            // method に関係なく、実在ファイルなら常に2行目にファイル名
-            if (!string.IsNullOrEmpty(path) && File.Exists(path))
+            // ★ 2行目は「OCR を優先」。なければファイル名（どちらか一方だけ）
+            string second = null;
+            if (!string.IsNullOrEmpty(description))
             {
-                var name = Path.GetFileName(path);
-                text += Environment.NewLine + MiddleEllipsis(name, 32);
+                second = MiddleEllipsis(OneLine(description), 32);
+            }
+            else if (!string.IsNullOrEmpty(path) && File.Exists(path))
+            {
+                second = MiddleEllipsis(Path.GetFileName(path), 32);
+            }
+            else
+            {
+                // ファイルも説明も無いときのフォールバック（任意）
+                // second = SR.T("Text.History.Method.Capture", "Capture");
             }
 
-            return text;
-        }
+            if (!string.IsNullOrEmpty(second))
+                sb.AppendLine().Append(second);
 
+            return sb.ToString();
+        }
 
         // ========== 履歴インデックス ==========
 

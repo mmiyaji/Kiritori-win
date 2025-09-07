@@ -27,43 +27,27 @@ namespace Kiritori
         {
             Log.Info("OCR started", "SnapWindow");
             if (_ocrBusy) return;
+
             var src = _originalImage ?? pictureBox1?.Image as Bitmap;
-            if (src == null)
-            {
-                ShowOverlay("NO IMAGE FOR OCR");
-                return;
-            }
+            if (src == null) { ShowOverlay("NO IMAGE FOR OCR"); return; }
 
             _ocrBusy = true;
             try
             {
-                using (var clone = new Bitmap(src))
+                // ここを Facade に差し替え。Settings から言語を読み、必要ならクリップボードへコピー
+                var text = await Kiritori.Services.Ocr.OcrFacade.RunAsync(src, copyToClipboard: true);
+
+                if (!string.IsNullOrEmpty(text))
                 {
-                    var ocrService = new OcrService();
-                    var provider = ocrService.Get(null);
-
-                    var opt = new OcrOptions
+                    ShowOverlay("OCR RESULT COPIED");
+                    if (Properties.Settings.Default.ShowNotificationOnOcr)
                     {
-                        LanguageTag = "ja",
-                        Preprocess = true,
-                        CopyToClipboard = true
-                    };
-
-                    var result = await provider.RecognizeAsync(clone, opt).ConfigureAwait(true);
-
-                    if (!string.IsNullOrEmpty(result.Text))
-                    {
-                        try { Clipboard.SetText(result.Text); } catch { }
-                        ShowOverlay("OCR RESULT COPIED");
-                        if (Properties.Settings.Default.ShowNotificationOnOcr)
-                        {
-                            ShowOcrToast(result.Text ?? "");
-                        }
+                        ShowOcrToast(text);
                     }
-                    else
-                    {
-                        ShowOverlay("OCR NOT DETECTED");
-                    }
+                }
+                else
+                {
+                    ShowOverlay("OCR NOT DETECTED");
                 }
             }
             catch (Exception ex)

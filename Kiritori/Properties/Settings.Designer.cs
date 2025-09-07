@@ -402,5 +402,23 @@ namespace Kiritori.Properties {
             set { this["LivePreviewPrivacyMode"] = value; }
         }
 
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("ja")]
+        [global::System.ComponentModel.DescriptionAttribute("OCR language code (e.g., ja, en)")]
+        public string OcrLanguage
+        {
+            get { return ((string)(this["OcrLanguage"])); }
+            set { this["OcrLanguage"] = value; }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        [global::System.ComponentModel.DescriptionAttribute("Include OCR text in history items")]
+        public bool HistoryIncludeOcr {
+            get { return ((bool)(this["HistoryIncludeOcr"])); }
+            set { this["HistoryIncludeOcr"] = value; }
+        }
     }
 }

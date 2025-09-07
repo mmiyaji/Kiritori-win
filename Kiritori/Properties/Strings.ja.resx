@@ -247,7 +247,7 @@
     <value>メニューウィンドウを起動時に表示しない</value>
   </data>
   <data name="Text.TipTasktray" xml:space="preserve">
-    <value>Tips: タスクトレイに最小化されます。アイコンを右クリックするとメニューが表示されます。</value>
+    <value>Tip: タスクトレイに最小化されます。アイコンを右クリックするとメニューが表示されます。</value>
   </data>
   <data name="Text.WhatIs1" xml:space="preserve">
     <value>Kiritoriとは</value>
@@ -589,7 +589,7 @@
     <value>FFmpegが見つかりません</value>
   </data>
   <data name="Text.Advanced.Tips" xml:space="preserve">
-    <value>値は Value セルをダブルクリックして編集できます。Enterで確定します。</value>
+    <value>Tip: 値は Value セルをダブルクリックして編集できます。Enterで確定します。</value>
   </data>
   <data name="Menu.OpenClipboard" xml:space="preserve">
     <value>クリップボードから開く</value>
@@ -602,5 +602,17 @@
   </data>
   <data name="Desc.HideFromCapture" xml:space="preserve">
     <value>ON にすると (推奨)、このウィンドウは Zoom や OBS などの画面共有/録画に映らなくなります。</value>
+  </data>
+  <data name="Tab.Logs" xml:space="preserve">
+    <value>ログ</value>
+  </data>
+  <data name="Text.ClearView" xml:space="preserve">
+    <value>ログ表示をクリア</value>
+  </data>
+  <data name="Text.AutoScrollToLatest" xml:space="preserve">
+    <value>最新ログにスクロール</value>
+  </data>
+  <data name="Text.LogLevel" xml:space="preserve">
+    <value>ログレベル</value>
   </data>
 </root>

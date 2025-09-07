@@ -41,6 +41,7 @@ namespace Kiritori
         private HotkeySpec DEF_HOTKEY_LIVE  = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D6 };
         private string _saveButtonDefaultText;
         private System.Windows.Forms.Timer _savedResetTimer;
+        private SynchronizationContext _ui;
         // =========================================================
         // ==================== Constructor ========================
         // =========================================================
@@ -50,6 +51,7 @@ namespace Kiritori
             _initLang = true;
 
             InitializeComponent();
+            _ui = SynchronizationContext.Current;
             _loadingUi = true;
 
 #if DEBUG
@@ -94,10 +96,7 @@ namespace Kiritori
             _loadingUi = false;
             HookRuntimeEvents();
             WireAdvancedDirtyEvents();
-            // ※ ここでは PropertyChanged を購読しない（初期化で発火するため）
-            // 基準ハッシュの初期化も Load 完了後に行う
-            // DumpSettingsKeys();
-            // DumpControlBindings(this);
+            InitLogTab();
         }
 
         // =========================================================
@@ -551,7 +550,9 @@ namespace Kiritori
             }
 
             // ここで一回だけ保存
-            Properties.Settings.Default.Save();
+            // Properties.Settings.Default.Save();
+            _isDirty = true;
+            UpdateDirtyUI();
             Log.Debug($"saved: Cap='{Properties.Settings.Default.HotkeyCapture}', " +
                 $"Ocr='{Properties.Settings.Default.HotkeyOcr}', Live='{Properties.Settings.Default.HotkeyLive}'", "PrefForm");
         }
@@ -1006,7 +1007,10 @@ namespace Kiritori
 
             // タイトル
             Text = string.Format("{0} - {1}", SR.T("App.Name", "Kiritori"), SR.T("PrefForm.Title", "Preferences"));
-
+            if (btnSaveSettings != null && !btnSaveSettings.IsDisposed)
+            {
+                _saveButtonDefaultText = SR.T("Text.BtnSave", "Save");
+            }
             // MSIX/非MSIXで変わるボタン
             if (btnOpenStartupSettings != null && !btnOpenStartupSettings.IsDisposed)
             {

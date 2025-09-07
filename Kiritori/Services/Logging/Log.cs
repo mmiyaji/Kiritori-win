@@ -5,11 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using Kiritori.Helpers;
 
 namespace Kiritori.Services.Logging
 {
-    public enum LogLevel { Trace = 0, Debug = 1, Info = 2, Warn = 3, Error = 4, Fatal = 5, Off = 6 }
-
     public sealed class LoggerOptions
     {
         public bool Enabled = true;
@@ -43,6 +42,7 @@ namespace Kiritori.Services.Logging
         private static BlockingCollection<LogItem> _queue;
         private static Thread _worker;
         private static int _procId = Process.GetCurrentProcess().Id;
+        public static event Action<DateTime, LogLevel, string, string, Exception> LogWritten;
 
         private class LogItem
         {
@@ -137,9 +137,11 @@ namespace Kiritori.Services.Logging
                     var line = FormatLine(item);
                     if (_opt.WriteToDebug)
                     {
-                        try {
-                            System.Diagnostics.Debug.WriteLine(line); 
-                        } catch { }
+                        try
+                        {
+                            System.Diagnostics.Debug.WriteLine(line);
+                        }
+                        catch { }
                     }
                     if (_opt.WriteToFile)
                     {
@@ -151,6 +153,11 @@ namespace Kiritori.Services.Logging
                         }
                         catch { /* ignore IO errors */ }
                     }
+                    try
+                    {
+                        LogWritten?.Invoke(item.Time, item.Level, item.Category, item.Message, item.Exception);
+                    }
+                    catch { /* swallow */ }
                 }
                 catch { /* never throw from logger */ }
             }

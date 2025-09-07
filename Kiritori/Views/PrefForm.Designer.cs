@@ -13,7 +13,11 @@ namespace Kiritori
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null)) components.Dispose();
+            if (disposing)
+            {
+                DisposeLogTab();
+                if (components != null) components.Dispose();
+            }
             base.Dispose(disposing);
         }
 
@@ -131,6 +135,8 @@ namespace Kiritori
 
         // ========= Advanced ==========
         private TabPage tabAdvanced;
+        // ========= Advanced ==========
+        private TabPage tabLogs;
 
         // ========= Info ==========
         private TabPage tabInfo;
@@ -181,6 +187,7 @@ namespace Kiritori
             this.tabAppearance = new TabPage("Appearance") { AutoScroll = false, Tag = "loc:Tab.Appearance" };
             this.tabShortcuts = new TabPage("Shortcuts") { AutoScroll = false, Tag = "loc:Tab.Shortcut" };
             this.tabAdvanced = new TabPage("Advanced") { AutoScroll = false, Tag = "loc:Tab.Advanced" };
+            this.tabLogs = new TabPage("Logs") { AutoScroll = false, Tag = "loc:Tab.Logs" };
 
             this.tabControl.TabPages.AddRange(new TabPage[]
             {
@@ -189,6 +196,7 @@ namespace Kiritori
                 this.tabAppearance,
                 this.tabShortcuts,
                 this.tabAdvanced,
+                this.tabLogs,
             });
 
             // =========================================================
