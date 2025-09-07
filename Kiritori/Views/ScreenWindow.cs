@@ -19,6 +19,7 @@ using System.Security.Principal;
 using Windows.UI.Notifications;
 using System.IO;
 using System.Threading;
+using Kiritori.Services.Ocr;
 //using static Kiritori.Helpers;
 
 namespace Kiritori
@@ -816,59 +817,73 @@ namespace Kiritori
         }
 
 
-        // ====== OCR ユーティリティ ======
-        private async System.Threading.Tasks.Task DoOcrFromCropAsync(Bitmap baseImage, Rectangle crop)
-        {
-            try
-            {
-                using (var sub = baseImage.Clone(crop, baseImage.PixelFormat))
-                {
-                    // あなたの OCR 実装に合わせて参照名を調整してください
-                    // 例: Kiritori.Services.Ocr.WindowsOcrProvider / IOcrProvider / OcrOptions
-                    var provider = new Kiritori.Services.Ocr.WindowsOcrProvider();
-                    var opt = new Kiritori.Services.Ocr.OcrOptions(); // オプションが不要なら削除OK
+        // // ====== OCR ユーティリティ ======
+        // private async System.Threading.Tasks.Task DoOcrFromCropAsync(Bitmap baseImage, Rectangle crop)
+        // {
+        //     try
+        //     {
+        //         using (var sub = baseImage.Clone(crop, baseImage.PixelFormat))
+        //         {
+        //             // あなたの OCR 実装に合わせて参照名を調整してください
+        //             // 例: Kiritori.Services.Ocr.WindowsOcrProvider / IOcrProvider / OcrOptions
+        //             var provider = new Kiritori.Services.Ocr.WindowsOcrProvider();
+        //             string lang = Properties.Settings.Default["OcrLanguage"] as string;
+        //             if (string.IsNullOrWhiteSpace(lang))
+        //             {
+        //                 string ui = Properties.Settings.Default.UICulture;
+        //                 lang = !string.IsNullOrEmpty(ui) ? ui : "ja";
+        //             }
 
-                    var result = await provider.RecognizeAsync(sub, opt);
+        //             var ocrService = new OcrService();
+        //             var provider   = ocrService.Get(null);
+        //             var opt = new Kiritori.Services.Ocr.OcrOptions
+        //             {
+        //                 LanguageTag = lang,
+        //                 Preprocess = true,
+        //                 CopyToClipboard = true
+        //             };
 
-                    // OcrResult のプロパティ名に合わせて調整
-                    // Windows.Media.Ocr.OcrResult なら .Text
-                    // 自作 OcrResult でも通常は Text/PlainText いずれか
-                    string text = null;
-                    try
-                    {
-                        // 最初に Text を試す
-                        var prop = result.GetType().GetProperty("Text");
-                        if (prop != null) text = prop.GetValue(result, null) as string;
-                    }
-                    catch { /* ignore */ }
+        //             var result = await provider.RecognizeAsync(sub, opt);
 
-                    if (string.IsNullOrEmpty(text))
-                    {
-                        // 次善: PlainText を試す
-                        try
-                        {
-                            var prop = result.GetType().GetProperty("PlainText");
-                            if (prop != null) text = prop.GetValue(result, null) as string;
-                        }
-                        catch { /* ignore */ }
-                    }
+        //             // OcrResult のプロパティ名に合わせて調整
+        //             // Windows.Media.Ocr.OcrResult なら .Text
+        //             // 自作 OcrResult でも通常は Text/PlainText いずれか
+        //             string text = null;
+        //             try
+        //             {
+        //                 // 最初に Text を試す
+        //                 var prop = result.GetType().GetProperty("Text");
+        //                 if (prop != null) text = prop.GetValue(result, null) as string;
+        //             }
+        //             catch { /* ignore */ }
 
-                    if (text == null) text = result != null ? result.ToString() : string.Empty;
-                    if (text == null) text = string.Empty;
+        //             if (string.IsNullOrEmpty(text))
+        //             {
+        //                 // 次善: PlainText を試す
+        //                 try
+        //                 {
+        //                     var prop = result.GetType().GetProperty("PlainText");
+        //                     if (prop != null) text = prop.GetValue(result, null) as string;
+        //                 }
+        //                 catch { /* ignore */ }
+        //             }
 
-                    // クリップボードへ
-                    TrySetClipboardText(text);
+        //             if (text == null) text = result != null ? result.ToString() : string.Empty;
+        //             if (text == null) text = string.Empty;
 
-                    // トースト
-                    NotifyOcr(text);
-                }
-            }
-            catch (System.Exception ex)
-            {
-                Log.Trace("[OCR] failed: " + ex, "OCR");
-                NotifyOcrError();
-            }
-        }
+        //             // クリップボードへ
+        //             TrySetClipboardText(text);
+
+        //             // トースト
+        //             NotifyOcr(text);
+        //         }
+        //     }
+        //     catch (System.Exception ex)
+        //     {
+        //         Log.Trace("[OCR] failed: " + ex, "OCR");
+        //         NotifyOcrError();
+        //     }
+        // }
 
         /// <summary>
         /// STA 前提の UI スレッドから呼ばれる想定。例外は握りつぶす。
@@ -949,38 +964,23 @@ namespace Kiritori
                     main.NotifyIcon.ShowBalloonTip(2500, "Kiritori", SR.T("Toast.OcrFailed", "OCR failed"), ToolTipIcon.Error);
             }
         }
-        // こちらを新設。受け取った sub はここで using 破棄します
         private async System.Threading.Tasks.Task DoOcrFromSubImageAsync(Bitmap sub)
         {
             try
             {
-                using (sub) // ここで確実に破棄
+                using (sub) // ここで確実に破棄（Facade内部でクローンする前提）
                 {
-                    // あなたの OCR 実装に合わせて
-                    var provider = new Kiritori.Services.Ocr.WindowsOcrProvider();
-                    var opt = new Kiritori.Services.Ocr.OcrOptions();
+                    var text = await OcrFacade.RunAsync(
+                        sub,
+                        copyToClipboard: true,
+                        preprocess: true
+                    ).ConfigureAwait(false);
 
-                    var result = await provider.RecognizeAsync(sub, opt);
-
-                    string text = null;
-                    try
-                    {
-                        var prop = result.GetType().GetProperty("Text");
-                        if (prop != null) text = prop.GetValue(result, null) as string;
-                    }
-                    catch { }
                     if (string.IsNullOrEmpty(text))
                     {
-                        try
-                        {
-                            var prop = result.GetType().GetProperty("PlainText");
-                            if (prop != null) text = prop.GetValue(result, null) as string;
-                        }
-                        catch { }
+                        NotifyOcrError();
+                        return;
                     }
-                    if (text == null) text = result != null ? result.ToString() : string.Empty;
-
-                    TrySetClipboardText(text);
                     NotifyOcr(text);
                 }
             }
@@ -990,6 +990,5 @@ namespace Kiritori
                 NotifyOcrError();
             }
         }
-
     }
 }

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Drawing;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 using Kiritori.Services.Ocr;
 
 namespace Kiritori.Services.Ocr
@@ -15,30 +17,58 @@ namespace Kiritori.Services.Ocr
         {
             if (src == null) return string.Empty;
 
-            // 言語は Settings から。未設定なら UI のカルチャ or "ja" にフォールバック。
+            // 言語の決定
             var lang = Properties.Settings.Default["OcrLanguage"] as string;
             if (string.IsNullOrWhiteSpace(lang))
-                lang = Properties.Settings.Default.UICulture ?? "ja";   // 既存のUICultureはPrefで管理されています :contentReference[oaicite:0]{index=0}
+            {
+                var ui = Properties.Settings.Default.UICulture;
+                lang = !string.IsNullOrEmpty(ui) ? ui : "ja";
+            }
 
             var ocrService = new OcrService();
-            var provider = ocrService.Get(null);
+            var provider   = ocrService.Get(null);
 
             var opt = new OcrOptions
             {
                 LanguageTag = lang,
-                Preprocess = preprocess,
-                CopyToClipboard = copyToClipboard,
+                Preprocess  = preprocess,
+                // CopyToClipboard は provider では使わないので参照しない
             };
 
+            string text;
             using (var clone = new Bitmap(src)) // 元画像を汚さない
             {
                 var result = await provider.RecognizeAsync(clone, opt).ConfigureAwait(false);
-                return result?.Text ?? string.Empty;
+                text = result?.Text ?? string.Empty;
             }
+
+            if (copyToClipboard && !string.IsNullOrEmpty(text))
+                TrySetClipboardText(text);
+
+            return text;
         }
 
-        /// <summary>Imageからのオーバーロード（必要なら）</summary>
-        public static Task<string> RunAsync(Image image, bool copyToClipboard = false, bool preprocess = true)
-            => RunAsync(image as Bitmap ?? new Bitmap(image), copyToClipboard, preprocess);
+        private static void TrySetClipboardText(string text)
+        {
+            try
+            {
+                Clipboard.SetText(text);
+                return;
+            }
+            catch
+            {
+                // 呼び出し元がMTAでも安全にコピーできるようにSTAスレッドでフォールバック
+                var done = new ManualResetEventSlim(false);
+                var th = new Thread(() =>
+                {
+                    try { Clipboard.SetText(text); } catch { /* ignore */ }
+                    finally { done.Set(); }
+                });
+                th.SetApartmentState(ApartmentState.STA);
+                th.IsBackground = true;
+                th.Start();
+                done.Wait(500); // 最大0.5秒だけ待つ
+            }
+        }
     }
 }

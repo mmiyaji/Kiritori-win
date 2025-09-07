@@ -486,19 +486,11 @@ namespace Kiritori
             {
                 try
                 {
-                    string lang = Properties.Settings.Default["OcrLanguage"] as string;
-                    if (string.IsNullOrWhiteSpace(lang))
-                    {
-                        string ui = Properties.Settings.Default.UICulture;
-                        lang = !string.IsNullOrEmpty(ui) ? ui : "ja";
-                    }
-
-                    var ocrService = new OcrService();
-                    var provider   = ocrService.Get(null);
-                    var opt = new OcrOptions { LanguageTag = lang, Preprocess = true, CopyToClipboard = false };
-
-                    var result = await provider.RecognizeAsync(ocrCopy, opt).ConfigureAwait(false);
-                    var text   = result != null ? result.Text : null;
+                    var text = await OcrFacade.RunAsync(
+                        ocrCopy,
+                        copyToClipboard: false,
+                        preprocess: true
+                        ).ConfigureAwait(false);
 
                     if (!string.IsNullOrEmpty(text) && this != null && this.IsHandleCreated)
                     {

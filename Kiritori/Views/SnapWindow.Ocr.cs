@@ -31,11 +31,20 @@ namespace Kiritori
             var src = _originalImage ?? pictureBox1?.Image as Bitmap;
             if (src == null) { ShowOverlay("NO IMAGE FOR OCR"); return; }
 
+            Bitmap ocrCopy = null;
+            try { ocrCopy = new Bitmap(src); } catch { }
+            try { src.Dispose(); } catch { }
+
+            if (ocrCopy == null) return;
+
             _ocrBusy = true;
             try
             {
-                // ここを Facade に差し替え。Settings から言語を読み、必要ならクリップボードへコピー
-                var text = await Kiritori.Services.Ocr.OcrFacade.RunAsync(src, copyToClipboard: true);
+                var text = await OcrFacade.RunAsync(
+                    ocrCopy,
+                    copyToClipboard: true,
+                    preprocess: true
+                    ).ConfigureAwait(false);
 
                 if (!string.IsNullOrEmpty(text))
                 {
