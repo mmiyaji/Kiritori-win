@@ -14,6 +14,7 @@ namespace Kiritori
     public partial class PrefForm
     {
         // ===== UI =====
+        private bool _initLogTab;
         private RichTextBox _rtbLog;
         private ComboBox _cmbLogLevel;
         private Button _btnClear;
@@ -46,124 +47,120 @@ namespace Kiritori
         /// <summary>コンストラクタの末尾などで呼んでください。</summary>
         private void InitLogTab()
         {
-            // --- タブ作成 ---
-            // tabLogs = new TabPage("ログ") { Name = "tabLog" /* Tag にlocキーを載せるならここ */ };
-
-            var root = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 2,
-            };
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));     // 上部バー
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); // 出力
-
-            // --- 上部バー ---
-            var bar = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Top,
-                AutoSize = true,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
-                Padding = new Padding(8, 8, 8, 4)
-            };
-
-            // ログレベル
-            _cmbLogLevel = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Width = 140,
-                Tag = "loc:Text.LogLevel"
-            };
-            // 表示用（OFF/INFO/DEBUG…）
-            _cmbLogLevel.Items.AddRange(new object[]
-            {
-                "OFF", "INFO", "DEBUG", "TRACE", "WARN", "ERROR", "FATAL"
-            });
-            _cmbLogLevel.SelectedIndexChanged += (s, e) =>
-            {
-                _viewLevel = IndexToLevel(_cmbLogLevel.SelectedIndex);
-                RedrawByFilter();
-                SaveLogViewPrefs();
-                var opt = Log.GetCurrentOptions();
-                opt.MinLevel = _viewLevel;            // Off を選べば完全停止
-                Log.Configure(opt);
-                Log.Info($"Log level changed to {_viewLevel}", "Preferences");
-            };
-
-            // 表示クリア
-            _btnClear = new Button
-            {
-                Text = "Clear View",
-                AutoSize = true,
-                Tag = "loc:Text.ClearView"
-            };
-            _btnClear.Click += (s, e) =>
-            {
-                lock (_logSync)
+            _initLogTab = true;
+            try
+            { 
+                var root = new TableLayoutPanel
                 {
-                    _logBuffer.Clear();
-                }
-                _rtbLog.Clear();
-            };
+                    Dock = DockStyle.Fill,
+                    ColumnCount = 1,
+                    RowCount = 2,
+                };
+                root.RowStyles.Add(new RowStyle(SizeType.AutoSize));     // 上部バー
+                root.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); // 出力
 
-            // 最新へ自動スクロール
-            _chkAutoScroll = new CheckBox
-            {
-                Text = "Auto Scroll to Latest",
-                AutoSize = true,
-                Checked = true,
-                Tag = "loc:Text.AutoScrollToLatest"
-            };
-            _chkAutoScroll.CheckedChanged += (s, e) => SaveLogViewPrefs();
-
-            bar.Controls.Add(new Label
-            {
-                // Text = SR.T("Text.LogLevel", "LogLevel"),
-                AutoSize = true,
-                Padding = new Padding(0, 6, 6, 0),
-                Tag = "loc:Text.LogLevel"                
-            });
-            bar.Controls.Add(_cmbLogLevel);
-            bar.Controls.Add(_btnClear);
-            bar.Controls.Add(_chkAutoScroll);
-
-            // --- 出力部 ---
-            _rtbLog = new RichTextBox
-            {
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-                DetectUrls = false,
-                WordWrap = false,
-                HideSelection = false,
-                BorderStyle = BorderStyle.None,
-                BackColor = SystemColors.Window,
-                Font = new Font("Consolas", 9.0f, FontStyle.Regular, GraphicsUnit.Point)
-            };
-
-            // ルートに載せる
-            root.Controls.Add(bar, 0, 0);
-            root.Controls.Add(_rtbLog, 0, 1);
-
-            // 既存の TabControl に追加（名前は環境に合わせて）
-            this.tabLogs.Controls.Add(root);
-
-            Properties.Settings.Default.PropertyChanged += (_, e) =>
-            {
-                if (e.PropertyName == nameof(Properties.Settings.Default.LogTimestampFormat))
+                // --- 上部バー ---
+                var bar = new FlowLayoutPanel
                 {
-                    // UI 再描画
+                    Dock = DockStyle.Top,
+                    AutoSize = true,
+                    FlowDirection = FlowDirection.LeftToRight,
+                    WrapContents = false,
+                    Padding = new Padding(8, 8, 8, 4)
+                };
+
+                // ログレベル
+                _cmbLogLevel = new ComboBox
+                {
+                    DropDownStyle = ComboBoxStyle.DropDownList,
+                    Width = 140,
+                    Tag = "loc:Text.LogLevel"
+                };
+                // 表示用（OFF/INFO/DEBUG…）
+                _cmbLogLevel.Items.AddRange(new object[]
+                {
+                    "OFF", "INFO", "DEBUG", "TRACE", "WARN", "ERROR", "FATAL"
+                });
+                _cmbLogLevel.SelectedIndexChanged += (s, e) =>
+                {
+                    if (_initLogTab) return;
+                    _viewLevel = IndexToLevel(_cmbLogLevel.SelectedIndex);
                     RedrawByFilter();
-
-                    // ロガー側の書式も同期（任意）
+                    SaveLogViewPrefs();
                     var opt = Log.GetCurrentOptions();
-                    opt.TimestampFormat = Properties.Settings.Default.LogTimestampFormat;
+                    opt.MinLevel = _viewLevel;            // Off を選べば完全停止
                     Log.Configure(opt);
-                }
-            };
+                    Log.Info($"Log level changed to {_viewLevel}", "Preferences");
+                };
 
-            // 既定値＆保存値の復元
-            LoadLogViewPrefs();
+                // 表示クリア
+                _btnClear = new Button
+                {
+                    Text = "Clear View",
+                    AutoSize = true,
+                    Tag = "loc:Text.ClearView"
+                };
+                _btnClear.Click += (s, e) =>
+                {
+                    lock (_logSync)
+                    {
+                        _logBuffer.Clear();
+                    }
+                    _rtbLog.Clear();
+                };
+
+                // 最新へ自動スクロール
+                _chkAutoScroll = new CheckBox
+                {
+                    Text = "Auto Scroll to Latest",
+                    AutoSize = true,
+                    Checked = true,
+                    Tag = "loc:Text.AutoScrollToLatest"
+                };
+                _chkAutoScroll.CheckedChanged += (s, e) => SaveLogViewPrefs();
+
+                bar.Controls.Add(new Label
+                {
+                    // Text = SR.T("Text.LogLevel", "LogLevel"),
+                    AutoSize = true,
+                    Padding = new Padding(0, 6, 6, 0),
+                    Tag = "loc:Text.LogLevel"                
+                });
+                bar.Controls.Add(_cmbLogLevel);
+                bar.Controls.Add(_btnClear);
+                bar.Controls.Add(_chkAutoScroll);
+
+                // --- 出力部 ---
+                _rtbLog = new RichTextBox
+                {
+                    Dock = DockStyle.Fill,
+                    ReadOnly = true,
+                    DetectUrls = false,
+                    WordWrap = false,
+                    HideSelection = false,
+                    BorderStyle = BorderStyle.None,
+                    BackColor = SystemColors.Window,
+                    Font = new Font("Consolas", 9.0f, FontStyle.Regular, GraphicsUnit.Point)
+                };
+
+                // ルートに載せる
+                root.Controls.Add(bar, 0, 0);
+                root.Controls.Add(_rtbLog, 0, 1);
+
+                // 既存の TabControl に追加（名前は環境に合わせて）
+                this.tabLogs.Controls.Add(root);
+
+                // 既定値＆保存値の復元
+                LoadLogViewPrefs();
+                var engineLv = Log.GetCurrentOptions()?.MinLevel ?? LogLevel.Info;
+                _viewLevel = engineLv;
+                _cmbLogLevel.SelectedIndex = LevelToIndex(_viewLevel);
+
+            }
+            finally
+            {
+                _initLogTab = false;  // ← 追加：初期化完了
+            }
 
             // ロガーへ接続
             Log.LogWritten += OnLogWritten;
@@ -359,11 +356,12 @@ namespace Kiritori
         private static string BuildUiLine(DateTime t, LogLevel lv, string cat, string msg, Exception ex)
         {
             var sb = new StringBuilder();
-            sb.Append(FormatTimestamp(t)).Append('\t')
-                .Append(lv.ToString().ToUpperInvariant()).Append('\t');
+            sb.Append(t.ToString("HH:mm:ss:fff")).Append('\t')
+            .Append(lv.ToString().ToUpperInvariant()).Append('\t');
             if (!string.IsNullOrEmpty(cat)) sb.Append('[').Append(cat).Append("] ");
             sb.Append(msg ?? "");
-            if (ex != null) sb.Append(" | EX: ").Append(ex.GetType().Name).Append(": ").Append(ex.Message);
+            if (ex != null)
+                sb.Append(" | EX: ").Append(ex.GetType().Name).Append(": ").Append(ex.Message);
             return sb.ToString();
         }
         private static string FormatTimestamp(DateTime t)

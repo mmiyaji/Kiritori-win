@@ -135,8 +135,10 @@ namespace Kiritori
 
         // ========= Advanced ==========
         private TabPage tabAdvanced;
-        // ========= Advanced ==========
+        // ========= Logs ==========
         private TabPage tabLogs;
+        // ========= Extensions ==========
+        private TabPage tabExtensions;
 
         // ========= Info ==========
         private TabPage tabInfo;
@@ -188,6 +190,7 @@ namespace Kiritori
             this.tabShortcuts = new TabPage("Shortcuts") { AutoScroll = false, Tag = "loc:Tab.Shortcut" };
             this.tabAdvanced = new TabPage("Advanced") { AutoScroll = false, Tag = "loc:Tab.Advanced" };
             this.tabLogs = new TabPage("Logs") { AutoScroll = false, Tag = "loc:Tab.Logs" };
+            this.tabExtensions = new TabPage("Extensions") { AutoScroll = false, Tag = "loc:Tab.Extensions" };
 
             this.tabControl.TabPages.AddRange(new TabPage[]
             {
@@ -195,6 +198,7 @@ namespace Kiritori
                 this.tabGeneral,
                 this.tabAppearance,
                 this.tabShortcuts,
+                this.tabExtensions,
                 this.tabAdvanced,
                 this.tabLogs,
             });
@@ -649,6 +653,10 @@ namespace Kiritori
             // Advanced タブ（プレースホルダ）
             // =========================================================
             BuildAdvancedTab();
+            // =========================================================
+            // Extensions タブ（プレースホルダ）
+            // =========================================================
+            BuildExtensionsTab();
             // =========================================================
             // Info タブ
             // =========================================================

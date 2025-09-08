@@ -615,4 +615,7 @@
   <data name="Text.LogLevel" xml:space="preserve">
     <value>ログレベル</value>
   </data>
+  <data name="Tab.Extensions" xml:space="preserve">
+    <value>拡張機能</value>
+  </data>
 </root>

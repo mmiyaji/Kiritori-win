@@ -1,0 +1,20 @@
+{
+  "id": "toast",
+  "displayName": "Toast Notifications",
+  "version": "1.0.0",
+  "kind": "assembly",
+  "download": {
+    "url": "https://kiritori.ruhenheim.org/ext/toast-1.0.0.zip",
+    "sha256": "4FDB706D097FFF461778F0DD879F36AF4F462F6A8807E8BE2445D31D06A49F7B"
+  },
+  "install": {
+    "targetDir": "bin/toast/1.0.0",
+    "files": [
+      "CommunityToolkit.WinUI.Notifications.dll",
+      "System.ValueTuple.dll",
+      "LICENSE.md"
+    ]
+  },
+  "description": "Library for sending Windows toast notifications.",
+  "requires": { "osMin": "10.0.17763" }
+}

@@ -64,6 +64,9 @@ namespace Kiritori
         private const int MOD_SHIFT = 0x0004;
         private const int MOD_WIN = 0x0008; // 使うなら
         private const int MOD_NOREPEAT = 0x4000; // チャタリング対策
+        private bool _historyDirty = false;
+        private int  _historyDirtyCount = 0;
+
         internal MainApplication(AppStartupOptions opt = null)
         {
             _opt = opt ?? new AppStartupOptions();
@@ -137,6 +140,7 @@ namespace Kiritori
                     }
                 }
             };
+            this.historyToolStripMenuItem.DropDownOpening += (_, __) => SaveHistoryIfDirty();
         }
 
         protected override void WndProc(ref Message m)
@@ -514,7 +518,27 @@ namespace Kiritori
                 }
             });
         }
+        // 履歴が変わったときに呼ぶ（軽量）
+        private void MarkHistoryDirty()
+        {
+            _historyDirty = true;
 
+            // タイマーは使わず、回数でだけ間引く（3回ごとに即時保存）
+            _historyDirtyCount++;
+            if (_historyDirtyCount >= 3)
+            {
+                SaveHistoryIfDirty();
+            }
+        }
+
+        // 「必要な時だけ」保存する軽量フラッシュ
+        private void SaveHistoryIfDirty()
+        {
+            if (!_historyDirty) return;
+            _historyDirty = false;
+            _historyDirtyCount = 0;
+            SaveHistoryToIndex();   // 既存：TSVを書き出すだけの軽処理
+        }
         private void AddHistoryEntryAndRefreshUI(HistoryEntry entry)
         {
             // 表示テキストを生成（ファイル名・解像度・時刻・説明など）
@@ -555,6 +579,7 @@ namespace Kiritori
 
             // すぐにインデックスへも反映したいならここで保存（任意）
             // SaveHistoryToIndex();
+            MarkHistoryDirty();
         }
 
         private void UpdateHistoryRow(HistoryEntry entry)
@@ -579,6 +604,7 @@ namespace Kiritori
 
             // 変更を保存したい場合は任意で
             // SaveHistoryToIndex();
+            MarkHistoryDirty();
         }
 
 
@@ -986,7 +1012,7 @@ namespace Kiritori
                 {
                     if (mi.Tag is HistoryEntry he)
                     {
-                        if (IsHistoryTempPath(he.Path)) SafeDelete(he.Path);
+                        // if (IsHistoryTempPath(he.Path)) SafeDelete(he.Path);
                         he.Thumb?.Dispose();
                         mi.Tag = null;
                     }

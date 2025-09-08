@@ -1,0 +1,19 @@
+{
+  "id": "ffmpeg",
+  "displayName": "FFmpeg",
+  "version": "8.0.3",
+  "kind": "assembly",
+  "download": {
+    "url": "https://kiritori.ruhenheim.org/ext/ffmpeg-8.0.3.zip",
+    "sha256": "F1A5A4005687A18FAB9ACF830725EE9EA02EACBFFDEB7EDC7DEA3794AE762026"
+  },
+  "install": {
+    "targetDir": "bin/ffmpeg/8.0.3",
+    "files": [
+      "ffmpeg.exe",
+      "LICENSE.txt"
+    ]
+  },
+  "description": "FFmpeg is a free software project that produces libraries and programs for handling multimedia data.",
+  "requires": { "osMin": "10.0.17763" }
+}

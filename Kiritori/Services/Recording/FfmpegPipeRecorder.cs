@@ -8,6 +8,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
 using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
 namespace Kiritori.Services.Recording
 {
@@ -59,7 +60,16 @@ namespace Kiritori.Services.Recording
             // ---- ffmpeg.exe の自動解決（同梱→PATH）
             var resolved = Options.FfmpegPath;
             if (string.IsNullOrWhiteSpace(resolved))
+            {
                 resolved = FfmpegLocator.Resolve();
+                if (string.IsNullOrWhiteSpace(resolved))
+                {
+                    MessageBox.Show(null,
+                        "FFmpeg が見つかりませんでした。Extensionsタブからインストールしてください。",
+                        "FFmpeg not found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return; // or throw
+                }
+            }
 
             Options.FfmpegPath = resolved;
 

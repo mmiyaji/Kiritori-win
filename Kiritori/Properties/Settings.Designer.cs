@@ -235,7 +235,7 @@ namespace Kiritori.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
         [global::System.ComponentModel.DescriptionAttribute("Show tray notification when OCR completes")]
         public bool ShowNotificationOnOcr
         {
@@ -397,7 +397,8 @@ namespace Kiritori.Properties {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
         [global::System.ComponentModel.DescriptionAttribute("Hide from screen captures for privacy")]
-        public bool LivePreviewPrivacyMode {
+        public bool LivePreviewPrivacyMode
+        {
             get { return ((bool)(this["LivePreviewPrivacyMode"])); }
             set { this["LivePreviewPrivacyMode"] = value; }
         }
@@ -416,9 +417,20 @@ namespace Kiritori.Properties {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
         [global::System.ComponentModel.DescriptionAttribute("Include OCR text in history items")]
-        public bool HistoryIncludeOcr {
+        public bool HistoryIncludeOcr
+        {
             get { return ((bool)(this["HistoryIncludeOcr"])); }
             set { this["HistoryIncludeOcr"] = value; }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        [global::System.ComponentModel.DescriptionAttribute("FFmpeg executable path (empty to use default)")]
+        public string FfmpegPath
+        {
+            get { return ((string)(this["FfmpegPath"])); }
+            set { this["FfmpegPath"] = value; }
         }
     }
 }

@@ -1,9 +1,11 @@
 ﻿using Kiritori.Helpers;
 using Kiritori.Startup;
 using Kiritori.Services.Logging;
+using Kiritori.Services.Extensions;
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
@@ -58,14 +60,17 @@ namespace Kiritori
         static void Main(string[] args)
         {
             var logopt = LoggerSettingsLoader.LoadFromSettings();
-            #if DEBUG
+#if DEBUG
             if (!logopt.WriteToDebug) logopt.WriteToDebug = true;
             if (logopt.MinLevel > LogLevel.Debug) logopt.MinLevel = LogLevel.Debug;
             if (!logopt.WriteToFile) logopt.WriteToFile = true;
-            #endif
+#endif
             Log.Configure(logopt);
             Application.ApplicationExit += (s, e) => Log.Shutdown();
             Log.Info($"Kiritori starting (v{Application.ProductVersion})", "Startup");
+            EarlyExtensionsInit();
+            // ===== 拡張DLL/衛星リソースの遅延解決 =====
+            RegisterAssemblyResolvers();
 
             try
             {
@@ -112,7 +117,17 @@ namespace Kiritori
             catch { }
 
             // 例: Program.cs / Main の最初で
-            Kiritori.Services.Notifications.ToastBootstrapper.Initialize();
+            // Kiritori.Services.Notifications.ToastBootstrapper.Initialize();
+            try
+            {
+                if (ExtensionsManager.IsInstalled("toast") && ExtensionsManager.IsEnabled("toast"))
+                    Kiritori.Services.Notifications.ToastBootstrapper.Initialize();
+            }
+            catch (Exception ex)
+            {
+                Log.Debug("" + ex, "Ext");
+            }
+            try { Kiritori.Services.Extensions.ExtensionsManager.RepairStateIfMissing(); } catch { }
 
             Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
             Application.EnableVisualStyles();
@@ -151,6 +166,63 @@ namespace Kiritori
                     }
                 }
         }
+        private static void RegisterAssemblyResolvers()
+        {
+            AppDomain.CurrentDomain.AssemblyResolve += (s, e) =>
+            {
+                try
+                {
+                    var an = new AssemblyName(e.Name);
+
+                    // 1) 衛星アセンブリ（i18n）
+                    if (an.Name != null && an.Name.EndsWith(".resources", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var culture = an.CultureName;
+                        if (!string.IsNullOrEmpty(culture))
+                        {
+                            var baseDir = Path.Combine(
+                                Kiritori.Services.Extensions.ExtensionsPaths.Root, "i18n", culture);
+                            var resPath = Path.Combine(baseDir, "Kiritori.resources.dll");
+                            Kiritori.Services.Logging.Log.Debug(
+                                "[AssemblyResolve] Resource " + culture + " => " + resPath, "Startup");
+                            if (File.Exists(resPath)) return Assembly.LoadFrom(resPath);
+                        }
+                    }
+
+                    // 2) Toast 拡張（導入済み＆有効のときのみ）
+                    if (Kiritori.Services.Extensions.ExtensionsManager.IsInstalled("toast") &&
+                        Kiritori.Services.Extensions.ExtensionsManager.IsEnabled("toast"))
+                    {
+                        var ver = Kiritori.Services.Extensions.ExtensionsManager.InstalledVersion("toast") ?? "1.0.0";
+                        var dir = Path.Combine(
+                            Kiritori.Services.Extensions.ExtensionsPaths.Root, "bin", "toast", ver);
+                        var name = an.Name + ".dll";
+                        var p = Path.Combine(dir, name);
+                        Kiritori.Services.Logging.Log.Debug(
+                            "[AssemblyResolve] Toast " + name + " => " + p, "Startup");
+                        if (File.Exists(p)) return Assembly.LoadFrom(p);
+                    }
+                }
+                catch { /* ignore */ }
+
+                return null;
+            };
+        }
+        private static void EarlyExtensionsInit()
+        {
+            try
+            {
+                Kiritori.Services.Extensions.ExtensionsPaths.EnsureDirs();
+                Kiritori.Services.Extensions.ExtensionsManager.RepairStateIfMissing();
+
+                Kiritori.Services.Logging.Log.Info(
+                    "[Ext] Root=" + Kiritori.Services.Extensions.ExtensionsPaths.Root +
+                    "  State=" + Kiritori.Services.Extensions.ExtensionsPaths.StateJson,
+                    "Extensions");
+            }
+            catch { /* 起動阻害は避ける */ }
+        }
+
         private static AppStartupOptions ParseArgs(string[] args)
         {
             string[] exts = { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp" /*, ".heic"*/ };

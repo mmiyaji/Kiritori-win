@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Resources;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -20,6 +21,8 @@ using System.Runtime.InteropServices;
 
 // 次の GUID は、このプロジェクトが COM に公開される場合の、typelib の ID です
 [assembly: Guid("b5168a0c-efd0-4484-b69f-9c0efb4a9dfe")]
+
+[assembly: NeutralResourcesLanguage("en", UltimateResourceFallbackLocation.MainAssembly)]
 
 // アセンブリのバージョン情報は、以下の 4 つの値で構成されています:
 //

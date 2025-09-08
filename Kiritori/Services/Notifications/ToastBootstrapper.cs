@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using CommunityToolkit.WinUI.Notifications; // DesktopNotificationManagerCompat, ToastArguments
+using System.Runtime.CompilerServices; 
 using Kiritori.Helpers;
 using Kiritori.Services.Logging;
 
@@ -24,27 +25,31 @@ namespace Kiritori.Services.Notifications
             Log.Debug($"Initialize: {Aumid}", "Toast");
             if (_initialized) return;
             _initialized = true;
-
-            #pragma warning disable CS0618
+            if (!ToastRuntime.EnsureAvailable(owner: null, promptToInstall: false))
+            {
+                Log.Info("Toast extension not available. Skip bootstrap.", "Toast");
+                return;
+            }
+            InitToolkit(Aumid);
+        }
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void InitToolkit(string aumid)
+        {
+#pragma warning disable CS0618
             if (!PackagedHelper.IsPackaged())
             {
-                // 1) Start メニューに AUMID 付きショートカットを用意
-                EnsureStartMenuShortcut(ShortcutName + ".lnk", Aumid, Application.ExecutablePath);
-
-                // 2) AUMID と COM アクティベータを登録（非管理者でOK）
-                DesktopNotificationManagerCompat.RegisterAumidAndComServer<MyToastActivator>(Aumid);
+                EnsureStartMenuShortcut(ShortcutName + ".lnk", aumid, Application.ExecutablePath);
+                DesktopNotificationManagerCompat.RegisterAumidAndComServer<MyToastActivator>(aumid);
                 DesktopNotificationManagerCompat.RegisterActivator<MyToastActivator>();
-
-                // 3) （推奨）プロセスにも AUMID を付与
-                try { SetCurrentProcessExplicitAppUserModelID(Aumid); } catch { }
+                try { SetCurrentProcessExplicitAppUserModelID(aumid); } catch { }
             }
             else
             {
-                // パッケージ時は AUMID/lnk 不要。OnActivated を使うため RegisterActivator のみ。
                 DesktopNotificationManagerCompat.RegisterActivator<MyToastActivator>();
             }
-            #pragma warning restore CS0618
-            // クリック時ハンドラ（重複登録しない）
+#pragma warning restore CS0618
+
+            // クリック時ハンドラ（既存の中身をそのまま移動）
             ToastNotificationManagerCompat.OnActivated += e =>
             {
                 try
@@ -53,32 +58,21 @@ namespace Kiritori.Services.Notifications
                     var action = ta.Get("action") ?? "open";
                     var path   = ta.Get("path");
 
-                    // UIスレッドへ（起動直後などフォームが無いケースも考慮）
                     var anyForm = Application.OpenForms.Count > 0 ? Application.OpenForms[0] : null;
                     void OnUI(Action a)
                     {
                         if (anyForm != null && anyForm.IsHandleCreated) anyForm.BeginInvoke(a);
-                        else
-                        {
-                            var t = new System.Threading.Thread(() => a());
-                            t.SetApartmentState(System.Threading.ApartmentState.STA);
-                            t.Start();
-                        }
+                        else { var t = new System.Threading.Thread(() => a()); t.SetApartmentState(System.Threading.ApartmentState.STA); t.Start(); }
                     }
 
                     if (action == "open" && !string.IsNullOrEmpty(path) && File.Exists(path))
-                    {
                         OnUI(() => Process.Start(new ProcessStartInfo(path) { UseShellExecute = true }));
-                    }
                     else if (action == "openFolder" && !string.IsNullOrEmpty(path))
-                    {
                         OnUI(() =>
                         {
                             var dir = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
-                            if (!string.IsNullOrEmpty(dir))
-                                Process.Start("explorer.exe", "/select,\"" + path + "\"");
+                            if (!string.IsNullOrEmpty(dir)) Process.Start("explorer.exe", "/select,\"" + path + "\"");
                         });
-                    }
                 }
                 catch (Exception ex)
                 {

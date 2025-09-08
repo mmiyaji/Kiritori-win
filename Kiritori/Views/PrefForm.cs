@@ -3,6 +3,7 @@ using Kiritori.Startup;
 using Kiritori.Views.Controls;
 using Kiritori.Services.Settings;
 using Kiritori.Services.Logging;
+using Kiritori.Services.Extensions;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -36,15 +37,23 @@ namespace Kiritori
         private System.Collections.Generic.Dictionary<string, string> _baselineMap =
                     new System.Collections.Generic.Dictionary<string, string>();
 
-        private HotkeySpec DEF_HOTKEY_CAP   = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 };
-        private HotkeySpec DEF_HOTKEY_OCR   = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 };
-        private HotkeySpec DEF_HOTKEY_LIVE  = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D6 };
+        private HotkeySpec DEF_HOTKEY_CAP = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 };
+        private HotkeySpec DEF_HOTKEY_OCR = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 };
+        private HotkeySpec DEF_HOTKEY_LIVE = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D6 };
         private string _saveButtonDefaultText;
         private System.Windows.Forms.Timer _savedResetTimer;
         private SynchronizationContext _ui;
         // =========================================================
         // ==================== Constructor ========================
         // =========================================================
+        private sealed class LangItem
+        {
+            public string Text { get; set; }     // 表示用 "日本語 (ja) ✓"
+            public string Culture { get; set; }  // "ja"
+            public string ExtId { get; set; }    // "lang_ja"（英語は null）
+            public bool Installed { get; set; }
+            public override string ToString() => Text;
+        }
         public PrefForm()
         {
             _initStartupToggle = true;
@@ -278,7 +287,7 @@ namespace Kiritori
 
             // 変更前の状態を保持（ロールバック用）
             var before = Properties.Settings.Default.RunAtStartup;
-            var want   = chkRunAtStartup.Checked;
+            var want = chkRunAtStartup.Checked;
 
             // UI操作中は触らせない
             chkRunAtStartup.Enabled = false;
@@ -466,23 +475,72 @@ namespace Kiritori
             }
         }
 
-        // Language ComboBox 選択変更
         private void cmbLanguage_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (_initLang) return;
+            var li = cmbLanguage.SelectedItem as LangItem;
+            if (li == null) return;
 
-            var item = cmbLanguage.SelectedItem;
-            var valProp = item?.GetType().GetProperty("Value");
-            var culture = valProp?.GetValue(item)?.ToString() ?? "en";
-
-            var cur = Properties.Settings.Default.UICulture ?? "";
-            if (!string.Equals(cur, culture, StringComparison.OrdinalIgnoreCase))
+            // 未導入ならその場で導入（キャンセルなら元に戻す）
+            if (!li.Installed && !string.IsNullOrEmpty(li.ExtId))
             {
-                Properties.Settings.Default.UICulture = culture; // 変わる時だけセット
-                // ここでは Save しない（Save ボタンで保存）
-                SR.SetCulture(culture);
+                try
+                {
+                    if (!ExtensionsAuto.TryEnsure(li.ExtId, this, prompt: true, throwOnDecline: true))
+                    {
+                        InitLanguageCombo(); // 失敗 → リスト再構成＆元へ
+                        return;
+                    }
+                    li.Installed = true;
+                }
+                catch (OperationCanceledException)
+                {
+                    // ユーザーが拒否 → 選択を元に戻す
+                    _initLang = true;
+                    var saved = Properties.Settings.Default.UICulture;
+                    if (string.IsNullOrWhiteSpace(saved))
+                        saved = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+                    for (int i = 0; i < cmbLanguage.Items.Count; i++)
+                    {
+                        var it = (LangItem)cmbLanguage.Items[i];
+                        if (it.Culture.Equals(saved, System.StringComparison.OrdinalIgnoreCase))
+                        { cmbLanguage.SelectedIndex = i; break; }
+                    }
+                    _initLang = false;
+                    return;
+                }
             }
+
+            // 保存＆（可能なら）適用
+            Properties.Settings.Default.UICulture = li.Culture;
+            try { Properties.Settings.Default.Save(); } catch { }
+            TryApplyUiCulture(li.Culture);
+
+            // 表示の ✓ を更新
+            InitLanguageCombo();
+
+            // // 再起動促し（任意）
+            // if (MessageBox.Show(this,
+            //     "言語を変更しました。アプリを再起動して反映しますか？",
+            //     "Language", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            // {
+            //     try { System.Diagnostics.Process.Start(Application.ExecutablePath); } catch { }
+            //     Application.Exit();
+            // }
         }
+
+        private static void TryApplyUiCulture(string culture)
+        {
+            try
+            {
+                var ci = new CultureInfo(culture);
+                Thread.CurrentThread.CurrentUICulture = ci;
+                // 既存のローカライズヘルパーがあれば
+                try { Kiritori.Helpers.SR.SetCulture(ci.Name); } catch { }
+            }
+            catch { /* ignore */ }
+        }
+
 
         private void SaveHotkeyFromPicker(CaptureMode mode, HotkeyPicker picker)
         {
@@ -494,8 +552,8 @@ namespace Kiritori
             Log.Debug($"picked: '{pickedText}' (Mods={picker.Value.Mods}, Key={picker.Value.Key})", "PrefForm");
 
             // 現在値
-            var currentCap  = Properties.Settings.Default.HotkeyCapture ?? "";
-            var currentOcr  = Properties.Settings.Default.HotkeyOcr ?? "";
+            var currentCap = Properties.Settings.Default.HotkeyCapture ?? "";
+            var currentOcr = Properties.Settings.Default.HotkeyOcr ?? "";
             var currentLive = Properties.Settings.Default.HotkeyLive ?? "";
             Log.Debug($"before: Cap='{currentCap}', Ocr='{currentOcr}', Live='{currentLive}'", "PrefForm");
 
@@ -559,13 +617,13 @@ namespace Kiritori
 
         private void ResetCaptureHotkeyToDefault()
         {
-            var defCapText  = HotkeyUtil.ToText(DEF_HOTKEY_CAP);
-            var defOcrText  = HotkeyUtil.ToText(DEF_HOTKEY_OCR);
+            var defCapText = HotkeyUtil.ToText(DEF_HOTKEY_CAP);
+            var defOcrText = HotkeyUtil.ToText(DEF_HOTKEY_OCR);
             var defLiveText = HotkeyUtil.ToText(DEF_HOTKEY_LIVE);
 
             // 現在値
-            var curOcr  = Properties.Settings.Default.HotkeyOcr   ?? "";
-            var curLive = Properties.Settings.Default.HotkeyLive  ?? "";
+            var curOcr = Properties.Settings.Default.HotkeyOcr ?? "";
+            var curLive = Properties.Settings.Default.HotkeyLive ?? "";
 
             // Capture 既定と衝突していたら OCR / Live も既定化
             if (string.Equals(defCapText, curOcr, StringComparison.OrdinalIgnoreCase))
@@ -587,12 +645,12 @@ namespace Kiritori
 
         private void ResetOcrHotkeyToDefault()
         {
-            var defCapText  = HotkeyUtil.ToText(DEF_HOTKEY_CAP);
-            var defOcrText  = HotkeyUtil.ToText(DEF_HOTKEY_OCR);
+            var defCapText = HotkeyUtil.ToText(DEF_HOTKEY_CAP);
+            var defOcrText = HotkeyUtil.ToText(DEF_HOTKEY_OCR);
             var defLiveText = HotkeyUtil.ToText(DEF_HOTKEY_LIVE);
 
-            var curCap  = Properties.Settings.Default.HotkeyCapture ?? "";
-            var curLive = Properties.Settings.Default.HotkeyLive    ?? "";
+            var curCap = Properties.Settings.Default.HotkeyCapture ?? "";
+            var curLive = Properties.Settings.Default.HotkeyLive ?? "";
 
             // OCR 既定と衝突していたら Capture / Live も既定化
             if (string.Equals(defOcrText, curCap, StringComparison.OrdinalIgnoreCase))
@@ -614,12 +672,12 @@ namespace Kiritori
 
         private void ResetLiveHotkeyToDefault()
         {
-            var defCapText  = HotkeyUtil.ToText(DEF_HOTKEY_CAP);
-            var defOcrText  = HotkeyUtil.ToText(DEF_HOTKEY_OCR);
+            var defCapText = HotkeyUtil.ToText(DEF_HOTKEY_CAP);
+            var defOcrText = HotkeyUtil.ToText(DEF_HOTKEY_OCR);
             var defLiveText = HotkeyUtil.ToText(DEF_HOTKEY_LIVE);
 
             var curCap = Properties.Settings.Default.HotkeyCapture ?? "";
-            var curOcr = Properties.Settings.Default.HotkeyOcr      ?? "";
+            var curOcr = Properties.Settings.Default.HotkeyOcr ?? "";
 
             // Live 既定と衝突していたら Capture / OCR も既定化
             if (string.Equals(defLiveText, curCap, StringComparison.OrdinalIgnoreCase))
@@ -657,16 +715,16 @@ namespace Kiritori
             var ocrGlobalText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyOcr, DEF_HOTKEY_OCR);
             var liveGlobalText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyLive, DEF_HOTKEY_LIVE);
 
-            AddShortcutInfo(tlpShortcutsInfo, capText,          "Start capture",                     tagKey: "Text.StartCapture");
-            AddShortcutInfo(tlpShortcutsInfo, ocrGlobalText,    "Start OCR capture",         tagKey: "Text.StartOcrCapture");
+            AddShortcutInfo(tlpShortcutsInfo, capText, "Start capture", tagKey: "Text.StartCapture");
+            AddShortcutInfo(tlpShortcutsInfo, ocrGlobalText, "Start OCR capture", tagKey: "Text.StartOcrCapture");
 
-            AddShortcutInfo(tlpShortcutsInfo, "Ctrl + W, ESC",  "Close window",                      tagKey: "Text.CloseWindow");
-            AddShortcutInfo(tlpShortcutsInfo, "Ctrl + C",       "Copy to clipboard",                 tagKey: "Text.CopyToClipboard");
+            AddShortcutInfo(tlpShortcutsInfo, "Ctrl + W, ESC", "Close window", tagKey: "Text.CloseWindow");
+            AddShortcutInfo(tlpShortcutsInfo, "Ctrl + C", "Copy to clipboard", tagKey: "Text.CopyToClipboard");
             // AddShortcutInfo(tlpShortcutsInfo, "Ctrl + S",    "Save image",                         tagKey: "Text.SaveImage");
             // AddShortcutInfo(tlpShortcutsInfo, "Ctrl + T",       "Run OCR (copy result / show toast)", tagKey: "Text.RunOCRDesc");
 
             // AddShortcutInfo(tlpShortcutsInfo, "", "");
-            AddShortcutInfo(tlpShortcutsInfo, "", "...and more. See Shortcuts",                       tagKey: "Text.AndMore");
+            AddShortcutInfo(tlpShortcutsInfo, "", "...and more. See Shortcuts", tagKey: "Text.AndMore");
 
             this.grpShortcuts.Controls.Add(tlpShortcutsInfo);
         }
@@ -780,12 +838,69 @@ namespace Kiritori
         {
             _initLang = true;
 
-            this.cmbLanguage.DisplayMember = "Text";
-            this.cmbLanguage.ValueMember = "Value";
-            this.cmbLanguage.Items.Clear();
-            this.cmbLanguage.Items.Add(new { Text = "English (en)", Value = "en" });
-            this.cmbLanguage.Items.Add(new { Text = "日本語 (ja)", Value = "ja" });
+            // 候補を作る
+            var items = new System.Collections.Generic.List<LangItem>();
 
+            // 1) 既定: 英語（拡張不要）
+            items.Add(new LangItem
+            {
+                Text = "English (en) ✓",
+                Culture = "en",
+                ExtId = null,
+                Installed = true
+            });
+
+            // 2) マニフェストから lang_xx を列挙
+            var repo = ExtensionsManager.LoadRepoManifests() ?? Enumerable.Empty<ExtensionManifest>();
+            foreach (var m in repo.Where(m => (m?.Id ?? "").StartsWith("lang_", System.StringComparison.OrdinalIgnoreCase)))
+            {
+                var cul = m.Id.Substring("lang_".Length);
+                bool installed = ExtensionsManager.IsInstalled(m.Id) ||
+                                File.Exists(Path.Combine(ExtensionsPaths.Root, "i18n", cul, "Kiritori.resources.dll"));
+                var name = string.IsNullOrEmpty(m.DisplayName) ? cul : m.DisplayName;
+
+                items.Add(new LangItem
+                {
+                    Text = $"{name} ({cul}){(installed ? " ✓" : "")}",
+                    Culture = cul,
+                    ExtId = m.Id,
+                    Installed = installed
+                });
+            }
+
+            // 3) i18n にあるがマニフェストに無いカルチャも拾う（移行用）
+            try
+            {
+                var i18n = Path.Combine(ExtensionsPaths.Root, "i18n");
+                if (Directory.Exists(i18n))
+                {
+                    foreach (var culDir in Directory.EnumerateDirectories(i18n))
+                    {
+                        var cul = Path.GetFileName(culDir);
+                        if (items.Any(x => x.Culture.Equals(cul, System.StringComparison.OrdinalIgnoreCase))) continue;
+                        if (File.Exists(Path.Combine(culDir, "Kiritori.resources.dll")))
+                        {
+                            items.Add(new LangItem
+                            {
+                                Text = $"{cul} ({cul}) ✓",
+                                Culture = cul,
+                                ExtId = "lang_" + cul,
+                                Installed = true
+                            });
+                        }
+                    }
+                }
+            }
+            catch { /* ignore */ }
+
+            // UIへ反映
+            cmbLanguage.BeginUpdate();
+            cmbLanguage.Items.Clear();
+            foreach (var it in items.OrderBy(i => i.Culture, System.StringComparer.OrdinalIgnoreCase))
+                cmbLanguage.Items.Add(it);
+            cmbLanguage.EndUpdate();
+
+            // 既定選択（設定→なければ現在UI文化）
             var saved = Properties.Settings.Default.UICulture;
             if (string.IsNullOrWhiteSpace(saved))
                 saved = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
@@ -793,20 +908,18 @@ namespace Kiritori
             int index = 0;
             for (int i = 0; i < cmbLanguage.Items.Count; i++)
             {
-                var item = cmbLanguage.Items[i];
-                var valProp = item.GetType().GetProperty("Value");
-                var val = valProp?.GetValue(item)?.ToString();
-                if (val != null && val.Equals(saved, StringComparison.OrdinalIgnoreCase))
-                {
-                    index = i;
-                    break;
-                }
+                var it = (LangItem)cmbLanguage.Items[i];
+                if (it.Culture.Equals(saved, System.StringComparison.OrdinalIgnoreCase)) { index = i; break; }
             }
-            this.cmbLanguage.SelectedIndex = index;
 
-            this.cmbLanguage.SelectedIndexChanged += cmbLanguage_SelectedIndexChanged;
+            cmbLanguage.SelectedIndexChanged -= cmbLanguage_SelectedIndexChanged;
+            cmbLanguage.DisplayMember = nameof(LangItem.Text); // 表示は Text（ToString() でもOK）
+            cmbLanguage.SelectedIndex = index;
+            cmbLanguage.SelectedIndexChanged += cmbLanguage_SelectedIndexChanged;
+
             _initLang = false;
         }
+
 
         private void UpdateVersionLabel()
         {
