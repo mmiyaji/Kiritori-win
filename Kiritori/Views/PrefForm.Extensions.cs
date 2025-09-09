@@ -183,28 +183,74 @@ namespace Kiritori
         private void DoInstallOrUpdateSelected()
         {
             var r = GetSelectedRow();
-            if (r == null) return;
+            if (r == null)
+            {
+                Log.Warn("[ExtensionsUI] No row selected.", "Extensions");
+                return;
+            }
+            if (r.ManifestRef == null)
+            {
+                Log.Error($"[ExtensionsUI] Manifest missing for id={r.Id}", "Extensions");
+                MessageBox.Show(this, "Manifest が見つかりません。", "Extensions",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
             try
             {
-                // 確認（任意、邪魔なら外してOK）
+                // 確認ダイアログ
                 var msg = r.Installed
                     ? $"Update/Reinstall \"{r.Name}\" to {r.RepoVersion}?"
                     : $"Install \"{r.Name}\" ({r.RepoVersion})?";
-                if (MessageBox.Show(this, msg, "Extensions", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                if (MessageBox.Show(this, msg, "Extensions",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                {
                     return;
+                }
 
-                ExtensionsManager.Install(r.ManifestRef);
-                Log.Info($"Installed: {r.Id} {r.RepoVersion}", "Extensions");
+                // UIを一時的に無効化（必要なら対象コントロールだけでもOK）
+                var prevEnabled = this.Enabled;
+                this.Enabled = false;
+                try
+                {
+                    // 進捗ダイアログを表示して実行（キャンセル可）
+                    var ok = ExtDownloadDialog.Run(this, r.ManifestRef);
+                    if (!ok)
+                    {
+                        Log.Warn($"[ExtensionsUI] Install canceled or failed: {r.Id}", "Extensions");
+                        return;
+                    }
+
+                    // 成功時のログと有効化（必要であれば）
+                    Log.Info($"[ExtensionsUI] Installed: {r.Id} {r.RepoVersion}", "Extensions");
+
+                    // インストール後に有効化したい場合（状態を明示的にON）
+                    try
+                    {
+                        ExtensionsManager.SetEnabled(r.Id, true);
+                    }
+                    catch (Exception exSet)
+                    {
+                        Log.Warn($"[ExtensionsUI] Enable failed: {r.Id} ({exSet.Message})", "Extensions");
+                    }
+                }
+                finally
+                {
+                    this.Enabled = prevEnabled;
+                }
             }
             catch (Exception ex)
             {
-                Log.Error($"Install failed: {r.Id} ({ex.Message})", "Extensions");
-                MessageBox.Show(this, "Install failed:\n" + ex.Message, "Extensions", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Log.Error($"[ExtensionsUI] Install failed: {r.Id} ({ex.Message})", "Extensions");
+                MessageBox.Show(this, "Install failed:\n" + ex.Message, "Extensions",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-            ReloadExtensionsIntoGrid();
+            finally
+            {
+                // 一覧を再読み込みして反映
+                ReloadExtensionsIntoGrid();
+            }
         }
-
         private void DoEnableDisableSelected()
         {
             var r = GetSelectedRow();

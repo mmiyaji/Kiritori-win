@@ -45,7 +45,7 @@ set "ROOT=%~dp0"
 set "SLN=%ROOT%Kiritori.sln"
 
 REM ---- Git 短縮ハッシュ → InformationalVersion に付与（任意）
-for /f %%G in ('git rev-parse --short HEAD 2^>nul') do set "GITHASH=%%G"
+@REM for /f %%G in ('git rev-parse --short HEAD 2^>nul') do set "GITHASH=%%G"
 if defined GITHASH (
   set "INFOVER=%VERSION%+g%GITHASH%"
 ) else (
@@ -138,14 +138,14 @@ if exist "%EXE%.config" (
   echo [INFO] EXE.config を同梱しました。
 )
 
-REM DLL（ルート直下 *.dll のみ）
-robocopy "%BIN%" "%OUTDIR%" *.dll /R:0 /W:0 /NFL /NDL /NJH /NJS /NP >nul
-if errorlevel 8 (
-  echo [ERROR] DLL コピーに失敗しました。
-  goto :end_fail
-) else (
-  echo [INFO] DLL を同梱しました（%BIN%\*.dll）。
-)
+@REM REM DLL（ルート直下 *.dll のみ）
+@REM robocopy "%BIN%" "%OUTDIR%" *.dll /R:0 /W:0 /NFL /NDL /NJH /NJS /NP >nul
+@REM if errorlevel 8 (
+@REM   echo [ERROR] DLL コピーに失敗しました。
+@REM   goto :end_fail
+@REM ) else (
+@REM   echo [INFO] DLL を同梱しました（%BIN%\*.dll）。
+@REM )
 
 REM ---- 拡張管理DLLの明示除去（拡張からロードさせる想定のもの）
 for %%F in (

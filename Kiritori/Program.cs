@@ -69,7 +69,8 @@ namespace Kiritori
             Application.ApplicationExit += (s, e) => Log.Shutdown();
             Log.Info($"Kiritori starting (v{Application.ProductVersion})", "Startup");
 
-            SatelliteBootstrapper.EnsureSatellitesExtracted();
+            // SatelliteBootstrapper.EnsureSatellitesExtracted();
+            Kiritori.Helpers.SatelliteBootstrapper.Init();
 
             EarlyExtensionsInit();
             RegisterAssemblyResolvers();

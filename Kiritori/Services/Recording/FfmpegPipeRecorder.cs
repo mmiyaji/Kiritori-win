@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -29,6 +30,11 @@ namespace Kiritori.Services.Recording
         private Stream _stdin;
         private byte[] _lineBuf; // 1ラインぶん (Width * 4)
         private bool _started;
+        private readonly object _sync = new object();
+        private CancellationTokenSource _cts;
+        private volatile bool _disposed;
+        private volatile int _state; // 0=Stopped,1=Starting,2=Running,3=Stopping
+        private EventHandler _onExited; // 解除のため保持
 
         // CFR ワーカー（あなたの環境に既にあればそのまま使われます）
         private volatile bool _run;
@@ -37,7 +43,7 @@ namespace Kiritori.Services.Recording
         private readonly object _frameLock = new object();
         private readonly System.Text.StringBuilder _stderrBuf = new System.Text.StringBuilder(8192);
         private const int _stderrMax = 32768;
-        private volatile int _exitCode = int.MinValue;
+        // private volatile int _exitCode = int.MinValue;
         public int GracefulExitTimeoutMs = 15000;
 
         // 進捗ログ用
@@ -53,100 +59,229 @@ namespace Kiritori.Services.Recording
             _lineBuf = new byte[Options.Width * 4];
         }
 
-        public void Start()
+        // -----------------------------------------
+        // Start: プロセス起動＋CFRワーカー開始＋Exitedハンドラ登録
+        // -----------------------------------------
+        public void Start(string ffmpegPath = null, string arguments = null)
         {
-            if (_started) { Log.Debug("Start: already started", "REC"); return; }
+            if (_disposed) throw new ObjectDisposedException(nameof(FfmpegPipeRecorder));
 
-            // ---- ffmpeg.exe の自動解決（同梱→PATH）
-            var resolved = Options.FfmpegPath;
-            if (string.IsNullOrWhiteSpace(resolved))
+            lock (_sync)
             {
-                resolved = FfmpegLocator.Resolve();
-                if (string.IsNullOrWhiteSpace(resolved))
+                if (_state == 2 || _state == 1) return; // すでに実行/起動中
+                _state = 1;
+
+                _cts?.Dispose();
+                _cts = new CancellationTokenSource();
+
+                // ffmpeg パス／引数の既定化
+                var exe = string.IsNullOrWhiteSpace(ffmpegPath) ? (Options.FfmpegPath ?? "ffmpeg") : ffmpegPath;
+                var args = string.IsNullOrWhiteSpace(arguments) ? BuildArgs(Options) : arguments;
+
+                var psi = new ProcessStartInfo
                 {
-                    MessageBox.Show(null,
-                        "FFmpeg が見つかりませんでした。Extensionsタブからインストールしてください。",
-                        "FFmpeg not found", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return; // or throw
-                }
-            }
+                    FileName = exe,
+                    Arguments = args,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardInput = true,
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = false
+                };
 
-            Options.FfmpegPath = resolved;
-
-            if (string.IsNullOrWhiteSpace(Options.FfmpegPath) || !File.Exists(Options.FfmpegPath))
-            {
-                var msg = SR.T("Text.Ffmpeg.Notfound",
-                            "FFmpeg was not found. Please check your settings to install or include it.");
-                var cap = SR.T("Text.Ffmpeg.NotfoundTitle", "FFmpeg not found");
+                var proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
+                _onExited = new EventHandler(OnProcessExited);
 
                 try
                 {
-                    System.Windows.Forms.MessageBox.Show(
-                        msg,
-                        cap,
-                        System.Windows.Forms.MessageBoxButtons.OK,
-                        System.Windows.Forms.MessageBoxIcon.Error);
+                    if (!proc.Start())
+                    {
+                        _state = 0;
+                        throw new InvalidOperationException("Failed to start ffmpeg.");
+                    }
+
+                    // 起動成功 → フィールドへ確定代入
+                    _proc = proc;
+                    _stdin = proc.StandardInput.BaseStream;
+                    proc.Exited += _onExited;
+
+                    // stderr 読み取り開始（ログ用途）
+                    Task.Run(() => DrainStderr(proc, _cts.Token));
+
+                    // 進捗カウンタ初期化
+                    _writtenFrames = 0;
+                    _sinceStart.Restart();
+
+                    // CFR ワーカー開始（必要な場合）
+                    if (_worker == null || !_worker.IsAlive)
+                    {
+                        _run = true;
+                        _worker = new Thread(WorkerLoop) { IsBackground = true, Name = "FfmpegPipeRecorder.Worker" };
+                        _worker.Start();
+                    }
+
+                    _started = true;
+                    _state = 2; // Running
+                    Log.Debug($"REC Start: {exe} {args}", "REC");
                 }
                 catch
                 {
-                    // UI スレッド以外でも安全にログだけは残す
-                    Log.Debug("FFmpeg not found: " + (Options.FfmpegPath ?? "(null)"), "REC");
+                    try { proc.Exited -= _onExited; } catch { /* ignore */ }
+                    SafeKillAndDispose(proc);
+                    _onExited = null;
+                    _stdin = null;
+                    _proc = null;
+                    _state = 0;
+                    throw;
                 }
-                return; // 例外を投げずに録画開始を中断
+            }
+        }
+
+        // -----------------------------------------
+        // Stop: 正常停止（CFRワーカー停止 → EOF → 待機）
+        // -----------------------------------------
+        public async Task StopAsync(int waitExitMs = 2000)
+        {
+            // すでに停止中ならスキップ
+            lock (_sync)
+            {
+                if (_state == 0 || _state == 3) return;
+                _state = 3; // Stopping
             }
 
-            Directory.CreateDirectory(Path.GetDirectoryName(Options.OutputPath) ?? ".");
+            // 1) ワーカー停止
+            _run = false;
+            try { _worker?.Join(2000); } catch { /* ignore */ }
+            _worker = null;
 
-            var args = BuildArgs(Options);
+            CancellationTokenSource cts = null;
+            Process proc = null;
+            Stream stdin = null;
 
-            Log.Info($"Resolved ffmpeg path: '{Options.FfmpegPath}'", "REC");
-            Log.Debug($"Start ffmpeg: path='{Options.FfmpegPath}' args='{args}'", "REC");
-            Log.Debug($"Output='{Options.OutputPath}', {Options.Width}x{Options.Height}@{Options.Fps}fps, Kind={Options.Kind}", "REC");
-
-            var psi = new ProcessStartInfo
+            // 2) 参照スナップショット＆Exited解除（遅延発火対策）
+            lock (_sync)
             {
-                FileName = Options.FfmpegPath,
-                Arguments = args,
-                UseShellExecute = false,
-                RedirectStandardInput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-                StandardErrorEncoding = System.Text.Encoding.UTF8
-            };
+                cts = _cts; _cts = null;
+                proc = _proc;
+                stdin = _stdin;
 
-            _proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
-            _proc.Exited += (s, e) =>
+                if (proc != null && _onExited != null)
+                {
+                    try { proc.Exited -= _onExited; } catch { /* ignore */ }
+                }
+                _onExited = null;
+            }
+
+            // 3) EOF を伝える
+            try { stdin?.Flush(); } catch { /* ignore */ }
+            try { stdin?.Dispose(); } catch { /* ignore */ }
+
+            // 4) バックグラウンド処理へキャンセル
+            try { cts?.Cancel(); } catch { /* ignore */ }
+            cts?.Dispose();
+
+            // 5) ffmpeg の終了待ち（タイムアウトなら Kill）
+            if (proc != null)
             {
                 try
                 {
-                    _exitCode = _proc.ExitCode;
-                    Log.Debug($"ffmpeg Exited: code={_exitCode}", "REC");
+                    if (!proc.HasExited)
+                    {
+                        var t = Task.Run(() => proc.WaitForExit(waitExitMs));
+                        var ok = await t.ConfigureAwait(false);
+                        if (!ok && !proc.HasExited)
+                        {
+                            try { proc.Kill(); } catch { /* ignore */ }
+                            try { proc.WaitForExit(); } catch { /* ignore */ }
+                        }
+                    }
                 }
-                catch { }
-            };
-            _proc.ErrorDataReceived += (s, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
+                finally
                 {
-                    Log.Debug("[ffmpeg] " + e.Data, "REC");
-                    if (_stderrBuf.Length > _stderrMax) _stderrBuf.Remove(0, _stderrBuf.Length - _stderrMax);
-                    _stderrBuf.AppendLine(e.Data);
+                    SafeKillAndDispose(proc);
                 }
-            };
-            if (!_proc.Start())
-                throw new Win32Exception("failed to start ffmpeg");
+            }
 
-            _proc.BeginErrorReadLine();
-            _stdin = _proc.StandardInput.BaseStream;
-            _started = true;
-            _writtenFrames = 0;
-            _sinceStart.Restart();
+            // 6) 状態クリア
+            lock (_sync)
+            {
+                _stdin = null;
+                _proc = null;
+                _started = false;
+                if (_state != 0) _state = 0; // Stopped
+            }
 
-            _run = true;
-            _worker = new Thread(WorkerLoop) { IsBackground = true, Name = "FfmpegCfrWriter" };
-            _worker.Start();
+            Log.Debug($"REC Stopped: frames={_writtenFrames}, elapsed={_sinceStart.Elapsed.TotalSeconds:F1}s", "REC");
+        }
 
-            Log.Debug("ffmpeg started and stdin opened", "REC");
+        // -----------------------------------------
+        // Exited: 二重実行/NREを防止
+        // -----------------------------------------
+        private void OnProcessExited(object sender, EventArgs e)
+        {
+            // すでに停止処理中なら何もしない
+            if (_state == 0 || _state == 3) return;
+
+            lock (_sync)
+            {
+                if (_state == 0 || _state == 3) return;
+
+                var proc = sender as Process ?? _proc;
+
+                // まずイベント解除
+                if (proc != null && _onExited != null)
+                {
+                    try { proc.Exited -= _onExited; } catch { /* ignore */ }
+                }
+                _onExited = null;
+
+                // 入力/トークンをクリーンアップ
+                try { _stdin?.Dispose(); } catch { /* ignore */ }
+                _stdin = null;
+
+                try { _cts?.Cancel(); } catch { /* ignore */ }
+                _cts?.Dispose();
+                _cts = null;
+
+                SafeKillAndDispose(proc);
+                _proc = null;
+
+                _run = false;
+                _started = false;
+                _state = 0;
+            }
+
+            Log.Debug($"REC Exited: frames={_writtenFrames}, elapsed={_sinceStart.Elapsed.TotalSeconds:F1}s", "REC");
+        }
+
+        // -----------------------------------------
+        // 補助: stderr 読み取り（任意）
+        // -----------------------------------------
+        private void DrainStderr(Process p, CancellationToken ct)
+        {
+            try
+            {
+                var r = p.StandardError;
+                var buf = new char[1024];
+                while (!ct.IsCancellationRequested)
+                {
+                    var n = r.Read(buf, 0, buf.Length);
+                    if (n <= 0) break;
+                    // 必要ならログへ
+                    // Log.Debug(new string(buf, 0, n), "FFmpeg");
+                }
+            }
+            catch { /* ignore */ }
+        }
+
+        // -----------------------------------------
+        // 補助: 安全に破棄
+        // -----------------------------------------
+        private static void SafeKillAndDispose(Process p)
+        {
+            if (p == null) return;
+            try { if (!p.HasExited) p.Kill(); } catch { /* ignore */ }
+            try { p.Dispose(); } catch { /* ignore */ }
         }
 
         private void WorkerLoop()
@@ -231,31 +366,17 @@ namespace Kiritori.Services.Recording
         /// <summary>1フレーム書き込み（ワーカー未使用時に直接呼ぶ）。失敗時は false を返す。</summary>
         public bool TryWriteFrame(Bitmap src)
         {
-            if (!_started || _stdin == null)
-            {
-                Log.Debug("TryWriteFrame: not started/stdin null", "REC");
-                return false;
-            }
-            if (_proc?.HasExited == true)
-            {
-                Log.Debug("TryWriteFrame: ffmpeg already exited", "REC");
-                return false;
-            }
-            if (src == null)
-            {
-                Log.Debug("TryWriteFrame: src is null", "REC");
-                return false;
-            }
-            if (src.Width != Options.Width || src.Height != Options.Height)
-            {
-                Log.Debug($"TryWriteFrame: size mismatch src={src.Width}x{src.Height} != rec={Options.Width}x{Options.Height}", "REC");
-                return false;
-            }
+            // _started かつ _stdin が有効であること
+            var stdin = _stdin; // ローカルスナップショットで競合回避
+            if (!_started || stdin == null) return false;
+
+            if (_proc?.HasExited == true) return false;
+            if (src == null) return false;
+            if (src.Width != Options.Width || src.Height != Options.Height) return false;
 
             BitmapData bd = null;
             try
             {
-                // 32bpp ARGB でロック（BGRA として送る）
                 bd = src.LockBits(new Rectangle(0, 0, src.Width, src.Height),
                     ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
 
@@ -268,30 +389,27 @@ namespace Kiritori.Services.Recording
                     byte* pBase = (byte*)scan0.ToPointer();
                     if (stride > 0)
                     {
-                        // 上→下
                         for (int y = 0; y < Options.Height; y++)
                         {
                             Marshal.Copy(new IntPtr(pBase + y * stride), _lineBuf, 0, lineBytes);
-                            _stdin.Write(_lineBuf, 0, lineBytes);
+                            stdin.Write(_lineBuf, 0, lineBytes);
                         }
                     }
                     else
                     {
-                        // 下→上（負ストライド対応）
                         byte* pRow0 = pBase + (Options.Height - 1) * (-stride);
                         for (int y = 0; y < Options.Height; y++)
                         {
                             Marshal.Copy(new IntPtr(pRow0 + y * (-stride)), _lineBuf, 0, lineBytes);
-                            _stdin.Write(_lineBuf, 0, lineBytes);
+                            stdin.Write(_lineBuf, 0, lineBytes);
                         }
                     }
                 }
 
                 _writtenFrames++;
-                if ((_writtenFrames % 120) == 0) // だいたい4秒ごと@30fps
-                {
+                if ((_writtenFrames % 120) == 0)
                     Log.Debug($"wrote {_writtenFrames} frames, elapsed={_sinceStart.Elapsed.TotalSeconds:F1}s", "REC");
-                }
+
                 return true;
             }
             catch (Exception ex)
@@ -307,46 +425,9 @@ namespace Kiritori.Services.Recording
 
         public void Dispose()
         {
-            Log.Debug("Dispose: begin", "REC");
-
-            // 1) 録画スレッド停止
-            _run = false;
-            try { _worker?.Join(2000); } catch { }
-            _worker = null;
-
-            // 2) 入力を閉じて ffmpeg に EOF を伝える
-            try { _stdin?.Flush(); } catch (Exception ex) { Log.Debug("stdin Flush EX: " + ex.Message, "REC"); }
-            try { _stdin?.Close(); } catch (Exception ex) { Log.Debug("stdin Close EX: " + ex.Message, "REC"); }
-            _stdin = null;
-
-            // 3) 充分に待つ（moov/palette が書かれる）
-            try
-            {
-                if (_proc != null && !_proc.HasExited)
-                {
-                    Log.Debug("waiting ffmpeg exit...", "REC");
-                    var exited = _proc.WaitForExit(GracefulExitTimeoutMs);
-                    Log.Debug("ffmpeg exited=" + exited, "REC");
-                    if (!exited)
-                    {
-                        Log.Debug("ffmpeg not exited in time -> Kill()", "REC");
-                        _proc.Kill();
-                        _proc.WaitForExit(2000);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Debug("Wait/Kill EX: " + ex.Message, "REC");
-            }
-
-            try { _proc?.Dispose(); } catch { }
-            _proc = null;
-            _started = false;
-
-            Log.Debug($"Dispose: end. frames={_writtenFrames}, duration={_sinceStart.Elapsed.TotalSeconds:F1}s, out='{Options?.OutputPath}'", "REC");
-            if (_stderrBuf.Length > 0)
-                Log.Debug("ffmpeg stderr(last):\n" + _stderrBuf.ToString(), "REC");
+            if (_disposed) return;
+            _disposed = true;
+            try { StopAsync(GracefulExitTimeoutMs).GetAwaiter().GetResult(); } catch { /* ignore */ }
         }
     }
 }

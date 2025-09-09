@@ -1,87 +1,121 @@
 ﻿using System;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
-
 
 namespace Kiritori.Helpers
 {
-    static class SatelliteBootstrapper
+    internal static class SatelliteBootstrapper
     {
-        // 既存コードで使っているルート（%LocalAppData%\Kiritori 相当）に合わせてください
-        static readonly string Root = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Kiritori");
+        private static bool _initialized;
+        private static readonly object _gate = new object();
 
-        public static void EnsureSatellitesExtracted()
+        // 例: %LocalAppData%\Kiritori\i18n\ja\Kiritori.resources.dll
+        private static readonly string BaseDir =
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                         "Kiritori", "i18n");
+
+        /// <summary>アプリ起動の最初期に一度だけ呼ぶ</summary>
+        internal static void Init()
         {
-            var asm = typeof(Properties.Strings).Assembly;
-            var resNames = asm.GetManifestResourceNames()
-                            .Where(n => n.EndsWith(".resources.dll", StringComparison.OrdinalIgnoreCase)
-                                    && n.IndexOf(".i18n.", StringComparison.OrdinalIgnoreCase) >= 0)
-                            .ToList();
-
-            Kiritori.Services.Logging.Log.Info(
-                $"[i18n] Embedded satellites found: {resNames.Count}", "Startup");
-
-            foreach (var name in resNames)
+            if (_initialized) return;
+            lock (_gate)
             {
-                var cul = TryGetCultureFromResourceName(name);
-                if (string.IsNullOrEmpty(cul)) continue;
+                if (_initialized) return;
+                EnsureSatellitesExtracted();
+                AppDomain.CurrentDomain.AssemblyResolve += OnResolveSatellite;
+                _initialized = true;
+            }
+        }
 
-                var outDir = Path.Combine(Root, "i18n", cul);
-                var outFile = Path.Combine(outDir, "Kiritori.resources.dll");
+        /// <summary>
+        /// EXE に埋め込まれた "{AsmName}.i18n.{culture}.{AsmName}.resources.dll" を
+        /// %LocalAppData%\Kiritori\i18n\{culture}\ に展開する
+        /// </summary>
+        private static void EnsureSatellitesExtracted()
+        {
+            var asm = Assembly.GetExecutingAssembly();
+            var asmName = asm.GetName().Name; // "Kiritori"
+            var prefix = asmName + ".i18n.";  // "Kiritori.i18n."
+
+            var resourceNames = asm.GetManifestResourceNames()
+                                   .Where(n => n.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+                                            && n.EndsWith(".resources.dll", StringComparison.OrdinalIgnoreCase))
+                                   .ToArray();
+
+            foreach (var resName in resourceNames)
+            {
+                // 期待形: Kiritori.i18n.ja.Kiritori.resources.dll
+                //                                  ^ idx
+                var parts = resName.Split('.');
+                var idx = Array.IndexOf(parts, "i18n");
+                if (idx < 0 || idx + 1 >= parts.Length) continue;
+
+                var culture = parts[idx + 1]; // ja / fr / zh-Hans など
+                var outDir = Path.Combine(BaseDir, culture);
+                var outPath = Path.Combine(outDir, asmName + ".resources.dll");
+
                 Directory.CreateDirectory(outDir);
 
-                using (var src = asm.GetManifestResourceStream(name))
+                // 埋め込みを1回読み切ってファイルへコピー（Positionは触らない）
+                using (var s = asm.GetManifestResourceStream(resName))
                 {
-                    if (src == null) continue;
+                    if (s == null || s.Length == 0) continue;
 
-                    bool write = !File.Exists(outFile) || !StreamsEqual(src, File.OpenRead(outFile));
-                    Kiritori.Services.Logging.Log.Debug(
-                        $"[i18n] {name} -> {outFile} {(write ? "(write)" : "(skip)")}", "Startup");
-
-                    if (write)
+                    // 既存と同サイズならスキップ（簡易最適化。完全一致保証が必要ならSHA-256を計算してください）
+                    try
                     {
-                        src.Position = 0;
-                        using (var fs = File.Create(outFile))
-                            src.CopyTo(fs);
+                        var fi = new FileInfo(outPath);
+                        if (fi.Exists && fi.Length == s.Length)
+                        {
+                            // ※ ここで s をもう使わないので using ブロックの終了で破棄される
+                            continue;
+                        }
                     }
+                    catch { /* 読めなければ上書きへ */ }
+
+                    // 原子更新: temp に書いてから Move
+                    var tmpPath = outPath + ".tmp_" + System.Diagnostics.Process.GetCurrentProcess().Id;
+                    using (var f = new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                    {
+                        s.CopyTo(f); // ここで1回読み切り。Positionのリセットは不要。
+                    }
+                    try
+                    {
+                        if (File.Exists(outPath)) File.Delete(outPath);
+                    }
+                    catch { /* 他プロセスが掴んでいたら上書きに失敗することがある */ }
+                    File.Move(tmpPath, outPath);
                 }
             }
         }
 
-
-        static string TryGetCultureFromResourceName(string resName)
+        /// <summary>
+        /// .NET が衛星アセンブリ（*.resources）を解決できなかったときのフォールバック
+        /// </summary>
+        private static Assembly OnResolveSatellite(object sender, ResolveEventArgs e)
         {
-            // ★判定用に正規化（呼び出し元では resName=元の名前のまま保持）
-            var norm = resName.Replace('\\', '.').Replace('/', '.');
+            var req = new AssemblyName(e.Name);
 
-            // 期待形: "... .i18n.<culture> .Kiritori.resources.dll"
-            const string head = ".i18n.";
-            const string tail = ".Kiritori.resources.dll";
+            // *.resources 以外は対象外
+            if (!req.Name.EndsWith(".resources", StringComparison.OrdinalIgnoreCase))
+                return null;
 
-            int i = norm.IndexOf(head, StringComparison.OrdinalIgnoreCase);
-            if (i < 0) return null;
-            i += head.Length;
+            // 中立カルチャは対象外
+            if (string.IsNullOrEmpty(req.CultureName) || req.CultureName == "neutral")
+                return null;
 
-            int j = norm.IndexOf(tail, i, StringComparison.OrdinalIgnoreCase);
-            if (j < 0 || j <= i) return null;
+            // "Kiritori.resources" → "Kiritori"
+            var asmName = req.Name.Substring(0, req.Name.Length - ".resources".Length);
+            var path = Path.Combine(BaseDir, req.CultureName, asmName + ".resources.dll");
 
-            return norm.Substring(i, j - i); // "ja" / "fr" / "zh-CN" など
-        }
-
-        static bool StreamsEqual(Stream a, Stream b)
-        {
-            using (a)
-            using (b)
-            using (var sha = SHA256.Create())
+            try
             {
-                var ha = sha.ComputeHash(a);
-                var hb = sha.ComputeHash(b);
-                return ha.SequenceEqual(hb);
+                return File.Exists(path) ? Assembly.LoadFrom(path) : null;
+            }
+            catch
+            {
+                return null;
             }
         }
     }

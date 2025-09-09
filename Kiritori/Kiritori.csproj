@@ -139,6 +139,9 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Services\Extensions\ExtDownloadDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Services\Extensions\ExtensionManifest.cs" />
     <Compile Include="Services\Extensions\ExtensionsAuto.cs" />
     <Compile Include="Services\Extensions\ExtensionsEmbedded.cs" />
@@ -368,7 +371,7 @@
     <!-- 出力先のフォルダ作成 (bin\...\i18n\ja など) -->
     <MakeDir Directories="@(_SatDlls->'$(TargetDir)i18n\%(RecursiveDir)')" />
     <!-- i18n\{cul}\Kiritori.resources.dll へコピー -->
-    <Copy SourceFiles="@(_SatDlls)" DestinationFiles="@(_SatDlls->'$(TargetDir)i18n\%(RecursiveDir)$(AssemblyName).resources.dll')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_SatDlls)" DestinationFiles="@(_SatDlls->'i18n\%(RecursiveDir)$(AssemblyName).resources.dll')" SkipUnchangedFiles="true" />
     <!-- ログ（任意） -->
     <Message Text="i18n へコピー: @(_SatDlls->'%(RecursiveDir)$(AssemblyName).resources.dll')" Importance="High" />
   </Target>

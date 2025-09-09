@@ -7,12 +7,22 @@ using System.Net;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Kiritori.Services.Extensions
 {
     internal static class ExtensionsManager
     {
         public static ExtensionState State { get; private set; } = ExtensionState.Load();
+        internal struct DownloadProgress
+        {
+            public int Percent;    // 0-100, 未設定は -1
+            public string Stage;   // "ダウンロード中…", "検証中…", "展開中…" など
+            public long BytesReceived;
+            public long TotalBytes;
+        }
+
 
         public static IEnumerable<ExtensionManifest> LoadRepoManifests()
         {
@@ -188,7 +198,7 @@ namespace Kiritori.Services.Extensions
             try
             {
                 var root = ExtensionsPaths.Root;
-                var ver  = InstalledVersion(id);
+                var ver = InstalledVersion(id);
 
                 // bin\<id>\<ver>
                 if (!string.IsNullOrEmpty(ver))
@@ -353,6 +363,143 @@ namespace Kiritori.Services.Extensions
             }
             catch { /* ignore */ }
         }
+        public static string InstallWithProgress(
+            ExtensionManifest m,
+            IProgress<int> progress = null)
+        {
+            if (m == null || m.Download == null || m.Install == null) 
+                throw new ArgumentException("bad manifest");
 
+            ExtensionsPaths.EnsureDirs();
+
+            // 1) ダウンロード
+            var tmpZip = Path.Combine(Path.GetTempPath(), $"kiritori_ext_{m.Id}_{m.Version}.zip");
+            using (var wc = new WebClient())
+            {
+                if (progress != null)
+                {
+                    wc.DownloadProgressChanged += (s, e) =>
+                    {
+                        progress.Report(e.ProgressPercentage);
+                        Log.Debug($"[Ext] Download {m.Id}: {e.ProgressPercentage}%", "Extensions");
+                    };
+                }
+
+                // ブロッキングで進捗も拾いたいなら Async+WaitOne を使う
+                var done = new System.Threading.AutoResetEvent(false);
+                Exception error = null;
+
+                wc.DownloadFileCompleted += (s, e) =>
+                {
+                    if (e.Error != null) error = e.Error;
+                    done.Set();
+                };
+
+                wc.DownloadFileAsync(new Uri(m.Download.Url), tmpZip);
+                done.WaitOne();
+
+                if (error != null) throw error;
+            }
+
+            // 2) 検証
+            if (!ExtensionsUtil.VerifySha256(tmpZip, m.Download.Sha256))
+                throw new InvalidOperationException("SHA256 verification failed.");
+
+            // 3) 展開
+            var target = ExtensionsPaths.Expand(m.Install.TargetDir);
+            Directory.CreateDirectory(target);
+            ExtensionsZip.ExtractZipAllowOverwrite(tmpZip, target);
+
+            // 4) 必要ファイルが揃っているか検証
+            foreach (var f in m.Install.Files ?? Array.Empty<string>())
+            {
+                var p = Path.Combine(target, f);
+                if (!File.Exists(p)) throw new FileNotFoundException("Missing file in extension package.", p);
+            }
+
+            MarkInstalled(m.Id, m.Version);
+            Log.Info($"Extension installed: {m.Id} {m.Version}", "Ext");
+            return target;
+        }
+
+        public static async Task<string> InstallAsync(
+            ExtensionManifest m,
+            IProgress<DownloadProgress> progress,
+            System.Threading.CancellationToken ct)
+        {
+            if (m == null || m.Download == null || m.Install == null) throw new ArgumentException("bad manifest");
+
+            ExtensionsPaths.EnsureDirs();
+
+            var tmpZip = Path.Combine(Path.GetTempPath(), $"kiritori_ext_{m.Id}_{m.Version}.zip");
+
+            // 1) ダウンロード
+            progress?.Report(new DownloadProgress { Percent = 0, Stage = "ダウンロード中…" });
+
+            using (var wc = new WebClient())
+            using (ct.Register(() => wc.CancelAsync()))
+            {
+                var tcs = new TaskCompletionSource<bool>();
+                Exception error = null;
+
+                wc.DownloadProgressChanged += (s, e) =>
+                {
+                    var p = e.ProgressPercentage >= 0 ? e.ProgressPercentage : 0;
+                    progress?.Report(new DownloadProgress
+                    {
+                        Percent = p,
+                        Stage = $"ダウンロード中… {p}%",
+                        BytesReceived = e.BytesReceived,
+                        TotalBytes = e.TotalBytesToReceive
+                    });
+                };
+                wc.DownloadFileCompleted += (s, e) =>
+                {
+                    if (e.Cancelled) { tcs.TrySetCanceled(); return; }
+                    if (e.Error != null) { error = e.Error; tcs.TrySetException(e.Error); return; }
+                    tcs.TrySetResult(true);
+                };
+
+                wc.DownloadFileAsync(new Uri(m.Download.Url), tmpZip);
+                await tcs.Task.ConfigureAwait(false);
+                if (error != null) throw error;
+                ct.ThrowIfCancellationRequested();
+            }
+
+            // 2) 検証（DEBUG ではスキップする現在の仕様を踏襲）
+            bool verify = true;
+#if DEBUG
+            verify = false; // DebugビルドはSHAチェックをスキップ
+#endif
+            if (verify)
+            {
+                progress?.Report(new DownloadProgress { Percent = 100, Stage = "検証中…" });
+                if (!ExtensionsUtil.VerifySha256(tmpZip, m.Download.Sha256))
+                    throw new InvalidOperationException("SHA256 verification failed.");
+            }
+            else
+            {
+                Log.Debug("[Ext] SHA256 skipped (DEBUG build).", "Extensions");
+            }
+
+            ct.ThrowIfCancellationRequested();
+
+            // 3) 展開
+            progress?.Report(new DownloadProgress { Percent = -1, Stage = "展開中…" });
+            var target = ExtensionsPaths.Expand(m.Install.TargetDir);
+            Directory.CreateDirectory(target);
+            ExtensionsZip.ExtractZipAllowOverwrite(tmpZip, target); // 既存仕様を流用（上書き展開）
+
+            // 4) 必須ファイル検証（既存仕様）
+            foreach (var f in m.Install.Files ?? Array.Empty<string>())
+            {
+                var p = Path.Combine(target, f);
+                if (!File.Exists(p)) throw new FileNotFoundException("Missing file in extension package.", p);
+            }
+
+            MarkInstalled(m.Id, m.Version);
+            Log.Info($"Extension installed: {m.Id} {m.Version}", "Ext");
+            return target;
+        }
     }
 }
