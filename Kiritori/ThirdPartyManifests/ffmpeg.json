@@ -4,8 +4,9 @@
   "version": "8.0.3",
   "kind": "assembly",
   "download": {
-    "url": "https://kiritori.ruhenheim.org/ext/ffmpeg-8.0.3.zip",
-    "sha256": "F1A5A4005687A18FAB9ACF830725EE9EA02EACBFFDEB7EDC7DEA3794AE762026"
+    "url": "https://github.com/mmiyaji/Kiritori-win/releases/download/v1.4.0/ffmpeg-8.0.3.zip",
+    "sha256": "F1A5A4005687A18FAB9ACF830725EE9EA02EACBFFDEB7EDC7DEA3794AE762026",
+    "size": 62681277
   },
   "install": {
     "targetDir": "bin/ffmpeg/8.0.3",

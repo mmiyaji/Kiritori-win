@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Kiritori.Services.Logging;
+using Kiritori.Helpers;
 
 namespace Kiritori.Services.Extensions
 {
@@ -27,6 +28,29 @@ namespace Kiritori.Services.Extensions
 
         public static bool Run(IWin32Window owner, ExtensionManifest manifest)
         {
+            if (manifest == null) throw new ArgumentNullException(nameof(manifest));
+
+            // --- 事前確認ダイアログ（サイズ表示つき） ---
+            var sizeBytes = manifest.Download?.Size ?? 0L;
+            var sizeText = sizeBytes > 0
+                ? FormatBytes(sizeBytes)
+                : SR.T("Extensions.InstallDialog.SizeUnknown", "Unknown");
+
+            var name = manifest.DisplayName ?? manifest.Id ?? "(unknown)";
+            var ver = manifest.Version ?? "-";
+            var url = manifest.Download?.Url ?? "-";
+            var sha = manifest.Download?.Sha256;
+            var shaShort = (!string.IsNullOrEmpty(sha) && sha.Length >= 8) ? sha.Substring(0, 8) : "-";
+
+            var title = SR.T("Extensions.InstallDialog.ConfirmTitle", "Install Extension");
+            var body = string.Format(
+                "Install \"{0}\" ({1})?\r\nDownload size: {2}\r\nSource: {3}\r\nSHA-256: {4}",
+                name, ver, sizeText, url, shaShort);
+
+            var btn = MessageBox.Show(owner, body, title, MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
+            if (btn != DialogResult.OK) return false;
+
+            // --- 既存のダイアログを開いてダウンロード実行 ---
             using (var dlg = new ExtDownloadDialog(manifest))
             {
                 dlg.StartPosition = FormStartPosition.CenterParent;
@@ -37,7 +61,7 @@ namespace Kiritori.Services.Extensions
 
         private void InitializeComponent()
         {
-            this.Text = "拡張機能のインストール";
+            this.Text = SR.T("Extensions.InstallDialog.Title", "Install Extension");
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MinimizeBox = false;
             this.MaximizeBox = false;
@@ -56,7 +80,7 @@ namespace Kiritori.Services.Extensions
             _lblStatus = new Label
             {
                 AutoSize = false,
-                Text = "準備中…",
+                Text = SR.T("Extensions.InstallDialog.Preparing", "Preparing..."),
                 Dock = DockStyle.Top,
                 Height = 24
             };
@@ -73,7 +97,7 @@ namespace Kiritori.Services.Extensions
 
             _btnCancel = new Button
             {
-                Text = "キャンセル",
+                Text = SR.T("Extensions.InstallDialog.Cancel", "Cancel"),
                 Dock = DockStyle.Bottom,
                 Height = 32
             };
@@ -95,11 +119,12 @@ namespace Kiritori.Services.Extensions
             {
                 try
                 {
-                    UpdateStatus($"ダウンロードを開始します…");
+                    UpdateStatus(SR.T("Extensions.InstallDialog.StartingDownload", "Starting download..."));
                     var sw = Stopwatch.StartNew();
 
                     var progress = new Progress<ExtensionsManager.DownloadProgress>(
-                        p => {
+                        p =>
+                        {
                             if (p.Stage != null) UpdateStatus(p.Stage);
                             if (p.Percent >= 0) UpdatePercent(p.Percent);
                         });
@@ -107,21 +132,21 @@ namespace Kiritori.Services.Extensions
                     var targetDir = await ExtensionsManager.InstallAsync(_manifest, progress, _cts.Token);
 
                     sw.Stop();
-                    Log.Info($"[Ext] Install finished: {_manifest.Id} -> {targetDir} ({sw.ElapsedMilliseconds}ms)", "Extensions");
+                    Log.Info($"Install finished: {_manifest.Id} -> {targetDir} ({sw.ElapsedMilliseconds}ms)", "Extensions");
 
                     this.SafeInvoke(() => { this.DialogResult = DialogResult.OK; this.Close(); });
                 }
                 catch (OperationCanceledException)
                 {
-                    Log.Warn($"[Ext] Install canceled: {_manifest.Id}", "Extensions");
+                    Log.Warn($"Install canceled: {_manifest.Id}", "Extensions");
                     this.SafeInvoke(() => { this.DialogResult = DialogResult.Cancel; this.Close(); });
                 }
                 catch (Exception ex)
                 {
-                    Log.Error($"[Ext] Install failed: {_manifest.Id} ({ex.Message})", "Extensions");
+                    Log.Error($"Install failed: {_manifest.Id} ({ex.Message})", "Extensions");
                     this.SafeInvoke(() =>
                     {
-                        MessageBox.Show(this, "インストールに失敗しました:\n" + ex.Message, "Kiritori Extensions",
+                        MessageBox.Show(this, SR.T("Extensions.InstallDialog.InstallFailed", "Installation failed:") + "\n" + ex.Message, "Kiritori Extensions",
                             MessageBoxButtons.OK, MessageBoxIcon.Error);
                         this.DialogResult = DialogResult.Abort;
                         this.Close();
@@ -138,6 +163,15 @@ namespace Kiritori.Services.Extensions
         {
             if (percent < 0) percent = 0; if (percent > 100) percent = 100;
             this.SafeInvoke(() => _bar.Value = percent);
+        }
+        private static string FormatBytes(long bytes)
+        {
+            const long K = 1024, M = K * 1024, G = M * 1024;
+            if (bytes >= G) return (bytes / (double)G).ToString("0.0") + " GiB";
+            if (bytes >= M) return (bytes / (double)M).ToString("0.0") + " MiB";
+            if (bytes >= K) return (bytes / (double)K).ToString("0.0") + " KiB";
+            if (bytes > 0)  return bytes + " B";
+            return SR.T("Extensions.InstallDialog.SizeUnknown", "Unknown");
         }
     }
 

@@ -124,6 +124,105 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Cancel に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Extensions_InstallDialog_Cancel {
+            get {
+                return ResourceManager.GetString("Extensions.InstallDialog.Cancel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Do you want to install に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Extensions_InstallDialog_ConfirmInstall {
+            get {
+                return ResourceManager.GetString("Extensions.InstallDialog.ConfirmInstall", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Install Extension に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Extensions_InstallDialog_ConfirmTitle {
+            get {
+                return ResourceManager.GetString("Extensions.InstallDialog.ConfirmTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Downloading... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Extensions_InstallDialog_Downloading {
+            get {
+                return ResourceManager.GetString("Extensions.InstallDialog.Downloading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Extracting... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Extensions_InstallDialog_Extracting {
+            get {
+                return ResourceManager.GetString("Extensions.InstallDialog.Extracting", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Installation failed に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Extensions_InstallDialog_InstallFailed {
+            get {
+                return ResourceManager.GetString("Extensions.InstallDialog.InstallFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Preparing... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Extensions_InstallDialog_Preparing {
+            get {
+                return ResourceManager.GetString("Extensions.InstallDialog.Preparing", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Unknown に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Extensions_InstallDialog_SizeUnknown {
+            get {
+                return ResourceManager.GetString("Extensions.InstallDialog.SizeUnknown", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Starting download... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Extensions_InstallDialog_StartingDownload {
+            get {
+                return ResourceManager.GetString("Extensions.InstallDialog.StartingDownload", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Install Extension に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Extensions_InstallDialog_Title {
+            get {
+                return ResourceManager.GetString("Extensions.InstallDialog.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Verifying... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Extensions_InstallDialog_Verifying {
+            get {
+                return ResourceManager.GetString("Extensions.InstallDialog.Verifying", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Always draw に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_AlwaysDraw {
@@ -696,6 +795,15 @@ namespace Kiritori.Properties {
         internal static string Tab_Appearance {
             get {
                 return ResourceManager.GetString("Tab.Appearance", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Extensions に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Tab_Extensions {
+            get {
+                return ResourceManager.GetString("Tab.Extensions", resourceCulture);
             }
         }
         

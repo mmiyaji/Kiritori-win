@@ -1,4 +1,5 @@
 ﻿using Kiritori.Services.Logging;
+using Kiritori.Helpers;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -38,7 +39,7 @@ namespace Kiritori.Services.Extensions
                         var m = LoadManifest(f);
                         if (m != null) list.Add(m);
                     }
-                    Kiritori.Services.Logging.Log.Debug($"[Ext] Manifests scanned: {dir} => {list.Count}", "Extensions");
+                    Kiritori.Services.Logging.Log.Debug($"Manifests scanned: {dir} => {list.Count}", "Extensions");
                 }
 
                 // 2) 見つからなければ EXE に埋め込んだデフォルトを使う
@@ -46,7 +47,7 @@ namespace Kiritori.Services.Extensions
                 {
                     var emb = ExtensionsEmbedded.LoadEmbedded();
                     list.AddRange(emb);
-                    Kiritori.Services.Logging.Log.Info($"[Ext] Using embedded default manifests: {emb.Count}", "Extensions");
+                    Kiritori.Services.Logging.Log.Info($"Using embedded default manifests: {emb.Count}", "Extensions");
                 }
 
                 // 3) 同一IDが重複したら最初のものを採用
@@ -57,7 +58,7 @@ namespace Kiritori.Services.Extensions
             }
             catch (Exception ex)
             {
-                Kiritori.Services.Logging.Log.Error("[Ext] LoadRepoManifests failed: " + ex.Message, "Extensions");
+                Kiritori.Services.Logging.Log.Error("LoadRepoManifests failed: " + ex.Message, "Extensions");
             }
             return list;
         }
@@ -167,7 +168,7 @@ namespace Kiritori.Services.Extensions
             }
             else
             {
-                Kiritori.Services.Logging.Log.Debug("[Ext] SHA256 skipped (DEBUG build).", "Extensions");
+                Kiritori.Services.Logging.Log.Debug("SHA256 skipped (DEBUG build).", "Extensions");
             }
             // 3) 展開
             var target = ExtensionsPaths.Expand(m.Install.TargetDir);
@@ -252,16 +253,23 @@ namespace Kiritori.Services.Extensions
                         {
                             State = loaded;
                             needRepair = false;
+                            Log.Debug("State file loaded: " + path, "Extensions");
                         }
                         else
                         {
                             State = loaded ?? new ExtensionState();
+                            Log.Warn("State file invalid: " + path, "Extensions");
                         }
+                    }
+                    else
+                    {
+                        Log.Debug("State file not found: " + path, "Extensions");
                     }
                 }
                 catch
                 {
                     // ロード失敗 → 復旧へ
+                    Log.Debug("State file load failed: " + path, "Extensions");
                 }
 
                 if (!needRepair) return;
@@ -306,6 +314,7 @@ namespace Kiritori.Services.Extensions
                                     Enabled = true,
                                     Version = latestVer
                                 };
+                                Log.Debug($"Repaired state: {id} {latestVer}", "Extensions");
                             }
                         }
                     }
@@ -327,6 +336,7 @@ namespace Kiritori.Services.Extensions
                                 Enabled = true,
                                 Version = "embedded"
                             };
+                            Log.Debug($"Repaired state: lang_{cul} embedded", "Extensions");
                         }
                     }
                 }
@@ -334,11 +344,25 @@ namespace Kiritori.Services.Extensions
                 st.Save();
                 State = st; // メモリにも反映
                 Kiritori.Services.Logging.Log.Info(
-                    "[Ext] Repaired missing state: " + path + " (" + st.Items.Count + " items)", "Extensions");
+                    "Repaired missing state: " + path + " (" + st.Items.Count + " items)", "Extensions");
+
+#if DEBUG
+                var len = new FileInfo(path).Length;
+                Log.Debug($"State saved: {path} ({len} bytes)", "Extensions");
+                // 先頭文字プレビュー
+                try {
+                    using (var r = new StreamReader(path, Encoding.UTF8))
+                    {
+                        char[] buf = new char[300];
+                        int n = r.ReadBlock(buf, 0, buf.Length);
+                        Log.Debug("State preview: " + new string(buf, 0, n), "Extensions");
+                    }
+                } catch {}
+#endif
             }
             catch (Exception ex)
             {
-                Kiritori.Services.Logging.Log.Warn("[Ext] RepairStateIfMissing failed: " + ex.Message, "Extensions");
+                Kiritori.Services.Logging.Log.Warn("RepairStateIfMissing failed: " + ex.Message, "Extensions");
             }
         }
 
@@ -347,7 +371,11 @@ namespace Kiritori.Services.Extensions
         {
             try
             {
-                if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
+                if (Directory.Exists(path))
+                {
+                    Directory.Delete(path, recursive: true);
+                    Log.Info($"Deleted directory: {path}", "Extensions");
+                }
             }
             catch { /* ignore */ }
         }
@@ -359,6 +387,7 @@ namespace Kiritori.Services.Extensions
                     Directory.GetFileSystemEntries(path).Length == 0)
                 {
                     Directory.Delete(path, false);
+                    Log.Info($"Deleted empty directory: {path}", "Extensions");
                 }
             }
             catch { /* ignore */ }
@@ -381,7 +410,7 @@ namespace Kiritori.Services.Extensions
                     wc.DownloadProgressChanged += (s, e) =>
                     {
                         progress.Report(e.ProgressPercentage);
-                        Log.Debug($"[Ext] Download {m.Id}: {e.ProgressPercentage}%", "Extensions");
+                        Log.Debug($"Download {m.Id}: {e.ProgressPercentage}%", "Extensions");
                     };
                 }
 
@@ -434,7 +463,7 @@ namespace Kiritori.Services.Extensions
             var tmpZip = Path.Combine(Path.GetTempPath(), $"kiritori_ext_{m.Id}_{m.Version}.zip");
 
             // 1) ダウンロード
-            progress?.Report(new DownloadProgress { Percent = 0, Stage = "ダウンロード中…" });
+            progress?.Report(new DownloadProgress { Percent = 0, Stage = SR.T("Extensions.InstallDialog.Downloading", "Downloading...") });
 
             using (var wc = new WebClient())
             using (ct.Register(() => wc.CancelAsync()))
@@ -448,7 +477,7 @@ namespace Kiritori.Services.Extensions
                     progress?.Report(new DownloadProgress
                     {
                         Percent = p,
-                        Stage = $"ダウンロード中… {p}%",
+                        Stage = SR.T("Extensions.InstallDialog.Downloading", "Downloading...") + $" {p}%",
                         BytesReceived = e.BytesReceived,
                         TotalBytes = e.TotalBytesToReceive
                     });
@@ -466,31 +495,31 @@ namespace Kiritori.Services.Extensions
                 ct.ThrowIfCancellationRequested();
             }
 
-            // 2) 検証（DEBUG ではスキップする現在の仕様を踏襲）
+            // 2) 検証（DEBUG ではスキップする）
             bool verify = true;
 #if DEBUG
             verify = false; // DebugビルドはSHAチェックをスキップ
 #endif
             if (verify)
             {
-                progress?.Report(new DownloadProgress { Percent = 100, Stage = "検証中…" });
+                progress?.Report(new DownloadProgress { Percent = 100, Stage = SR.T("Extensions.InstallDialog.Verifying", "Verifying...") });
                 if (!ExtensionsUtil.VerifySha256(tmpZip, m.Download.Sha256))
                     throw new InvalidOperationException("SHA256 verification failed.");
             }
             else
             {
-                Log.Debug("[Ext] SHA256 skipped (DEBUG build).", "Extensions");
+                Log.Debug("SHA256 skipped (DEBUG build).", "Extensions");
             }
 
             ct.ThrowIfCancellationRequested();
 
             // 3) 展開
-            progress?.Report(new DownloadProgress { Percent = -1, Stage = "展開中…" });
+            progress?.Report(new DownloadProgress { Percent = -1, Stage = SR.T("Extensions.InstallDialog.Extracting", "Extracting...") });
             var target = ExtensionsPaths.Expand(m.Install.TargetDir);
             Directory.CreateDirectory(target);
-            ExtensionsZip.ExtractZipAllowOverwrite(tmpZip, target); // 既存仕様を流用（上書き展開）
+            ExtensionsZip.ExtractZipAllowOverwrite(tmpZip, target); // 上書き展開
 
-            // 4) 必須ファイル検証（既存仕様）
+            // 4) 必須ファイル検証
             foreach (var f in m.Install.Files ?? Array.Empty<string>())
             {
                 var p = Path.Combine(target, f);

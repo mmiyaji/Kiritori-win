@@ -4,8 +4,9 @@
   "version": "1.3.2",
   "kind": "satellite",
   "download": {
-    "url": "https://kiritori.ruhenheim.org/ext/lang-ja-1.3.2.zip",
-    "sha256": "DA4A5A4868F226DBEB5148CCDCDCE5B18A40F664F29B3A29A80CBF2E5EA495F0"
+    "url": "https://github.com/mmiyaji/Kiritori-win/releases/download/v1.4.0/lang-ja-1.3.1.zip",
+    "sha256": "DA4A5A4868F226DBEB5148CCDCDCE5B18A40F664F29B3A29A80CBF2E5EA495F0",
+    "size": 6723
   },
   "install": {
     "targetDir": "i18n/ja",

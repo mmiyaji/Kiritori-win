@@ -8,24 +8,16 @@ using System.Text;
 
 namespace Kiritori.Services.Extensions
 {
-    [DataContract]
     internal sealed class ExtensionState
     {
-        [DataMember]
-        public Dictionary<string, Item> Items { get; set; }
-            = new Dictionary<string, Item>(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, Item> Items = new Dictionary<string, Item>(StringComparer.OrdinalIgnoreCase);
 
-        [DataContract]
         internal sealed class Item
         {
-            [DataMember] public bool Installed;
-            [DataMember] public bool Enabled = true;
-            [DataMember] public string Version;
+            public bool Installed;
+            public bool Enabled = true;
+            public string Version;
         }
-
-        private static DataContractJsonSerializer CreateSerializer() =>
-            new DataContractJsonSerializer(typeof(ExtensionState),
-                new DataContractJsonSerializerSettings { UseSimpleDictionaryFormat = true });
 
         public static ExtensionState Load()
         {
@@ -36,12 +28,12 @@ namespace Kiritori.Services.Extensions
                 {
                     using (var fs = File.OpenRead(path))
                     {
-                        var ser = CreateSerializer();
+                        var ser = new DataContractJsonSerializer(typeof(ExtensionState));
                         return (ExtensionState)ser.ReadObject(fs);
                     }
                 }
             }
-            catch { /* 初回などは新規生成 */ }
+            catch { }
             return new ExtensionState();
         }
 
@@ -53,12 +45,12 @@ namespace Kiritori.Services.Extensions
                 var path = ExtensionsPaths.StateJson;
                 using (var ms = new MemoryStream())
                 {
-                    var ser = CreateSerializer();
+                    var ser = new DataContractJsonSerializer(typeof(ExtensionState));
                     ser.WriteObject(ms, this);
                     File.WriteAllText(path, Encoding.UTF8.GetString(ms.ToArray()), Encoding.UTF8);
                 }
             }
-            catch { /* 書き込み失敗は握りつぶし（必要ならログ） */ }
+            catch { }
         }
     }
 }

@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Windows.Forms;
 using Kiritori.Services.Logging;
+using Kiritori.Helpers;
 
 namespace Kiritori.Services.Extensions
 {
@@ -26,7 +27,7 @@ namespace Kiritori.Services.Extensions
             if (prompt)
             {
                 var r = MessageBox.Show(owner,
-                    $"拡張機能「{manifest.DisplayName ?? manifest.Id}」({manifest.Version}) をインストールしますか？",
+                    SR.T("Extensions.InstallDialog.Confirm", "Do you want to install") + $"[{manifest.DisplayName ?? manifest.Id}] ({manifest.Version})",
                     "Kiritori Extensions", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                 if (r != DialogResult.Yes)
                 {
@@ -44,7 +45,7 @@ namespace Kiritori.Services.Extensions
             catch (Exception ex)
             {
                 Log.Error($"[AutoInstall] Install failed: {manifest.Id} ({ex.Message})", "Extensions");
-                MessageBox.Show(owner, "インストールに失敗しました:\n" + ex.Message,
+                MessageBox.Show(owner, SR.T("Extensions.InstallDialog.InstallFailed", "Installation failed:") + "\n" + ex.Message,
                     "Kiritori Extensions", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return false;
             }

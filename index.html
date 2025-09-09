@@ -299,7 +299,30 @@
 
     // GitHub Releases から最新を取得（必要に応じてリポジトリを変更）
     // 失敗時はフォールバックの # を維持
-    (async function(){
+  (async function(){
+      // 拡張子 / 名前規則で最適なアセットを選ぶ
+      function pickAsset(assets, extRegex) {
+        const cand = (assets || []).filter(a => extRegex.test(a.name || ''));
+        if (cand.length === 0) return null;
+
+        // スコアリング：Kiritoriで始まる > 名前にKiritoriを含む > それ以外
+        // さらに updated_at (なければ created_at) が新しいものを優先
+        const score = (name) => {
+          if (/^kiritori/i.test(name)) return 3;
+          if (/kiritori/i.test(name))  return 2;
+          return 1;
+        };
+        const getDate = (a) => new Date(a.updated_at || a.created_at || 0).getTime();
+
+        cand.sort((a, b) => {
+          const sa = score(a.name || '');
+          const sb = score(b.name || '');
+          if (sa !== sb) return sb - sa;
+          return getDate(b) - getDate(a); // 新しい方
+        });
+        return cand[0] || null;
+      }
+
       try {
         const repo = 'mmiyaji/Kiritori-win';
         const r = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
@@ -311,8 +334,8 @@
         document.getElementById('latestVersion').textContent = tag || 'latest';
 
         const assets = j.assets || [];
-        const zip = assets.find(a => /\.zip$/i.test(a.name));
-        const exe = assets.find(a => /\.exe$/i.test(a.name));
+        const zip = pickAsset(assets, /\.zip$/i);
+        const exe = pickAsset(assets, /\.exe$/i);
 
         if (zip) {
           document.getElementById('dlWinZip').href = zip.browser_download_url;
@@ -330,15 +353,6 @@
         }
       } catch(e) { /* ignore */ }
     })();
-    document.querySelectorAll('.feature-img').forEach(img => {
-      img.addEventListener('click', e => {
-        e.preventDefault();
-        const modal = document.getElementById('imgModal');
-        const modalImg = document.getElementById('modalImg');
-        modalImg.src = img.src;
-        modal.style.display = 'flex';
-      });
-    });
 
     document.getElementById('imgModal').addEventListener('click', () => {
       document.getElementById('imgModal').style.display = 'none';
@@ -378,6 +392,27 @@
     const headers = { 'Accept': 'application/vnd.github+json' };
     if (etag) headers['If-None-Match'] = etag;
 
+    // 拡張子 / 名前規則で最適なアセットを選ぶ
+    function pickAsset(assets, extRegex) {
+      const cand = (assets || []).filter(a => extRegex.test(a.name || ''));
+      if (cand.length === 0) return null;
+
+      const score = (name) => {
+        if (/^kiritori/i.test(name)) return 3;
+        if (/kiritori/i.test(name))  return 2;
+        return 1;
+      };
+      const getDate = (a) => new Date(a.updated_at || a.created_at || 0).getTime();
+
+      cand.sort((a, b) => {
+        const sa = score(a.name || '');
+        const sb = score(b.name || '');
+        if (sa !== sb) return sb - sa;
+        return getDate(b) - getDate(a);
+      });
+      return cand[0] || null;
+    }
+
     let releases = null;
     try {
       const res = await fetch(endpoint, { headers });
@@ -414,13 +449,15 @@
     const frag = document.createDocumentFragment();
     let firstInsertedDetails = null;
 
-    releases.forEach((r, idx) => {
+    releases.forEach((r) => {
       const tag  = r.tag_name || r.name || 'untagged';
       const date = r.published_at ? new Date(r.published_at).toISOString().slice(0,10) : '';
       const url  = r.html_url;
       const body = mdToHtml(r.body || '');
-      const zip  = (r.assets || []).find(a => /\.zip$/i.test(a.name));
-      const exe  = (r.assets || []).find(a => /\.exe$/i.test(a.name));
+
+      // ここで Kiritori 優先のアセット選択を適用
+      const zip  = pickAsset(r.assets, /\.zip$/i);
+      const exe  = pickAsset(r.assets, /\.exe$/i);
 
       const wrap = document.createElement('div');
       wrap.innerHTML = `
@@ -455,7 +492,6 @@
 
     // 最新（今回挿入した最初の details）だけ open
     if (firstInsertedDetails) firstInsertedDetails.setAttribute('open', '');
-
   })();
 </script>
 

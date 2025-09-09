@@ -19,6 +19,7 @@ namespace Kiritori.Services.Extensions
         {
             [DataMember(Name = "url")]    public string Url    { get; set; }
             [DataMember(Name = "sha256")] public string Sha256 { get; set; }
+            [DataMember(Name = "size")]   public long Size   { get; set; }
         }
 
         [DataContract]

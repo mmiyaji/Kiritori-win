@@ -618,4 +618,37 @@
   <data name="Tab.Extensions" xml:space="preserve">
     <value>拡張機能</value>
   </data>
+  <data name="Extensions.InstallDialog.Title" xml:space="preserve">
+    <value>拡張機能のインストール</value>
+  </data>
+  <data name="Extensions.InstallDialog.Preparing" xml:space="preserve">
+    <value>準備中...</value>
+  </data>
+  <data name="Extensions.InstallDialog.Cancel" xml:space="preserve">
+    <value>キャンセル</value>
+  </data>
+  <data name="Extensions.InstallDialog.StartingDownload" xml:space="preserve">
+    <value>ダウンロード開始中...</value>
+  </data>
+  <data name="Extensions.InstallDialog.InstallFailed" xml:space="preserve">
+    <value>インストールに失敗しました</value>
+  </data>
+  <data name="Extensions.InstallDialog.ConfirmInstall" xml:space="preserve">
+    <value>拡張機能をインストールしますか</value>
+  </data>
+  <data name="Extensions.InstallDialog.Downloading" xml:space="preserve">
+    <value>ダウンロード中...</value>
+  </data>
+  <data name="Extensions.InstallDialog.Verifying" xml:space="preserve">
+    <value>検証中...</value>
+  </data>
+  <data name="Extensions.InstallDialog.Extracting" xml:space="preserve">
+    <value>展開中...</value>
+  </data>
+  <data name="Extensions.InstallDialog.ConfirmTitle" xml:space="preserve">
+    <value>拡張機能のインストール</value>
+  </data>
+  <data name="Extensions.InstallDialog.SizeUnknown" xml:space="preserve">
+    <value>不明</value>
+  </data>
 </root>

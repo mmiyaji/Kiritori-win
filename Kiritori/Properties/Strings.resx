@@ -618,4 +618,37 @@
   <data name="Tab.Extensions" xml:space="preserve">
     <value>Extensions</value>
   </data>
+  <data name="Extensions.InstallDialog.Title" xml:space="preserve">
+    <value>Install Extension</value>
+  </data>
+  <data name="Extensions.InstallDialog.Preparing" xml:space="preserve">
+    <value>Preparing...</value>
+  </data>
+  <data name="Extensions.InstallDialog.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Extensions.InstallDialog.StartingDownload" xml:space="preserve">
+    <value>Starting download...</value>
+  </data>
+  <data name="Extensions.InstallDialog.InstallFailed" xml:space="preserve">
+    <value>Installation failed</value>
+  </data>
+  <data name="Extensions.InstallDialog.ConfirmInstall" xml:space="preserve">
+    <value>Do you want to install</value>
+  </data>
+  <data name="Extensions.InstallDialog.Downloading" xml:space="preserve">
+    <value>Downloading...</value>
+  </data>
+  <data name="Extensions.InstallDialog.Verifying" xml:space="preserve">
+    <value>Verifying...</value>
+  </data>
+  <data name="Extensions.InstallDialog.Extracting" xml:space="preserve">
+    <value>Extracting...</value>
+  </data>
+  <data name="Extensions.InstallDialog.ConfirmTitle" xml:space="preserve">
+    <value>Install Extension</value>
+  </data>
+  <data name="Extensions.InstallDialog.SizeUnknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
 </root>

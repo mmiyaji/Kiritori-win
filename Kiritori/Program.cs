@@ -76,7 +76,9 @@ namespace Kiritori
             RegisterAssemblyResolvers();
             try
             {
-                Thread.CurrentThread.CurrentUICulture = new CultureInfo(Properties.Settings.Default.UICulture);
+                var culture = Properties.Settings.Default.UICulture;
+                Thread.CurrentThread.CurrentUICulture = new CultureInfo(culture);
+                Log.Debug("Set UI Culture: " + culture, "Startup");
             }
             catch { }
             // ===== DPI Awareness を可能な限り高く設定 =====
@@ -123,7 +125,15 @@ namespace Kiritori
             try
             {
                 if (ExtensionsManager.IsInstalled("toast") && ExtensionsManager.IsEnabled("toast"))
+                {
+                    Log.Debug("Toast start initialize", "Startup");
                     Kiritori.Services.Notifications.ToastBootstrapper.Initialize();
+                    Log.Debug("Toast initialized", "Startup");
+                }
+                else
+                {
+                    Log.Debug("Toast extension not installed or not enabled", "Startup");
+                }
             }
             catch (Exception ex)
             {
@@ -135,7 +145,7 @@ namespace Kiritori
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            Log.Info($"Args: {string.Join(" ", args ?? Array.Empty<string>())}", "Startup");
+            Log.Info($"Exec Args: {string.Join(" ", args ?? Array.Empty<string>())}", "Startup");
             var opt = ParseArgs(args);
             using (var mutex = new Mutex(true, SingleInstance.MutexName, out bool isNew))
                 {
@@ -260,7 +270,7 @@ namespace Kiritori
                 Kiritori.Services.Extensions.ExtensionsManager.RepairStateIfMissing();
 
                 Kiritori.Services.Logging.Log.Info(
-                    "[Ext] Root=" + Kiritori.Services.Extensions.ExtensionsPaths.Root +
+                    "Root=" + Kiritori.Services.Extensions.ExtensionsPaths.Root +
                     "  State=" + Kiritori.Services.Extensions.ExtensionsPaths.StateJson,
                     "Extensions");
             }
