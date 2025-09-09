@@ -81,21 +81,6 @@ namespace Kiritori
             return path;
         }
 
-        private (Bitmap normal, Bitmap hover) GetCloseBitmapsForDpi(int dpi)
-        {
-            int key = (dpi <= 0 ? this.DeviceDpi : dpi);
-            if (_closeIconCache.TryGetValue(key, out var cached)) return cached;
-
-            float scale = key / 96f;
-            int size = (int)Math.Round(20 * scale);
-
-            Bitmap bmpNormal = new Bitmap(Properties.Resources.close, new Size(size, size));
-            Bitmap bmpHover = new Bitmap(Properties.Resources.close_bold, new Size(size, size));
-
-            _closeIconCache[key] = (bmpNormal, bmpHover);
-            return _closeIconCache[key];
-        }
-
         #endregion
 
     }

@@ -119,3 +119,4 @@ neutral.txt
 BundleArtifacts/
 /KiritoriPackage/BundleArtifacts
 Kiritori/ThirdParty/*/*.exe
+*log

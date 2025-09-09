@@ -129,6 +129,7 @@
     <Compile Include="Helpers\HotkeyUtil.cs" />
     <Compile Include="Helpers\LocalizedDescriptionAttribute.cs" />
     <Compile Include="Helpers\Localizer.cs" />
+    <Compile Include="Helpers\SatelliteBootstrapper.cs" />
     <Compile Include="Helpers\SingleInstance.cs" />
     <Compile Include="Helpers\SR.cs" />
     <Compile Include="Helpers\HotKey.cs" />
@@ -295,6 +296,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="FodyWeavers.xml" />
     <Content Include="kiritori.ico" />
     <Content Include="resources\kiritori.ico" />
     <Content Include="ThirdParty\ffmpeg\LICENSE.txt" />
@@ -323,6 +325,14 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Costura.Fody">
+      <Version>6.0.0</Version>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Fody">
+      <Version>6.9.3</Version>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="ILRepack.MSBuild.Task" Version="2.0.13" PrivateAssets="All" />
   </ItemGroup>
   <!-- <Target Name="AfterBuild">
@@ -350,6 +360,25 @@
     </ItemGroup>
     <Delete Files="@(ValueTupleLeftovers)" ContinueOnError="true" />
   </Target> -->
+  <Target Name="CopySatellitesToI18n" AfterTargets="Build">
+    <!-- 例: obj\Debug\ja\Kiritori.resources.dll, obj\Release\fr\Kiritori.resources.dll ... -->
+    <ItemGroup>
+      <_SatDlls Include="$(IntermediateOutputPath)**\$(AssemblyName).resources.dll" />
+    </ItemGroup>
+    <!-- 出力先のフォルダ作成 (bin\...\i18n\ja など) -->
+    <MakeDir Directories="@(_SatDlls->'$(TargetDir)i18n\%(RecursiveDir)')" />
+    <!-- i18n\{cul}\Kiritori.resources.dll へコピー -->
+    <Copy SourceFiles="@(_SatDlls)" DestinationFiles="@(_SatDlls->'$(TargetDir)i18n\%(RecursiveDir)$(AssemblyName).resources.dll')" SkipUnchangedFiles="true" />
+    <!-- ログ（任意） -->
+    <Message Text="i18n へコピー: @(_SatDlls->'%(RecursiveDir)$(AssemblyName).resources.dll')" Importance="High" />
+  </Target>
+  <ItemGroup>
+    <!-- 例: ja を埋め込む -->
+    <EmbeddedResource Include="i18n\ja\Kiritori.resources.dll">
+      <LogicalName>Kiritori.i18n.ja.Kiritori.resources.dll</LogicalName>
+    </EmbeddedResource>
+    <!-- 他言語も同様に LogicalName を設定 -->
+  </ItemGroup>
   <ItemGroup>
     <Content Include="ThirdParty\ffmpeg\ffmpeg.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

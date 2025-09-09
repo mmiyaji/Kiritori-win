@@ -68,10 +68,11 @@ namespace Kiritori
             Log.Configure(logopt);
             Application.ApplicationExit += (s, e) => Log.Shutdown();
             Log.Info($"Kiritori starting (v{Application.ProductVersion})", "Startup");
-            EarlyExtensionsInit();
-            // ===== 拡張DLL/衛星リソースの遅延解決 =====
-            RegisterAssemblyResolvers();
 
+            SatelliteBootstrapper.EnsureSatellitesExtracted();
+
+            EarlyExtensionsInit();
+            RegisterAssemblyResolvers();
             try
             {
                 Thread.CurrentThread.CurrentUICulture = new CultureInfo(Properties.Settings.Default.UICulture);
@@ -172,42 +173,84 @@ namespace Kiritori
             {
                 try
                 {
-                    var an = new AssemblyName(e.Name);
+                    var an = new System.Reflection.AssemblyName(e.Name);
 
-                    // 1) 衛星アセンブリ（i18n）
+                    // 1) 衛星アセンブリ（i18n）：Kiritori.resources.dll を i18n\<cul>\ 下から解決
                     if (an.Name != null && an.Name.EndsWith(".resources", StringComparison.OrdinalIgnoreCase))
                     {
-                        var culture = an.CultureName;
+                        var culture = an.CultureName; // "ja" など
                         if (!string.IsNullOrEmpty(culture))
                         {
-                            var baseDir = Path.Combine(
+                            var baseDir = System.IO.Path.Combine(
                                 Kiritori.Services.Extensions.ExtensionsPaths.Root, "i18n", culture);
-                            var resPath = Path.Combine(baseDir, "Kiritori.resources.dll");
-                            Kiritori.Services.Logging.Log.Debug(
-                                "[AssemblyResolve] Resource " + culture + " => " + resPath, "Startup");
-                            if (File.Exists(resPath)) return Assembly.LoadFrom(resPath);
+                            var resPath = System.IO.Path.Combine(baseDir, "Kiritori.resources.dll");
+                            Kiritori.Services.Logging.Log.Debug("[AssemblyResolve] Resource " + culture + " => " + resPath, "Startup");
+                            if (System.IO.File.Exists(resPath))
+                                return System.Reflection.Assembly.LoadFrom(resPath);
                         }
                     }
 
-                    // 2) Toast 拡張（導入済み＆有効のときのみ）
+                    // 2) Toast 拡張（導入・有効なときのみ）
                     if (Kiritori.Services.Extensions.ExtensionsManager.IsInstalled("toast") &&
                         Kiritori.Services.Extensions.ExtensionsManager.IsEnabled("toast"))
                     {
                         var ver = Kiritori.Services.Extensions.ExtensionsManager.InstalledVersion("toast") ?? "1.0.0";
-                        var dir = Path.Combine(
+                        var dir = System.IO.Path.Combine(
                             Kiritori.Services.Extensions.ExtensionsPaths.Root, "bin", "toast", ver);
                         var name = an.Name + ".dll";
-                        var p = Path.Combine(dir, name);
-                        Kiritori.Services.Logging.Log.Debug(
-                            "[AssemblyResolve] Toast " + name + " => " + p, "Startup");
-                        if (File.Exists(p)) return Assembly.LoadFrom(p);
+                        var p = System.IO.Path.Combine(dir, name);
+                        Kiritori.Services.Logging.Log.Debug("[AssemblyResolve] Toast " + name + " => " + p, "Startup");
+                        if (System.IO.File.Exists(p))
+                            return System.Reflection.Assembly.LoadFrom(p);
                     }
                 }
-                catch { /* ignore */ }
+                catch
+                {
+                    // 失敗時は null を返して標準解決に委ねる
+                }
 
                 return null;
             };
         }
+
+        static void InstallSatellitesFromAppFolder()
+        {
+            try
+            {
+                var appI18n = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "i18n");
+                if (!Directory.Exists(appI18n)) return;
+
+                var destRoot = Path.Combine(ExtensionsPaths.Root, "i18n"); // 既に使っている場所
+                Directory.CreateDirectory(destRoot);
+
+                foreach (var culDir in Directory.EnumerateDirectories(appI18n)) // 例: ...\i18n\ja
+                {
+                    var cul = Path.GetFileName(culDir);
+                    var src = Path.Combine(culDir, "Kiritori.resources.dll");
+                    if (!File.Exists(src)) continue;
+
+                    var destDir = Path.Combine(destRoot, cul);
+                    var dest = Path.Combine(destDir, "Kiritori.resources.dll");
+                    Directory.CreateDirectory(destDir);
+
+                    // 既にある場合はサイズ/更新時刻で簡易判定して上書き（必要ならバージョン比較でもOK）
+                    bool needCopy = !File.Exists(dest)
+                                || new FileInfo(src).Length != new FileInfo(dest).Length
+                                || File.GetLastWriteTimeUtc(src) > File.GetLastWriteTimeUtc(dest);
+
+                    if (needCopy)
+                    {
+                        File.Copy(src, dest, true);
+                        Log.Info($"[i18n] Installed/updated '{cul}' to {dest}", "Startup");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Debug("[i18n] Install failed: " + ex, "Startup");
+            }
+        }
+
         private static void EarlyExtensionsInit()
         {
             try

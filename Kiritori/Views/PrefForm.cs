@@ -19,6 +19,7 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace Kiritori
 {
@@ -477,12 +478,16 @@ namespace Kiritori
 
         private void cmbLanguage_SelectedIndexChanged(object sender, EventArgs e)
         {
+            Log.Debug($"Language combobox changed: init={_initLang}", "PrefForm");
             if (_initLang) return;
             var li = cmbLanguage.SelectedItem as LangItem;
             if (li == null) return;
 
-            // 未導入ならその場で導入（キャンセルなら元に戻す）
-            if (!li.Installed && !string.IsNullOrEmpty(li.ExtId))
+            // ja サテライト DLL（内蔵/外出し問わず）が見つかるなら拡張機能チェックはスキップ
+            var hasDll = HasUiSatellite(li.Culture);
+
+            // ここで DLL が無い時だけ拡張機能を確認・導入
+            if (!hasDll && !li.Installed && !string.IsNullOrEmpty(li.ExtId))
             {
                 try
                 {
@@ -503,7 +508,7 @@ namespace Kiritori
                     for (int i = 0; i < cmbLanguage.Items.Count; i++)
                     {
                         var it = (LangItem)cmbLanguage.Items[i];
-                        if (it.Culture.Equals(saved, System.StringComparison.OrdinalIgnoreCase))
+                        if (it.Culture.Equals(saved, StringComparison.OrdinalIgnoreCase))
                         { cmbLanguage.SelectedIndex = i; break; }
                     }
                     _initLang = false;
@@ -511,23 +516,15 @@ namespace Kiritori
                 }
             }
 
-            // 保存＆（可能なら）適用
+            // 保存＆適用は従来通り
             Properties.Settings.Default.UICulture = li.Culture;
             try { Properties.Settings.Default.Save(); } catch { }
             TryApplyUiCulture(li.Culture);
 
-            // 表示の ✓ を更新
+            // 表示の ✓ 更新
             InitLanguageCombo();
-
-            // // 再起動促し（任意）
-            // if (MessageBox.Show(this,
-            //     "言語を変更しました。アプリを再起動して反映しますか？",
-            //     "Language", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-            // {
-            //     try { System.Diagnostics.Process.Start(Application.ExecutablePath); } catch { }
-            //     Application.Exit();
-            // }
         }
+
 
         private static void TryApplyUiCulture(string culture)
         {
@@ -838,37 +835,62 @@ namespace Kiritori
         {
             _initLang = true;
 
-            // 候補を作る
             var items = new System.Collections.Generic.List<LangItem>();
 
-            // 1) 既定: 英語（拡張不要）
-            items.Add(new LangItem
-            {
-                Text = "English (en) ✓",
-                Culture = "en",
-                ExtId = null,
-                Installed = true
-            });
+            // EXE 内の埋め込み .resources を走査してカルチャ候補を作る
+            var asm = typeof(Properties.Strings).Assembly;   // Kiritori.exe
+            var embeddedCultures = GetEmbeddedCulturesFromSatDlls(asm);
 
-            // 2) マニフェストから lang_xx を列挙
+            // 既定: 英語（中立）
+            items.Add(new LangItem { Text = "English (en) ✓", Culture = "en", Installed = true });
+
+            // 内蔵カルチャ（例: ja）
+            foreach (var cul in embeddedCultures.OrderBy(c => c, StringComparer.OrdinalIgnoreCase))
+            {
+                if (string.Equals(cul, "en", StringComparison.OrdinalIgnoreCase)) continue;
+                if (items.Any(x => x.Culture.Equals(cul, StringComparison.OrdinalIgnoreCase))) continue;
+
+                string display;
+                switch (cul)
+                {
+                    case "ja": display = "日本語"; break;
+                    case "fr": display = "Français"; break;
+                    case "de": display = "Deutsch"; break;
+                    case "zh-CN": display = "简体中文"; break;
+                    case "zh-TW": display = "繁體中文"; break;
+                    default: display = cul; break;
+                }
+
+                items.Add(new LangItem
+                {
+                    Text = display + " (" + cul + ") ✓",
+                    Culture = cul,
+                    Installed = true
+                });
+            }
+
+            // リポジトリ由来の言語拡張
             var repo = ExtensionsManager.LoadRepoManifests() ?? Enumerable.Empty<ExtensionManifest>();
-            foreach (var m in repo.Where(m => (m?.Id ?? "").StartsWith("lang_", System.StringComparison.OrdinalIgnoreCase)))
+            foreach (var m in repo.Where(mf => (mf != null && mf.Id != null) &&
+                                            mf.Id.StartsWith("lang_", StringComparison.OrdinalIgnoreCase)))
             {
                 var cul = m.Id.Substring("lang_".Length);
+                if (items.Any(x => x.Culture.Equals(cul, StringComparison.OrdinalIgnoreCase))) continue;
+
                 bool installed = ExtensionsManager.IsInstalled(m.Id) ||
                                 File.Exists(Path.Combine(ExtensionsPaths.Root, "i18n", cul, "Kiritori.resources.dll"));
                 var name = string.IsNullOrEmpty(m.DisplayName) ? cul : m.DisplayName;
 
                 items.Add(new LangItem
                 {
-                    Text = $"{name} ({cul}){(installed ? " ✓" : "")}",
+                    Text = name + " (" + cul + ")" + (installed ? " ✓" : ""),
                     Culture = cul,
                     ExtId = m.Id,
                     Installed = installed
                 });
             }
 
-            // 3) i18n にあるがマニフェストに無いカルチャも拾う（移行用）
+            // i18n フォルダ直下の拾い上げ
             try
             {
                 var i18n = Path.Combine(ExtensionsPaths.Root, "i18n");
@@ -877,12 +899,12 @@ namespace Kiritori
                     foreach (var culDir in Directory.EnumerateDirectories(i18n))
                     {
                         var cul = Path.GetFileName(culDir);
-                        if (items.Any(x => x.Culture.Equals(cul, System.StringComparison.OrdinalIgnoreCase))) continue;
+                        if (items.Any(x => x.Culture.Equals(cul, StringComparison.OrdinalIgnoreCase))) continue;
                         if (File.Exists(Path.Combine(culDir, "Kiritori.resources.dll")))
                         {
                             items.Add(new LangItem
                             {
-                                Text = $"{cul} ({cul}) ✓",
+                                Text = cul + " (" + cul + ") ✓",
                                 Culture = cul,
                                 ExtId = "lang_" + cul,
                                 Installed = true
@@ -893,14 +915,13 @@ namespace Kiritori
             }
             catch { /* ignore */ }
 
-            // UIへ反映
+            // UI 反映
             cmbLanguage.BeginUpdate();
             cmbLanguage.Items.Clear();
-            foreach (var it in items.OrderBy(i => i.Culture, System.StringComparer.OrdinalIgnoreCase))
+            foreach (var it in items.OrderBy(i => i.Culture, StringComparer.OrdinalIgnoreCase))
                 cmbLanguage.Items.Add(it);
             cmbLanguage.EndUpdate();
 
-            // 既定選択（設定→なければ現在UI文化）
             var saved = Properties.Settings.Default.UICulture;
             if (string.IsNullOrWhiteSpace(saved))
                 saved = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
@@ -909,18 +930,39 @@ namespace Kiritori
             for (int i = 0; i < cmbLanguage.Items.Count; i++)
             {
                 var it = (LangItem)cmbLanguage.Items[i];
-                if (it.Culture.Equals(saved, System.StringComparison.OrdinalIgnoreCase)) { index = i; break; }
+                if (it.Culture.Equals(saved, StringComparison.OrdinalIgnoreCase)) { index = i; break; }
             }
 
             cmbLanguage.SelectedIndexChanged -= cmbLanguage_SelectedIndexChanged;
-            cmbLanguage.DisplayMember = nameof(LangItem.Text); // 表示は Text（ToString() でもOK）
+            cmbLanguage.DisplayMember = nameof(LangItem.Text);
             cmbLanguage.SelectedIndex = index;
             cmbLanguage.SelectedIndexChanged += cmbLanguage_SelectedIndexChanged;
 
             _initLang = false;
         }
+        
+        private static readonly Regex RxSat =
+            new Regex(@"(?:^|[.\\])i18n\.([^\.\\]+)\.Kiritori\.resources\.dll$",
+                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-
+        private static System.Collections.Generic.List<string> GetEmbeddedCulturesFromSatDlls(Assembly asm)
+        {
+            var list = new System.Collections.Generic.List<string>();
+            foreach (var rn in asm.GetManifestResourceNames())
+            {
+                var m = RxSat.Match(rn);
+                if (m.Success)
+                {
+                    var cul = m.Groups[1].Value;    // 例: "ja"
+                    if (!string.IsNullOrWhiteSpace(cul) &&
+                        !list.Contains(cul, StringComparer.OrdinalIgnoreCase))
+                    {
+                        list.Add(cul);
+                    }
+                }
+            }
+            return list;
+        }
         private void UpdateVersionLabel()
         {
             var asm = Assembly.GetExecutingAssembly();
@@ -1248,7 +1290,36 @@ namespace Kiritori
 
             LayoutInfoTabResponsive();
         }
+        private static bool HasUiSatellite(string culture)
+        {
+            if (string.IsNullOrWhiteSpace(culture)) return false;
 
+            var ci = new CultureInfo(culture);
+            var asm = typeof(PrefForm).Assembly;
+            var names = asm.GetManifestResourceNames();
+
+            // 1) EXE に埋め込まれた i18n.*.Kiritori.resources.dll があるか？
+            var regex = new System.Text.RegularExpressions.Regex(
+                @"(?:^|[.\\])i18n\." + System.Text.RegularExpressions.Regex.Escape(ci.Name) + @"\.Kiritori\.resources\.dll$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            if (names.Any(n => regex.IsMatch(n)))
+                return true;
+
+            // 2) Costura により埋め込まれた衛星DLLがあるか？
+            var needle = ".resources." + ci.Name.ToLowerInvariant() + ".dll";
+            if (names.Any(n =>
+                n.StartsWith("costura.", StringComparison.OrdinalIgnoreCase) &&
+                n.ToLowerInvariant().Contains(needle)))
+                return true;
+
+            // 3) ディスク上のサテライトDLL（従来の bin\Debug\ja\Kiritori.resources.dll 等）
+            var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            var jaDll = Path.Combine(baseDir, ci.Name, asm.GetName().Name + ".resources.dll");
+            if (File.Exists(jaDll)) return true;
+
+            return false;
+        }
 
         // === Settings のスナップショット（ハッシュ）を作る ===
         static void DumpControlBindings(Form f)
