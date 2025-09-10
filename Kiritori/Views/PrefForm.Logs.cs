@@ -1,5 +1,5 @@
 using Kiritori.Helpers;
-using Kiritori.Services.Logging; 
+using Kiritori.Services.Logging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using System.Globalization;
+
 namespace Kiritori
 {
     public partial class PrefForm
@@ -20,36 +21,22 @@ namespace Kiritori
         private Button _btnClear;
         private CheckBox _chkAutoScroll;
 
-        // ===== バッファ（フィルタ切替でも再描画できるよう保持） =====
-        private readonly List<LogItem> _logBuffer = new List<LogItem>(capacity: 5000);
-        private const int MaxBuffer = 10000; // メモリ保護（必要なら調整）
-
-        private readonly object _logSync = new object();
+        // ローカル同期（UI 追記時の多重呼び出し抑制用）
+        private readonly object _uiAppendSync = new object();
 
         // 画面に表示するレベル（None は出さない）
         private LogLevel _viewLevel = LogLevel.Info;
 
-        // 既存の Settings を使うならここに保存/復元
+        // Settings キー
         private const string SettingsKey_ViewLevel = "LogView.Level";
         private const string SettingsKey_AutoScroll = "LogView.AutoScroll";
-
-        // ===== 公開：ロガー連携用フック点 =====
-        // 1) イベント購読型：LogManager.LogEmitted がある前提（なければコメントアウト）
-        // 2) シンク登録型：LogManager.RegisterSink(ILogSink) がある前提（なければ無視）
-
-        private struct LogItem
-        {
-            public DateTime Time;
-            public LogLevel Level;
-            public string Message;
-        }
 
         /// <summary>コンストラクタの末尾などで呼んでください。</summary>
         private void InitLogTab()
         {
             _initLogTab = true;
             try
-            { 
+            {
                 var root = new TableLayoutPanel
                 {
                     Dock = DockStyle.Fill,
@@ -69,14 +56,12 @@ namespace Kiritori
                     Padding = new Padding(8, 8, 8, 4)
                 };
 
-                // ログレベル
                 _cmbLogLevel = new ComboBox
                 {
                     DropDownStyle = ComboBoxStyle.DropDownList,
                     Width = 140,
                     Tag = "loc:Text.LogLevel"
                 };
-                // 表示用（OFF/INFO/DEBUG…）
                 _cmbLogLevel.Items.AddRange(new object[]
                 {
                     "OFF", "INFO", "DEBUG", "TRACE", "WARN", "ERROR", "FATAL"
@@ -85,15 +70,15 @@ namespace Kiritori
                 {
                     if (_initLogTab) return;
                     _viewLevel = IndexToLevel(_cmbLogLevel.SelectedIndex);
-                    RedrawByFilter();
+                    RedrawByFilter();          // 共有バッファから引き直し
                     SaveLogViewPrefs();
+
                     var opt = Log.GetCurrentOptions();
-                    opt.MinLevel = _viewLevel;            // Off を選べば完全停止
+                    opt.MinLevel = _viewLevel; // OFF なら停止
                     Log.Configure(opt);
                     Log.Info($"Log level changed to {_viewLevel}", "Preferences");
                 };
 
-                // 表示クリア
                 _btnClear = new Button
                 {
                     Text = "Clear View",
@@ -102,14 +87,10 @@ namespace Kiritori
                 };
                 _btnClear.Click += (s, e) =>
                 {
-                    lock (_logSync)
-                    {
-                        _logBuffer.Clear();
-                    }
+                    // 画面だけクリア（共有バッファは残す）
                     _rtbLog.Clear();
                 };
 
-                // 最新へ自動スクロール
                 _chkAutoScroll = new CheckBox
                 {
                     Text = "Auto Scroll to Latest",
@@ -121,10 +102,9 @@ namespace Kiritori
 
                 bar.Controls.Add(new Label
                 {
-                    // Text = SR.T("Text.LogLevel", "LogLevel"),
                     AutoSize = true,
                     Padding = new Padding(0, 6, 6, 0),
-                    Tag = "loc:Text.LogLevel"                
+                    Tag = "loc:Text.LogLevel"
                 });
                 bar.Controls.Add(_cmbLogLevel);
                 bar.Controls.Add(_btnClear);
@@ -156,21 +136,22 @@ namespace Kiritori
                 _viewLevel = engineLv;
                 _cmbLogLevel.SelectedIndex = LevelToIndex(_viewLevel);
 
+                // 共有バッファから初期再描画
+                RedrawByFilter();
             }
             finally
             {
-                _initLogTab = false;  // ← 追加：初期化完了
+                _initLogTab = false;
             }
 
-            // ロガーへ接続
+            // ロガーへ接続（複数フォームでも OK：各フォームが購読）
             Log.LogWritten += OnLogWritten;
-            
+
             Log.Info("Log tab initialized", "Preferences");
         }
 
         private static LogLevel IndexToLevel(int idx)
         {
-            // 0:なし → 特別扱い。以降は主に INFO/DEBUG/TRACE/WARN/ERROR/FATAL
             switch (idx)
             {
                 case 0: return LogLevel.Off;
@@ -203,9 +184,9 @@ namespace Kiritori
         {
             try
             {
-                // 設定ストアがあれば使う。無ければ既定。
                 var lvString = Properties.Settings.Default[SettingsKey_ViewLevel] as string;
-                if (!string.IsNullOrEmpty(lvString) && Enum.TryParse(lvString, out LogLevel lv))
+                LogLevel lv;
+                if (!string.IsNullOrEmpty(lvString) && Enum.TryParse(lvString, out lv))
                     _viewLevel = lv;
 
                 var auto = Properties.Settings.Default[SettingsKey_AutoScroll] as string;
@@ -228,57 +209,62 @@ namespace Kiritori
             catch { /* 非致命 */ }
         }
 
-        /// <summary>
-        /// 外部（任意の場所）から生ログを出したいとき用。
-        /// </summary>
+        /// <summary>外部から PrefForm のビューにも流したい場合に使用。</summary>
         public void AppendLog(LogLevel level, string message)
         {
-            var item = new LogItem { Time = DateTime.Now, Level = level, Message = message };
-            lock (_logSync)
-            {
-                _logBuffer.Add(item);
-                if (_logBuffer.Count > MaxBuffer) _logBuffer.RemoveRange(0, _logBuffer.Count - MaxBuffer);
-            }
+            var now = DateTime.Now;
+            // 共有バッファに積む（必ず先）
+            LogViewSharedBuffer.Add(now, level, message);
 
             // 表示フィルタに合致すれば即時追記
             if (level >= _viewLevel && _viewLevel != LogLevel.Off)
             {
-                AppendToRtb(item);
+                AppendToRtb(new Kiritori.Services.Logging.LogItem
+                {
+                    Time = now,
+                    Level = level,
+                    Message = message
+                });
             }
         }
 
-        private void AppendToRtb(LogItem item)
+        private void AppendToRtb(Kiritori.Services.Logging.LogItem item)
         {
             if (this.IsDisposed) return;
 
-            // UI スレッドへ
             if (InvokeRequired)
             {
                 BeginInvoke((Action)(() => AppendToRtb(item)));
                 return;
             }
 
-            var sb = new StringBuilder(64 + (item.Message?.Length ?? 0));
-            sb.Append(FormatTimestamp(item.Time)).Append('\t');
-            sb.Append(LevelShort(item.Level)).Append('\t');
-            sb.Append(item.Message ?? string.Empty);
-            if (!sb.ToString().EndsWith("\n")) sb.Append(Environment.NewLine);
-
-            _rtbLog.SuspendLayout();
-            try
+            // まとめて追記する箇所があるのでレイアウト抑制
+            lock (_uiAppendSync)
             {
-                _rtbLog.AppendText(sb.ToString());
+                var sb = new StringBuilder(64 + (item.Message != null ? item.Message.Length : 0));
+                sb.Append(FormatTimestamp(item.Time)).Append('\t');
+                sb.Append(LevelShort(item.Level)).Append('\t');
+                sb.Append(item.Message ?? string.Empty);
+                var line = sb.ToString();
+                if (!line.EndsWith(Environment.NewLine))
+                    line += Environment.NewLine;
 
-                if (_chkAutoScroll.Checked)
+                _rtbLog.SuspendLayout();
+                try
                 {
-                    _rtbLog.SelectionStart = _rtbLog.TextLength;
-                    _rtbLog.SelectionLength = 0;
-                    _rtbLog.ScrollToCaret();
+                    _rtbLog.AppendText(line);
+
+                    if (_chkAutoScroll.Checked)
+                    {
+                        _rtbLog.SelectionStart = _rtbLog.TextLength;
+                        _rtbLog.SelectionLength = 0;
+                        _rtbLog.ScrollToCaret();
+                    }
                 }
-            }
-            finally
-            {
-                _rtbLog.ResumeLayout();
+                finally
+                {
+                    _rtbLog.ResumeLayout();
+                }
             }
         }
 
@@ -313,10 +299,13 @@ namespace Kiritori
                 _rtbLog.Clear();
                 if (_viewLevel == LogLevel.Off) return;
 
-                // バッファから再描画
-                foreach (var it in _logBuffer)
+                // 共有バッファからスナップショットを取得して再描画
+                List<Kiritori.Services.Logging.LogItem> snap = LogViewSharedBuffer.Snapshot();
+                for (int i = 0; i < snap.Count; i++)
                 {
-                    if (it.Level >= _viewLevel) AppendToRtb(it);
+                    var it = snap[i];
+                    if (it.Level >= _viewLevel)
+                        AppendToRtb(it);
                 }
             }
             finally
@@ -324,26 +313,27 @@ namespace Kiritori
                 _rtbLog.ResumeLayout();
             }
         }
+
         private void OnLogWritten(DateTime time, LogLevel level, string category, string message, Exception ex)
         {
+            // 共有バッファへの積み込みは常駐シンクが担当済み
             var msg = BuildMessageOnly(category, message, ex);
-            // UI スレッドに投げる（ハンドル未生成でもOK）
+            // ここではビュー追従のみ
             _ui.Post(_ => AppendLogFromEvent(time, level, msg), null);
         }
-        // イベントから直接積む
         private void AppendLogFromEvent(DateTime time, LogLevel level, string message)
         {
-            var item = new LogItem { Time = time, Level = level, Message = message ?? "" };
-            lock (_logSync)
-            {
-                _logBuffer.Add(item);
-                if (_logBuffer.Count > MaxBuffer) _logBuffer.RemoveRange(0, _logBuffer.Count - MaxBuffer);
-            }
             if (level >= _viewLevel && _viewLevel != LogLevel.Off)
-                AppendToRtb(item);
+            {
+                AppendToRtb(new Kiritori.Services.Logging.LogItem
+                {
+                    Time = time,
+                    Level = level,
+                    Message = message ?? string.Empty
+                });
+            }
         }
 
-        // 本文だけ成形（時刻/レベルは入れない）
         private static string BuildMessageOnly(string cat, string msg, Exception ex)
         {
             var sb = new StringBuilder();
@@ -353,26 +343,15 @@ namespace Kiritori
             return sb.ToString();
         }
 
-        private static string BuildUiLine(DateTime t, LogLevel lv, string cat, string msg, Exception ex)
-        {
-            var sb = new StringBuilder();
-            sb.Append(t.ToString("HH:mm:ss:fff")).Append('\t')
-            .Append(lv.ToString().ToUpperInvariant()).Append('\t');
-            if (!string.IsNullOrEmpty(cat)) sb.Append('[').Append(cat).Append("] ");
-            sb.Append(msg ?? "");
-            if (ex != null)
-                sb.Append(" | EX: ").Append(ex.GetType().Name).Append(": ").Append(ex.Message);
-            return sb.ToString();
-        }
         private static string FormatTimestamp(DateTime t)
         {
-            var fmt = Properties.Settings.Default?.LogTimestampFormat;
-            if (string.IsNullOrWhiteSpace(fmt)) fmt = "HH:mm:ss.fff";   // 既定
-
+            var fmt = Properties.Settings.Default != null ? Properties.Settings.Default.LogTimestampFormat : null;
+            if (string.IsNullOrWhiteSpace(fmt)) fmt = "HH:mm:ss.fff";
             try { return t.ToString(fmt, CultureInfo.InvariantCulture); }
-            catch { return t.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture); } // 保険
+            catch { return t.ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture); }
         }
-        // 終了時にシンクを外す
+
+        // PrefForm を閉じるたびに共有バッファは保持。購読だけ外す。
         private void DisposeLogTab()
         {
             Log.LogWritten -= OnLogWritten;

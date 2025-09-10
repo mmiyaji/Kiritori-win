@@ -151,6 +151,8 @@
     <Compile Include="Services\Extensions\ExtensionsUtil.cs" />
     <Compile Include="Services\Extensions\ExtensionsZip.cs" />
     <Compile Include="Services\Logging\Log.cs" />
+    <Compile Include="Services\Logging\LogViewSharedBuffer.cs" />
+    <Compile Include="Services\Logging\LogViewSharedSink.cs" />
     <Compile Include="Services\Notifications\ToastRuntime.cs" />
     <Compile Include="Services\Ocr\OcrFacade.cs" />
     <Compile Include="Services\Recording\FfmpegLocator.cs" />
@@ -402,9 +404,7 @@
   <ItemGroup>
     <EmbeddedResource Include="ThirdPartyManifests\*.json" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="ThirdParty\Tesseract\" />
-  </ItemGroup>
+  <ItemGroup />
   <!-- >>> added: g.cs 生成（ビルド前）＆ クリーン時の削除 -->
   <Target Name="GenerateVersionInfo" BeforeTargets="BeforeBuild">
     <PropertyGroup>

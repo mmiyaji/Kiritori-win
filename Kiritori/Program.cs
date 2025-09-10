@@ -67,6 +67,7 @@ namespace Kiritori
 #endif
             Log.Configure(logopt);
             Application.ApplicationExit += (s, e) => Log.Shutdown();
+            Kiritori.Services.Logging.LogViewSharedSink.EnsureRegistered();
             Log.Info($"Kiritori starting (v{Application.ProductVersion})", "Startup");
 
             // SatelliteBootstrapper.EnsureSatellitesExtracted();

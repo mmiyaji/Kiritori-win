@@ -26,10 +26,14 @@ namespace Kiritori
         private void captureToolStripMenuItem_Click(object sender, EventArgs e) { this.ma.openScreen(); }
         private void captureOCRToolStripMenuItem_Click(object sender, EventArgs e) { this.ma.openScreenOCR(); }
         private void livePreviewToolStripMenuItem_Click(object sender, EventArgs e) { this.ma.openScreenLive(); }
-        private void closeESCToolStripMenuItem_Click(object sender, EventArgs e) { this.Close(); }
+        private void closeESCToolStripMenuItem_Click(object sender, EventArgs e) {
+            Log.Info("SnapWindow closed by user", "SnapWindow");
+            this.Close();
+        }
         private void cutCtrlXToolStripMenuItem_Click(object sender, EventArgs e) {
             Clipboard.SetImage(this.pictureBox1.Image);
             Log.Info("Image copied to clipboard", "SnapWindow");
+            Log.Info("SnapWindow closed by user (cut)", "SnapWindow");
             this.Close();
         }
         private void copyCtrlCToolStripMenuItem_Click(object sender, EventArgs e) {
@@ -283,7 +287,11 @@ namespace Kiritori
         private void PictureBox1_MouseClick_Icon(object sender, MouseEventArgs e)
         {
             if (e.Button != MouseButtons.Left) return;
-            if (GetCloseRect().Contains(e.Location)) this.Close();
+            if (GetCloseRect().Contains(e.Location))
+            {
+                Log.Info("SnapWindow closed by user (icon)", "SnapWindow");
+                this.Close();
+            }
         }
 
         public void printImage()
@@ -324,6 +332,7 @@ namespace Kiritori
         public void closeWindow()
         {
             ShowOverlay("CLOSED");
+            Log.Info("SnapWindow closed by user (menu)", "SnapWindow");
             this.Close();
         }
 

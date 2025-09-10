@@ -296,6 +296,7 @@ namespace Kiritori.Views.LiveCapture
 
                 case (int)HOTS.CLOSE:   // Ctrl + W
                 case (int)HOTS.ESCAPE:  // Esc
+                    Log.Info("LivePreviewWindow closed by user", "LivePreview");
                     this.Close(); return true;
                 case (int)HOTS.SPACE:   // Space
                     TogglePause(); return true;
@@ -1403,7 +1404,11 @@ namespace Kiritori.Views.LiveCapture
             _miTopMost.ShortcutKeys = (Keys)HOTS.FLOAT;
 
             _miClose = new ToolStripMenuItem(SR.T("Menu.CloseWindow", "Close Window"));
-            _miClose.Click += (s, e) => this.Close();
+            _miClose.Click += (s, e) =>
+            {
+                Log.Info("LivePreviewWindow closed by user (menu)", "LivePreview");
+                this.Close();
+            };
             _miClose.ShortcutKeys = (Keys)HOTS.CLOSE;
 
             _miPref = new ToolStripMenuItem(SR.T("Menu.Preferences", "Preferences"));
@@ -2242,7 +2247,11 @@ namespace Kiritori.Views.LiveCapture
                     _closeDown = false;
                     bool insideX = GetCloseRect().Contains(this.PointToClient(Cursor.Position));
                     Invalidate(GetCloseRect());
-                    if (insideX) { this.Close(); return; }
+                    if (insideX) {
+                        Log.Info("LivePreviewWindow closed by user (icon)", "LivePreview");
+                        this.Close();
+                        return;
+                    }
                 }
 
                 // クリック／ドラッグ判定 ---
