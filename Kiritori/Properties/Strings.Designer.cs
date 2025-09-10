@@ -70,6 +70,231 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Export... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Button_Advanced_Export {
+            get {
+                return ResourceManager.GetString("Button.Advanced.Export", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Import... に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Button_Advanced_Import {
+            get {
+                return ResourceManager.GetString("Button.Advanced.Import", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Reload from Disk に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Button_Advanced_Reload {
+            get {
+                return ResourceManager.GetString("Button.Advanced.Reload", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Reset All to Default に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Button_Advanced_ResetAll {
+            get {
+                return ResourceManager.GetString("Button.Advanced.ResetAll", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Reset Selected to Default に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Button_Advanced_ResetSelected {
+            get {
+                return ResourceManager.GetString("Button.Advanced.ResetSelected", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Enable / Disable に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Button_Extensions_EnableDisable {
+            get {
+                return ResourceManager.GetString("Button.Extensions.EnableDisable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Install / Update に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Button_Extensions_InstallUpdate {
+            get {
+                return ResourceManager.GetString("Button.Extensions.InstallUpdate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Open Folder に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Button_Extensions_OpenFolder {
+            get {
+                return ResourceManager.GetString("Button.Extensions.OpenFolder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Refresh に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Button_Extensions_Refresh {
+            get {
+                return ResourceManager.GetString("Button.Extensions.Refresh", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Uninstall に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Button_Extensions_Uninstall {
+            get {
+                return ResourceManager.GetString("Button.Extensions.Uninstall", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Description に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Column_Advanced_Description {
+            get {
+                return ResourceManager.GetString("Column.Advanced.Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Key に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Column_Advanced_Key {
+            get {
+                return ResourceManager.GetString("Column.Advanced.Key", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Scope に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Column_Advanced_Scope {
+            get {
+                return ResourceManager.GetString("Column.Advanced.Scope", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Type に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Column_Advanced_Type {
+            get {
+                return ResourceManager.GetString("Column.Advanced.Type", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Value(editable) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Column_Advanced_Value {
+            get {
+                return ResourceManager.GetString("Column.Advanced.Value", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   This is the only editable column に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Column_Advanced_Value_Editable {
+            get {
+                return ResourceManager.GetString("Column.Advanced.Value.Editable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Description に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Column_Extensions_Description {
+            get {
+                return ResourceManager.GetString("Column.Extensions.Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   E に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Column_Extensions_Enabled_Checkbox {
+            get {
+                return ResourceManager.GetString("Column.Extensions.Enabled.Checkbox", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Enabled に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Column_Extensions_Enabled_Tooltip {
+            get {
+                return ResourceManager.GetString("Column.Extensions.Enabled.Tooltip", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Id に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Column_Extensions_Id {
+            get {
+                return ResourceManager.GetString("Column.Extensions.Id", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Installed に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Column_Extensions_Installed {
+            get {
+                return ResourceManager.GetString("Column.Extensions.Installed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   I に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Column_Extensions_Installed_Checkbox {
+            get {
+                return ResourceManager.GetString("Column.Extensions.Installed.Checkbox", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Installed に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Column_Extensions_Installed_Tooltip {
+            get {
+                return ResourceManager.GetString("Column.Extensions.Installed.Tooltip", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Name に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Column_Extensions_Name {
+            get {
+                return ResourceManager.GetString("Column.Extensions.Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Version に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Column_Extensions_Repo {
+            get {
+                return ResourceManager.GetString("Column.Extensions.Repo", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   (empty) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Common_Empty {
@@ -1200,6 +1425,15 @@ namespace Kiritori.Properties {
         internal static string Text_Language {
             get {
                 return ResourceManager.GetString("Text.Language", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Licenses に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_LicensesButton {
+            get {
+                return ResourceManager.GetString("Text.LicensesButton", resourceCulture);
             }
         }
         

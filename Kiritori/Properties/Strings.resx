@@ -651,4 +651,82 @@
   <data name="Extensions.InstallDialog.SizeUnknown" xml:space="preserve">
     <value>Unknown</value>
   </data>
+  <data name="Text.LicensesButton" xml:space="preserve">
+    <value>Licenses</value>
+  </data>
+  <data name="Column.Advanced.Key" xml:space="preserve">
+    <value>Key</value>
+  </data>
+  <data name="Column.Advanced.Scope" xml:space="preserve">
+    <value>Scope</value>
+  </data>
+  <data name="Column.Advanced.Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Column.Advanced.Value" xml:space="preserve">
+    <value>Value(editable)</value>
+  </data>
+  <data name="Column.Advanced.Value.Editable" xml:space="preserve">
+    <value>This is the only editable column</value>
+  </data>
+  <data name="Column.Advanced.Description" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="Button.Advanced.ResetSelected" xml:space="preserve">
+    <value>Reset Selected to Default</value>
+  </data>
+  <data name="Button.Advanced.ResetAll" xml:space="preserve">
+    <value>Reset All to Default</value>
+  </data>
+  <data name="Button.Advanced.Reload" xml:space="preserve">
+    <value>Reload from Disk</value>
+  </data>
+  <data name="Button.Advanced.Export" xml:space="preserve">
+    <value>Export...</value>
+  </data>
+  <data name="Button.Advanced.Import" xml:space="preserve">
+    <value>Import...</value>
+  </data>
+  <data name="Column.Extensions.Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Column.Extensions.Id" xml:space="preserve">
+    <value>Id</value>
+  </data>
+  <data name="Column.Extensions.Repo" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="Column.Extensions.Installed" xml:space="preserve">
+    <value>Installed</value>
+  </data>
+  <data name="Column.Extensions.Installed.Checkbox" xml:space="preserve">
+    <value>I</value>
+  </data>
+  <data name="Column.Extensions.Installed.Tooltip" xml:space="preserve">
+    <value>Installed</value>
+  </data>
+  <data name="Column.Extensions.Enabled.Checkbox" xml:space="preserve">
+    <value>E</value>
+  </data>
+  <data name="Column.Extensions.Enabled.Tooltip" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="Column.Extensions.Description" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="Button.Extensions.InstallUpdate" xml:space="preserve">
+    <value>Install / Update</value>
+  </data>
+  <data name="Button.Extensions.EnableDisable" xml:space="preserve">
+    <value>Enable / Disable</value>
+  </data>
+  <data name="Button.Extensions.Uninstall" xml:space="preserve">
+    <value>Uninstall</value>
+  </data>
+  <data name="Button.Extensions.OpenFolder" xml:space="preserve">
+    <value>Open Folder</value>
+  </data>
+  <data name="Button.Extensions.Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
 </root>

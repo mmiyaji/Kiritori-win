@@ -157,10 +157,12 @@ namespace Kiritori
 
         // ========= Bottom Buttons ==========
         private TableLayoutPanel bottomBar;
+        private FlowLayoutPanel leftButtons;
         private FlowLayoutPanel rightButtons;
         private Button btnCancelSettings;
         private Button btnSaveSettings;
         private Button btnExitAppLeft;
+        private Button btnLicenses;
 
         // ========= Initialize =========
         private void InitializeComponent()
@@ -221,6 +223,15 @@ namespace Kiritori
             {
                 e.Graphics.DrawLine(SystemPens.ControlLight, 0, 0, this.bottomBar.Width, 0);
             };
+            this.leftButtons = new FlowLayoutPanel
+            {
+                // FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(0),
+                Margin = new Padding(0),
+            };
 
             this.btnExitAppLeft = new Button
             {
@@ -230,6 +241,21 @@ namespace Kiritori
                 Tag = "loc:Text.BtnExit"
             };
             this.btnExitAppLeft.Click += new EventHandler(this.btnExitApp_Click);
+            this.btnLicenses = new Button
+            {
+                Text = "Licenses…",
+                AutoSize = true,
+                Margin = new Padding(0, 6, 6, 6),
+                Tag = "loc:Text.LicensesButton"
+            };
+            this.btnLicenses.Click += (s, e) =>
+            {
+                using (var dlg = new Kiritori.Views.ThirdPartyDialog())
+                    dlg.ShowDialog(this);
+            };
+
+            this.leftButtons.Controls.Add(this.btnExitAppLeft);
+            this.leftButtons.Controls.Add(this.btnLicenses);
 
             this.rightButtons = new FlowLayoutPanel
             {
@@ -263,7 +289,7 @@ namespace Kiritori
 
             var spacer = new Panel { Dock = DockStyle.Fill };
 
-            this.bottomBar.Controls.Add(this.btnExitAppLeft, 0, 0);
+            this.bottomBar.Controls.Add(this.leftButtons, 0, 0);
             this.bottomBar.Controls.Add(spacer, 1, 0);
             this.bottomBar.Controls.Add(this.rightButtons, 2, 0);
 
@@ -418,7 +444,8 @@ namespace Kiritori
             this.chkTrayNotifyOCR = new CheckBox { Text = "Notify in tray on OCR capture", AutoSize = true, Tag = "loc:Text.NotifyTrayOCR" };
             // this.chkPlaySound = new CheckBox { Text = "Play sound on capture", AutoSize = true, Enabled = false, Tag = "loc:Text.PlaySound" };
 
-            var flowToggles = new FlowLayoutPanel {
+            var flowToggles = new FlowLayoutPanel
+            {
                 FlowDirection = FlowDirection.LeftToRight,
                 AutoSize = true,
                 WrapContents = true,
@@ -640,7 +667,7 @@ namespace Kiritori
             this.tlpShortcutsCap = NewGrid(2, 3);
 
             // 左段
-            AddShortcutRow(this.tlpShortcutsCap, 0, "Toggle guide lines", out this.labelScreenGuide, out this.textBoxScreenGuide, "Alt", colOffset: 0, tagKey: "Text.ToggleGuide" );
+            AddShortcutRow(this.tlpShortcutsCap, 0, "Toggle guide lines", out this.labelScreenGuide, out this.textBoxScreenGuide, "Alt", colOffset: 0, tagKey: "Text.ToggleGuide");
             AddShortcutRow(this.tlpShortcutsCap, 1, "Square crop", out this.labelScreenSquare, out this.textBoxScreenSquare, "Shift", colOffset: 0, tagKey: "Text.SquareCrop");
             AddShortcutRow(this.tlpShortcutsCap, 2, "Snap", out this.labelScreenSnap, out this.textBoxScreenSnap, "Ctrl", colOffset: 0, tagKey: "Text.Snap");
 
@@ -783,8 +810,8 @@ namespace Kiritori
             tlpShortcutsInfo.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
 
             AddShortcutInfo(tlpShortcutsInfo, "Ctrl + Shift + 5", "Start capture", tagKey: "Text.StartCapture");
-            AddShortcutInfo(tlpShortcutsInfo, "Ctrl + W, ESC",    "Close window", tagKey: "Text.CloseWindow");
-            AddShortcutInfo(tlpShortcutsInfo, "Ctrl + C",         "Copy to clipboard", tagKey: "Text.CopyToClipboard");
+            AddShortcutInfo(tlpShortcutsInfo, "Ctrl + W, ESC", "Close window", tagKey: "Text.CloseWindow");
+            AddShortcutInfo(tlpShortcutsInfo, "Ctrl + C", "Copy to clipboard", tagKey: "Text.CopyToClipboard");
             // AddShortcutInfo(tlpShortcutsInfo, "Ctrl + S",         "Save image", tagKey: "Text.SaveImage");
             // AddShortcutInfo(tlpShortcutsInfo, "Ctrl + T",         "Run OCR (copy result / show toast)", tagKey: "Text.RunOCRDesc");
             // AddShortcutInfo(tlpShortcutsInfo, "", "");
@@ -797,7 +824,7 @@ namespace Kiritori
             this.grpOnAppLaunch = new GroupBox
             {
                 Text = "On app launch",
-                Tag  = "loc:Text.OnAppLaunch",
+                Tag = "loc:Text.OnAppLaunch",
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Dock = DockStyle.Top,
@@ -819,7 +846,7 @@ namespace Kiritori
             {
                 AutoSize = true,
                 Text = "Open this menu on app start",
-                Tag  = "loc:Text.OpenMenuOnAppStart"
+                Tag = "loc:Text.OpenMenuOnAppStart"
             };
 
             // 補足ラベル
@@ -839,8 +866,8 @@ namespace Kiritori
             this.grpOnAppLaunch.Controls.Add(tlpOnAppLaunch);
 
             // ルートに配置
-            this.tlpInfoRoot.Controls.Add(this.tlpInfoHeader,  0, 0); // 上段：名刺ヘッダ
-            this.tlpInfoRoot.Controls.Add(this.grpShortcuts,   0, 1); // 中段：ショートカット
+            this.tlpInfoRoot.Controls.Add(this.tlpInfoHeader, 0, 0); // 上段：名刺ヘッダ
+            this.tlpInfoRoot.Controls.Add(this.grpShortcuts, 0, 1); // 中段：ショートカット
             this.tlpInfoRoot.Controls.Add(this.grpOnAppLaunch, 0, 2); // 下段：起動時カード
 
             // タブに追加
@@ -849,7 +876,7 @@ namespace Kiritori
 
             // リサイズでレスポンシブ調整
             tlpOnAppLaunch.SizeChanged += (_, __) =>
-            {                
+            {
                 var pad = tlpOnAppLaunch.Padding.Left + tlpOnAppLaunch.Padding.Right;
                 lblDesc.MaximumSize = new Size(Math.Max(100, tlpOnAppLaunch.ClientSize.Width - pad), 0);
             };

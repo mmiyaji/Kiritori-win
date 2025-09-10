@@ -133,7 +133,7 @@ namespace Kiritori
             var colName = new DataGridViewTextBoxColumn
             {
                 DataPropertyName = nameof(SettingRow.Name),
-                HeaderText = "Key",
+                HeaderText = SR.T("Column.Advanced.Key", "Key"),
                 ReadOnly = true,
                 Width = 150,
                 // MinimumWidth = 160
@@ -142,7 +142,7 @@ namespace Kiritori
             var colScope = new DataGridViewTextBoxColumn
             {
                 DataPropertyName = nameof(SettingRow.Scope),
-                HeaderText = "Scope",
+                HeaderText = SR.T("Column.Advanced.Scope", "Scope"),
                 ReadOnly = true,
                 Width = 50,
                 // MinimumWidth = 70
@@ -151,7 +151,7 @@ namespace Kiritori
             var colType = new DataGridViewTextBoxColumn
             {
                 DataPropertyName = nameof(SettingRow.TypeDisplay),
-                HeaderText = "Type",
+                HeaderText = SR.T("Column.Advanced.Type", "Type"),
                 ReadOnly = true,
                 Width = 50,
                 // MinimumWidth = 140
@@ -160,12 +160,12 @@ namespace Kiritori
             var colValue = new DataGridViewTextBoxColumn
             {
                 DataPropertyName = nameof(SettingRow.ValueString),
-                HeaderText = "Value(editable)",
+                HeaderText = SR.T("Column.Advanced.Value", "Value(editable)"),
                 ReadOnly = false,
                 Width = 100,
             };
             // Value 列の既定スタイル（常時薄色）
-            colValue.HeaderCell.ToolTipText = "This is the only editable column";
+            colValue.HeaderCell.ToolTipText = SR.T("Column.Advanced.Value.Editable", "This is the only editable column");
             colValue.DefaultCellStyle.BackColor = _valueBaseBg;
             colValue.DefaultCellStyle.SelectionBackColor = _valueBaseSelBg;
             colValue.DefaultCellStyle.SelectionForeColor = SystemColors.ControlText;
@@ -174,7 +174,7 @@ namespace Kiritori
             var colDesc = new DataGridViewTextBoxColumn
             {
                 DataPropertyName = nameof(SettingRow.Description),
-                HeaderText = "Description",
+                HeaderText = SR.T("Column.Advanced.Description", "Description"),
                 ReadOnly = true,
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
                 FillWeight = 40,       // ← Value:Description = 60:40 の比率
@@ -301,11 +301,26 @@ namespace Kiritori
                 Padding = new Padding(0, 6, 0, 0)
             };
 
-            _btnResetSel = new Button { Text = "Reset Selected to Default", AutoSize = true };
-            _btnResetAll = new Button { Text = "Reset All to Default", AutoSize = true };
-            _btnReload = new Button { Text = "Reload from Disk", AutoSize = true };
-            _btnExport = new Button { Text = "Export...", AutoSize = true };
-            _btnImport = new Button { Text = "Import...", AutoSize = true };
+            _btnResetSel = new Button {
+                Text = "Reset Selected to Default",
+                Tag = "loc:Button.Advanced.ResetSelected",
+                AutoSize = true };
+            _btnResetAll = new Button {
+                Text = "Reset All to Default",
+                Tag = "loc:Button.Advanced.ResetAll",
+                AutoSize = true };
+            _btnReload = new Button {
+                Text = "Reload from Disk",
+                Tag = "loc:Button.Advanced.Reload",
+                AutoSize = true };
+            _btnExport = new Button {
+                Text = "Export",
+                Tag = "loc:Button.Advanced.Export",
+                AutoSize = true };
+            _btnImport = new Button {
+                Text = "Import",
+                Tag = "loc:Button.Advanced.Import",
+                AutoSize = true };
 
             _btnResetSel.Click += (s, e) => ResetSelectedToDefault();
             _btnResetAll.Click += (s, e) => ResetAllToDefault();

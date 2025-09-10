@@ -7,7 +7,7 @@ using System.Linq;
 using System.Windows.Forms;
 using Kiritori.Services.Logging;
 using Kiritori.Services.Extensions;
-
+using Kiritori.Helpers;
 namespace Kiritori
 {
     public partial class PrefForm
@@ -58,13 +58,37 @@ namespace Kiritori
             _gridExt.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
 
             // 列
-            _gridExt.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(ExtRow.Name), HeaderText = "Name", Width = 180 });
-            _gridExt.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(ExtRow.Id), HeaderText = "Id", Width = 130 });
-            _gridExt.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(ExtRow.RepoVersion), HeaderText = "Repo", Width = 70 });
-            _gridExt.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(ExtRow.InstalledVersion), HeaderText = "Installed", Width = 80 });
-            _gridExt.Columns.Add(new DataGridViewCheckBoxColumn { DataPropertyName = nameof(ExtRow.Installed), HeaderText = "I", Width = 30, ToolTipText = "Installed" });
-            _gridExt.Columns.Add(new DataGridViewCheckBoxColumn { DataPropertyName = nameof(ExtRow.Enabled), HeaderText = "E", Width = 30, ToolTipText = "Enabled" });
-            var colDesc = new DataGridViewTextBoxColumn { DataPropertyName = nameof(ExtRow.Description), HeaderText = "Description", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, FillWeight = 60 };
+            _gridExt.Columns.Add(new DataGridViewTextBoxColumn {
+                DataPropertyName = nameof(ExtRow.Name),
+                HeaderText = SR.T("Column.Extensions.Name", "Name"),
+                Width = 180 });
+            _gridExt.Columns.Add(new DataGridViewTextBoxColumn {
+                DataPropertyName = nameof(ExtRow.Id),
+                HeaderText = SR.T("Column.Extensions.Id", "Id"),
+                Width = 130 });
+            _gridExt.Columns.Add(new DataGridViewTextBoxColumn {
+                DataPropertyName = nameof(ExtRow.RepoVersion),
+                HeaderText = SR.T("Column.Extensions.Repo", "Repo"),
+                Width = 70 });
+            _gridExt.Columns.Add(new DataGridViewTextBoxColumn {
+                DataPropertyName = nameof(ExtRow.InstalledVersion),
+                HeaderText = SR.T("Column.Extensions.Installed", "Installed"),
+                Width = 80 });
+            _gridExt.Columns.Add(new DataGridViewCheckBoxColumn {
+                DataPropertyName = nameof(ExtRow.Installed),
+                HeaderText = SR.T("Column.Extensions.Installed.Checkbox", "I"),
+                Width = 30,
+                ToolTipText = SR.T("Column.Extensions.Installed.Tooltip", "Installed") });
+            _gridExt.Columns.Add(new DataGridViewCheckBoxColumn {
+                DataPropertyName = nameof(ExtRow.Enabled),
+                HeaderText = SR.T("Column.Extensions.Enabled.Checkbox", "E"),
+                Width = 30,
+                ToolTipText = SR.T("Column.Extensions.Enabled.Tooltip", "Enabled") });
+            var colDesc = new DataGridViewTextBoxColumn {
+                DataPropertyName = nameof(ExtRow.Description),
+                HeaderText = SR.T("Column.Extensions.Description", "Description"),
+                AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
+                FillWeight = 60 };
             _gridExt.Columns.Add(colDesc);
 
             // ボタンバー
@@ -77,11 +101,26 @@ namespace Kiritori
                 Padding = new Padding(0, 6, 0, 0)
             };
 
-            _btnExtInstallUpdate = new Button { Text = "Install / Update", AutoSize = true };
-            _btnExtEnableDisable = new Button { Text = "Enable / Disable", AutoSize = true };
-            _btnExtUninstall = new Button { Text = "Uninstall", AutoSize = true };
-            _btnExtOpenFolder = new Button { Text = "Open Folder", AutoSize = true };
-            _btnExtRefresh = new Button { Text = "Refresh", AutoSize = true };
+            _btnExtInstallUpdate = new Button {
+                Text = "Install / Update",
+                Tag = "loc:Button.Extensions.InstallUpdate",
+                AutoSize = true };
+            _btnExtEnableDisable = new Button {
+                Text = "Enable / Disable",
+                Tag = "loc:Button.Extensions.EnableDisable",
+                AutoSize = true };
+            _btnExtUninstall = new Button {
+                Text = "Uninstall",
+                Tag = "loc:Button.Extensions.Uninstall",
+                AutoSize = true };
+            _btnExtOpenFolder = new Button {
+                Text = "Open Folder",
+                Tag = "loc:Button.Extensions.OpenFolder",
+                AutoSize = true };
+            _btnExtRefresh = new Button {
+                Text = "Refresh",
+                Tag = "loc:Button.Extensions.Refresh",
+                AutoSize = true };
 
             _btnExtInstallUpdate.Click += (_, __) => DoInstallOrUpdateSelected();
             _btnExtEnableDisable.Click += (_, __) => DoEnableDisableSelected();
@@ -165,19 +204,19 @@ namespace Kiritori
             {
                 _btnExtInstallUpdate.Enabled = false;
                 _btnExtEnableDisable.Enabled = false;
-                _btnExtInstallUpdate.Text = "Install / Update";
-                _btnExtEnableDisable.Text = "Enable / Disable";
+                _btnExtInstallUpdate.Text = SR.T("Button.Extensions.InstallUpdate", "Install / Update");
+                _btnExtEnableDisable.Text = SR.T("Button.Extensions.EnableDisable", "Enable / Disable");
                 return;
             }
 
             // Install/Update
             bool needsInstall = !r.Installed || string.IsNullOrEmpty(r.InstalledVersion) || !string.Equals(r.InstalledVersion, r.RepoVersion, StringComparison.OrdinalIgnoreCase);
             _btnExtInstallUpdate.Enabled = has;
-            _btnExtInstallUpdate.Text = needsInstall ? "Install / Update" : "Reinstall";
+            _btnExtInstallUpdate.Text = needsInstall ? SR.T("Button.Extensions.InstallUpdate", "Install / Update") : SR.T("Button.Extensions.Reinstall", "Reinstall");
 
             // Enable/Disable
             _btnExtEnableDisable.Enabled = r.Installed;
-            _btnExtEnableDisable.Text = r.Enabled ? "Disable" : "Enable";
+            _btnExtEnableDisable.Text = r.Enabled ? SR.T("Button.Extensions.Disable", "Disable") : SR.T("Button.Extensions.Enable", "Enable");
         }
 
         private void DoInstallOrUpdateSelected()
@@ -191,7 +230,7 @@ namespace Kiritori
             if (r.ManifestRef == null)
             {
                 Log.Error($"[ExtensionsUI] Manifest missing for id={r.Id}", "Extensions");
-                MessageBox.Show(this, "Manifest が見つかりません。", "Extensions",
+                MessageBox.Show(this, "Manifest not found", "Extensions",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
