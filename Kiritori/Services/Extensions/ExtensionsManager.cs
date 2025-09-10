@@ -24,16 +24,38 @@ namespace Kiritori.Services.Extensions
             public long TotalBytes;
         }
 
+        private static readonly object _repoCacheSync = new object();
+        private static List<ExtensionManifest> _repoCache; // プロセス内キャッシュ
+
+        public static void InvalidateRepoCache()
+        {
+            lock (_repoCacheSync) { _repoCache = null; }
+        }
 
         public static IEnumerable<ExtensionManifest> LoadRepoManifests()
         {
+            // 1) キャッシュがあれば即返す（呼び出しが連続しても実スキャンは1回）
+            lock (_repoCacheSync)
+            {
+                if (_repoCache != null) return new List<ExtensionManifest>(_repoCache);
+            }
+
             var list = new List<ExtensionManifest>();
             try
             {
-                // 1) 外部ディレクトリ群（ユーザー領域→出力同梱→開発時の親）を走査
-                foreach (var dir in ExtensionsPaths.CandidateManifestDirs())
+                // --- ディレクトリ重複の排除（大小文字や相対→絶対の差分も吸収） ---
+                var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var raw in ExtensionsPaths.CandidateManifestDirs())
                 {
+                    if (string.IsNullOrWhiteSpace(raw)) continue;
+
+                    string dir = raw;
+                    try { dir = Path.GetFullPath(raw); } catch { /* 失敗時はそのまま */ }
+
                     if (!Directory.Exists(dir)) continue;
+                    if (!seen.Add(dir)) continue; // ★ 同一パスはスキップ
+
+                    // --- 実スキャン ---
                     foreach (var f in Directory.EnumerateFiles(dir, "*.json", SearchOption.TopDirectoryOnly))
                     {
                         var m = LoadManifest(f);
@@ -42,7 +64,7 @@ namespace Kiritori.Services.Extensions
                     Kiritori.Services.Logging.Log.Debug($"Manifests scanned: {dir} => {list.Count}", "Extensions");
                 }
 
-                // 2) 見つからなければ EXE に埋め込んだデフォルトを使う
+                // 2) 見つからなければ埋め込み既定を採用
                 if (list.Count == 0)
                 {
                     var emb = ExtensionsEmbedded.LoadEmbedded();
@@ -50,18 +72,27 @@ namespace Kiritori.Services.Extensions
                     Kiritori.Services.Logging.Log.Info($"Using embedded default manifests: {emb.Count}", "Extensions");
                 }
 
-                // 3) 同一IDが重複したら最初のものを採用
+                // 3) ID重複を排除（最初のものを採用）
                 list = list
                     .GroupBy(m => m.Id ?? "", StringComparer.OrdinalIgnoreCase)
                     .Select(g => g.First())
                     .ToList();
+
+                // 4) キャッシュへ保存
+                lock (_repoCacheSync)
+                {
+                    _repoCache = new List<ExtensionManifest>(list);
+                }
             }
             catch (Exception ex)
             {
                 Kiritori.Services.Logging.Log.Error("LoadRepoManifests failed: " + ex.Message, "Extensions");
             }
+
+            // 呼び出し側が安全に列挙できるようにスナップショットを返す
             return list;
         }
+
 
 
         private static IEnumerable<ExtensionManifest> LoadAllFrom(string dir)
@@ -184,6 +215,7 @@ namespace Kiritori.Services.Extensions
             }
 
             MarkInstalled(m.Id, m.Version);
+            InvalidateRepoCache();
             Log.Info($"Extension installed: {m.Id} {m.Version}", "Ext");
             return target;
         }
@@ -226,6 +258,7 @@ namespace Kiritori.Services.Extensions
             catch { /* ベストエフォート */ }
 
             MarkUninstalled(id); // 状態更新
+            InvalidateRepoCache();
         }
         public static string GetInstallDir(string id)
         {
@@ -396,7 +429,7 @@ namespace Kiritori.Services.Extensions
             ExtensionManifest m,
             IProgress<int> progress = null)
         {
-            if (m == null || m.Download == null || m.Install == null) 
+            if (m == null || m.Download == null || m.Install == null)
                 throw new ArgumentException("bad manifest");
 
             ExtensionsPaths.EnsureDirs();

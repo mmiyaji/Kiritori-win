@@ -652,7 +652,7 @@
     <value>不明</value>
   </data>
   <data name="Text.LicensesButton" xml:space="preserve">
-    <value>ライセンス</value>
+    <value>ライセンス...</value>
   </data>
   <data name="Column.Advanced.Key" xml:space="preserve">
     <value>キー</value>
@@ -724,9 +724,18 @@
     <value>アンインストール</value>
   </data>
   <data name="Button.Extensions.OpenFolder" xml:space="preserve">
-    <value>フォルダをフラク</value>
+    <value>フォルダを開く</value>
   </data>
   <data name="Button.Extensions.Refresh" xml:space="preserve">
     <value>更新</value>
+  </data>
+  <data name="Button.Extensions.Reinstall" xml:space="preserve">
+    <value>再インストール</value>
+  </data>
+  <data name="Button.Extensions.Disable" xml:space="preserve">
+    <value>無効</value>
+  </data>
+  <data name="Button.Extensions.Enable" xml:space="preserve">
+    <value>有効</value>
   </data>
 </root>

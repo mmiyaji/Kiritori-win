@@ -140,7 +140,6 @@ namespace Kiritori
             {
                 Log.Debug("" + ex, "Ext");
             }
-            try { Kiritori.Services.Extensions.ExtensionsManager.RepairStateIfMissing(); } catch { }
 
             Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
             Application.EnableVisualStyles();

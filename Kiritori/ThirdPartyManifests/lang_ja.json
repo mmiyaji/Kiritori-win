@@ -5,8 +5,8 @@
   "kind": "satellite",
   "download": {
     "url": "https://github.com/mmiyaji/Kiritori-win/releases/download/v1.4.1/lang-ja-1.4.1.zip",
-    "sha256": "F1E4C8661FDD26B84BE3B74D2D05032AA79FA293B42A64DDE335C2C67706C32C",
-    "size": 7732
+    "sha256": "F7065AE4CC3D3CCD2CE4B8BCEEA7CE830C6FD75ED7552638D532D3F97CA8AD91",
+    "size": 7774
   },
   "install": {
     "targetDir": "i18n/ja",

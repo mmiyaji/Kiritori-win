@@ -115,6 +115,24 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Disable に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Button_Extensions_Disable {
+            get {
+                return ResourceManager.GetString("Button.Extensions.Disable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Enable に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Button_Extensions_Enable {
+            get {
+                return ResourceManager.GetString("Button.Extensions.Enable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Enable / Disable に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Button_Extensions_EnableDisable {
@@ -147,6 +165,15 @@ namespace Kiritori.Properties {
         internal static string Button_Extensions_Refresh {
             get {
                 return ResourceManager.GetString("Button.Extensions.Refresh", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Reinstall に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Button_Extensions_Reinstall {
+            get {
+                return ResourceManager.GetString("Button.Extensions.Reinstall", resourceCulture);
             }
         }
         
@@ -1429,7 +1456,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Licenses に類似しているローカライズされた文字列を検索します。
+        ///   Licenses... に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_LicensesButton {
             get {

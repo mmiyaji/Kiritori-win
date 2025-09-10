@@ -652,7 +652,7 @@
     <value>Unknown</value>
   </data>
   <data name="Text.LicensesButton" xml:space="preserve">
-    <value>Licenses</value>
+    <value>Licenses...</value>
   </data>
   <data name="Column.Advanced.Key" xml:space="preserve">
     <value>Key</value>
@@ -728,5 +728,14 @@
   </data>
   <data name="Button.Extensions.Refresh" xml:space="preserve">
     <value>Refresh</value>
+  </data>
+  <data name="Button.Extensions.Reinstall" xml:space="preserve">
+    <value>Reinstall</value>
+  </data>
+  <data name="Button.Extensions.Disable" xml:space="preserve">
+    <value>Disable</value>
+  </data>
+  <data name="Button.Extensions.Enable" xml:space="preserve">
+    <value>Enable</value>
   </data>
 </root>
