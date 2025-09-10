@@ -15,7 +15,7 @@ namespace Kiritori.Services.Extensions
 {
     internal static class ExtensionsManager
     {
-        public static ExtensionState State { get; private set; } = ExtensionState.Load();
+        public static ExtensionState State { get; private set; } = ExtensionState.GetState();
         internal struct DownloadProgress
         {
             public int Percent;    // 0-100, 未設定は -1
@@ -53,7 +53,7 @@ namespace Kiritori.Services.Extensions
                     try { dir = Path.GetFullPath(raw); } catch { /* 失敗時はそのまま */ }
 
                     if (!Directory.Exists(dir)) continue;
-                    if (!seen.Add(dir)) continue; // ★ 同一パスはスキップ
+                    if (!seen.Add(dir)) continue; // 同一パスはスキップ
 
                     // --- 実スキャン ---
                     foreach (var f in Directory.EnumerateFiles(dir, "*.json", SearchOption.TopDirectoryOnly))
@@ -146,7 +146,7 @@ namespace Kiritori.Services.Extensions
             if (!State.Items.TryGetValue(id, out it)) it = new ExtensionState.Item();
             it.Enabled = enabled;
             State.Items[id] = it;
-            State.Save();
+            ExtensionState.SaveState(State);
         }
 
         public static void MarkInstalled(string id, string version)
@@ -157,7 +157,7 @@ namespace Kiritori.Services.Extensions
             it.Version = version;
             if (!it.Enabled) it.Enabled = true;
             State.Items[id] = it;
-            State.Save();
+            ExtensionState.SaveState(State);
         }
 
         public static void MarkUninstalled(string id)
@@ -167,7 +167,7 @@ namespace Kiritori.Services.Extensions
             {
                 it.Installed = false;
                 State.Items[id] = it;
-                State.Save();
+                ExtensionState.SaveState(State);
             }
         }
 
@@ -281,7 +281,7 @@ namespace Kiritori.Services.Extensions
                 {
                     if (File.Exists(path))
                     {
-                        var loaded = ExtensionState.Load();
+                        var loaded = ExtensionState.GetState();
                         if (loaded != null && loaded.Items != null && loaded.Items.Count > 0)
                         {
                             State = loaded;
@@ -374,7 +374,7 @@ namespace Kiritori.Services.Extensions
                     }
                 }
 
-                st.Save();
+                ExtensionState.SaveState(st);
                 State = st; // メモリにも反映
                 Kiritori.Services.Logging.Log.Info(
                     "Repaired missing state: " + path + " (" + st.Items.Count + " items)", "Extensions");

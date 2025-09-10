@@ -669,7 +669,7 @@ namespace Kiritori
             if (res.Width > 0 && res.Height > 0)
                 sb.Append(' ').Append('(').Append(res.Width).Append('x').Append(res.Height).Append(')');
 
-            // ★ 2行目は「OCR を優先」。なければファイル名（どちらか一方だけ）
+            // 2行目は「OCR を優先」。なければファイル名（どちらか一方だけ）
             string second = null;
             if (!string.IsNullOrEmpty(description))
             {
