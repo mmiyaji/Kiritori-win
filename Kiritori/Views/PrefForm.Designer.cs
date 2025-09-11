@@ -64,7 +64,7 @@ namespace Kiritori
         private Label labelStartup;
         private CheckBox chkRunAtStartup;
         private Button btnOpenStartupSettings;
-        private Label labelStartupInfo;
+        // private Label labelStartupInfo;
         private Label labelHistory;
         private NumericUpDown textBoxHistory;
 
@@ -172,8 +172,8 @@ namespace Kiritori
             this.toolTip1 = new ToolTip(this.components);
 
             // ---- Form basics ----
-            this.AutoScaleDimensions = new SizeF(6F, 12F);
-            this.AutoScaleMode = AutoScaleMode.Font;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            this.AutoScaleMode = AutoScaleMode.Dpi;
             this.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
             this.ClientSize = new Size(640, 460);
             this.MinimumSize = new Size(660, 500);
@@ -187,12 +187,12 @@ namespace Kiritori
             this.tabControl = new TabControl { Dock = DockStyle.Fill };
 
             this.tabInfo = new TabPage("App Info") { AutoScroll = true, Tag = "loc:Tab.Info" };
-            this.tabGeneral = new TabPage("General") { AutoScroll = false, Tag = "loc:Tab.General" };
-            this.tabAppearance = new TabPage("Appearance") { AutoScroll = false, Tag = "loc:Tab.Appearance" };
-            this.tabShortcuts = new TabPage("Shortcuts") { AutoScroll = false, Tag = "loc:Tab.Shortcut" };
-            this.tabAdvanced = new TabPage("Advanced") { AutoScroll = false, Tag = "loc:Tab.Advanced" };
-            this.tabLogs = new TabPage("Logs") { AutoScroll = false, Tag = "loc:Tab.Logs" };
-            this.tabExtensions = new TabPage("Extensions") { AutoScroll = false, Tag = "loc:Tab.Extensions" };
+            this.tabGeneral = new TabPage("General") { AutoScroll = true, Tag = "loc:Tab.General" };
+            this.tabAppearance = new TabPage("Appearance") { AutoScroll = true, Tag = "loc:Tab.Appearance" };
+            this.tabShortcuts = new TabPage("Shortcuts") { AutoScroll = true, Tag = "loc:Tab.Shortcut" };
+            this.tabAdvanced = new TabPage("Advanced") { AutoScroll = true, Tag = "loc:Tab.Advanced" };
+            this.tabLogs = new TabPage("Logs") { AutoScroll = true, Tag = "loc:Tab.Logs" };
+            this.tabExtensions = new TabPage("Extensions") { AutoScroll = true, Tag = "loc:Tab.Extensions" };
 
             this.tabControl.TabPages.AddRange(new TabPage[]
             {
@@ -210,19 +210,20 @@ namespace Kiritori
             // =========================================================
             this.bottomBar = new TableLayoutPanel
             {
-                Height = 40,
-                Padding = new Padding(8, 6, 8, 6),
+                Height = 38,
+                Padding = new Padding(6),
                 ColumnCount = 3,
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
                 AutoSize = false
             };
+            this.bottomBar.Margin = new Padding(0);
             this.bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             this.bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             this.bottomBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            this.bottomBar.Paint += (s, e) =>
-            {
-                e.Graphics.DrawLine(SystemPens.ControlLight, 0, 0, this.bottomBar.Width, 0);
-            };
+            // this.bottomBar.Paint += (s, e) =>
+            // {
+            //     e.Graphics.DrawLine(SystemPens.ControlLight, 0, 0, this.bottomBar.Width, 0);
+            // };
             this.leftButtons = new FlowLayoutPanel
             {
                 // FlowDirection = FlowDirection.RightToLeft,
@@ -237,7 +238,7 @@ namespace Kiritori
             {
                 Text = "Exit App",
                 AutoSize = true,
-                Margin = new Padding(0, 6, 6, 6),
+                Margin = new Padding(0, 0, 6, 0),
                 Tag = "loc:Text.BtnExit"
             };
             this.btnExitAppLeft.Click += new EventHandler(this.btnExitApp_Click);
@@ -245,7 +246,7 @@ namespace Kiritori
             {
                 Text = "Licenses…",
                 AutoSize = true,
-                Margin = new Padding(0, 6, 6, 6),
+                Margin = new Padding(0),
                 Tag = "loc:Text.LicensesButton"
             };
             this.btnLicenses.Click += (s, e) =>
@@ -270,7 +271,7 @@ namespace Kiritori
             {
                 Text = "Cancel",
                 AutoSize = true,
-                Margin = new Padding(6),
+                Margin = new Padding(6, 0, 0, 0),
                 Tag = "loc:Text.BtnCancel"
             };
             this.btnCancelSettings.Click += new EventHandler(this.btnCancelSettings_Click);
@@ -279,7 +280,7 @@ namespace Kiritori
             {
                 Text = "Save",
                 AutoSize = true,
-                Margin = new Padding(6, 6, 0, 6),
+                Margin = new Padding(0),
                 Tag = "loc:Text.BtnSave"
             };
             this.btnSaveSettings.Click += new EventHandler(this.btnSaveSettings_Click);
@@ -301,7 +302,7 @@ namespace Kiritori
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
                 RowCount = 2,
-                Padding = new Padding(12, 0, 12, 5)
+                Padding = new Padding(12, 0, 12, 8)
             };
             shell.RowStyles.Add(new RowStyle(SizeType.Percent, 100F)); // タブ
             shell.RowStyles.Add(new RowStyle(SizeType.AutoSize));      // ボタンバー
@@ -332,8 +333,8 @@ namespace Kiritori
             this.chkRunAtStartup = new CheckBox { Text = "Run at startup", AutoSize = true, Enabled = false, Tag = "loc:Text.Runatstartup" };
             this.btnOpenStartupSettings = new Button { Text = "Open Startup settings", AutoSize = true, Tag = "loc:Text.BtnStartupFolder" };
             this.btnOpenStartupSettings.Click += new EventHandler(this.btnOpenStartupSettings_Click);
-            this.labelStartupInfo = new Label { AutoSize = true, ForeColor = SystemColors.GrayText, Text = "Startup is managed by Windows.", Dock = DockStyle.Fill };
-            this.toolTip1.SetToolTip(this.labelStartupInfo, "Settings > Apps > Startup");
+            // this.labelStartupInfo = new Label { AutoSize = true, ForeColor = SystemColors.GrayText, Text = "Startup is managed by Windows.", Dock = DockStyle.Fill };
+            // this.toolTip1.SetToolTip(this.labelStartupInfo, "Settings > Apps > Startup");
             flowStartup.Controls.Add(this.chkRunAtStartup);
             flowStartup.Controls.Add(this.btnOpenStartupSettings);
 
@@ -347,7 +348,7 @@ namespace Kiritori
 
             var flowStack = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, WrapContents = false };
             flowStack.Controls.Add(flowStartup);
-            flowStack.Controls.Add(this.labelStartupInfo);
+            // flowStack.Controls.Add(this.labelStartupInfo);
 
             tlpApp.Controls.Add(flowStack, 1, 1);
             tlpApp.Controls.Add(this.labelHistory, 0, 2);
@@ -504,7 +505,7 @@ namespace Kiritori
             this.grpWindowSettings.Tag = "loc:Text.WindowSetting";
             this.grpWindowSettings.Margin = new Padding(0, 8, 0, 0);
 
-            var tlpWin = NewGrid(4, 2);
+            var tlpWin = NewGrid(2, 2);
 
             var flowWinToggles = new FlowLayoutPanel
             {
@@ -608,7 +609,7 @@ namespace Kiritori
             this.tlpShortcutsWin = new TableLayoutPanel();
             this.tlpShortcutsWin.ColumnCount = 5;
             this.tlpShortcutsWin.RowCount = 7;
-            this.tlpShortcutsWin.Dock = DockStyle.Fill;
+            this.tlpShortcutsWin.Dock = DockStyle.Top;
             this.tlpShortcutsWin.AutoSize = true;
             this.tlpShortcutsWin.AutoSizeMode = AutoSizeMode.GrowAndShrink;
 
@@ -715,7 +716,7 @@ namespace Kiritori
             // 左：アプリアイコン（初期は120px、幅に応じて後で縮小）
             this.picAppIcon = new PictureBox
             {
-                Size = new Size(128, 128),
+                Size = new Size(110, 110),
                 SizeMode = PictureBoxSizeMode.Zoom,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left,
             };
@@ -749,7 +750,7 @@ namespace Kiritori
             {
                 Text = "Version - built at (on load)",
                 AutoSize = true,
-                Margin = new Padding(0, 0, 0, 10)
+                Margin = new Padding(0, 0, 0, 0)
             };
 
             // 作者

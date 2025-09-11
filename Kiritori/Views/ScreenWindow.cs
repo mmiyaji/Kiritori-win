@@ -70,9 +70,8 @@ namespace Kiritori
             InitializeComponent();
 
             this.DoubleBuffered = true;
-            this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.AutoScaleDimensions = new SizeF(96F, 96F);
-
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             // 設定を反映 & 設定変更のライブ反映
             ApplySettingsFromPreferences();
             HookSettingsChanged();

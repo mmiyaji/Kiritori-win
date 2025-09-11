@@ -44,9 +44,8 @@
             // 
             // ScreenWindow
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.CausesValidation = false;
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);            this.CausesValidation = false;
             this.ClientSize = new System.Drawing.Size(284, 262);
             this.ControlBox = false;
             this.Controls.Add(this.pictureBox1);

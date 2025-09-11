@@ -168,8 +168,7 @@ namespace Kiritori.Views.LiveCapture
             InitializeComponent();
             this.DoubleBuffered = true;
             this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.AutoScaleDimensions = new SizeF(96F, 96F);
-
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint, true);
 
             this.KeyPreview = true;

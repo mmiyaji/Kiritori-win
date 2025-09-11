@@ -673,13 +673,13 @@
     <value>Description</value>
   </data>
   <data name="Button.Advanced.ResetSelected" xml:space="preserve">
-    <value>Reset Selected to Default</value>
+    <value>Reset (Selected)</value>
   </data>
   <data name="Button.Advanced.ResetAll" xml:space="preserve">
-    <value>Reset All to Default</value>
+    <value>Reset (All)</value>
   </data>
   <data name="Button.Advanced.Reload" xml:space="preserve">
-    <value>Reload from Disk</value>
+    <value>Reload</value>
   </data>
   <data name="Button.Advanced.Export" xml:space="preserve">
     <value>Export...</value>

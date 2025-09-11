@@ -511,9 +511,8 @@ namespace Kiritori
             // 
             // SnapWindow
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
-            this.AutoScaleMode = AutoScaleMode.Font;
-            this.AutoSize = true;
+            this.AutoScaleMode = AutoScaleMode.Dpi;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);            this.AutoSize = true;
             this.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             this.ClientSize = new System.Drawing.Size(284, 262);
             this.ControlBox = false;

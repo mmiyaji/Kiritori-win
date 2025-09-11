@@ -91,7 +91,7 @@ namespace Kiritori
             Application.ApplicationExit += new EventHandler(Application_ApplicationExit);
             s = new ScreenWindow(this);
             this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.AutoScaleDimensions = new SizeF(96F, 96F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
 
             ApplyTrayLocalization();
             SR.CultureChanged += () =>

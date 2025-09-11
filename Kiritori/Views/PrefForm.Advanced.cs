@@ -162,7 +162,7 @@ namespace Kiritori
                 DataPropertyName = nameof(SettingRow.ValueString),
                 HeaderText = SR.T("Column.Advanced.Value", "Value(editable)"),
                 ReadOnly = false,
-                Width = 100,
+                Width = 110,
             };
             // Value 列の既定スタイル（常時薄色）
             colValue.HeaderCell.ToolTipText = SR.T("Column.Advanced.Value.Editable", "This is the only editable column");
@@ -302,23 +302,23 @@ namespace Kiritori
             };
 
             _btnResetSel = new Button {
-                Text = "Reset Selected to Default",
+                Text = "Reset (Selected)",
                 Tag = "loc:Button.Advanced.ResetSelected",
                 AutoSize = true };
             _btnResetAll = new Button {
-                Text = "Reset All to Default",
+                Text = "Reset (All)",
                 Tag = "loc:Button.Advanced.ResetAll",
                 AutoSize = true };
             _btnReload = new Button {
-                Text = "Reload from Disk",
+                Text = "Reload",
                 Tag = "loc:Button.Advanced.Reload",
                 AutoSize = true };
             _btnExport = new Button {
-                Text = "Export",
+                Text = "Export...",
                 Tag = "loc:Button.Advanced.Export",
                 AutoSize = true };
             _btnImport = new Button {
-                Text = "Import",
+                Text = "Import...",
                 Tag = "loc:Button.Advanced.Import",
                 AutoSize = true };
 

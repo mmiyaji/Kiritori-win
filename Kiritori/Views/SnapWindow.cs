@@ -197,8 +197,7 @@ namespace Kiritori
 
             this.DoubleBuffered = true;
             this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.AutoScaleDimensions = new SizeF(96F, 96F);
-
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             this.AllowDrop = true;
             this.DragEnter += SnapWindow_DragEnter;
             this.DragDrop += SnapWindow_DragDrop;

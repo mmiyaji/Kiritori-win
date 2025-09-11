@@ -673,10 +673,10 @@
     <value>説明</value>
   </data>
   <data name="Button.Advanced.ResetSelected" xml:space="preserve">
-    <value>デフォルト値に戻す</value>
+    <value>値を戻す</value>
   </data>
   <data name="Button.Advanced.ResetAll" xml:space="preserve">
-    <value>すべてデフォルトに戻す</value>
+    <value>すべて戻す</value>
   </data>
   <data name="Button.Advanced.Reload" xml:space="preserve">
     <value>リロード</value>

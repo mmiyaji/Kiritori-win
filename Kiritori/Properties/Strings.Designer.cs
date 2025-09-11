@@ -88,7 +88,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Reload from Disk に類似しているローカライズされた文字列を検索します。
+        ///   Reload に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Button_Advanced_Reload {
             get {
@@ -97,7 +97,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Reset All to Default に類似しているローカライズされた文字列を検索します。
+        ///   Reset (All) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Button_Advanced_ResetAll {
             get {
@@ -106,7 +106,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Reset Selected to Default に類似しているローカライズされた文字列を検索します。
+        ///   Reset (Selected) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Button_Advanced_ResetSelected {
             get {

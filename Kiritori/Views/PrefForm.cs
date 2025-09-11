@@ -83,7 +83,7 @@ namespace Kiritori
             if (b != null) this.chkRunAtStartup.DataBindings.Remove(b);
 
             this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.AutoScaleDimensions = new SizeF(96F, 96F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
             this.StartPosition = FormStartPosition.CenterScreen;
 
             if (!IsInDesignMode())
@@ -154,8 +154,8 @@ namespace Kiritori
                     chkRunAtStartup.Checked = enabled;
                     chkRunAtStartup.Enabled = false;
 
-                    toolTip1.SetToolTip(labelStartupInfo, "Managed by Windows Settings > Apps > Startup");
-                    labelStartupInfo.Text = "Startup is managed by Windows.";
+                    // toolTip1.SetToolTip(labelStartupInfo, "Managed by Windows Settings > Apps > Startup");
+                    // labelStartupInfo.Text = "Startup is managed by Windows.";
                 }
                 else
                 {
@@ -168,8 +168,8 @@ namespace Kiritori
 
                     string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
                     string displayDir = startupDir.Replace(appData, "%APPDATA%");
-                    labelStartupInfo.Text = "Shortcut: " + Path.Combine(displayDir, Application.ProductName + ".lnk");
-                    toolTip1.SetToolTip(labelStartupInfo, shortcutPath);
+                    // labelStartupInfo.Text = "Shortcut: " + Path.Combine(displayDir, Application.ProductName + ".lnk");
+                    // toolTip1.SetToolTip(labelStartupInfo, shortcutPath);
                 }
 
                 // Info タブのバージョン表示
@@ -778,8 +778,8 @@ namespace Kiritori
             }
             this.tlpInfoHeader.ResumeLayout(true);
 
-            // アイコンのスケール（小さい幅では96、大きい幅では128）
-            int target = narrow ? 96 : 128;
+            // アイコンのスケール（小さい幅では96、大きい幅では110）
+            int target = narrow ? 96 : 110;
             if (this.picAppIcon.Size.Width != target)
             {
                 try
@@ -1174,16 +1174,16 @@ namespace Kiritori
                     : SR.T("Text.BtnStartupFolder", "Open Startup folder");
             }
 
-            // 起動管理の説明＆ツールチップ（あれば）
-            if (labelStartupInfo != null && !labelStartupInfo.IsDisposed && toolTip1 != null)
-            {
-                if (PackagedHelper.IsPackaged())
-                {
-                    labelStartupInfo.Text = SR.T("Text.StartupManaged", "Startup is managed by Windows.");
-                    toolTip1.SetToolTip(labelStartupInfo, SR.T("Text.StartupManagedTip", "Settings > Apps > Startup"));
-                }
-                // 非 MSIX側の表示は必要ならここに
-            }
+            // // 起動管理の説明＆ツールチップ（あれば）
+            // if (labelStartupInfo != null && !labelStartupInfo.IsDisposed && toolTip1 != null)
+            // {
+            //     if (PackagedHelper.IsPackaged())
+            //     {
+            //         labelStartupInfo.Text = SR.T("Text.StartupManaged", "Startup is managed by Windows.");
+            //         toolTip1.SetToolTip(labelStartupInfo, SR.T("Text.StartupManagedTip", "Settings > Apps > Startup"));
+            //     }
+            //     // 非 MSIX側の表示は必要ならここに
+            // }
 
             // バージョン/ビルド日（ファイルの更新時刻を採用：再現性◎）
             var asm = Assembly.GetExecutingAssembly();

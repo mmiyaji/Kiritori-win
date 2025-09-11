@@ -28,9 +28,9 @@ namespace Kiritori.Views
 
         public ThirdPartyDialog()
         {
-            this.AutoScaleDimensions = new SizeF(6F, 12F);
-            this.AutoScaleMode = AutoScaleMode.Font;
-            this.Font = new Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Dpi;
+            this.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             this.Text = "Third-Party Licenses";
             this.StartPosition = FormStartPosition.CenterParent;
             this.Size = new Size(1000, 680);
