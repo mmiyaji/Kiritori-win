@@ -10,7 +10,6 @@ namespace Kiritori.Services.Recording
 {
     internal static class FfmpegLocator
     {
-        // ここをメインの入口として利用
         public static string Resolve(bool autoInstall = true, IWin32Window owner = null)
         {
             // 1) 設定で明示パスがあれば最優先
@@ -18,22 +17,12 @@ namespace Kiritori.Services.Recording
             if (IsGood(cfgPath)) return cfgPath;
 
             // 2) 拡張（x64/x86）から探す
-            // var id = Environment.Is64BitProcess ? "ffmpeg" : "ffmpeg_x86";
             var id = "ffmpeg";
             var ext = TryFromExtension(id);
             if (IsGood(ext)) return ext;
 
             // 2-1) 自動導入（未導入なら）
-            // if (autoInstall && !ExtensionsManager.IsInstalled(id))
-            // {
-            //     // 確認ダイアログあり (Debug/Releaseどちらでも)
-            //     if (ExtensionsAuto.TryEnsure(id, owner, prompt: true))
-            //     {
-            //         ext = TryFromExtension(id);
-            //         if (IsGood(ext)) return ext;
-            //     }
-            // }
-            if (autoInstall && !ExtensionsManager.IsInstalled(id))
+            if (autoInstall && !ExtensionsManager.IsInstalled(id) && !Helpers.PackagedHelper.IsPackaged())
             {
                 try
                 {

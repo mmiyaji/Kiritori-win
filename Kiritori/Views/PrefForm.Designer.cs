@@ -194,16 +194,31 @@ namespace Kiritori
             this.tabLogs = new TabPage("Logs") { AutoScroll = true, Tag = "loc:Tab.Logs" };
             this.tabExtensions = new TabPage("Extensions") { AutoScroll = true, Tag = "loc:Tab.Extensions" };
 
-            this.tabControl.TabPages.AddRange(new TabPage[]
+            if (!Helpers.PackagedHelper.IsPackaged())
             {
-                this.tabInfo,
-                this.tabGeneral,
-                this.tabAppearance,
-                this.tabShortcuts,
-                this.tabExtensions,
-                this.tabAdvanced,
-                this.tabLogs,
-            });
+                this.tabControl.TabPages.AddRange(new TabPage[]
+                {
+                    this.tabInfo,
+                    this.tabGeneral,
+                    this.tabAppearance,
+                    this.tabShortcuts,
+                    this.tabExtensions,
+                    this.tabAdvanced,
+                    this.tabLogs,
+                });
+            }
+            else
+            {
+                this.tabControl.TabPages.AddRange(new TabPage[]
+                {
+                    this.tabInfo,
+                    this.tabGeneral,
+                    this.tabAppearance,
+                    this.tabShortcuts,
+                    this.tabAdvanced,
+                    this.tabLogs,
+                });
+            }
 
             // =========================================================
             // ② Bottom bar（Exit 左 / Cancel & Save 右）
@@ -420,8 +435,8 @@ namespace Kiritori
             tlpHot.Controls.Add(this.labelHotkeyLivePreview, 0, 2);
             tlpHot.Controls.Add(this.textBoxHotkeyLivePreview, 1, 2);
             tlpHot.Controls.Add(btnResetLive, 2, 2);
-            tlpHot.Controls.Add(this.labelHotkeyCapturePrev, 0, 3);
-            tlpHot.Controls.Add(this.textBoxCapturePrev, 1, 3);
+            // tlpHot.Controls.Add(this.labelHotkeyCapturePrev, 0, 3);
+            // tlpHot.Controls.Add(this.textBoxCapturePrev, 1, 3);
 
             this.grpHotkey.Controls.Add(tlpHot);
 

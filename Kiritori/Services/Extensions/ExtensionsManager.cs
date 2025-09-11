@@ -181,6 +181,9 @@ namespace Kiritori.Services.Extensions
             var tmpZip = Path.Combine(Path.GetTempPath(), $"kiritori_ext_{m.Id}_{m.Version}.zip");
             using (var wc = new WebClient())
             {
+                var u = new Uri(m.Download.Url);
+                if (!u.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException("HTTPS only.");
                 wc.DownloadFile(m.Download.Url, tmpZip);
             }
 
@@ -216,7 +219,7 @@ namespace Kiritori.Services.Extensions
 
             MarkInstalled(m.Id, m.Version);
             InvalidateRepoCache();
-            Log.Info($"Extension installed: {m.Id} {m.Version}", "Ext");
+            Log.Info($"Extension installed: {m.Id} {m.Version}", "Extensions");
             return target;
         }
         public static void Enable(string id, bool enabled)
@@ -432,6 +435,10 @@ namespace Kiritori.Services.Extensions
             if (m == null || m.Download == null || m.Install == null)
                 throw new ArgumentException("bad manifest");
 
+            var u = new Uri(m.Download.Url);
+            if (!u.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("HTTPS only.");
+
             ExtensionsPaths.EnsureDirs();
 
             // 1) ダウンロード
@@ -480,7 +487,7 @@ namespace Kiritori.Services.Extensions
             }
 
             MarkInstalled(m.Id, m.Version);
-            Log.Info($"Extension installed: {m.Id} {m.Version}", "Ext");
+            Log.Info($"Extension installed: {m.Id} {m.Version}", "Extensions");
             return target;
         }
 
@@ -560,7 +567,7 @@ namespace Kiritori.Services.Extensions
             }
 
             MarkInstalled(m.Id, m.Version);
-            Log.Info($"Extension installed: {m.Id} {m.Version}", "Ext");
+            Log.Info($"Extension installed: {m.Id} {m.Version}", "Extensions");
             return target;
         }
     }

@@ -738,4 +738,7 @@
   <data name="Button.Extensions.Enable" xml:space="preserve">
     <value>有効</value>
   </data>
+  <data name="Extensions.InstallDialog.NotSupported" xml:space="preserve">
+    <value>Microsoft Store 版ではオンライン導入/更新はサポートしていません。</value>
+  </data>
 </root>

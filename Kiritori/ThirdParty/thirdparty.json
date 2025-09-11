@@ -1,16 +1,6 @@
 {
   "components": [
     {
-      "id": "tesseract",
-      "name": "Tesseract OCR",
-      "version": "5.5.0",
-      "license": "Apache-2.0",
-      "projectUrl": "https://github.com/tesseract-ocr/tesseract",
-      "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0",
-      "licenseRes": "ThirdParty/Tesseract/LICENSE.txt",
-      "noticeRes": "ThirdParty/Tesseract/NOTICE.txt"
-    },
-    {
       "id": "ffmpeg",
       "name": "FFmpeg",
       "version": "8.0.3",

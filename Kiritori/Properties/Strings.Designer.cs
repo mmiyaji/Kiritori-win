@@ -430,6 +430,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Extension installation is not supported in packaged mode. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Extensions_InstallDialog_NotSupported {
+            get {
+                return ResourceManager.GetString("Extensions.InstallDialog.NotSupported", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Preparing... に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Extensions_InstallDialog_Preparing {

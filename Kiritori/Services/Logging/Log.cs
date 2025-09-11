@@ -17,7 +17,9 @@ namespace Kiritori.Services.Logging
         public bool WriteToDebug = true;
         public bool WriteToFile = true;
 
-        public string FilePath = Path.Combine(Path.GetTempPath(), "Kiritori", "Kiritori.log");
+        // public string FilePath = Path.Combine(Path.GetTempPath(), "Kiritori", "Kiritori.log");
+        public string FilePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kiritori", "Kiritori.log");
         public long MaxFileSizeBytes = 5L * 1024 * 1024; // 5 MB
         public int MaxRollFiles = 3; // ローテーション世代数
 

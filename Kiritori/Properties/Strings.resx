@@ -738,4 +738,7 @@
   <data name="Button.Extensions.Enable" xml:space="preserve">
     <value>Enable</value>
   </data>
+  <data name="Extensions.InstallDialog.NotSupported" xml:space="preserve">
+    <value>Extension installation is not supported in packaged mode.</value>
+  </data>
 </root>

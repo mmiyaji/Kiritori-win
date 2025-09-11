@@ -73,8 +73,16 @@ namespace Kiritori
             // SatelliteBootstrapper.EnsureSatellitesExtracted();
             Kiritori.Helpers.SatelliteBootstrapper.Init();
 
-            EarlyExtensionsInit();
-            RegisterAssemblyResolvers();
+            if (Helpers.PackagedHelper.IsPackaged())
+            {
+                InstallSatellitesFromAppFolder();
+            }
+            else
+            {
+                EarlyExtensionsInit();
+                RegisterAssemblyResolvers();
+            }
+
             try
             {
                 var culture = Properties.Settings.Default.UICulture;
@@ -138,14 +146,21 @@ namespace Kiritori
             }
             catch (Exception ex)
             {
-                Log.Debug("" + ex, "Ext");
+                Log.Debug("" + ex, "Extensions");
             }
 
             Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            Log.Info($"Exec Args: {string.Join(" ", args ?? Array.Empty<string>())}", "Startup");
+            if (Helpers.PackagedHelper.IsPackaged())
+            {
+                Log.Info("Running in packaged mode", "Startup");
+            }
+            if(args != null && args.Length > 0)
+            {
+                Log.Info("Command line args: " + string.Join(" ", args), "Startup");
+            }
             var opt = ParseArgs(args);
             using (var mutex = new Mutex(true, SingleInstance.MutexName, out bool isNew))
                 {
@@ -200,20 +215,19 @@ namespace Kiritori
                                 return System.Reflection.Assembly.LoadFrom(resPath);
                         }
                     }
-
-                    // 2) Toast 拡張（導入・有効なときのみ）
-                    if (Kiritori.Services.Extensions.ExtensionsManager.IsInstalled("toast") &&
-                        Kiritori.Services.Extensions.ExtensionsManager.IsEnabled("toast"))
-                    {
-                        var ver = Kiritori.Services.Extensions.ExtensionsManager.InstalledVersion("toast") ?? "1.0.0";
-                        var dir = System.IO.Path.Combine(
-                            Kiritori.Services.Extensions.ExtensionsPaths.Root, "bin", "toast", ver);
-                        var name = an.Name + ".dll";
-                        var p = System.IO.Path.Combine(dir, name);
-                        Kiritori.Services.Logging.Log.Debug("[AssemblyResolve] Toast " + name + " => " + p, "Startup");
-                        if (System.IO.File.Exists(p))
-                            return System.Reflection.Assembly.LoadFrom(p);
-                    }
+                    // // 2) Toast 拡張（導入・有効なときのみ）
+                    // if (Kiritori.Services.Extensions.ExtensionsManager.IsInstalled("toast") &&
+                    //     Kiritori.Services.Extensions.ExtensionsManager.IsEnabled("toast"))
+                    // {
+                    //     var ver = Kiritori.Services.Extensions.ExtensionsManager.InstalledVersion("toast") ?? "1.0.0";
+                    //     var dir = System.IO.Path.Combine(
+                    //         Kiritori.Services.Extensions.ExtensionsPaths.Root, "bin", "toast", ver);
+                    //     var name = an.Name + ".dll";
+                    //     var p = System.IO.Path.Combine(dir, name);
+                    //     Kiritori.Services.Logging.Log.Debug("[AssemblyResolve] Toast " + name + " => " + p, "Startup");
+                    //     if (System.IO.File.Exists(p))
+                    //         return System.Reflection.Assembly.LoadFrom(p);
+                    // }
                 }
                 catch
                 {
@@ -288,8 +302,6 @@ namespace Kiritori
                 .Where(p => exts.Contains(Path.GetExtension(p).ToLowerInvariant()))
                 .Distinct()
                 .ToArray();
-
-            Log.Info($"Parsed files: {string.Join(", ", files)}", "Startup");
 
             return files.Length > 0
                 ? new AppStartupOptions { Mode = AppStartupMode.Viewer, ImagePaths = files }
