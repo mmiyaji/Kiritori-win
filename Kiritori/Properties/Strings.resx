@@ -151,7 +151,7 @@
     <value>Run at Startup</value>
   </data>
   <data name="Text.BtnStartupFolder" xml:space="preserve">
-    <value>Open Startup folder</value>
+    <value>Open Startup</value>
   </data>
   <data name="Text.HistoryLimit" xml:space="preserve">
     <value>History limit</value>

@@ -165,10 +165,20 @@
     <Compile Include="Services\Logging\LogViewSharedSink.cs" />
     <Compile Include="Services\Notifications\ToastRuntime.cs" />
     <Compile Include="Services\Ocr\OcrFacade.cs" />
+    <Compile Include="Services\Ocr\WindowsOcrHelper.cs" />
     <Compile Include="Services\Recording\FfmpegLocator.cs" />
     <Compile Include="Services\Recording\FfmpegPipeRecorder.cs" />
     <Compile Include="Services\Settings\SettingsDirtyTracker.cs" />
     <Compile Include="Services\ThirdParty\ThirdPartyCatalog.cs" />
+    <Compile Include="Views\PrefForm\PrefForm.Appearance.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\PrefForm\PrefForm.General.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\PrefForm\PrefForm.Shortcuts.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Views\ThirdParty\ThirdPartyDialog.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -201,13 +211,13 @@
     <Compile Include="Helpers\PackageHelper.cs" />
     <Compile Include="Views\LiveCapture\TitleIconBadger.cs" />
     <Compile Include="Views\LiveCapture\WindowAligner.cs" />
-    <Compile Include="Views\PrefForm.Advanced.cs">
+    <Compile Include="Views\PrefForm\PrefForm.Advanced.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Views\PrefForm.cs">
+    <Compile Include="Views\PrefForm\PrefForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Views\PrefForm.Designer.cs">
+    <Compile Include="Views\PrefForm\PrefForm.Designer.cs">
       <DependentUpon>PrefForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\Strings.Designer.cs">
@@ -215,10 +225,10 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Strings.resx</DependentUpon>
     </Compile>
-    <Compile Include="Views\PrefForm.Extensions.cs">
+    <Compile Include="Views\PrefForm\PrefForm.Extensions.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Views\PrefForm.Logs.cs">
+    <Compile Include="Views\PrefForm\PrefForm.Logs.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Views\ScreenWindow.cs">
@@ -279,7 +289,7 @@
     <EmbeddedResource Include="Views\MainApplication.resx">
       <DependentUpon>MainApplication.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Views\PrefForm.resx">
+    <EmbeddedResource Include="Views\PrefForm\PrefForm.resx">
       <DependentUpon>PrefForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Strings.ja.resx" />

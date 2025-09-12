@@ -151,7 +151,7 @@
     <value>自動起動</value>
   </data>
   <data name="Text.BtnStartupFolder" xml:space="preserve">
-    <value>スタートアップフォルダーを開く</value>
+    <value>スタートアップを開く</value>
   </data>
   <data name="Text.HistoryLimit" xml:space="preserve">
     <value>履歴の保存件数</value>

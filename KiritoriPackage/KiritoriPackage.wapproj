@@ -215,10 +215,10 @@
       <IncludeInPackage>true</IncludeInPackage>
       <PackagePath>i18n\%(RecursiveDir)Kiritori.resources.dll</PackagePath>
     </Content>
-    <Content Include="..\Kiritori\ThirdPartyManifests\*.json">
+    <!-- <Content Include="..\Kiritori\ThirdPartyManifests\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInPackage>true</IncludeInPackage>
       <PackagePath>ThirdPartyManifests\</PackagePath>
-    </Content>
+    </Content> -->
   </ItemGroup>
 </Project>

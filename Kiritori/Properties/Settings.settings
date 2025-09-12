@@ -117,7 +117,7 @@
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="OcrLanguage" Type="System.String" Scope="User">
-      <Value Profile="(Default)">ja</Value>
+      <Value Profile="(Default)">auto</Value>
     </Setting>
     <Setting Name="HistoryIncludeOcr" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>

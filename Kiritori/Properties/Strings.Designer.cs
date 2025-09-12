@@ -1195,7 +1195,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Open Startup folder に類似しているローカライズされた文字列を検索します。
+        ///   Open Startup に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_BtnStartupFolder {
             get {
