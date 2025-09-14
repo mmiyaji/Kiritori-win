@@ -157,6 +157,14 @@ namespace Kiritori
                 }
             };
             this.historyToolStripMenuItem.DropDownOpening += (_, __) => SaveHistoryIfDirty();
+            Kiritori.Services.History.HistoryBridge.RegisterMain(this);
+            Kiritori.Services.History.HistoryBridge.RegisterUiContext(SynchronizationContext.Current);
+            this.HandleCreated += (_, __) =>
+            {
+                HistoryBridge.RegisterMain(this);
+                if (SynchronizationContext.Current != null)
+                    HistoryBridge.RegisterUiContext(SynchronizationContext.Current);
+            };
         }
         internal IList<HistoryEntry> GetHistoryEntriesSnapshot()
         {
@@ -988,6 +996,8 @@ namespace Kiritori
 
         public void RemoveHistoryEntries(IEnumerable<HistoryEntry> targets)
         {
+            Log.Debug("Main->Remove req: " + string.Join(", ",
+                targets.Where(t => t != null).Select(HistoryKey)), "History");
             if (targets == null) return;
 
             // 参照ではなくキーで一致判定する
@@ -1006,6 +1016,7 @@ namespace Kiritori
                     var key = HistoryKey(he);
                     if (targetKeys.Contains(key))
                     {
+                        Log.Debug($"Main->Remove HIT: {HistoryKey(he)}", "History");
                         try { (mi.Image as Bitmap)?.Dispose(); } catch { }
                         try { he?.Thumb?.Dispose(); } catch { }
                         historyToolStripMenuItem.DropDownItems.RemoveAt(i);
@@ -1145,23 +1156,38 @@ namespace Kiritori
         }
         private void ClearHistoryMenu()
         {
-            foreach (ToolStripItem tsi in historyToolStripMenuItem.DropDownItems)
+            // UI スレッド保証
+            if (this.InvokeRequired) { this.Invoke((Action)ClearHistoryMenu); return; }
+
+            try
             {
+                // メニューが開いているときは先に閉じる（安全策）
+                if (historyToolStripMenuItem.DropDown.Visible)
+                    historyToolStripMenuItem.DropDown.Close(ToolStripDropDownCloseReason.AppFocusChange);
+            }
+            catch { /* noop */ }
+
+            // 列挙破壊を避ける：配列にコピーしてから逆順で外す
+            var items = historyToolStripMenuItem.DropDownItems.Cast<ToolStripItem>().ToArray();
+            for (int i = items.Length - 1; i >= 0; i--)
+            {
+                var tsi = items[i];
+
                 if (tsi is ToolStripMenuItem mi)
                 {
                     if (mi.Tag is HistoryEntry he)
                     {
-                        // if (IsHistoryTempPath(he.Path)) SafeDelete(he.Path);
-                        he.Thumb?.Dispose();
+                        try { he.Thumb?.Dispose(); } catch { }
                         mi.Tag = null;
                     }
-                    mi.Image?.Dispose();
-                    mi.Dispose();
+                    try { mi.Image?.Dispose(); } catch { }
                 }
-            }
-            historyToolStripMenuItem.DropDownItems.Clear();
-        }
 
+                // 先にコレクションから外してから Dispose（どちらでも良いが明示的に）
+                try { historyToolStripMenuItem.DropDownItems.Remove(tsi); } catch { }
+                try { tsi.Dispose(); } catch { }
+            }
+        }
 
         private static bool IsHistoryTempPath(string path)
         {

@@ -1,7 +1,8 @@
-﻿// Services/History/HistoryBridge.cs など
+﻿using Kiritori.Services.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace Kiritori.Services.History
@@ -35,26 +36,70 @@ namespace Kiritori.Services.History
             var main = Application.OpenForms.OfType<MainApplication>().FirstOrDefault();
             if (main != null) SetProvider(() => main.GetHistoryEntriesSnapshot());
         }
-        public static void RaiseChanged(object sender = null)
+        // public static void RaiseChanged(object sender = null)
+        // {
+        //     var h = HistoryChanged;
+        //     if (h != null) h(sender ?? typeof(HistoryBridge), EventArgs.Empty);
+        // }
+        public static void RaiseChanged(object sender) => HistoryChanged?.Invoke(sender, EventArgs.Empty);
+
+        private static WeakReference<MainApplication> _mainRef;
+        private static SynchronizationContext _uiCtx;
+        public static void RegisterMain(MainApplication main)
         {
-            var h = HistoryChanged;
-            if (h != null) h(sender ?? typeof(HistoryBridge), EventArgs.Empty);
+            _mainRef = (main != null) ? new WeakReference<MainApplication>(main) : null;
+            Log.Debug($"HB.RegisterMain: main={(main!=null)}", "History");
+        }
+        
+        public static void RegisterUiContext(SynchronizationContext ctx)
+        {
+            _uiCtx = ctx;
+            Log.Debug($"HB.RegisterUiContext: ctx={(ctx!=null)}", "History");
         }
 
-
-        // PrefForm など UI 以外から、安全に「削除して」と頼む用。
-        // MainApplication が開いていればそこへフォワードします。
-        public static void RequestDelete(IEnumerable<HistoryEntry> targets)
+        private static MainApplication TryGetMain()
         {
-            if (targets == null) return;
-            var main = Application.OpenForms.OfType<MainApplication>().FirstOrDefault();
-            if (main != null && main.IsHandleCreated)
+            if (_mainRef != null && _mainRef.TryGetTarget(out var m) && m != null && !m.IsDisposed)
+                return m;
+
+            // 最後の保険：OpenForms から探して再登録
+            var fallback = Application.OpenForms.OfType<MainApplication>().FirstOrDefault();
+            if (fallback != null) RegisterMain(fallback);
+            return fallback;
+        }
+
+        public static void RequestDelete(IEnumerable<HistoryEntry> entries)
+        {
+            var list = (entries ?? Enumerable.Empty<HistoryEntry>()).Where(e => e != null).ToList();
+            Log.Debug($"HB.RequestDelete: count={list.Count}", "History");
+
+            var main = TryGetMain();
+            Log.Debug($"HB.RequestDelete: mainFound={(main!=null)}", "History");
+            if (main == null || main.IsDisposed) return;
+
+            void Do()
             {
-                // UI スレッドで実行
-                main.BeginInvoke((Action)(() => main.RemoveHistoryEntries(targets)));
+                try
+                {
+                    Log.Debug("HB.RequestDelete: invoking Main.RemoveHistoryEntries()", "History");
+                    main.RemoveHistoryEntries(list);
+                }
+                catch (Exception ex)
+                {
+                    Log.Debug($"HB.RequestDelete: exception in Do(): {ex}", "History");
+                }
+            }
+
+            try
+            {
+                if (_uiCtx != null) { _uiCtx.Post(_ => Do(), null); return; }
+                if (main.InvokeRequired) main.BeginInvoke((Action)Do); else Do();
+            }
+            catch (Exception ex)
+            {
+                Log.Debug($"HB.RequestDelete: dispatch failed: {ex}", "History");
             }
         }
-
 
     }
 }

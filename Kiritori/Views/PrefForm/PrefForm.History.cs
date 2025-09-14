@@ -1019,6 +1019,8 @@ namespace Kiritori
 
             try
             {
+                Log.Debug("Pref->RequestDelete: " + string.Join(", ",
+                    list.Select(h => (h.Path ?? "clipboard") + "|" + h.LoadedAt.Ticks + "|" + h.Resolution.Width + "x" + h.Resolution.Height)), "History");
                 // 1) 実ファイル削除（存在するものだけ）
                 foreach (var he in list)
                 {
