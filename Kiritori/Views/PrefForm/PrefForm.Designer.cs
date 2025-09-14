@@ -6,6 +6,7 @@ using System;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using Kiritori.Services.Logging;
 
 namespace Kiritori
 {
@@ -400,6 +401,8 @@ namespace Kiritori
             this.labelHistory = NewRightLabel("History limit");
             this.labelHistory.Tag = "loc:Text.HistoryLimit";
             this.textBoxHistory = new NumericUpDown { Minimum = 0, Maximum = 100, Value = 20, Width = 80, Anchor = AnchorStyles.Left };
+            this.textBoxHistory.Minimum = 0;
+            this.textBoxHistory.Maximum = 100;
 
             tlpApp.Controls.Add(this.labelLanguage, 0, 0);
             tlpApp.Controls.Add(this.cmbLanguage, 1, 0);
@@ -1085,6 +1088,21 @@ namespace Kiritori
             this.previewBg.DataBindings.Add(
                 new Binding("AlphaPercent", S, nameof(S.CaptureBackgroundAlphaPercent),
                     true, DataSourceUpdateMode.OnPropertyChanged));
+            // 履歴数
+            var b = new Binding("Value", S, nameof(S.HistoryLimit),
+                true, DataSourceUpdateMode.OnPropertyChanged);
+            b.Format += (s, e) =>
+            {
+                if (e.DesiredType == typeof(decimal) && e.Value is int i)
+                    e.Value = (decimal)i;
+            };
+            b.Parse += (s, e) =>
+            {
+                if (e.Value is decimal d)
+                    e.Value = Decimal.ToInt32(d);
+            };
+            Log.Debug("Binding history limit {0}", string.Format("{0}", S.HistoryLimit));
+            this.textBoxHistory.DataBindings.Add(b);
 
             // --- Hover preview <-> Settings ---
             this.previewHover.DataBindings.Add(

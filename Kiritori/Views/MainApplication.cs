@@ -138,6 +138,23 @@ namespace Kiritori
                         this.HandleCreated += handler;
                     }
                 }
+                else if (e.PropertyName == nameof(Properties.Settings.Default.HistoryLimit))
+                {
+                    int limit = Properties.Settings.Default.HistoryLimit;
+                    if (limit <= 0)
+                    {
+                        ClearHistoryMenu();
+                        PruneHistoryFilesBeyondLimit();
+                        // SaveHistoryToIndex(); // 必要ならindexも更新
+                    }
+                    else
+                    {
+                        // 上限を増減したら読み直して数を合わせる
+                        ClearHistoryMenu();
+                        LoadHistoryFromIndex();                 // limitに従って読み込む（既存）
+                        PruneHistoryFilesBeyondLimit();         // 余剰ファイルを削る
+                    }
+                }
             };
             this.historyToolStripMenuItem.DropDownOpening += (_, __) => SaveHistoryIfDirty();
         }
@@ -157,7 +174,13 @@ namespace Kiritori
                 pref.SetupHistoryTabIfNeededAndShow(snap);
             }
         }
-
+        private static string HistoryKey(HistoryEntry he)
+        {
+            if (he == null) return "";
+            var path = he.Path ?? "clipboard";
+            return path + "|" + he.LoadedAt.Ticks.ToString()
+                + "|" + he.Resolution.Width + "x" + he.Resolution.Height;
+        }
         public void RefreshHistoryMenuText(HistoryEntry entry)
         {
             if (entry == null) return;
@@ -495,6 +518,9 @@ namespace Kiritori
         {
             if (sw == null) return;
 
+            if (Properties.Settings.Default.HistoryLimit <= 0)
+                return;
+
             Bitmap src = sw.GetCurrentBitmapClone();
             if (src == null) return;
 
@@ -583,6 +609,7 @@ namespace Kiritori
         }
         private void AddHistoryEntryAndRefreshUI(HistoryEntry entry)
         {
+            if (Properties.Settings.Default.HistoryLimit <= 0) return;
             // 表示テキストを生成（ファイル名・解像度・時刻・説明など）
             var text = FormatHistoryText(
                 path: entry.Path,
@@ -783,6 +810,12 @@ namespace Kiritori
         {
             try
             {
+                int limit = Properties.Settings.Default.HistoryLimit;
+                if (limit <= 0)
+                {
+                    ClearHistoryMenu();
+                    return;
+                }
                 if (!File.Exists(HistoryIndexPath))
                 {
                     Log.Debug("History index not found.", "History");
@@ -795,7 +828,6 @@ namespace Kiritori
                 // まず現在のメニューをクリア（Disposeは既存メソッド利用）
                 ClearHistoryMenu();
 
-                int limit = Properties.Settings.Default.HistoryLimit;
                 int count = 0;
 
                 foreach (var line in lines)
@@ -884,7 +916,17 @@ namespace Kiritori
             catch { return null; }
         }
 
-        // 掃除：履歴フォルダ内の管理対象外や上限超過を削除
+        // 追加：履歴フォルダ配下チェック（正規化して厳密比較）
+        private static bool IsUnderDir(string path, string root)
+        {
+            if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(root)) return false;
+            var full = Path.GetFullPath(path);
+            var fullRoot = Path.GetFullPath(root)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+            return full.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase);
+        }
+
         private void PruneHistoryFilesBeyondLimit()
         {
             try
@@ -892,7 +934,7 @@ namespace Kiritori
                 int limit = Properties.Settings.Default.HistoryLimit;
                 Directory.CreateDirectory(HistoryTempDir);
 
-                // 現在インデックスで管理しているパスの集合
+                // 履歴インデックスに載っている“管理対象”だけを集合化
                 var managed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 if (File.Exists(HistoryIndexPath))
                 {
@@ -908,37 +950,34 @@ namespace Kiritori
                     }
                 }
 
-                // フォルダ内の PNG (他形式を使うなら拡張)
-                var all = new DirectoryInfo(HistoryTempDir)
-                            .EnumerateFiles("*.*", SearchOption.TopDirectoryOnly)
-                            .Where(fi => IsImageExt(fi.Extension))
-                            .OrderBy(fi => fi.CreationTimeUtc)
-                            .ToList();
-
-                // 1) 管理対象外（インデックスに無い）を削除
-                foreach (var fi in all)
+                // --- 履歴OFF（0以下）は“管理対象だけ”を安全に削除 ---
+                if (limit <= 0)
                 {
-                    var full = fi.FullName;
-                    if (!managed.Contains(Path.GetFullPath(full)))
+                    foreach (var p in managed)
                     {
-                        SafeDelete(full);
+                        if (File.Exists(p) && IsUnderDir(p, HistoryTempDir) && IsImageExt(Path.GetExtension(p)))
+                            SafeDelete(p);
                     }
+                    try { if (File.Exists(HistoryIndexPath)) File.Delete(HistoryIndexPath); } catch { }
+                    return;
                 }
 
-                // 2) 管理対象だとしても、フォルダ内のファイル総数が上限超過なら古いものから削除
-                //    （上限=履歴件数。フォルダ内のショットを丸ごと履歴保管にしている前提）
-                var remaining = new DirectoryInfo(HistoryTempDir)
-                                    .EnumerateFiles("*.*", SearchOption.TopDirectoryOnly)
-                                    .Where(fi => IsImageExt(fi.Extension))
-                                    .OrderByDescending(fi => fi.CreationTimeUtc)
-                                    .ToList();
+                // ★「管理対象外は削除する」処理はやめる（安全策）
+                // （元コードの all→managedに無いものを消すループは削除）
 
-                if (limit > 0 && remaining.Count > limit)
+                // --- 上限超過の削除も“管理対象だけ”で実施 ---
+                var remaining = managed
+                    .Select(p => { try { return new FileInfo(p); } catch { return null; } })
+                    .Where(fi => fi != null && fi.Exists
+                                && IsUnderDir(fi.FullName, HistoryTempDir)
+                                && IsImageExt(fi.Extension))
+                    .OrderByDescending(fi => fi.CreationTimeUtc)
+                    .ToList();
+
+                if (remaining.Count > limit)
                 {
                     foreach (var fi in remaining.Skip(limit))
-                    {
                         SafeDelete(fi.FullName);
-                    }
                 }
             }
             catch (Exception ex)
@@ -946,6 +985,59 @@ namespace Kiritori
                 Log.Debug($"PruneHistoryFilesBeyondLimit error: {ex}", "History");
             }
         }
+
+        public void RemoveHistoryEntries(IEnumerable<HistoryEntry> targets)
+        {
+            if (targets == null) return;
+
+            // 参照ではなくキーで一致判定する
+            var targetKeys = new HashSet<string>(
+                targets.Where(t => t != null).Select(HistoryKey),
+                StringComparer.OrdinalIgnoreCase);
+
+            int removed = 0;
+
+            // 1) トレイの履歴メニューから除去
+            for (int i = historyToolStripMenuItem.DropDownItems.Count - 1; i >= 0; i--)
+            {
+                if (historyToolStripMenuItem.DropDownItems[i] is ToolStripMenuItem mi)
+                {
+                    var he = mi.Tag as HistoryEntry;
+                    var key = HistoryKey(he);
+                    if (targetKeys.Contains(key))
+                    {
+                        try { (mi.Image as Bitmap)?.Dispose(); } catch { }
+                        try { he?.Thumb?.Dispose(); } catch { }
+                        historyToolStripMenuItem.DropDownItems.RemoveAt(i);
+                        mi.Dispose();
+                        removed++;
+                    }
+                }
+            }
+
+            // 2) インデックス(TSV)にも反映（既存の保存経路を使う）
+            try
+            {
+                MarkHistoryDirty();   // 変更フラグ
+                SaveHistoryIfDirty(); // すぐ保存
+            }
+            catch
+            {
+                Log.Debug("RemoveHistoryEntries: failed to save index", "History");
+            }
+
+            // 3) PrefForm などへ変更通知
+            try { Kiritori.Services.History.HistoryBridge.RaiseChanged(this); }
+            catch
+            {
+                Log.Debug("RemoveHistoryEntries: failed to notify PrefForm", "History");
+            }
+
+            // 4) デバッグログ
+            Log.Debug($"RemoveHistoryEntries: removed={removed}, requested={targetKeys.Count}", "History");
+        }
+
+
 
         private static bool IsImageExt(string ext)
         {

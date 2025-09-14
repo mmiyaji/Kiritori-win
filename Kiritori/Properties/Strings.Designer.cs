@@ -529,6 +529,51 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Your captures will appear here. Use the capture shortcut or toolbar to get started. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Empty_Body {
+            get {
+                return ResourceManager.GetString("History.Empty.Body", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Set the history limit above 0 to save new captures. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Empty_Disabled_Body {
+            get {
+                return ResourceManager.GetString("History.Empty.Disabled.Body", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   History is turned off に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Empty_Disabled_Title {
+            get {
+                return ResourceManager.GetString("History.Empty.Disabled.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Enable history に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Empty_EnableButton {
+            get {
+                return ResourceManager.GetString("History.Empty.EnableButton", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   No history yet に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Empty_Title {
+            get {
+                return ResourceManager.GetString("History.Empty.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Copy Image to Clipboard に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string History_Menu_CopyImage {

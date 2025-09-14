@@ -897,4 +897,19 @@
   <data name="History.Thumb.Placeholder" xml:space="preserve">
     <value>No preview</value>
   </data>
+  <data name="History.Empty.Title" xml:space="preserve">
+    <value>No history yet</value>
+  </data>
+  <data name="History.Empty.Body" xml:space="preserve">
+    <value>Your captures will appear here. Use the capture shortcut or toolbar to get started.</value>
+  </data>
+  <data name="History.Empty.Disabled.Title" xml:space="preserve">
+    <value>History is turned off</value>
+  </data>
+  <data name="History.Empty.Disabled.Body" xml:space="preserve">
+    <value>Set the history limit above 0 to save new captures.</value>
+  </data>
+  <data name="History.Empty.EnableButton" xml:space="preserve">
+    <value>Enable history</value>
+  </data>
 </root>

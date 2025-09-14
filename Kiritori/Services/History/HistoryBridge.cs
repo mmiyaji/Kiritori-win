@@ -29,18 +29,32 @@ namespace Kiritori.Services.History
             return new List<HistoryEntry>();
         }
 
-        // ★ここを追加：外部から発火できるようにする
-        public static void RaiseChanged(object sender = null)
-        {
-            var h = HistoryChanged;
-            if (h != null) h(sender ?? typeof(HistoryBridge), EventArgs.Empty);
-        }
-
         public static void TryBindFromOpenForms()
         {
             if (_provider != null) return;
             var main = Application.OpenForms.OfType<MainApplication>().FirstOrDefault();
             if (main != null) SetProvider(() => main.GetHistoryEntriesSnapshot());
         }
+        public static void RaiseChanged(object sender = null)
+        {
+            var h = HistoryChanged;
+            if (h != null) h(sender ?? typeof(HistoryBridge), EventArgs.Empty);
+        }
+
+
+        // PrefForm など UI 以外から、安全に「削除して」と頼む用。
+        // MainApplication が開いていればそこへフォワードします。
+        public static void RequestDelete(IEnumerable<HistoryEntry> targets)
+        {
+            if (targets == null) return;
+            var main = Application.OpenForms.OfType<MainApplication>().FirstOrDefault();
+            if (main != null && main.IsHandleCreated)
+            {
+                // UI スレッドで実行
+                main.BeginInvoke((Action)(() => main.RemoveHistoryEntries(targets)));
+            }
+        }
+
+
     }
 }

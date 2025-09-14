@@ -54,7 +54,12 @@ namespace Kiritori
         private SortKey _sortKey = SortKey.LoadedAt;
         private bool _sortAsc = false;
 
-
+        // 空表示用
+        private Panel _emptyState;
+        private Label _emptyTitle;
+        private Label _emptyBody;
+        private Button _btnEnableHistory;
+        
         public void BuildHistoryTab()
         {
             EnsureHistoryTabUi();
@@ -90,6 +95,120 @@ namespace Kiritori
                 tb.HandleCreated += h;
             }
         }
+        private void EnsureHistoryEmptyStateUi()
+        {
+            if (_emptyState != null) return;
+
+            _emptyState = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = SystemColors.Window,
+                Visible = false  // 初期は非表示
+            };
+
+            _emptyTitle = new Label
+            {
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+                Dock = DockStyle.Top,
+                Height = 36
+            };
+
+            _emptyBody = new Label
+            {
+                AutoSize = false,
+                TextAlign = ContentAlignment.TopCenter,
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+                Dock = DockStyle.Top,
+                Height = 48
+            };
+
+            _btnEnableHistory = new Button
+            {
+                AutoSize = false,
+                // Anchor = AnchorStyles.Top,
+                Width = 200,
+                Dock = DockStyle.Top,
+                Visible = false // 無効化時のみ表示
+            };
+            _btnEnableHistory.Click += (s, e) =>
+            {
+                try
+                {
+                    // 上限を1件にして有効化（好みで既定値を変更可）
+                    Properties.Settings.Default.HistoryLimit = Math.Max(10, Properties.Settings.Default.HistoryLimit); // 既に値があれば尊重
+                    if (Properties.Settings.Default.HistoryLimit <= 0)
+                        Properties.Settings.Default.HistoryLimit = 10;
+                    Properties.Settings.Default.Save();
+
+                    // 画面をリロード
+                    _txtSearch.Text = "";
+                    HistoryBridge.RaiseChanged(this); // Main 側がスナップショットを投げてきてくれます
+                    UpdateHistoryEmptyState();        // 念のため更新
+                }
+                catch { /* noop */ }
+            };
+
+            // 中央寄せのためのレイアウト
+            var host = new Panel { Dock = DockStyle.Fill };
+            var spacerTop = new Panel { Dock = DockStyle.Top, Height = 40 };
+            var center = new Panel { Dock = DockStyle.Top, Height = 140 };
+            var spacerBottom = new Panel { Dock = DockStyle.Fill };
+
+            center.Controls.Add(_btnEnableHistory);
+            center.Controls.Add(_emptyBody);
+            center.Controls.Add(_emptyTitle);
+
+            _emptyState.Controls.Add(spacerBottom);
+            _emptyState.Controls.Add(center);
+            _emptyState.Controls.Add(spacerTop);
+
+            this.tabHistory.Controls.Add(_emptyState);
+            _emptyState.BringToFront();
+
+            UpdateHistoryEmptyTexts(); // 初回文言設定
+        }
+
+        private void UpdateHistoryEmptyTexts()
+        {
+            // ローカライズ
+            _emptyTitle.Text = SR.T("History.Empty.Title", "No history yet");
+            _emptyBody.Text  = SR.T("History.Empty.Body", "Your captures will appear here.\nUse the capture shortcut or toolbar to get started.");
+
+            _btnEnableHistory.Text = SR.T("History.Empty.EnableButton", "Enable history");
+        }
+        private void UpdateHistoryEmptyState()
+        {
+            EnsureHistoryEmptyStateUi();
+
+            int limit = Properties.Settings.Default.HistoryLimit;
+            bool disabled = (limit <= 0);
+            bool empty = (_viewHistory == null || _viewHistory.Count == 0);
+
+            // 空状態にするか？
+            bool show = disabled || empty;
+
+            _emptyState.Visible = show;
+            if (!show) return;
+
+            // 文言とボタンの出し分け
+            if (disabled)
+            {
+                _emptyTitle.Text = SR.T("History.Empty.Disabled.Title", "History is turned off");
+                _emptyBody.Text  = SR.T("History.Empty.Disabled.Body", "Set the history limit above 0 to save new captures.");
+                _btnEnableHistory.Visible = true;
+            }
+            else // 件数0
+            {
+                UpdateHistoryEmptyTexts();
+                _btnEnableHistory.Visible = false;
+            }
+
+            // オーバーレイを最前面に
+            _emptyState.BringToFront();
+        }
+
         private void BuildHistoryToolbar()
         {
             if (_historyToolbar != null) return;
@@ -173,7 +292,7 @@ namespace Kiritori
                 g.Clear(Color.FromArgb(240, 240, 240));
                 using (var p = new Pen(Color.Silver)) g.DrawRectangle(p, 0, 0, THUMB_W - 1, THUMB_H - 1);
 
-                // ★ ローカライズされた文字列を使用（英語フォールバック付き）
+                // ローカライズされた文字列を使用（英語フォールバック付き）
                 var s = SR.T("History.Thumb.Placeholder", "No preview");
                 using (var f = new Font("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point))
                 using (var br = new SolidBrush(Color.Gray))
@@ -269,8 +388,9 @@ namespace Kiritori
             {
                 try
                 {
-                    // UpdateHistoryContextMenuTexts();
                     UpdateHistoryToolbarTexts();
+                    UpdateHistoryEmptyTexts();
+                    UpdateHistoryEmptyState();
                     _lvHistory?.Invalidate();
                 }
                 catch { /* noop */ }
@@ -395,21 +515,18 @@ namespace Kiritori
                         try
                         {
                             using (var fit = RenderThumb(he.Thumb, THUMB_W, THUMB_H))
-                            {
-                                // RenderThumb は新しい Bitmap を返すので、ImageList には複製を登録
-                                _imgThumbs.Images.Add(keyStable, (Bitmap)fit.Clone());
-                            }
+                                SafeAddThumb(keyStable, fit);
                         }
                         catch
                         {
                             // 壊れ画像などはプレースホルダーにフォールバック
-                            _imgThumbs.Images.Add(keyStable, _placeholder);
+                            SafeAddThumb(keyStable, _placeholder);
                         }
                     }
                     else
                     {
                         // まだサムネが無い → ひとまずプレースホルダー
-                        _imgThumbs.Images.Add(keyStable, _placeholder);
+                        SafeAddThumb(keyStable, _placeholder);
                     }
                 }
             }
@@ -618,8 +735,8 @@ namespace Kiritori
                     using (var ms = new MemoryStream(bytes))
                     using (var img = Image.FromStream(ms, useEmbeddedColorManagement: false, validateImageData: false))
                     {
-                        // サムネを作る（アスペクト比維持で枠内にフィット）
-                        bmp = RenderThumb((Bitmap)img, THUMB_W, THUMB_H);
+                        using (var src = new Bitmap(img)) // ← 独立ビットマップに
+                            bmp = RenderThumb(src, THUMB_W, THUMB_H);
                     }
                 }
                 else if (he.Thumb != null)
@@ -665,13 +782,8 @@ namespace Kiritori
         {
             // ImageList へ登録 → 対応 ListViewItem に割当
             string key = GetStableKey(he);
-            if (_imgThumbs.Images.ContainsKey(key))
-            {
-                // 既存差し替え（ImageList は直接置換できないので Remove/Add）
-                _imgThumbs.Images.RemoveByKey(key);
-            }
-            _imgThumbs.Images.Add(key, bmp);
-
+            SafeReplaceThumb(key, bmp, _placeholder);
+            
             // 対応するListViewItemを探して更新
             foreach (ListViewItem it in _lvHistory.Items)
             {
@@ -690,6 +802,7 @@ namespace Kiritori
             ApplyFilterAndSort();
             RebuildListView(_viewHistory);
             StartLazyThumbLoad();
+            UpdateHistoryEmptyState();
         }
 
         private void ApplyFilterAndSort()
@@ -754,7 +867,7 @@ namespace Kiritori
 
             if (string.IsNullOrEmpty(q))
             {
-                // ★ 検索が空になったら最新スナップショットを再読み込み
+                // 検索が空になったら最新スナップショットを再読み込み
                 try
                 {
                     var snap = HistoryBridge.GetSnapshot(); // 既存の仕組みに合わせてください
@@ -769,6 +882,7 @@ namespace Kiritori
             ApplyFilterAndSort();
             RebuildListView(_viewHistory);
             StartLazyThumbLoad();
+            UpdateHistoryEmptyState();
         }
 
         internal void RefreshAllHistory(IEnumerable<HistoryEntry> fresh)
@@ -782,8 +896,45 @@ namespace Kiritori
             ApplyFilterAndSort();
             RebuildListView(_viewHistory);
             StartLazyThumbLoad();
+            UpdateHistoryEmptyState();
+        }
+        private void SafeAddThumb(string key, Image img)
+        {
+            if (_imgThumbs == null || img == null) return;
+            if (_imgThumbs.Images.ContainsKey(key)) return;
+
+            try
+            {
+                if (img.Width <= 0 || img.Height <= 0) return;
+
+                // 必ずクローンを渡す → ImageList が独立コピーを持てる
+                using (var clone = new Bitmap(img))
+                {
+                    _imgThumbs.Images.Add(key, (Bitmap)clone.Clone());
+                }
+            }
+            catch
+            {
+                // 壊れた画像は placeholder にフォールバック
+                if (!_imgThumbs.Images.ContainsKey("__placeholder__") && _placeholder != null)
+                    SafeAddThumb("__placeholder__", _placeholder);
+            }
         }
 
+        private void SafeReplaceThumb(string key, Image img, Image fallback)
+        {
+            if (_imgThumbs == null || img == null) return;
+            try
+            {
+                if (_imgThumbs.Images.ContainsKey(key)) _imgThumbs.Images.RemoveByKey(key);
+                SafeAddThumb(key, img);
+            }
+            catch
+            {
+                if (_imgThumbs.Images.ContainsKey(key)) _imgThumbs.Images.RemoveByKey(key);
+                if (fallback != null) SafeAddThumb(key, fallback);
+            }
+        }
         private void RebuildListView(IEnumerable<HistoryEntry> entries)
         {
             _lvHistory.BeginUpdate();
@@ -797,8 +948,7 @@ namespace Kiritori
                 var img = GetSafeThumb(he);
                 try
                 {
-                    if (!_imgThumbs.Images.ContainsKey(key))
-                        _imgThumbs.Images.Add(key, img);
+                    SafeAddThumb(key, img);
                 }
                 catch
                 {
@@ -807,7 +957,8 @@ namespace Kiritori
                     {
                         if (_imgThumbs.Images.ContainsKey(key))
                             _imgThumbs.Images.RemoveByKey(key);
-                        _imgThumbs.Images.Add(key, _placeholder);
+                        SafeAddThumb("__placeholder__", _placeholder);
+                        var _ = _imgThumbs.Handle;
                     }
                     catch { /* ここでの失敗は無視 */ }
                 }
@@ -832,6 +983,7 @@ namespace Kiritori
 
         private void DeleteSelected()
         {
+            Log.Debug("History: DeleteSelected invoked", "History");
             if (_lvHistory.SelectedItems.Count == 0) return;
 
             var list = _lvHistory.SelectedItems
@@ -874,12 +1026,14 @@ namespace Kiritori
                     {
                         if (!string.IsNullOrEmpty(he.Path) && File.Exists(he.Path))
                             File.Delete(he.Path);
+                        Log.Debug($"History: Deleted file '{he.Path}'", "History");
                     }
                     catch
                     {
-                        // ロック中などはスキップ（必要ならログ）
+                        Log.Debug($"History: Failed to delete file '{he.Path}'", "History");
                     }
                 }
+
 
                 // 2) UI側データから除去
                 var set = new HashSet<HistoryEntry>(list);
@@ -889,6 +1043,7 @@ namespace Kiritori
                 ApplyFilterAndRefresh();
 
                 // 4) 他画面へ通知（トレイ履歴など）
+                Kiritori.Services.History.HistoryBridge.RequestDelete(list);
                 Kiritori.Services.History.HistoryBridge.RaiseChanged(this);
             }
             catch (Exception ex)

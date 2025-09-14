@@ -493,14 +493,34 @@ namespace Kiritori
             if (_rows == null) return;
             var S = Properties.Settings.Default;
 
+            // --- HistoryLimit は decimal → int に明示変換して保存 ---
+            int limit = Decimal.ToInt32(this.textBoxHistory.Value);
+            if (limit < 0) limit = 0;
+            S.HistoryLimit = limit;
+
             _suppressExternalSync = true;   // ← 自画面からの書き換え通知は無視
             try
             {
                 foreach (var r in _rows)
                 {
                     if (r.ReadOnly) continue;
-                    try { S[r.Name] = r.RawValue; }
-                    catch { S[r.Name] = r.ValueString; }
+
+                    if (string.Equals(r.Name, nameof(S.HistoryLimit), StringComparison.Ordinal)) continue;
+
+                    try
+                    {
+                        // 設定プロパティの型に合わせて値を整形して代入
+                        var prop = S.Properties[r.Name];
+                        if (prop == null) continue;
+
+                        var targetType = prop.PropertyType;
+                        object value = CoerceToType(r.RawValue ?? r.ValueString, targetType);
+                        S[r.Name] = value;
+                    }
+                    catch
+                    {
+                        // 型がどうしても合わない時はスキップ（落とさない）
+                    }
                 }
             }
             finally
@@ -508,12 +528,49 @@ namespace Kiritori
                 _suppressExternalSync = false;
             }
 
-            // 保存後、最新保存値を基準値に更新し直す（未保存強調をリセット）
+            // 保存後、最新保存値を基準値に更新（未保存強調をリセット）
             foreach (var r in _rows)
             {
-                r.OriginalValue = S[r.Name];
+                if (string.Equals(r.Name, nameof(S.HistoryLimit), StringComparison.Ordinal))
+                    r.OriginalValue = S.HistoryLimit;
+                else
+                    r.OriginalValue = S[r.Name];
             }
             _gridSettings?.Invalidate();
+        }
+
+        // 汎用：設定の型へ安全に変換
+        private static object CoerceToType(object src, Type targetType)
+        {
+            if (src == null) return null;
+
+            // 文字列 → 目標型
+            if (src is string s)
+            {
+                if (targetType == typeof(string)) return s;
+                if (targetType == typeof(int))    return int.Parse(s, System.Globalization.CultureInfo.InvariantCulture);
+                if (targetType == typeof(decimal))return decimal.Parse(s, System.Globalization.CultureInfo.InvariantCulture);
+                if (targetType == typeof(bool))   return bool.Parse(s);
+                if (targetType.IsEnum)            return Enum.Parse(targetType, s, ignoreCase: true);
+                // その他は ChangeType にフォールバック
+                return Convert.ChangeType(s, targetType, System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            // NumericUpDown など decimal → 各数値型
+            if (src is decimal d)
+            {
+                if (targetType == typeof(int))     return Decimal.ToInt32(d);
+                if (targetType == typeof(long))    return Decimal.ToInt64(d);
+                if (targetType == typeof(float))   return (float)d;
+                if (targetType == typeof(double))  return (double)d;
+                if (targetType == typeof(decimal)) return d;
+            }
+
+            // 既に互換ならそのまま
+            if (targetType.IsAssignableFrom(src.GetType())) return src;
+
+            // 最後の手段
+            return Convert.ChangeType(src, targetType, System.Globalization.CultureInfo.InvariantCulture);
         }
         private void HookSettingsEvents()
         {
