@@ -744,4 +744,91 @@
   <data name="Tab.History" xml:space="preserve">
     <value>履歴</value>
   </data>
+  <data name="Setting.Display.AlwaysOnTop" xml:space="preserve">
+    <value>常に手前に表示</value>
+  </data>
+  <data name="Setting.Display.FfmpegPath" xml:space="preserve">
+    <value>FFmpeg のパス</value>
+  </data>
+  <data name="Setting.Display.HistoryIncludeOcr" xml:space="preserve">
+    <value>履歴に OCR 結果を含める</value>
+  </data>
+  <data name="Setting.Display.HotkeyCapture" xml:space="preserve">
+    <value>ホットキー: キャプチャ</value>
+  </data>
+  <data name="Setting.Display.HotkeyLive" xml:space="preserve">
+    <value>ホットキー: ライブプレビュー</value>
+  </data>
+  <data name="Setting.Display.HotkeyOcr" xml:space="preserve">
+    <value>ホットキー: OCR</value>
+  </data>
+  <data name="Setting.Display.LivePreviewMaxFps" xml:space="preserve">
+    <value>ライブプレビューの最大 FPS</value>
+  </data>
+  <data name="Setting.Display.LivePreviewPrivacyMode" xml:space="preserve">
+    <value>ライブプレビューのプライバシーモード</value>
+  </data>
+  <data name="Setting.Display.LivePreviewRenderPolicy" xml:space="preserve">
+    <value>ライブプレビューの描画方式 (自動/GDI/DirectX)</value>
+  </data>
+  <data name="Setting.Display.LogEnabled" xml:space="preserve">
+    <value>ログ記録を有効化</value>
+  </data>
+  <data name="Setting.Display.LogFilePath" xml:space="preserve">
+    <value>ログファイルの保存先</value>
+  </data>
+  <data name="Setting.Display.LogIncludeCategoryTag" xml:space="preserve">
+    <value>カテゴリタグを含める</value>
+  </data>
+  <data name="Setting.Display.LogIncludeProcessId" xml:space="preserve">
+    <value>プロセス ID を含める</value>
+  </data>
+  <data name="Setting.Display.LogIncludeThreadId" xml:space="preserve">
+    <value>スレッド ID を含める</value>
+  </data>
+  <data name="Setting.Display.LogIncludeTimestamp" xml:space="preserve">
+    <value>タイムスタンプを含める</value>
+  </data>
+  <data name="Setting.Display.LogMaxFileSizeBytes" xml:space="preserve">
+    <value>ログファイルの最大サイズ (バイト)</value>
+  </data>
+  <data name="Setting.Display.LogMaxRollFiles" xml:space="preserve">
+    <value>ロールファイル数の上限</value>
+  </data>
+  <data name="Setting.Display.LogMinLevel" xml:space="preserve">
+    <value>ログ出力の最小レベル</value>
+  </data>
+  <data name="Setting.Display.LogTimestampFormat" xml:space="preserve">
+    <value>時刻フォーマット</value>
+  </data>
+  <data name="Setting.Display.LogWriteToDebug" xml:space="preserve">
+    <value>デバッグ出力に書き込む</value>
+  </data>
+  <data name="Setting.Display.LogWriteToFile" xml:space="preserve">
+    <value>ファイルに書き込む</value>
+  </data>
+  <data name="Setting.Display.OcrLanguage" xml:space="preserve">
+    <value>OCR の言語</value>
+  </data>
+  <data name="Setting.Display.OverlayEnabled" xml:space="preserve">
+    <value>オーバーレイを有効化</value>
+  </data>
+  <data name="Setting.Display.PlaySoundOnCapture" xml:space="preserve">
+    <value>キャプチャ時に効果音を再生</value>
+  </data>
+  <data name="Setting.Display.ShowNotificationOnCapture" xml:space="preserve">
+    <value>キャプチャ時に通知を表示</value>
+  </data>
+  <data name="Setting.Display.ShowNotificationOnOcr" xml:space="preserve">
+    <value>OCR 実行時に通知を表示</value>
+  </data>
+  <data name="Setting.Display.SnapToEdgesEnabled" xml:space="preserve">
+    <value>端にスナップ</value>
+  </data>
+  <data name="Setting.Display.WindowOpacityPercent" xml:space="preserve">
+    <value>ウィンドウの不透明度 (%)</value>
+  </data>
+  <data name="Setting.Display.WindowShadowEnabled" xml:space="preserve">
+    <value>ウィンドウの影</value>
+  </data>
 </root>

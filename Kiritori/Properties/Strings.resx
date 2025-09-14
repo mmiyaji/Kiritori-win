@@ -744,4 +744,91 @@
   <data name="Tab.History" xml:space="preserve">
     <value>History</value>
   </data>
+  <data name="Setting.Display.AlwaysOnTop" xml:space="preserve">
+    <value>Always on Top</value>
+  </data>
+  <data name="Setting.Display.FfmpegPath" xml:space="preserve">
+    <value>FFmpeg Path</value>
+  </data>
+  <data name="Setting.Display.HistoryIncludeOcr" xml:space="preserve">
+    <value>Include OCR Results in History</value>
+  </data>
+  <data name="Setting.Display.HotkeyCapture" xml:space="preserve">
+    <value>Hotkey: Capture</value>
+  </data>
+  <data name="Setting.Display.HotkeyLive" xml:space="preserve">
+    <value>Hotkey: Live Preview</value>
+  </data>
+  <data name="Setting.Display.HotkeyOcr" xml:space="preserve">
+    <value>Hotkey: OCR</value>
+  </data>
+  <data name="Setting.Display.LivePreviewMaxFps" xml:space="preserve">
+    <value>Live Preview Max FPS</value>
+  </data>
+  <data name="Setting.Display.LivePreviewPrivacyMode" xml:space="preserve">
+    <value>Live Preview Privacy Mode</value>
+  </data>
+  <data name="Setting.Display.LivePreviewRenderPolicy" xml:space="preserve">
+    <value>Live Preview Render Policy (Auto/GDI/DirectX)</value>
+  </data>
+  <data name="Setting.Display.LogEnabled" xml:space="preserve">
+    <value>Enable Logging</value>
+  </data>
+  <data name="Setting.Display.LogFilePath" xml:space="preserve">
+    <value>Log File Path</value>
+  </data>
+  <data name="Setting.Display.LogIncludeCategoryTag" xml:space="preserve">
+    <value>Include Category Tag</value>
+  </data>
+  <data name="Setting.Display.LogIncludeProcessId" xml:space="preserve">
+    <value>Include Process ID</value>
+  </data>
+  <data name="Setting.Display.LogIncludeThreadId" xml:space="preserve">
+    <value>Include Thread ID</value>
+  </data>
+  <data name="Setting.Display.LogIncludeTimestamp" xml:space="preserve">
+    <value>Include Timestamp</value>
+  </data>
+  <data name="Setting.Display.LogMaxFileSizeBytes" xml:space="preserve">
+    <value>Max Log File Size (bytes)</value>
+  </data>
+  <data name="Setting.Display.LogMaxRollFiles" xml:space="preserve">
+    <value>Max Roll Files</value>
+  </data>
+  <data name="Setting.Display.LogMinLevel" xml:space="preserve">
+    <value>Minimum Log Level</value>
+  </data>
+  <data name="Setting.Display.LogTimestampFormat" xml:space="preserve">
+    <value>Timestamp Format</value>
+  </data>
+  <data name="Setting.Display.LogWriteToDebug" xml:space="preserve">
+    <value>Write to Debug Output</value>
+  </data>
+  <data name="Setting.Display.LogWriteToFile" xml:space="preserve">
+    <value>Write to File</value>
+  </data>
+  <data name="Setting.Display.OcrLanguage" xml:space="preserve">
+    <value>OCR Language</value>
+  </data>
+  <data name="Setting.Display.OverlayEnabled" xml:space="preserve">
+    <value>Enable Overlay</value>
+  </data>
+  <data name="Setting.Display.PlaySoundOnCapture" xml:space="preserve">
+    <value>Play Sound on Capture</value>
+  </data>
+  <data name="Setting.Display.ShowNotificationOnCapture" xml:space="preserve">
+    <value>Show Notification on Capture</value>
+  </data>
+  <data name="Setting.Display.ShowNotificationOnOcr" xml:space="preserve">
+    <value>Show Notification on OCR</value>
+  </data>
+  <data name="Setting.Display.SnapToEdgesEnabled" xml:space="preserve">
+    <value>Snap to Edges</value>
+  </data>
+  <data name="Setting.Display.WindowOpacityPercent" xml:space="preserve">
+    <value>Window Opacity (%)</value>
+  </data>
+  <data name="Setting.Display.WindowShadowEnabled" xml:space="preserve">
+    <value>Window Shadow</value>
+  </data>
 </root>

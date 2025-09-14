@@ -94,7 +94,7 @@ namespace Kiritori
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
-                RowCount = 2,
+                RowCount = 3,
                 Padding = new Padding(8)
             };
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
@@ -108,12 +108,13 @@ namespace Kiritori
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 ForeColor = SystemColors.GrayText,
-                Margin = new Padding(0, 0, 0, 0),
+                Margin = new Padding(0),
                 Padding = new Padding(2, 0, 0, 0),
+                Text = SR.T("Text.Advanced.Tips", "Tip: Double-click the Value cell to edit. Press Enter to commit changes."),
                 Tag = "loc:Text.Advanced.Tips"
-                // Text = SR.T("Text.Advanced.Tips", "Tip: Double-click the Value cell to edit. Press Enter to commit changes.")
             };
             root.Controls.Add(helpLabel, 0, 0);
+
             // DataGridView
             _gridSettings = new DataGridView
             {
@@ -136,6 +137,7 @@ namespace Kiritori
                 HeaderText = SR.T("Column.Advanced.Key", "Key"),
                 ReadOnly = true,
                 Width = 150,
+                Tag = "loc:Column.Advanced.Key",
                 // MinimumWidth = 160
             };
             // Scope（固定）
@@ -145,6 +147,7 @@ namespace Kiritori
                 HeaderText = SR.T("Column.Advanced.Scope", "Scope"),
                 ReadOnly = true,
                 Width = 50,
+                Tag = "loc:Column.Advanced.Scope",
                 // MinimumWidth = 70
             };
             // Type（固定）
@@ -154,6 +157,7 @@ namespace Kiritori
                 HeaderText = SR.T("Column.Advanced.Type", "Type"),
                 ReadOnly = true,
                 Width = 50,
+                Tag = "loc:Column.Advanced.Type",
                 // MinimumWidth = 140
             };
             // Value（可変：最優先で広く取る）
@@ -163,6 +167,7 @@ namespace Kiritori
                 HeaderText = SR.T("Column.Advanced.Value", "Value(editable)"),
                 ReadOnly = false,
                 Width = 110,
+                Tag = "loc:Column.Advanced.Value",
             };
             // Value 列の既定スタイル（常時薄色）
             colValue.HeaderCell.ToolTipText = SR.T("Column.Advanced.Value.Editable", "This is the only editable column");
@@ -178,6 +183,7 @@ namespace Kiritori
                 ReadOnly = true,
                 AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
                 FillWeight = 40,       // ← Value:Description = 60:40 の比率
+                Tag = "loc:Column.Advanced.Description",
                 // MinimumWidth = 120
             };
             _gridSettings.CellFormatting += (s, e) =>
@@ -329,11 +335,29 @@ namespace Kiritori
             _btnImport.Click += (s, e) => ImportFromFile();
 
             buttons.Controls.AddRange(new Control[] { _btnResetSel, _btnResetAll, _btnReload, _btnExport, _btnImport });
-            root.Controls.Add(buttons, 0, 1);
+            root.Controls.Add(buttons, 0, 2);
 
             // 初期ロード
             ReloadSettingsIntoGrid();
         }
+
+        // 設定キーから説明文字列を引くヘルパ
+        private string GetSettingDescription(string key, SettingsProperty p)
+        {
+            // 1) リソース（お好みで順序は調整可）
+            string s;
+            s = SR.T("Setting.Display." + key, null); if (!string.IsNullOrEmpty(s)) return s;
+            // s = SR.T("SettingDesc_" + key, null); if (!string.IsNullOrEmpty(s)) return s;
+            // s = SR.T("Setting_Display_" + key, null); if (!string.IsNullOrEmpty(s)) return s;
+            // s = SR.T("Text_" + key, null); if (!string.IsNullOrEmpty(s)) return s;
+
+            // 2) Settings の DescriptionAttribute
+            var da = p.Attributes[typeof(DescriptionAttribute)] as DescriptionAttribute;
+            if (da != null && !string.IsNullOrEmpty(da.Description)) return da.Description;
+
+            return string.Empty;
+        }
+
         private static bool ValueEquals(object a, object b, string typeName)
         {
             if (ReferenceEquals(a, b)) return true;
@@ -411,10 +435,11 @@ namespace Kiritori
                     ? "User" : "Application";
 
                 // Description
-                string desc = "";
-                var descAttr = p.Attributes[typeof(System.ComponentModel.DescriptionAttribute)] as DescriptionAttribute;
-                if (descAttr != null) desc = descAttr.Description ?? "";
-
+                // string desc = "";
+                // var descAttr = p.Attributes[typeof(System.ComponentModel.DescriptionAttribute)] as DescriptionAttribute;
+                // Log.Debug($"Description for {p.Name}: {descAttr}");
+                // if (descAttr != null) desc = descAttr.Description ?? "";
+                string desc = GetSettingDescription(p.Name, p);
                 // 型が null の場合に備えてフォールバック
                 var pt = p.PropertyType ?? typeof(string);
 
@@ -450,6 +475,11 @@ namespace Kiritori
             }
 
             _rows = new BindingList<SettingRow>(list.OrderBy(r => r.Name).ToList());
+            Log.Debug($"Loaded {_rows.Count} settings into Advanced tab");
+            // foreach (var r in _rows)
+            // {
+            //     Log.Debug($"  {r.Name} = {r.ValueString} (Default={r.DefaultValue}, Type={r.TypeName}, ReadOnly={r.ReadOnly})");
+            // }
 
             // Grid がまだ未構築のタイミングで呼ばれても落ちないように
             if (_gridSettings != null)
