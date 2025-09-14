@@ -831,4 +831,70 @@
   <data name="Setting.Display.WindowShadowEnabled" xml:space="preserve">
     <value>ウィンドウの影</value>
   </data>
+  <data name="History.Menu.Open" xml:space="preserve">
+    <value>開く (&amp;O)</value>
+  </data>
+  <data name="History.Menu.OpenFolder" xml:space="preserve">
+    <value>フォルダを開く (&amp;F)</value>
+  </data>
+  <data name="History.Menu.CopyPath" xml:space="preserve">
+    <value>パスをコピー (&amp;P)</value>
+  </data>
+  <data name="History.Menu.CopyOcr" xml:space="preserve">
+    <value>OCRテキストをコピー (&amp;T)</value>
+  </data>
+  <data name="History.Menu.CopyImage" xml:space="preserve">
+    <value>画像をクリップボードへ (&amp;C)</value>
+  </data>
+  <data name="History.Menu.RunOcr" xml:space="preserve">
+    <value>OCRを実行 (&amp;R)</value>
+  </data>
+  <data name="History.Menu.Delete" xml:space="preserve">
+    <value>削除 (&amp;D)</value>
+  </data>
+  <data name="History.Toolbar.SearchPlaceholder" xml:space="preserve">
+    <value>検索（ファイル名 / パス / OCR）</value>
+  </data>
+  <data name="History.Toolbar.SortByDate" xml:space="preserve">
+    <value>撮影日時</value>
+  </data>
+  <data name="History.Toolbar.SortByName" xml:space="preserve">
+    <value>ファイル名</value>
+  </data>
+  <data name="History.Toolbar.SortByWidth" xml:space="preserve">
+    <value>幅</value>
+  </data>
+  <data name="History.Toolbar.SortByHeight" xml:space="preserve">
+    <value>高さ</value>
+  </data>
+  <data name="History.Toolbar.OrderDesc" xml:space="preserve">
+    <value>降順</value>
+  </data>
+  <data name="History.Toolbar.OrderAsc" xml:space="preserve">
+    <value>昇順</value>
+  </data>
+  <data name="History.Toolbar.Clear" xml:space="preserve">
+    <value>クリア</value>
+  </data>
+  <data name="History.Toolbar.DeleteSelected" xml:space="preserve">
+    <value>選択を削除</value>
+  </data>
+  <data name="History.Dialog.DeleteTitle" xml:space="preserve">
+    <value>履歴の削除</value>
+  </data>
+  <data name="History.Dialog.DeleteConfirmFew" xml:space="preserve">
+    <value>以下の {0} 件を削除しますか？</value>
+  </data>
+  <data name="History.Dialog.DeleteConfirmMany" xml:space="preserve">
+    <value>選択された {0} 件を削除しますか？</value>
+  </data>
+  <data name="History.Dialog.OcrTitle" xml:space="preserve">
+    <value>OCR</value>
+  </data>
+  <data name="History.Dialog.OcrFailed" xml:space="preserve">
+    <value>OCRに失敗しました。</value>
+  </data>
+  <data name="History.Thumb.Placeholder" xml:space="preserve">
+    <value>プレビューなし</value>
+  </data>
 </root>

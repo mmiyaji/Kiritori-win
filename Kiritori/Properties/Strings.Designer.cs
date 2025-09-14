@@ -484,6 +484,204 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Delete these {0} item(s)? に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Dialog_DeleteConfirmFew {
+            get {
+                return ResourceManager.GetString("History.Dialog.DeleteConfirmFew", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Delete the selected {0} item(s)? に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Dialog_DeleteConfirmMany {
+            get {
+                return ResourceManager.GetString("History.Dialog.DeleteConfirmMany", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Delete History に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Dialog_DeleteTitle {
+            get {
+                return ResourceManager.GetString("History.Dialog.DeleteTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Failed to run OCR. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Dialog_OcrFailed {
+            get {
+                return ResourceManager.GetString("History.Dialog.OcrFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   OCR に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Dialog_OcrTitle {
+            get {
+                return ResourceManager.GetString("History.Dialog.OcrTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Copy Image to Clipboard に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Menu_CopyImage {
+            get {
+                return ResourceManager.GetString("History.Menu.CopyImage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Copy OCR Text に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Menu_CopyOcr {
+            get {
+                return ResourceManager.GetString("History.Menu.CopyOcr", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Copy Path に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Menu_CopyPath {
+            get {
+                return ResourceManager.GetString("History.Menu.CopyPath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Delete に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Menu_Delete {
+            get {
+                return ResourceManager.GetString("History.Menu.Delete", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Open に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Menu_Open {
+            get {
+                return ResourceManager.GetString("History.Menu.Open", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Open Containing Folder に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Menu_OpenFolder {
+            get {
+                return ResourceManager.GetString("History.Menu.OpenFolder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Run OCR に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Menu_RunOcr {
+            get {
+                return ResourceManager.GetString("History.Menu.RunOcr", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   No preview に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Thumb_Placeholder {
+            get {
+                return ResourceManager.GetString("History.Thumb.Placeholder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Clear に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Toolbar_Clear {
+            get {
+                return ResourceManager.GetString("History.Toolbar.Clear", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Delete Selected に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Toolbar_DeleteSelected {
+            get {
+                return ResourceManager.GetString("History.Toolbar.DeleteSelected", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Ascending に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Toolbar_OrderAsc {
+            get {
+                return ResourceManager.GetString("History.Toolbar.OrderAsc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Descending に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Toolbar_OrderDesc {
+            get {
+                return ResourceManager.GetString("History.Toolbar.OrderDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Search (filename / path / OCR) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Toolbar_SearchPlaceholder {
+            get {
+                return ResourceManager.GetString("History.Toolbar.SearchPlaceholder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Captured Time に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Toolbar_SortByDate {
+            get {
+                return ResourceManager.GetString("History.Toolbar.SortByDate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Height に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Toolbar_SortByHeight {
+            get {
+                return ResourceManager.GetString("History.Toolbar.SortByHeight", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   File Name に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Toolbar_SortByName {
+            get {
+                return ResourceManager.GetString("History.Toolbar.SortByName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Width に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string History_Toolbar_SortByWidth {
+            get {
+                return ResourceManager.GetString("History.Toolbar.SortByWidth", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Always draw に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_AlwaysDraw {
@@ -934,6 +1132,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Always on Top に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_AlwaysOnTop {
+            get {
+                return ResourceManager.GetString("Setting.Display.AlwaysOnTop", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Capture Background Opacity (%) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Setting_Display_CaptureBackgroundAlphaPercent {
@@ -952,6 +1159,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   FFmpeg Path に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_FfmpegPath {
+            get {
+                return ResourceManager.GetString("Setting.Display.FfmpegPath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Initial Startup State Management に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Setting_Display_FirstRunShown {
@@ -961,11 +1177,47 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Include OCR Results in History に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_HistoryIncludeOcr {
+            get {
+                return ResourceManager.GetString("Setting.Display.HistoryIncludeOcr", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   History Limit に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Setting_Display_HistoryLimit {
             get {
                 return ResourceManager.GetString("Setting.Display.HistoryLimit", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Hotkey: Capture に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_HotkeyCapture {
+            get {
+                return ResourceManager.GetString("Setting.Display.HotkeyCapture", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Hotkey: Live Preview に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_HotkeyLive {
+            get {
+                return ResourceManager.GetString("Setting.Display.HotkeyLive", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Hotkey: OCR に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_HotkeyOcr {
+            get {
+                return ResourceManager.GetString("Setting.Display.HotkeyOcr", resourceCulture);
             }
         }
         
@@ -1006,11 +1258,173 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Live Preview Max FPS に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LivePreviewMaxFps {
+            get {
+                return ResourceManager.GetString("Setting.Display.LivePreviewMaxFps", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Live Preview Privacy Mode に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LivePreviewPrivacyMode {
+            get {
+                return ResourceManager.GetString("Setting.Display.LivePreviewPrivacyMode", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Live Preview Render Policy (Auto/GDI/DirectX) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LivePreviewRenderPolicy {
+            get {
+                return ResourceManager.GetString("Setting.Display.LivePreviewRenderPolicy", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Enable Logging に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LogEnabled {
+            get {
+                return ResourceManager.GetString("Setting.Display.LogEnabled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Log File Path に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LogFilePath {
+            get {
+                return ResourceManager.GetString("Setting.Display.LogFilePath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Include Category Tag に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LogIncludeCategoryTag {
+            get {
+                return ResourceManager.GetString("Setting.Display.LogIncludeCategoryTag", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Include Process ID に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LogIncludeProcessId {
+            get {
+                return ResourceManager.GetString("Setting.Display.LogIncludeProcessId", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Include Thread ID に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LogIncludeThreadId {
+            get {
+                return ResourceManager.GetString("Setting.Display.LogIncludeThreadId", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Include Timestamp に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LogIncludeTimestamp {
+            get {
+                return ResourceManager.GetString("Setting.Display.LogIncludeTimestamp", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Max Log File Size (bytes) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LogMaxFileSizeBytes {
+            get {
+                return ResourceManager.GetString("Setting.Display.LogMaxFileSizeBytes", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Max Roll Files に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LogMaxRollFiles {
+            get {
+                return ResourceManager.GetString("Setting.Display.LogMaxRollFiles", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Minimum Log Level に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LogMinLevel {
+            get {
+                return ResourceManager.GetString("Setting.Display.LogMinLevel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Timestamp Format に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LogTimestampFormat {
+            get {
+                return ResourceManager.GetString("Setting.Display.LogTimestampFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Write to Debug Output に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LogWriteToDebug {
+            get {
+                return ResourceManager.GetString("Setting.Display.LogWriteToDebug", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Write to File に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LogWriteToFile {
+            get {
+                return ResourceManager.GetString("Setting.Display.LogWriteToFile", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   OCR Language に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_OcrLanguage {
+            get {
+                return ResourceManager.GetString("Setting.Display.OcrLanguage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Open Menu on App Start に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Setting_Display_OpenPreferencesOnStartup {
             get {
                 return ResourceManager.GetString("Setting.Display.OpenPreferencesOnStartup", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Enable Overlay に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_OverlayEnabled {
+            get {
+                return ResourceManager.GetString("Setting.Display.OverlayEnabled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Play Sound on Capture に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_PlaySoundOnCapture {
+            get {
+                return ResourceManager.GetString("Setting.Display.PlaySoundOnCapture", resourceCulture);
             }
         }
         
@@ -1033,11 +1447,56 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Show Notification on Capture に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_ShowNotificationOnCapture {
+            get {
+                return ResourceManager.GetString("Setting.Display.ShowNotificationOnCapture", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Show Notification on OCR に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_ShowNotificationOnOcr {
+            get {
+                return ResourceManager.GetString("Setting.Display.ShowNotificationOnOcr", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Snap to Edges に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_SnapToEdgesEnabled {
+            get {
+                return ResourceManager.GetString("Setting.Display.SnapToEdgesEnabled", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Language に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Setting_Display_UICulture {
             get {
                 return ResourceManager.GetString("Setting.Display.UICulture", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Window Opacity (%) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_WindowOpacityPercent {
+            get {
+                return ResourceManager.GetString("Setting.Display.WindowOpacityPercent", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Window Shadow に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_WindowShadowEnabled {
+            get {
+                return ResourceManager.GetString("Setting.Display.WindowShadowEnabled", resourceCulture);
             }
         }
         

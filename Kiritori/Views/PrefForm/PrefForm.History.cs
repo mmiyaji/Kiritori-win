@@ -61,9 +61,35 @@ namespace Kiritori
         }
 
         [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
-        private static extern Int32 SendMessage(IntPtr hWnd, int msg, int wParam, string lParam);
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, string lParam);
         private const int EM_SETCUEBANNER = 0x1501;
+        private void SetCueBanner(TextBox tb, string text, bool showWhenFocused = true)
+        {
+            if (tb == null || tb.IsDisposed) return;
 
+            Action apply = () =>
+            {
+                try
+                {
+                    // wParam=1 でフォーカス時も表示（好みで false に）
+                    SendMessage(tb.Handle, EM_SETCUEBANNER, showWhenFocused ? new IntPtr(1) : IntPtr.Zero, text ?? "");
+                }
+                catch { /* noop */ }
+            };
+
+            if (tb.IsHandleCreated) apply();
+            else
+            {
+                // ハンドル作成後に一度だけ適用
+                EventHandler h = null;
+                h = (s, e) =>
+                {
+                    tb.HandleCreated -= h;
+                    apply();
+                };
+                tb.HandleCreated += h;
+            }
+        }
         private void BuildHistoryToolbar()
         {
             if (_historyToolbar != null) return;
@@ -77,11 +103,16 @@ namespace Kiritori
 
             _txtSearch = new TextBox { Left = 8, Top = 6, Width = 260 };
             // プレースホルダー（ハンドル生成後に設定）
-            _txtSearch.HandleCreated += (s, e) => { try { SendMessage(_txtSearch.Handle, EM_SETCUEBANNER, 1, "検索（ファイル名 / パス）"); } catch { } };
+            // _txtSearch.HandleCreated += (s, e) => { try { SendMessage(_txtSearch.Handle, EM_SETCUEBANNER, 1, "検索（ファイル名 / パス）"); } catch { } };
             _txtSearch.TextChanged += (s, e) => ApplyFilterAndRefresh();
 
             _cboSort = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Left = _txtSearch.Right + 8, Top = 6, Width = 140 };
-            _cboSort.Items.AddRange(new object[] { "撮影日時", "ファイル名", "幅", "高さ" });
+            _cboSort.Items.AddRange(new object[] {
+                SR.T("History.Toolbar.SortByDate", "Captured Time"),
+                SR.T("History.Toolbar.SortByName", "File Name"),
+                SR.T("History.Toolbar.SortByWidth", "Width"),
+                SR.T("History.Toolbar.SortByHeight", "Height"),
+                });
             _cboSort.SelectedIndex = 0;
             _cboSort.SelectedIndexChanged += (s, e) =>
             {
@@ -96,7 +127,10 @@ namespace Kiritori
             };
 
             _cboOrder = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Left = _cboSort.Right + 6, Top = 6, Width = 100 };
-            _cboOrder.Items.AddRange(new object[] { "降順", "昇順" });
+            _cboOrder.Items.AddRange(new object[] {
+                SR.T("History.Toolbar.OrderDescending", "Descending"),
+                SR.T("History.Toolbar.OrderAscending", "Ascending")
+                });
             _cboOrder.SelectedIndex = 0; // 既定：降順
             _cboOrder.SelectedIndexChanged += (s, e) => { _sortAsc = (_cboOrder.SelectedIndex == 1); ApplySortAndRefresh(); };
 
@@ -114,7 +148,13 @@ namespace Kiritori
                     ApplyFilterAndRefresh();
                 }
             };
-            _btnDelete = new Button { Text = "選択を削除", Left = _btnClearHistory.Right + 8, Top = 5, Width = 110 };
+            _btnDelete = new Button
+            {
+                Text = SR.T("History.Toolbar.DeleteSelected", "Delete Selected"),
+                Left = _btnClearHistory.Right + 8,
+                Top = 5,
+                Width = 110
+            };
             _btnDelete.Click += (s, e) => DeleteSelected();
 
             _historyToolbar.Controls.AddRange(new Control[] { _txtSearch, _cboSort, _cboOrder, _btnClearHistory, _btnDelete });
@@ -122,6 +162,7 @@ namespace Kiritori
             this.tabHistory.Controls.Add(_lvHistory);
             this.tabHistory.Controls.Add(_historyToolbar);
             _lvHistory.BringToFront();
+            UpdateHistoryToolbarTexts();
         }
 
         private Bitmap BuildPlaceholder()
@@ -131,8 +172,10 @@ namespace Kiritori
             {
                 g.Clear(Color.FromArgb(240, 240, 240));
                 using (var p = new Pen(Color.Silver)) g.DrawRectangle(p, 0, 0, THUMB_W - 1, THUMB_H - 1);
-                var s = "…";
-                using (var f = new Font("Segoe UI", 18f, FontStyle.Regular, GraphicsUnit.Point))
+
+                // ★ ローカライズされた文字列を使用（英語フォールバック付き）
+                var s = SR.T("History.Thumb.Placeholder", "No preview");
+                using (var f = new Font("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point))
                 using (var br = new SolidBrush(Color.Gray))
                 {
                     var sz = g.MeasureString(s, f);
@@ -141,6 +184,7 @@ namespace Kiritori
             }
             return bmp;
         }
+
 
         private static bool IsUsableImage(Image img)
         {
@@ -220,6 +264,17 @@ namespace Kiritori
 
             BuildHistoryToolbar();
             BuildHistoryContextMenu();
+            
+            SR.CultureChanged += () =>
+            {
+                try
+                {
+                    // UpdateHistoryContextMenuTexts();
+                    UpdateHistoryToolbarTexts();
+                    _lvHistory?.Invalidate();
+                }
+                catch { /* noop */ }
+            };
             _historyUiInitialized = true;
 
             _lvHistory.ItemActivate += (s, e) => OpenSelected();
@@ -247,6 +302,52 @@ namespace Kiritori
             int tileW = THUMB_W + gap + textAreaW;
             int tileH = Math.Max(THUMB_H + (int)Math.Round(12 * scale), (int)Math.Round(96 * scale));
             _lvHistory.TileSize = new Size(tileW, tileH);
+        }
+        private void UpdateHistoryToolbarTexts()
+        {
+            if (_historyToolbar == null) return;
+
+            // 検索プレースホルダー
+            var placeholder = SR.T("History.Toolbar.SearchPlaceholder", "Search (filename / path / OCR)");
+            SetCueBanner(_txtSearch, placeholder, showWhenFocused: true);
+
+            // ソートキー（順番は固定、表示だけ差し替え）
+            var itemsSort = new[]
+            {
+                SR.T("History.Toolbar.SortByDate",   "Captured Time"),
+                SR.T("History.Toolbar.SortByName",   "File Name"),
+                SR.T("History.Toolbar.SortByWidth",  "Width"),
+                SR.T("History.Toolbar.SortByHeight", "Height")
+            };
+            if (_cboSort != null)
+            {
+                int keep = _cboSort.SelectedIndex;
+                _cboSort.BeginUpdate();
+                _cboSort.Items.Clear();
+                _cboSort.Items.AddRange(itemsSort);
+                _cboSort.EndUpdate();
+                _cboSort.SelectedIndex = (keep >= 0 && keep < _cboSort.Items.Count) ? keep : 0;
+            }
+
+            // 昇順/降順
+            if (_cboOrder != null)
+            {
+                int keep = _cboOrder.SelectedIndex;
+                _cboOrder.BeginUpdate();
+                _cboOrder.Items.Clear();
+                _cboOrder.Items.AddRange(new object[] {
+                    SR.T("History.Toolbar.OrderDesc", "Descending"),
+                    SR.T("History.Toolbar.OrderAsc",  "Ascending")
+                });
+                _cboOrder.EndUpdate();
+                _cboOrder.SelectedIndex = (keep == 0 || keep == 1) ? keep : 0;
+            }
+
+            if (_btnClearHistory != null)
+                _btnClearHistory.Text = SR.T("History.Toolbar.Clear", "Clear");
+
+            if (_btnDelete != null)
+                _btnDelete.Text = SR.T("History.Toolbar.DeleteSelected", "Delete Selected");
         }
 
         private void PopulateHistoryItems(IEnumerable<HistoryEntry> entries)
@@ -733,23 +834,40 @@ namespace Kiritori
         {
             if (_lvHistory.SelectedItems.Count == 0) return;
 
-            var list = _lvHistory.SelectedItems.Cast<ListViewItem>()
-                        .Select(it => it.Tag as HistoryEntry)
-                        .Where(he => he != null)
-                        .ToList();
+            var list = _lvHistory.SelectedItems
+                .Cast<ListViewItem>()
+                .Select(it => it.Tag as HistoryEntry)
+                .Where(he => he != null)
+                .ToList();
             if (list.Count == 0) return;
 
-            var names = list.Take(5).Select(he => Path.GetFileName(he.Path) ?? "(clipboard)");
-            var msg = (list.Count <= 5)
-                ? $"以下の {list.Count} 件を削除しますか？\n\n- " + string.Join("\n- ", names)
-                : $"選択された {list.Count} 件を削除しますか？";
+            var names = list
+                .Take(5)
+                .Select(he => System.IO.Path.GetFileName(he.Path) ?? "(clipboard)");
 
-            if (MessageBox.Show(this, msg, "履歴の削除", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+            var title = SR.T("History.Dialog.DeleteTitle", "Delete History");
+            string msg;
+            if (list.Count <= 5)
+            {
+                // e.g. "Delete these 3 item(s)?"
+                msg = SR.F("History.Dialog.DeleteConfirmFew",
+                        "Delete these {0} item(s)?", list.Count)
+                    + "\n\n- " + string.Join("\n- ", names);
+            }
+            else
+            {
+                // e.g. "Delete the selected 12 item(s)?"
+                msg = SR.F("History.Dialog.DeleteConfirmMany",
+                        "Delete the selected {0} item(s)?", list.Count);
+            }
+
+            if (MessageBox.Show(this, msg, title,
+                MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
                 return;
 
             try
             {
-                // 1) 実ファイルを削除（存在するものだけ）
+                // 1) 実ファイル削除（存在するものだけ）
                 foreach (var he in list)
                 {
                     try
@@ -757,47 +875,63 @@ namespace Kiritori
                         if (!string.IsNullOrEmpty(he.Path) && File.Exists(he.Path))
                             File.Delete(he.Path);
                     }
-                    catch { /* ロック中などはスキップ */ }
+                    catch
+                    {
+                        // ロック中などはスキップ（必要ならログ）
+                    }
                 }
 
-                // 2) UI側データからも除去
+                // 2) UI側データから除去
                 var set = new HashSet<HistoryEntry>(list);
                 _allHistory = _allHistory.Where(h => !set.Contains(h)).ToList();
 
-                // 3) 表示更新
+                // 3) 画面更新
                 ApplyFilterAndRefresh();
 
-                // 4) 他画面に通知（トレイの履歴などを追従させる）
+                // 4) 他画面へ通知（トレイ履歴など）
                 Kiritori.Services.History.HistoryBridge.RaiseChanged(this);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "削除に失敗しました。\n" + ex.Message, "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this,
+                    SR.T("History.Dialog.DeleteFailed", "Failed to delete history.")
+                    + "\n" + ex.Message,
+                    title,
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
         private void BuildHistoryContextMenu()
         {
-            if (_ctxHistory != null) return;
+            // ListView がまだ無ければ何もしない（後で EnsureHistoryTabUi から再呼びされる）
+            if (_lvHistory == null || _lvHistory.IsDisposed) return;
+
+            // すでに作ってあればテキストだけ更新して終了
+            if (_ctxHistory != null)
+            {
+                UpdateHistoryContextMenuTexts(); // 多言語化ヘルパ（なければ削除可）
+                // 念のため再アタッチ（ListView を作り直したケース）
+                _lvHistory.ContextMenuStrip = _ctxHistory;
+                return;
+            }
 
             _ctxHistory = new ContextMenuStrip();
 
-            _miOpen       = new ToolStripMenuItem("開く (&O)");
-            _miOpenFolder = new ToolStripMenuItem("フォルダを開く (&F)");
-            _miCopyPath   = new ToolStripMenuItem("パスをコピー (&P)");
-            _miCopyOcr    = new ToolStripMenuItem("OCRテキストをコピー (&T)");
-            _miCopyImage  = new ToolStripMenuItem("画像をクリップボードへ (&C)");
-            _miDelete     = new ToolStripMenuItem("削除 (&D)");
-            // ★ 追加
-            _miRunOcr     = new ToolStripMenuItem("OCRを実行 (&R)");
+            _miOpen       = new ToolStripMenuItem("Open");
+            _miOpenFolder = new ToolStripMenuItem("Open Containing Folder");
+            _miCopyPath   = new ToolStripMenuItem("Copy Path");
+            _miCopyOcr    = new ToolStripMenuItem("Copy OCR Text");
+            _miCopyImage  = new ToolStripMenuItem("Copy Image to Clipboard");
+            _miRunOcr     = new ToolStripMenuItem("Run OCR");
+            _miDelete     = new ToolStripMenuItem("Delete");
 
             _miOpen.Click       += (s, e) => OpenSelected();
             _miOpenFolder.Click += (s, e) => RevealInExplorerSelected();
             _miCopyPath.Click   += (s, e) => CopyPathSelected();
             _miCopyOcr.Click    += (s, e) => CopyOcrSelected();
             _miCopyImage.Click  += (s, e) => CopyImageSelected();
-            _miDelete.Click     += (s, e) => DeleteSelected();
             _miRunOcr.Click     += async (s, e) => await RunOcrForSelectedAsync();
+            _miDelete.Click     += (s, e) => DeleteSelected();
 
             _ctxHistory.Items.AddRange(new ToolStripItem[]
             {
@@ -815,9 +949,12 @@ namespace Kiritori
 
             _ctxHistory.Opening += (s, e) =>
             {
+                // _lvHistory が null でないことを再確認（保険）
+                if (_lvHistory == null || _lvHistory.IsDisposed) { e.Cancel = true; return; }
+
                 var sel = GetSelectedEntries();
-                bool single = sel.Count == 1;
-                bool has    = sel.Count > 0;
+                bool single  = sel.Count == 1;
+                bool has     = sel.Count > 0;
                 bool hasPath = single && !string.IsNullOrEmpty(sel[0].Path) && File.Exists(sel[0].Path);
                 bool canRunOcr = hasPath && single && string.IsNullOrWhiteSpace(sel[0].Description);
 
@@ -826,12 +963,38 @@ namespace Kiritori
                 _miCopyPath.Enabled   = has;
                 _miCopyOcr.Enabled    = has;
                 _miCopyImage.Enabled  = hasPath && single;
+                _miRunOcr.Enabled     = canRunOcr;
                 _miDelete.Enabled     = has;
-                _miRunOcr.Enabled     = canRunOcr;   // ← 追加: Descが空のときだけ実行可
             };
 
+            // 多言語化（SR がある場合）
+            try { UpdateHistoryContextMenuTexts(); } catch { /* SR 未用意なら無視 */ }
             _lvHistory.ContextMenuStrip = _ctxHistory;
+
+            // ListView のハンドル再作成時にもメニューが外れないように保険
+            _lvHistory.HandleCreated -= LvHistory_HandleCreated_AttachCtx;
+            _lvHistory.HandleCreated += LvHistory_HandleCreated_AttachCtx;
         }
+
+        private void LvHistory_HandleCreated_AttachCtx(object sender, EventArgs e)
+        {
+            if (_lvHistory != null && !_lvHistory.IsDisposed && _ctxHistory != null)
+                _lvHistory.ContextMenuStrip = _ctxHistory;
+        }
+
+        private void UpdateHistoryContextMenuTexts()
+        {
+            if (_ctxHistory == null) return;
+
+            _miOpen.Text       = SR.T("History.Menu.Open",        "Open");
+            _miOpenFolder.Text = SR.T("History.Menu.OpenFolder",  "Open Containing Folder");
+            _miCopyPath.Text   = SR.T("History.Menu.CopyPath",    "Copy Path");
+            _miCopyOcr.Text    = SR.T("History.Menu.CopyOcr",     "Copy OCR Text");
+            _miCopyImage.Text  = SR.T("History.Menu.CopyImage",   "Copy Image to Clipboard");
+            _miRunOcr.Text     = SR.T("History.Menu.RunOcr",      "Run OCR");
+            _miDelete.Text     = SR.T("History.Menu.Delete",      "Delete");
+        }
+
         private async Task RunOcrForSelectedAsync()
         {
             var sel = GetSelectedEntries();
@@ -851,7 +1014,6 @@ namespace Kiritori
                 using (var img = Image.FromStream(ms, useEmbeddedColorManagement: false, validateImageData: false))
                 using (var bmp = new Bitmap(img))
                 {
-                    // ★ ここを copyToClipboard: true に
                     var text = await OcrFacade.RunAsync(
                         bmp,
                         copyToClipboard: true,   // ← クリップボードへコピー
@@ -890,7 +1052,7 @@ namespace Kiritori
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "OCRに失敗しました。\n" + ex.Message, "OCR", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, SR.T("History.Dialog.OcrFailed", "Failed to run OCR.") + "\n" + ex.Message, "OCR", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {

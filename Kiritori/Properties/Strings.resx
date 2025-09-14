@@ -831,4 +831,70 @@
   <data name="Setting.Display.WindowShadowEnabled" xml:space="preserve">
     <value>Window Shadow</value>
   </data>
+  <data name="History.Menu.Open" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="History.Menu.OpenFolder" xml:space="preserve">
+    <value>Open Containing Folder</value>
+  </data>
+  <data name="History.Menu.CopyPath" xml:space="preserve">
+    <value>Copy Path</value>
+  </data>
+  <data name="History.Menu.CopyOcr" xml:space="preserve">
+    <value>Copy OCR Text</value>
+  </data>
+  <data name="History.Menu.CopyImage" xml:space="preserve">
+    <value>Copy Image to Clipboard</value>
+  </data>
+  <data name="History.Menu.RunOcr" xml:space="preserve">
+    <value>Run OCR</value>
+  </data>
+  <data name="History.Menu.Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="History.Toolbar.SearchPlaceholder" xml:space="preserve">
+    <value>Search (filename / path / OCR)</value>
+  </data>
+  <data name="History.Toolbar.SortByDate" xml:space="preserve">
+    <value>Captured Time</value>
+  </data>
+  <data name="History.Toolbar.SortByName" xml:space="preserve">
+    <value>File Name</value>
+  </data>
+  <data name="History.Toolbar.SortByWidth" xml:space="preserve">
+    <value>Width</value>
+  </data>
+  <data name="History.Toolbar.SortByHeight" xml:space="preserve">
+    <value>Height</value>
+  </data>
+  <data name="History.Toolbar.OrderDesc" xml:space="preserve">
+    <value>Descending</value>
+  </data>
+  <data name="History.Toolbar.OrderAsc" xml:space="preserve">
+    <value>Ascending</value>
+  </data>
+  <data name="History.Toolbar.Clear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="History.Toolbar.DeleteSelected" xml:space="preserve">
+    <value>Delete Selected</value>
+  </data>
+  <data name="History.Dialog.DeleteTitle" xml:space="preserve">
+    <value>Delete History</value>
+  </data>
+  <data name="History.Dialog.DeleteConfirmFew" xml:space="preserve">
+    <value>Delete these {0} item(s)?</value>
+  </data>
+  <data name="History.Dialog.DeleteConfirmMany" xml:space="preserve">
+    <value>Delete the selected {0} item(s)?</value>
+  </data>
+  <data name="History.Dialog.OcrTitle" xml:space="preserve">
+    <value>OCR</value>
+  </data>
+  <data name="History.Dialog.OcrFailed" xml:space="preserve">
+    <value>Failed to run OCR.</value>
+  </data>
+  <data name="History.Thumb.Placeholder" xml:space="preserve">
+    <value>No preview</value>
+  </data>
 </root>
