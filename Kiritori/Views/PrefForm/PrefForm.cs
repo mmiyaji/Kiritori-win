@@ -29,6 +29,16 @@ namespace Kiritori
         // ================ Fields / Properties ====================
         // =========================================================
         private static PrefForm _instance;
+        /// <summary>
+        /// シングルトンインスタンスを取得
+        /// </summary>
+        public static PrefForm Instance => _instance;
+
+        /// <summary>
+        /// 開いていれば返す。閉じていれば null。
+        /// </summary>
+        public static PrefForm InstanceIfOpen
+            => (_instance != null && !_instance.IsDisposed) ? _instance : null;
         private bool _initStartupToggle = false;
         private bool _initLang = false;
         // private bool _loadingUi = false;
@@ -115,7 +125,7 @@ namespace Kiritori
         /// <summary>
         /// 設定ウィンドウを常に1つだけ表示する。既にあれば前面化。
         /// </summary>
-        public static void ShowSingleton(IWin32Window owner = null)
+        public static PrefForm ShowSingleton(IWin32Window owner = null)
         {
             if (_instance == null || _instance.IsDisposed)
             {
@@ -136,6 +146,7 @@ namespace Kiritori
                 _instance.BringToFront();
                 _instance.Activate();
             }
+            return _instance;
         }
 
         // =========================================================

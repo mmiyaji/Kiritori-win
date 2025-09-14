@@ -1,5 +1,7 @@
 ﻿using Kiritori.Helpers;
 using Kiritori.Views.Controls;
+using Kiritori.Services.Ocr;
+using Kiritori.Services.History;
 using System;
 using System.Drawing;
 using System.Linq;
@@ -9,6 +11,10 @@ namespace Kiritori
 {
     partial class PrefForm
     {
+        private bool _advancedBuilt;
+        private bool _extensionsBuilt;
+        private bool _shortcutsBuilt;
+        private bool _historyBuilt;
         private System.ComponentModel.IContainer components = null;
 
         protected override void Dispose(bool disposing)
@@ -57,11 +63,61 @@ namespace Kiritori
         // ========= General ==========
         private TabPage tabGeneral;
 
+        // Application Settings
+        private GroupBox grpAppSettings;
+        private Label labelLanguage;
+        private ComboBox cmbLanguage;
+        private Label labelOCRLanguage;
+        private ComboBox cmbOCRLanguage;
+        private Label labelStartup;
+        private CheckBox chkRunAtStartup;
+        private Button btnOpenStartupSettings;
+        // private Label labelStartupInfo;
+        private Label labelHistory;
+        private NumericUpDown textBoxHistory;
+
+        // Hotkeys
+        private GroupBox grpHotkey;
+        private Label labelHotkeyCapture;
+        private TextBox textBoxKiritori;            // Capture (existing)
+        private Label labelHotkeyCaptureOCR;
+        private TextBox textBoxHotkeyCaptureOCR;
+        private Label labelHotkeyLivePreview;       // Live Preview
+        private TextBox textBoxHotkeyLivePreview;
+        private Label labelHotkeyCapturePrev;       // Capture at previous region
+        private TextBox textBoxCapturePrev;
+
         // ========= Appearance ==========
         private TabPage tabAppearance;
 
+        // Capture settings（簡素化）
+        private GroupBox grpCaptureSettings;
+        private CheckBox chkScreenGuide;   // show guide lines
+        private CheckBox chkTrayNotify;    // notify on capture
+        private CheckBox chkTrayNotifyOCR;    // notify on capture
+        // private CheckBox chkPlaySound;     // play sound on capture
+        private Label labelBgPreset;
+        private ComboBox cmbBgPreset;
+        private AlphaPreviewPanel previewBg;
+
+        // Window settings（プリセット＋不透明度統合）
+        private GroupBox grpWindowSettings;
+        private CheckBox chkWindowShadow;
+        private CheckBox chkAfloat;
+        private CheckBox chkHighlightOnHover;
+        private CheckBox chkShowOverlay;
+        private Label labelHoverPreset;
+        private ComboBox cmbHoverPreset;
+        private Label labelHoverThickness;
+        private NumericUpDown numHoverThickness;
+        private AlphaPreviewPanel previewHover; // 透過は 100% 固定
+        private Label labelDefaultOpacity;
+        private TrackBar trackbarDefaultOpacity;
+        private Label labelDefaultOpacityVal;
+
         // ========= Shortcuts ==========
         private TabPage tabShortcuts;
+
 
         // ========= Advanced ==========
         private TabPage tabAdvanced;
@@ -69,6 +125,9 @@ namespace Kiritori
         private TabPage tabLogs;
         // ========= Extensions ==========
         private TabPage tabExtensions;
+
+        // ========= History ==========
+        private TabPage tabHistory;
 
         // ========= Info ==========
         private TabPage tabInfo;
@@ -123,6 +182,7 @@ namespace Kiritori
             this.tabAdvanced = new TabPage("Advanced") { AutoScroll = true, Tag = "loc:Tab.Advanced" };
             this.tabLogs = new TabPage("Logs") { AutoScroll = true, Tag = "loc:Tab.Logs" };
             this.tabExtensions = new TabPage("Extensions") { AutoScroll = true, Tag = "loc:Tab.Extensions" };
+            this.tabHistory = new TabPage("History") { AutoScroll = true, Tag = "loc:Tab.History" };
 
             if (!Helpers.PackagedHelper.IsPackaged())
             {
@@ -134,6 +194,7 @@ namespace Kiritori
                     this.tabShortcuts,
                     this.tabExtensions,
                     this.tabAdvanced,
+                    this.tabHistory,
                     this.tabLogs,
                 });
             }
@@ -146,9 +207,55 @@ namespace Kiritori
                     this.tabAppearance,
                     this.tabShortcuts,
                     this.tabAdvanced,
+                    this.tabHistory,
                     this.tabLogs,
                 });
             }
+            this.tabControl.Selected += (s, e) =>
+            {
+                // 履歴タブから離れたら idle の生成を止める
+                if (e.TabPage != this.tabHistory) StopLazyThumbLoad();
+
+                if (e.TabPage == this.tabAdvanced && !_advancedBuilt) { _advancedBuilt = true; BuildAdvancedTab(); }
+                else if (e.TabPage == this.tabExtensions && !_extensionsBuilt) { _extensionsBuilt = true; BuildExtensionsTab(); }
+                else if (e.TabPage == this.tabShortcuts && !_shortcutsBuilt) { _shortcutsBuilt = true; BuildShortcutsTab(); }
+                else if (e.TabPage == this.tabHistory)
+                {
+                    if (!_historyBuilt)
+                    {
+                        _historyBuilt = true;
+                        BuildHistoryTab();
+                    }
+                    try
+                    {
+                        var snap = HistoryBridge.GetSnapshot();
+                        this.SetupHistoryTabIfNeededAndShow(snap);
+                    }
+                    catch { /* 取得できなければ無視 */ }
+                    StartLazyThumbLoad();
+                }
+            };
+            // フォーム表示時、既に選ばれているタブだけ即構築（安全策）
+            this.Shown += (s, e) =>
+            {
+                var t = this.tabControl.SelectedTab;
+                if (t == this.tabAdvanced && !_advancedBuilt) { _advancedBuilt = true; BuildAdvancedTab(); }
+                else if (t == this.tabExtensions && !_extensionsBuilt) { _extensionsBuilt = true; BuildExtensionsTab(); }
+                // if (t == this.tabGeneral    && !_generalBuilt)    { _generalBuilt = true; BuildGeneralTab(); }
+                // if (t == this.tabAppearance && !_appearanceBuilt) { _appearanceBuilt = true; BuildAppearanceTab(); }
+                else if (t == this.tabShortcuts && !_shortcutsBuilt) { _shortcutsBuilt = true; BuildShortcutsTab(); }
+                else if (t == this.tabHistory && !_historyBuilt)
+                {
+                    _historyBuilt = true;
+                    BuildHistoryTab();
+
+                    var snap = HistoryBridge.GetSnapshot();
+                    this.SetupHistoryTabIfNeededAndShow(snap);
+
+                    StartLazyThumbLoad();
+                }
+                // if (t == this.tabInfo       && !_infoBuilt)       { _infoBuilt = true; BuildInfoTab(); }
+            };
 
             // =========================================================
             // ② Bottom bar（Exit 左 / Cancel & Save 右）
@@ -256,21 +363,312 @@ namespace Kiritori
             shell.Controls.Add(this.bottomBar, 0, 1);
 
             // =========================================================
-            // Appearance タブ
+            // General タブ（縦積みレイアウト）
             // =========================================================
-            BuildAppearanceTab();
+            var stackGeneral = NewStack();
+            this.tabGeneral.Controls.Add(stackGeneral);
+
+            // Application Settings
+            this.grpAppSettings = NewGroup("Application Settings");
+            this.grpAppSettings.Tag = "loc:Text.AppSetting";
+            var tlpApp = NewGrid(3, 3);
+
+            this.labelLanguage = NewRightLabel("Language");
+            this.labelLanguage.Tag = "loc:Text.Language";
+            this.cmbLanguage = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 220 };
+            this.cmbLanguage.Items.AddRange(new object[] { "English (en)", "日本語 (ja)" });
+            this.cmbLanguage.SelectedIndex = 0;
+
+            this.labelOCRLanguage = NewRightLabel("OCR Language");
+            this.labelOCRLanguage.Tag = "loc:Text.OcrLanguage";
+            this.cmbOCRLanguage = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 220 };
+
+            PopulateOcrLanguageCombo();
+            RestoreOcrLanguageSelection();
+
+            this.labelStartup = NewRightLabel("Startup");
+            this.labelStartup.Tag = "loc:Text.Startup";
+            var flowStartup = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false, Dock = DockStyle.Fill };
+            this.chkRunAtStartup = new CheckBox { Text = "Run at startup", AutoSize = true, Enabled = false, Tag = "loc:Text.Runatstartup" };
+            this.btnOpenStartupSettings = new Button { Text = "Open Startup", AutoSize = true, Tag = "loc:Text.BtnStartupFolder" };
+            this.btnOpenStartupSettings.Click += new EventHandler(this.btnOpenStartupSettings_Click);
+            // this.labelStartupInfo = new Label { AutoSize = true, ForeColor = SystemColors.GrayText, Text = "Startup is managed by Windows.", Dock = DockStyle.Fill };
+            // this.toolTip1.SetToolTip(this.labelStartupInfo, "Settings > Apps > Startup");
+            flowStartup.Controls.Add(this.chkRunAtStartup);
+            flowStartup.Controls.Add(this.btnOpenStartupSettings);
+
+            this.labelHistory = NewRightLabel("History limit");
+            this.labelHistory.Tag = "loc:Text.HistoryLimit";
+            this.textBoxHistory = new NumericUpDown { Minimum = 0, Maximum = 100, Value = 20, Width = 80, Anchor = AnchorStyles.Left };
+
+            tlpApp.Controls.Add(this.labelLanguage, 0, 0);
+            tlpApp.Controls.Add(this.cmbLanguage, 1, 0);
+
+            tlpApp.Controls.Add(this.labelOCRLanguage, 0, 1);
+            tlpApp.Controls.Add(this.cmbOCRLanguage, 1, 1);
+
+            tlpApp.Controls.Add(this.labelStartup, 0, 2);
+            var flowStack = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, WrapContents = false };
+            flowStack.Controls.Add(flowStartup);
+            tlpApp.Controls.Add(flowStack, 1, 2);
+
+            tlpApp.Controls.Add(this.labelHistory, 0, 3);
+            tlpApp.Controls.Add(this.textBoxHistory, 1, 3);
+
+            this.grpAppSettings.Controls.Add(tlpApp);
+
+            // Hotkeys（上マージンで間隔）
+            this.grpHotkey = NewGroup("Hotkeys");
+            this.grpHotkey.Tag = "loc:Text.Hotkeys";
+            this.grpHotkey.Margin = new Padding(0, 8, 0, 0);
+
+            var tlpHot = NewGrid(3, 4);
+            this.labelHotkeyCapture = NewRightLabel("Image capture");
+            this.labelHotkeyCapture.Tag = "loc:Text.ImageCapture";
+            this.textBoxKiritori = new TextBox { Enabled = false, Width = 160, Text = "Ctrl + Shift + 5" };
+            this.labelHotkeyCaptureOCR = NewRightLabel("OCR capture");
+            this.labelHotkeyCaptureOCR.Tag = "loc:Text.OCRCapture";
+
+            this.labelHotkeyLivePreview = NewRightLabel("Live preview");
+            this.labelHotkeyLivePreview.Tag = "loc:Text.LivePreview";
+
+            this.textBoxKiritori = new HotkeyPicker { ReadOnly = true, Width = 160 };
+            ((HotkeyPicker)this.textBoxKiritori).SetFromText(
+                Properties.Settings.Default.HotkeyCapture, DEF_HOTKEY_CAP);
+            ((HotkeyPicker)this.textBoxKiritori).HotkeyPicked += (s, e) =>
+            {
+                SaveHotkeyFromPicker(CaptureMode.image, (HotkeyPicker)this.textBoxKiritori);
+            };
+
+            this.textBoxHotkeyCaptureOCR = new HotkeyPicker { ReadOnly = true, Width = 160 };
+            ((HotkeyPicker)this.textBoxHotkeyCaptureOCR).SetFromText(
+                Properties.Settings.Default.HotkeyOcr, DEF_HOTKEY_OCR);
+            ((HotkeyPicker)this.textBoxHotkeyCaptureOCR).HotkeyPicked += (s, e) =>
+            {
+                SaveHotkeyFromPicker(CaptureMode.ocr, (HotkeyPicker)this.textBoxHotkeyCaptureOCR);
+            };
+
+            this.textBoxHotkeyLivePreview = new HotkeyPicker { ReadOnly = true, Width = 160 };
+            ((HotkeyPicker)this.textBoxHotkeyLivePreview).SetFromText(
+                Properties.Settings.Default.HotkeyLive, DEF_HOTKEY_LIVE);
+            ((HotkeyPicker)this.textBoxHotkeyLivePreview).HotkeyPicked += (s, e) =>
+            {
+                SaveHotkeyFromPicker(CaptureMode.live, (HotkeyPicker)this.textBoxHotkeyLivePreview);
+            };
+
+            var btnResetCap = new Button { Text = "Reset", AutoSize = true };
+            btnResetCap.Tag = "loc:Text.ResetDefault";
+            btnResetCap.Click += (s, e) => ResetCaptureHotkeyToDefault();
+
+            var btnResetOcr = new Button { Text = "Reset", AutoSize = true };
+            btnResetOcr.Tag = "loc:Text.ResetDefault";
+            btnResetOcr.Click += (s, e) => ResetOcrHotkeyToDefault();
+
+            var btnResetLive = new Button { Text = "Reset", AutoSize = true };
+            btnResetLive.Tag = "loc:Text.ResetDefault";
+            btnResetLive.Click += (s, e) => ResetLiveHotkeyToDefault();
+
+            this.labelHotkeyCapturePrev = NewRightLabel("Capture at previous region");
+            this.labelHotkeyCapturePrev.Tag = "loc:Text.PreviousCapture";
+            this.textBoxCapturePrev = new TextBox { Enabled = false, Width = 160, Text = "(disabled)" };
+
+            tlpHot.Controls.Add(this.labelHotkeyCapture, 0, 0);
+            tlpHot.Controls.Add(this.textBoxKiritori, 1, 0);
+            tlpHot.Controls.Add(btnResetCap, 2, 0);
+            tlpHot.Controls.Add(this.labelHotkeyCaptureOCR, 0, 1);
+            tlpHot.Controls.Add(this.textBoxHotkeyCaptureOCR, 1, 1);
+            tlpHot.Controls.Add(btnResetOcr, 2, 1);
+            tlpHot.Controls.Add(this.labelHotkeyLivePreview, 0, 2);
+            tlpHot.Controls.Add(this.textBoxHotkeyLivePreview, 1, 2);
+            tlpHot.Controls.Add(btnResetLive, 2, 2);
+            // tlpHot.Controls.Add(this.labelHotkeyCapturePrev, 0, 3);
+            // tlpHot.Controls.Add(this.textBoxCapturePrev, 1, 3);
+
+            this.grpHotkey.Controls.Add(tlpHot);
+
+            // stack へ追加
+            stackGeneral.Controls.Add(this.grpAppSettings, 0, 0);
+            stackGeneral.Controls.Add(this.grpHotkey, 0, 1);
+
             // =========================================================
-            // General タブ
+            // Appearance タブ（1画面に収まるシンプル構成）
             // =========================================================
-            BuildGeneralTab();
+            var stackAppearance = NewStack();
+            this.tabAppearance.Controls.Add(stackAppearance);
+
+            // Capture settings（プリセット＋右プレビュー）
+            this.grpCaptureSettings = NewGroup("Capture Settings");
+            this.grpCaptureSettings.Tag = "loc:Text.CaptureSetting";
+            var tlpCap = NewGrid(2, 2);
+
+            this.chkScreenGuide = new CheckBox { Text = "Show guide lines", Checked = true, AutoSize = true, Tag = "loc:Text.ShowGuide" };
+            this.chkTrayNotify = new CheckBox { Text = "Notify in tray on capture", AutoSize = true, Tag = "loc:Text.NotifyTray" };
+            this.chkTrayNotifyOCR = new CheckBox { Text = "Notify in tray on OCR capture", AutoSize = true, Tag = "loc:Text.NotifyTrayOCR" };
+            // this.chkPlaySound = new CheckBox { Text = "Play sound on capture", AutoSize = true, Enabled = false, Tag = "loc:Text.PlaySound" };
+
+            var flowToggles = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                WrapContents = true,
+            };
+            flowToggles.Controls.Add(this.chkScreenGuide);
+            flowToggles.Controls.Add(this.chkTrayNotify);
+            flowToggles.Controls.Add(this.chkTrayNotifyOCR);
+
+            tlpCap.Controls.Add(new Label { Text = "Options", AutoSize = true, TextAlign = ContentAlignment.MiddleRight, Anchor = AnchorStyles.Right, Tag = "loc:Text.Option" }, 0, 0);
+            tlpCap.Controls.Add(flowToggles, 1, 0);
+
+            this.labelBgPreset = NewRightLabel("Background");
+            this.labelBgPreset.Tag = "loc:Text.Background";
+            this.cmbBgPreset = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150 };
+            this.cmbBgPreset.Items.AddRange(new object[] {
+                "Transparent (0%)",
+                "Dark (30%)",
+                "Dark (60%)",
+                "Light (30%)",
+                "Light (60%)"
+            });
+            this.cmbBgPreset.SelectedIndex = 0;
+
+            this.previewBg = new AlphaPreviewPanel { Height = 20, Width = 50, Anchor = AnchorStyles.Left, RgbColor = Color.Black, AlphaPercent = 0 };
+
+            var flowPreset = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
+            flowPreset.Controls.Add(this.cmbBgPreset);
+            flowPreset.Controls.Add(this.previewBg);
+
+            tlpCap.Controls.Add(this.labelBgPreset, 0, 1);
+            tlpCap.Controls.Add(flowPreset, 1, 1);
+
+            this.grpCaptureSettings.Controls.Add(tlpCap);
+
+            // 背景プリセットのイベント
+            // Background preset -> Settings & Preview
+            this.cmbBgPreset.SelectedIndexChanged += (s, e) =>
+            {
+                var S = Properties.Settings.Default;
+                var sel = this.cmbBgPreset.SelectedItem?.ToString() ?? "";
+                foreach (var p in _bgPresets)
+                {
+                    if (p.Name == sel)
+                    {
+                        S.CaptureBackgroundColor = p.Color;
+                        S.CaptureBackgroundAlphaPercent = p.Alpha;
+                        // バインド済みなのでプレビュー側は自動追従
+                        break;
+                    }
+                }
+            };
+
+
+            // Window settings（プリセット＋太さ＋不透明度）
+            this.grpWindowSettings = NewGroup("Window Settings");
+            this.grpWindowSettings.Tag = "loc:Text.WindowSetting";
+            this.grpWindowSettings.Margin = new Padding(0, 8, 0, 0);
+
+            var tlpWin = NewGrid(2, 2);
+
+            var flowWinToggles = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                WrapContents = true,
+            };
+            this.chkWindowShadow = new CheckBox { Text = "Window shadow", Checked = true, AutoSize = true, Tag = "loc:Text.DropShadow" };
+            this.chkAfloat = new CheckBox { Text = "Always on top", Checked = true, AutoSize = true, Tag = "loc:Text.AlwaysOnTop" };
+            this.chkHighlightOnHover = new CheckBox { Text = "Highlight on hover", Checked = true, AutoSize = true, Tag = "loc:Text.HighlightOnHover" };
+            this.chkShowOverlay = new CheckBox { Text = "Show overlay", Checked = true, AutoSize = true, Tag = "loc:Text.ShowOverlay" };
+            flowWinToggles.Controls.Add(this.chkWindowShadow);
+            flowWinToggles.Controls.Add(this.chkAfloat);
+            flowWinToggles.Controls.Add(this.chkHighlightOnHover);
+            flowWinToggles.Controls.Add(this.chkShowOverlay);
+
+            tlpWin.Controls.Add(new Label { Text = "Options", AutoSize = true, TextAlign = ContentAlignment.MiddleRight, Anchor = AnchorStyles.Right, Tag = "loc:Text.Option" }, 0, 0);
+            tlpWin.Controls.Add(flowWinToggles, 1, 0);
+
+            // 色プリセット＋右プレビュー（透過 100% 固定）
+            this.labelHoverPreset = NewRightLabel("Highlight color");
+            this.labelHoverPreset.Tag = "loc:Text.HighlightColor";
+            this.cmbHoverPreset = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150 };
+            this.cmbHoverPreset.Items.AddRange(new object[] {
+                "Red", "Cyan", "Green", "Yellow", "Magenta", "Blue", "Orange", "Black", "White"
+            });
+            this.cmbHoverPreset.SelectedItem = "Cyan";
+
+            this.previewHover = new AlphaPreviewPanel { Height = 20, Width = 50, Anchor = AnchorStyles.Left, RgbColor = Color.Cyan, AlphaPercent = 60 };
+
+            var flowHover = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
+            flowHover.Controls.Add(this.cmbHoverPreset);
+            flowHover.Controls.Add(this.previewHover);
+
+            tlpWin.Controls.Add(this.labelHoverPreset, 0, 1);
+            tlpWin.Controls.Add(flowHover, 1, 1);
+
+            // 太さ（残す）
+            this.labelHoverThickness = NewRightLabel("Highlight thickness (px)");
+            this.labelHoverThickness.Tag = "loc:Text.HighlightThickness";
+            this.numHoverThickness = new NumericUpDown { Minimum = 1, Maximum = 10, Value = 2, Width = 60, Anchor = AnchorStyles.Left };
+            tlpWin.Controls.Add(this.labelHoverThickness, 0, 2);
+            tlpWin.Controls.Add(this.numHoverThickness, 1, 2);
+
+            // Default Window Opacity（ここに統合）
+            this.labelDefaultOpacity = NewRightLabel("Default opacity");
+            this.labelDefaultOpacity.Tag = "loc:Text.WindowOpacity";
+            this.trackbarDefaultOpacity = new TrackBar { Minimum = 10, Maximum = 100, TickFrequency = 10, Value = 100, Width = 240, Anchor = AnchorStyles.Left };
+            this.labelDefaultOpacityVal = new Label { AutoSize = true, Text = "100%", Anchor = AnchorStyles.Left };
+
+            var flowOpacity = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
+            flowOpacity.Controls.Add(this.trackbarDefaultOpacity);
+            flowOpacity.Controls.Add(this.labelDefaultOpacityVal);
+
+            tlpWin.Controls.Add(this.labelDefaultOpacity, 0, 3);
+            tlpWin.Controls.Add(flowOpacity, 1, 3);
+
+            this.grpWindowSettings.Controls.Add(tlpWin);
+
+            // イベント：色プリセット変更
+            this.cmbHoverPreset.SelectedIndexChanged += (s, e) =>
+            {
+                Color c = Color.Cyan;
+                switch ((this.cmbHoverPreset.SelectedItem ?? "").ToString())
+                {
+                    case "Red": c = Color.Red; break;
+                    case "Cyan": c = Color.Cyan; break;
+                    case "Green": c = Color.Lime; break;
+                    case "Yellow": c = Color.Yellow; break;
+                    case "Magenta": c = Color.Magenta; break;
+                    case "Blue": c = Color.Blue; break;
+                    case "Orange": c = Color.Orange; break;
+                    case "Black": c = Color.Black; break;
+                    case "White": c = Color.White; break;
+                }
+                this.previewHover.RgbColor = c;
+                this.previewHover.AlphaPercent = 100; // 透過なし
+                this.previewHover.Invalidate();
+            };
+
+            // イベント：不透明度表示
+            this.trackbarDefaultOpacity.Scroll += (s, e) =>
+            {
+                this.labelDefaultOpacityVal.Text = this.trackbarDefaultOpacity.Value + "%";
+            };
+
+            // stack へ追加（2グループのみ）
+            stackAppearance.Controls.Add(this.grpCaptureSettings, 0, 0);
+            stackAppearance.Controls.Add(this.grpWindowSettings, 0, 1);
+
             // =========================================================
-            // Advanced タブ
+            // Shortcuts タブ（縦積み）
             // =========================================================
-            BuildAdvancedTab();
+
             // =========================================================
-            // Extensions タブ
+            // Advanced タブ（プレースホルダ）
             // =========================================================
-            BuildExtensionsTab();
+            // BuildAdvancedTab();
+            // =========================================================
+            // Extensions タブ（プレースホルダ）
+            // =========================================================
+            // BuildExtensionsTab();
             // =========================================================
             // Info タブ
             // =========================================================
@@ -654,7 +1052,7 @@ namespace Kiritori
             {
                 // アルファを 0–100 で厳密一致（必要なら±誤差許容に）
                 if (_hoverPresets[i].Color.ToArgb() == c.ToArgb())
-                //  && _hoverPresets[i].Alpha == alpha)
+                    //  && _hoverPresets[i].Alpha == alpha)
                     return i;
             }
             return -1;
@@ -857,6 +1255,69 @@ namespace Kiritori
 
         // 値の妥当性チェック（アルファは 0–100、色は任意）
         private static bool IsAlphaValid(int alpha) => alpha >= 0 && alpha <= 100;
+        /// <summary>インストール済み OCR 言語を列挙してコンボに詰める（先頭に "Auto" を入れる）</summary>
+        private void PopulateOcrLanguageCombo()
+        {
+            this.cmbOCRLanguage.Items.Clear();
+            // 先頭は自動選択
+            this.cmbOCRLanguage.Items.Add(new ComboItem("Auto (installed best)", "auto"));
+
+            var tags = WindowsOcrHelper.GetAvailableLanguageTags();
+            foreach (var tag in tags)
+            {
+                this.cmbOCRLanguage.Items.Add(new ComboItem(WindowsOcrHelper.ToDisplay(tag), tag));
+            }
+
+            if (this.cmbOCRLanguage.Items.Count == 0)
+            {
+                // OCR自体が使えないケース（Windows OCR API 未サポート等）
+                this.cmbOCRLanguage.Items.Add(new ComboItem("(no OCR languages found)", "auto"));
+            }
+            this.cmbOCRLanguage.SelectedIndex = 0;
+        }
+
+        /// <summary>保存済みの OCRLanguage を UI に反映（無ければ "auto"）。</summary>
+        private void RestoreOcrLanguageSelection()
+        {
+            var saved = Properties.Settings.Default.OcrLanguage;
+            if (string.IsNullOrEmpty(saved)) saved = "auto";
+
+            for (int i = 0; i < this.cmbOCRLanguage.Items.Count; i++)
+            {
+                var item = this.cmbOCRLanguage.Items[i] as ComboItem;
+                if (item != null && string.Equals(item.Value, saved, StringComparison.OrdinalIgnoreCase))
+                {
+                    this.cmbOCRLanguage.SelectedIndex = i;
+                    return;
+                }
+            }
+            // マッチなし → auto
+            this.cmbOCRLanguage.SelectedIndex = 0;
+        }
+
+        /// <summary>UI の選択を Settings に保存</summary>
+        private void SaveOcrLanguageSelection()
+        {
+            var item = this.cmbOCRLanguage.SelectedItem as ComboItem;
+            var val = (item != null) ? item.Value : "auto";
+            if (string.IsNullOrEmpty(val)) val = "auto";
+
+            if (!string.Equals(Properties.Settings.Default.OcrLanguage, val, StringComparison.OrdinalIgnoreCase))
+            {
+                Properties.Settings.Default.OcrLanguage = val;
+                Properties.Settings.Default.Save();
+                // ログ出力など
+                // AppLog.Info($"[OCR] Preferred language set: {val}");
+            }
+        }
+
+        private sealed class ComboItem
+        {
+            public string Text;
+            public string Value;
+            public ComboItem(string text, string value) { Text = text; Value = value; }
+            public override string ToString() { return Text; }
+        }
 
     }
 }

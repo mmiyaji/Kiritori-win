@@ -1,14 +1,15 @@
 ﻿using Kiritori.Helpers;
+using Kiritori.Services.History;
 using Kiritori.Services.Logging;
 using Kiritori.Services.Recording;
 using System;
-using System.IO;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.IO;
 using System.Runtime.InteropServices;
-using System.Windows.Forms;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace Kiritori.Views.LiveCapture
 {
@@ -1730,8 +1731,20 @@ namespace Kiritori.Views.LiveCapture
         }
         private void ShowPreferences()
         {
-            try { PrefForm.ShowSingleton((IWin32Window)this.MainApp); }
-            catch { PrefForm.ShowSingleton(this); }
+            PrefForm pref;
+            try
+            {
+                pref = PrefForm.ShowSingleton((IWin32Window)this.MainApp);
+            }
+            catch
+            {
+                pref = PrefForm.ShowSingleton(this);
+            }
+
+            if (pref != null)
+            {
+                pref?.SetupHistoryTabIfNeededAndShow(HistoryBridge.GetSnapshot());
+            }
         }
         private void startCapture()
         {

@@ -1,3 +1,8 @@
+using CommunityToolkit.WinUI.Notifications;
+using Kiritori.Helpers;
+using Kiritori.Services.History;
+using Kiritori.Services.Notifications;
+using Kiritori.Services.Ocr;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,17 +16,13 @@ using System.Linq;
 using System.Security.Principal;
 using System.Text;
 using System.Windows.Forms;
-using CommunityToolkit.WinUI.Notifications;
-using Kiritori.Helpers;
-using Kiritori.Services.Notifications;
-using Kiritori.Services.Ocr;
 using Windows.UI.Notifications;
 
 namespace Kiritori
 {
     public partial class SnapWindow : Form
     {
-        #region ===== キー入力（ホットキー） =====
+        #region ===== キー入力（�EチE��キー�E�E=====
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
             switch ((int)keyData)
@@ -112,7 +113,9 @@ namespace Kiritori
                     minimizeWindow();
                     break;
                 case (int)HOTS.SETTING:
-                    PrefForm.ShowSingleton(this.ma);
+                    var pref = PrefForm.ShowSingleton(this.ma);
+                    pref?.SetupHistoryTabIfNeededAndShow(HistoryBridge.GetSnapshot());
+                    // PrefForm.ShowSingleton(this.ma);
                     break;
                 // case (int)HOTS.EXIT:
                 //     exitApp();

@@ -2,6 +2,7 @@
 using Kiritori.Helpers;
 using Kiritori.Services.Logging;
 using Kiritori.Services.Ocr;
+using Kiritori.Services.History;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -22,15 +23,6 @@ using System.Collections.Specialized;
 
 namespace Kiritori
 {
-    internal sealed class HistoryEntry
-    {
-        public string Path;
-        public Bitmap Thumb;
-        public DateTime LoadedAt;     // いつ履歴に積んだか
-        public Size Resolution;   // 画像解像度
-        public LoadMethod Method;     // Path / Capture / Clipboard
-        public string Description;  // 任意の説明テキスト   
-    }
     public partial class MainApplication : Form
     {
         private const int WM_DPICHANGED = 0x02E0;
@@ -112,6 +104,13 @@ namespace Kiritori
                     Directory.CreateDirectory(HistoryTempDir);
                     LoadHistoryFromIndex();           // インデックスからメニュー復元
                     PruneHistoryFilesBeyondLimit();   // 上限超過や孤児ファイルを削除
+                    Kiritori.Services.History.HistoryBridge.SetProvider(() => GetHistoryEntriesSnapshot());
+                    HistoryBridge.RaiseChanged(this);
+                    HistoryBridge.HistoryChanged += (s3, e3) =>
+                    {
+                        var snap = HistoryBridge.GetSnapshot();
+                        PrefForm.InstanceIfOpen?.SetupHistoryTabIfNeededAndShow(snap);
+                    };
                 }
                 catch (Exception ex)
                 {
@@ -142,6 +141,23 @@ namespace Kiritori
             };
             this.historyToolStripMenuItem.DropDownOpening += (_, __) => SaveHistoryIfDirty();
         }
+        internal IList<HistoryEntry> GetHistoryEntriesSnapshot()
+        {
+            var list = new List<HistoryEntry>(historyToolStripMenuItem.DropDownItems.Count);
+            foreach (ToolStripItem tsi in historyToolStripMenuItem.DropDownItems)
+                if (tsi is ToolStripMenuItem mi && mi.Tag is HistoryEntry he) list.Add(he);
+            return list;
+        }
+        private void NotifyPrefFormHistoryChanged()
+        {
+            var pref = PrefForm.InstanceIfOpen;
+            if (pref != null)
+            {
+                var snap = Kiritori.Services.History.HistoryBridge.GetSnapshot();
+                pref.SetupHistoryTabIfNeededAndShow(snap);
+            }
+        }
+
 
         protected override void WndProc(ref Message m)
         {
@@ -218,13 +234,18 @@ namespace Kiritori
                 Log.Info($"First run detected", "Startup");
                 Settings.Default.FirstRunShown = true;
                 Settings.Default.Save();
-                PrefForm.ShowSingleton(this);
+                // PrefForm.ShowSingleton(this);
+                var pref = PrefForm.ShowSingleton(this);
+                pref?.SetupHistoryTabIfNeededAndShow(GetHistoryEntriesSnapshot());
+
                 return;
             }
             if (Settings.Default.OpenPreferencesOnStartup)
             {
                 Log.Info($"Opening preferences on startup", "Startup");
-                PrefForm.ShowSingleton(this);
+                // PrefForm.ShowSingleton(this);
+                var pref = PrefForm.ShowSingleton(this);
+                pref?.SetupHistoryTabIfNeededAndShow(GetHistoryEntriesSnapshot());
             }
         }
 
@@ -580,6 +601,7 @@ namespace Kiritori
             // すぐにインデックスへも反映したいならここで保存（任意）
             // SaveHistoryToIndex();
             MarkHistoryDirty();
+            NotifyPrefFormHistoryChanged();
         }
 
         private void UpdateHistoryRow(HistoryEntry entry)
@@ -605,6 +627,8 @@ namespace Kiritori
             // 変更を保存したい場合は任意で
             // SaveHistoryToIndex();
             MarkHistoryDirty();
+            NotifyPrefFormHistoryChanged();
+            HistoryBridge.RaiseChanged(this);
         }
 
 
@@ -937,9 +961,9 @@ namespace Kiritori
 
         private void preferencesToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            // PrefForm pref = new PrefForm();
-            // pref.Show();
-            PrefForm.ShowSingleton(this);
+            // PrefForm.ShowSingleton(this);
+            var pref = PrefForm.ShowSingleton(this);
+            pref?.SetupHistoryTabIfNeededAndShow(GetHistoryEntriesSnapshot());
         }
 
         private void openToolStripMenuItem_Click(object sender, EventArgs e)
@@ -997,7 +1021,9 @@ namespace Kiritori
         {
             if (e.Button == MouseButtons.Left)
             {
-                PrefForm.ShowSingleton(this);
+                // PrefForm.ShowSingleton(this);
+                var pref = PrefForm.ShowSingleton(this);
+                pref?.SetupHistoryTabIfNeededAndShow(GetHistoryEntriesSnapshot());
             }
             else if (e.Button == MouseButtons.Right)
             {

@@ -1078,6 +1078,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   History に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Tab_History {
+            get {
+                return ResourceManager.GetString("Tab.History", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Info に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Tab_Info {

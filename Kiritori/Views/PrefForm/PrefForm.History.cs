@@ -1,0 +1,803 @@
+﻿using Kiritori.Helpers;
+using Kiritori.Services.Logging; 
+using Kiritori.Services.History;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Configuration;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Windows.Forms;
+
+namespace Kiritori
+{
+    public partial class PrefForm
+    {
+        // History タブ用
+        private ListView _lvHistory;
+        private ImageList _imgThumbs;
+        private bool _historyUiInitialized;
+        private bool _thumbLoadingActive;
+        private Queue<HistoryEntry> _thumbQueue;
+        private EventHandler _idleHandler;
+
+        // サムネ設定
+        private const int THUMB_W = 192 / 2;
+        private const int THUMB_H = 108 / 2;
+        private const int THUMB_PER_IDLE = 3;    // 1回のIdleで処理する枚数上限
+        private const int IDLE_TIME_BUDGET_MS = 12; // Idle 1回で使う最大時間
+        private Bitmap _placeholder;
+        // タブが今表示中かどうか（通知の最適化に使える）
+        internal bool IsHistoryTabActive =>
+            this.tabControl?.SelectedTab == this.tabHistory;
+
+        // データ
+        private List<HistoryEntry> _allHistory = new List<HistoryEntry>();
+        private List<HistoryEntry> _viewHistory = new List<HistoryEntry>();
+
+        // UI
+        private Panel _historyToolbar;
+        private TextBox _txtSearch;
+        private ComboBox _cboSort;
+        private ComboBox _cboOrder;
+        private Button _btnClearHistory;
+        private Button _btnDelete;
+
+        private enum SortKey { LoadedAt, FileName, Width, Height }
+        private SortKey _sortKey = SortKey.LoadedAt;
+        private bool _sortAsc = false;
+
+
+        public void BuildHistoryTab()
+        {
+            EnsureHistoryTabUi();
+        }
+        // private void EnsureHistoryTabUi()
+        // {
+        //     if (_historyUiInitialized) return;
+
+        //     _lvHistory = new ListView
+        //     {
+        //         Dock = DockStyle.Fill,
+        //         View = View.LargeIcon,
+        //         BorderStyle = BorderStyle.None,
+        //         HideSelection = false,
+        //         MultiSelect = true,
+        //         BackColor = SystemColors.Window
+        //     };
+
+        //     // ListView のちらつき対策
+        //     _lvHistory.GetType().GetProperty("DoubleBuffered", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+        //             ?.SetValue(_lvHistory, true, null);
+
+        //     _imgThumbs = new ImageList
+        //     {
+        //         ImageSize = new Size(THUMB_W, THUMB_H),
+        //         ColorDepth = ColorDepth.Depth32Bit
+        //     };
+        //     _lvHistory.LargeImageList = _imgThumbs;
+
+        //     _placeholder = new Bitmap(THUMB_W, THUMB_H);
+        //     using (var g = Graphics.FromImage(_placeholder))
+        //     {
+        //         g.Clear(Color.FromArgb(240, 240, 240));
+        //         using (var p = new Pen(Color.Silver))
+        //             g.DrawRectangle(p, 0, 0, THUMB_W - 1, THUMB_H - 1);
+        //         var s = "…";
+        //         using (var f = new Font("Segoe UI", 18f, FontStyle.Regular, GraphicsUnit.Point))
+        //         using (var br = new SolidBrush(Color.Gray))
+        //         {
+        //             var sz = g.MeasureString(s, f);
+        //             g.DrawString(s, f, br, (THUMB_W - sz.Width) / 2f, (THUMB_H - sz.Height) / 2f);
+        //         }
+        //     }
+        //     _imgThumbs.Images.Add("__placeholder__", _placeholder);
+
+        //     // _tabHistory.Controls.Add(_lvHistory);
+        //     this.tabHistory.Controls.Add(_lvHistory);
+        //     _historyUiInitialized = true;
+        // }
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        private static extern Int32 SendMessage(IntPtr hWnd, int msg, int wParam, string lParam);
+        private const int EM_SETCUEBANNER = 0x1501;
+
+        private void BuildHistoryToolbar()
+        {
+            if (_historyToolbar != null) return;
+
+            _historyToolbar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 36,
+                BackColor = SystemColors.Control
+            };
+
+            _txtSearch = new TextBox { Left = 8, Top = 6, Width = 260 };
+            // プレースホルダー（ハンドル生成後に設定）
+            _txtSearch.HandleCreated += (s, e) => { try { SendMessage(_txtSearch.Handle, EM_SETCUEBANNER, 1, "検索（ファイル名 / パス）"); } catch { } };
+            _txtSearch.TextChanged += (s, e) => ApplyFilterAndRefresh();
+
+            _cboSort = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Left = _txtSearch.Right + 8, Top = 6, Width = 140 };
+            _cboSort.Items.AddRange(new object[] { "撮影日時", "ファイル名", "幅", "高さ" });
+            _cboSort.SelectedIndex = 0;
+            _cboSort.SelectedIndexChanged += (s, e) =>
+            {
+                switch (_cboSort.SelectedIndex)
+                {
+                    case 1: _sortKey = SortKey.FileName; break;
+                    case 2: _sortKey = SortKey.Width; break;
+                    case 3: _sortKey = SortKey.Height; break;
+                    default: _sortKey = SortKey.LoadedAt; break;
+                }
+                ApplySortAndRefresh();
+            };
+
+            _cboOrder = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Left = _cboSort.Right + 6, Top = 6, Width = 100 };
+            _cboOrder.Items.AddRange(new object[] { "降順", "昇順" });
+            _cboOrder.SelectedIndex = 0; // 既定：降順
+            _cboOrder.SelectedIndexChanged += (s, e) => { _sortAsc = (_cboOrder.SelectedIndex == 1); ApplySortAndRefresh(); };
+
+            _btnClearHistory = new Button { Text = "クリア", Left = _cboOrder.Right + 8, Top = 5, Width = 70 };
+            _btnClearHistory.Click += (s, e) =>
+            {
+                _txtSearch.Text = "";
+                try
+                {
+                    var snap = HistoryBridge.GetSnapshot();
+                    RefreshAllHistory(snap);
+                }
+                catch
+                {
+                    ApplyFilterAndRefresh();
+                }
+            };
+            _btnDelete = new Button { Text = "選択を削除", Left = _btnClearHistory.Right + 8, Top = 5, Width = 110 };
+            _btnDelete.Click += (s, e) => DeleteSelected();
+
+            _historyToolbar.Controls.AddRange(new Control[] { _txtSearch, _cboSort, _cboOrder, _btnClearHistory, _btnDelete });
+
+            this.tabHistory.Controls.Add(_lvHistory);
+            this.tabHistory.Controls.Add(_historyToolbar);
+            _lvHistory.BringToFront();
+        }
+
+        private Bitmap BuildPlaceholder()
+        {
+            var bmp = new Bitmap(THUMB_W, THUMB_H);
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.Clear(Color.FromArgb(240, 240, 240));
+                using (var p = new Pen(Color.Silver)) g.DrawRectangle(p, 0, 0, THUMB_W - 1, THUMB_H - 1);
+                var s = "…";
+                using (var f = new Font("Segoe UI", 18f, FontStyle.Regular, GraphicsUnit.Point))
+                using (var br = new SolidBrush(Color.Gray))
+                {
+                    var sz = g.MeasureString(s, f);
+                    g.DrawString(s, f, br, (THUMB_W - sz.Width) / 2f, (THUMB_H - sz.Height) / 2f);
+                }
+            }
+            return bmp;
+        }
+
+        private static bool IsUsableImage(Image img)
+        {
+            if (img == null) return false;
+            try
+            {
+                // Width/Height アクセスで ObjectDisposed や Argument 例外が出るケースを吸収
+                return img.Width > 0 && img.Height > 0;
+            }
+            catch { return false; }
+        }
+
+        // he.Thumb を安全に取り出す（使えなければ placeholder）
+        private Image GetSafeThumb(HistoryEntry he)
+        {
+            try
+            {
+                if (he != null && IsUsableImage(he.Thumb))
+                    return he.Thumb;
+
+                // まだ Thumb が無いが Path から作れそうなら軽量生成して返す（失敗時は placeholder）
+                if (he != null && !string.IsNullOrEmpty(he.Path) && File.Exists(he.Path))
+                {
+                    // 読めるが重いなら LazyLoad に任せるため、ここでは作らず placeholder を返してOK
+                    // （即時生成したいなら RenderThumb を呼ぶ）
+                }
+            }
+            catch { /* no-op */ }
+
+            return _placeholder;
+        }
+
+        bool _subscribedToHistory = false;
+        private void EnsureHistoryTabUi()
+        {
+            if (_historyUiInitialized) return;
+
+            _lvHistory = new ListView
+            {
+                Dock = DockStyle.Fill,
+                View = View.Tile,                 // ← Tile 表示
+                OwnerDraw = true,                 // ← 自前描画ON
+                BorderStyle = BorderStyle.None,
+                HideSelection = false,
+                FullRowSelect = true,
+                MultiSelect = true,
+                BackColor = SystemColors.Window,
+                UseCompatibleStateImageBehavior = false,
+                ShowItemToolTips = true
+            };
+            // タイル寸法（DPI対応）
+            UpdateHistoryTileMetrics();
+            this.FontChanged += (s, e) => UpdateHistoryTileMetrics();
+            this.HandleCreated += (s, e) => UpdateHistoryTileMetrics();
+
+            // OwnerDraw フック
+            _lvHistory.DrawItem += LvHistory_DrawItem;
+            _lvHistory.MouseMove += LvHistory_MouseMove;
+            _lvHistory.MouseLeave += (s, e) => { _historyHotIndex = -1; _lvHistory.Invalidate(); };
+
+            _lvHistory.GetType().GetProperty("DoubleBuffered",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?.SetValue(_lvHistory, true, null);
+
+            // _imgThumbs = new ImageList { ImageSize = new Size(THUMB_W, THUMB_H), ColorDepth = ColorDepth.Depth32Bit };
+            // _lvHistory.LargeImageList = _imgThumbs;
+            _imgThumbs = new ImageList
+            {
+                ImageSize = new Size(THUMB_W, THUMB_H),
+                ColorDepth = ColorDepth.Depth32Bit
+            };
+            _lvHistory.LargeImageList = _imgThumbs;
+            _placeholder = BuildPlaceholder();
+            _imgThumbs.Images.Add("__placeholder__", _placeholder);
+            _thumbQueue = new Queue<HistoryEntry>();
+
+            // キー操作（Del で削除）
+            _lvHistory.KeyDown += (s, e) => { if (e.KeyCode == Keys.Delete) DeleteSelected(); };
+
+            BuildHistoryToolbar();
+            _historyUiInitialized = true;
+            if (!_subscribedToHistory)
+            {
+                Kiritori.Services.History.HistoryBridge.HistoryChanged += (s, e) =>
+                {
+                    var snap = Kiritori.Services.History.HistoryBridge.GetSnapshot();
+                    RefreshAllHistory(snap);
+                };
+                _subscribedToHistory = true;
+            }
+        }
+        private void UpdateHistoryTileMetrics()
+        {
+            float scale = this.DeviceDpi / 96f;
+            int textAreaW = (int)Math.Round(180 * scale); // ← 右の文字エリア幅（必要なら増やす）
+            int gap = (int)Math.Round(12 * scale);
+            int tileW = THUMB_W + gap + textAreaW;
+            int tileH = Math.Max(THUMB_H + (int)Math.Round(12 * scale), (int)Math.Round(96 * scale));
+            _lvHistory.TileSize = new Size(tileW, tileH);
+        }
+
+        private void PopulateHistoryItems(IEnumerable<HistoryEntry> entries)
+        {
+            if (entries == null) return;
+
+            // ListView 項目を即時構築（表示を先に速く）
+            var items = new List<ListViewItem>();
+
+            // 1) まず ListView を空にしてから追加（ちらつき抑制）
+            _lvHistory.BeginUpdate();
+            _lvHistory.Items.Clear();
+
+            // 2) 各エントリごとにプレースホルダー or 既存Thumbで即表示
+            foreach (var he in entries)
+            {
+                if (he == null) continue;
+
+                // ▼ ImageList のキーはできるだけ安定 & 衝突回避
+                //    Path が無い（クリップボード）場合や同ファイルの複数履歴も区別できるよう LoadedAt.Ticks を混ぜます
+                string keyStable = (he.Path ?? "clipboard")
+                                + "|" + he.LoadedAt.Ticks.ToString()
+                                + "|" + he.Resolution.Width + "x" + he.Resolution.Height;
+
+                var name = Path.GetFileName(he.Path) ?? "(clipboard)";
+                var tip  = he.Path ?? "(clipboard)";
+                if (!string.IsNullOrEmpty(he.Description))
+                    tip += "\r\n" + he.Description;   // OCR 結果を追記
+
+                var it = new ListViewItem(name)
+                {
+                    Tag = he,
+                    ImageKey = keyStable,
+                    ToolTipText = tip
+                };
+                items.Add(it);
+                Log.Debug($"History: Add ListViewItem for '{name}' with key '{keyStable}'");
+                // ▼ ImageList 登録
+                if (!_imgThumbs.Images.ContainsKey(keyStable))
+                {
+                    if (he.Thumb != null)
+                    {
+                        // 既存のトレイ用サムネをそのまま使うとサイズが小さい/比率が合わない場合があるので、
+                        // 履歴タブ用に一度フィット変換してから入れます。
+                        try
+                        {
+                            using (var fit = RenderThumb(he.Thumb, THUMB_W, THUMB_H))
+                            {
+                                // RenderThumb は新しい Bitmap を返すので、ImageList には複製を登録
+                                _imgThumbs.Images.Add(keyStable, (Bitmap)fit.Clone());
+                            }
+                        }
+                        catch
+                        {
+                            // 壊れ画像などはプレースホルダーにフォールバック
+                            _imgThumbs.Images.Add(keyStable, _placeholder);
+                        }
+                    }
+                    else
+                    {
+                        // まだサムネが無い → ひとまずプレースホルダー
+                        _imgThumbs.Images.Add(keyStable, _placeholder);
+                    }
+                }
+            }
+
+            // 3) 一括追加して描画更新
+            if (items.Count > 0)
+                _lvHistory.Items.AddRange(items.ToArray());
+            _lvHistory.EndUpdate();
+
+            // 4) LazyLoad の生成キューを組み立て（Thumb が無いものだけを積む）
+            var needs = new List<HistoryEntry>();
+            foreach (var he in entries)
+                if (he != null && he.Thumb == null) needs.Add(he);
+
+            _thumbQueue = new Queue<HistoryEntry>(needs);
+        }
+        private int _historyHotIndex = -1;
+
+        private void LvHistory_MouseMove(object sender, MouseEventArgs e)
+        {
+            var it = _lvHistory.GetItemAt(e.X, e.Y);
+            int idx = (it != null) ? it.Index : -1;
+            if (idx != _historyHotIndex)
+            {
+                _historyHotIndex = idx;
+                _lvHistory.Invalidate();
+            }
+        }
+
+        private void LvHistory_DrawItem(object sender, DrawListViewItemEventArgs e)
+        {
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+
+            Rectangle r = e.Bounds;
+            int pad = 6;
+            int gap = 10;
+
+            bool selected = e.Item.Selected;
+            Color bg = selected ? SystemColors.Highlight : _lvHistory.BackColor;
+            using (var b = new SolidBrush(bg)) e.Graphics.FillRectangle(b, r);
+
+            var inner = Rectangle.Inflate(r, -pad, -pad);
+
+            if (!selected && e.ItemIndex == _historyHotIndex)
+            {
+                using (var pen = new Pen(Color.FromArgb(90, 0, 120, 215), 2f))
+                    e.Graphics.DrawRectangle(pen, Rectangle.Inflate(inner, -1, -1));
+            }
+
+            var thumbRect = new Rectangle(inner.Left, inner.Top, THUMB_W, THUMB_H);
+            Image img = null;
+            try { img = _imgThumbs.Images[e.Item.ImageKey]; } catch { }
+            if (img != null) e.Graphics.DrawImage(img, thumbRect);
+            else { using (var p = new Pen(Color.Silver)) e.Graphics.DrawRectangle(p, thumbRect); }
+
+            int textX = thumbRect.Right + gap;
+            int textW = inner.Right - textX;
+            int y = inner.Top;
+
+            Color cMain = selected ? SystemColors.HighlightText : SystemColors.ControlText;
+            Color cSub = selected ? Color.FromArgb(230, 230, 230) : Color.Gray;
+
+            var he = e.Item.Tag as HistoryEntry;
+            string name = e.Item.Text;
+            string date = (he != null) ? he.LoadedAt.ToString("yyyy/MM/dd HH:mm") : "";
+            string res = (he != null) ? (he.Resolution.Width + "×" + he.Resolution.Height) : "";
+            string folder = (he != null && !string.IsNullOrEmpty(he.Path)) ? Path.GetDirectoryName(he.Path) : "";
+            string desc = (he != null) ? he.Description : null;
+            if (!string.IsNullOrEmpty(he?.Description))
+            {
+                desc = desc.Replace("\r", " ").Replace("\n", " ").Trim();
+            }
+
+            using (var fBold = new Font("Segoe UI", 9f, FontStyle.Bold))
+            using (var f = new Font("Segoe UI", 9f, FontStyle.Regular))
+            using (var fDesc = new Font("Segoe UI", 8f, FontStyle.Regular))
+            {
+                var r1 = new Rectangle(textX, y, textW, 20);
+                TextRenderer.DrawText(e.Graphics, date, fBold, r1, cMain, TextFormatFlags.EndEllipsis);
+                y += r1.Height;
+
+                if (!string.IsNullOrEmpty(res))
+                {
+                    var r2 = new Rectangle(textX, y, textW, 18);
+                    TextRenderer.DrawText(e.Graphics, res, fBold, r2, cSub, TextFormatFlags.EndEllipsis);
+                    y += r2.Height;
+                }
+
+                // ② 説明（OCR） 最大2行・折返し省略
+                if (!string.IsNullOrWhiteSpace(desc))
+                {
+                    var rDesc = new Rectangle(textX, y, textW, (int)Math.Ceiling(fDesc.GetHeight(e.Graphics) * 2 + 2));
+                    DrawMultilineEllipsis(e.Graphics, desc, fDesc, rDesc, selected ? SystemColors.HighlightText : Color.DimGray, 2);
+                    y += rDesc.Height;
+                }
+                // // ④ フォルダ
+                // if (!string.IsNullOrEmpty(folder))　
+                // {
+                //     var r3 = new Rectangle(textX, y, textW, 18);
+                //     TextRenderer.DrawText(e.Graphics, folder, f, r3, cSub, TextFormatFlags.EndEllipsis);
+                //     // y += r3.Height; // 高さが足りないときは下行は描けなくてもOK
+                // }
+            }
+
+            if (e.Item.Focused)
+            {
+                var focusRect = Rectangle.Inflate(inner, -1, -1);
+                ControlPaint.DrawFocusRectangle(e.Graphics, focusRect,
+                    selected ? SystemColors.HighlightText : SystemColors.ControlText, Color.Transparent);
+            }
+        }
+
+        private static void DrawMultilineEllipsis(Graphics g, string text, Font font, Rectangle rect, Color color, int maxLines)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+
+            StringFormat sf = new StringFormat();
+            try
+            {
+                // 文字詰めの見た目を整えたい場合は GenericTypographic でもOK
+                sf.Trimming = StringTrimming.EllipsisWord;
+                sf.FormatFlags |= StringFormatFlags.LineLimit;
+
+                int lineH = (int)Math.Ceiling(font.GetHeight(g));
+                int h = Math.Min(rect.Height, lineH * Math.Max(1, maxLines));
+                Rectangle r = new Rectangle(rect.X, rect.Y, rect.Width, h);
+
+                using (var br = new SolidBrush(color))
+                {
+                    g.DrawString(text, font, br, r, sf);
+                }
+            }
+            finally { sf.Dispose(); }
+        }
+
+
+
+        private void StartLazyThumbLoad()
+        {
+            if (_thumbLoadingActive) return;
+            if (_thumbQueue == null || _thumbQueue.Count == 0)
+                RefillThumbQueueFromListView();
+
+            _idleHandler = OnAppIdle_GenerateThumbs;
+            Application.Idle += _idleHandler;
+            _thumbLoadingActive = true;
+        }
+        private static string GetStableKey(HistoryEntry he) =>
+            (he.Path ?? "clipboard")
+            + "|" + he.LoadedAt.Ticks.ToString()
+            + "|" + he.Resolution.Width + "x" + he.Resolution.Height;
+
+        private void StopLazyThumbLoad()
+        {
+            if (!_thumbLoadingActive) return;
+            Application.Idle -= _idleHandler;
+            _idleHandler = null;
+            _thumbLoadingActive = false;
+        }
+
+        private void RefillThumbQueueFromListView()
+        {
+            var needs = new List<HistoryEntry>(_lvHistory.Items.Count);
+            foreach (ListViewItem it in _lvHistory.Items)
+                if (it.Tag is HistoryEntry he && he.Thumb == null) needs.Add(he);
+            _thumbQueue = new Queue<HistoryEntry>(needs);
+        }
+
+
+        private void OnAppIdle_GenerateThumbs(object sender, EventArgs e)
+        {
+            if (_thumbQueue == null || _thumbQueue.Count == 0)
+            {
+                StopLazyThumbLoad();
+                return;
+            }
+
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            int processed = 0;
+
+            while (_thumbQueue.Count > 0)
+            {
+                var he = _thumbQueue.Dequeue();
+                TryRenderOneThumb(he);   // 失敗しても飲み込む
+
+                processed++;
+                if (processed >= THUMB_PER_IDLE) break;
+                if (sw.ElapsedMilliseconds >= IDLE_TIME_BUDGET_MS) break;
+            }
+        }
+
+        private void TryRenderOneThumb(HistoryEntry he)
+        {
+            try
+            {
+                // 既に作っていればスキップ
+                if (he.Thumb != null) { AssignThumbToItem(he, he.Thumb); return; }
+
+                Bitmap bmp = null;
+
+                if (!string.IsNullOrEmpty(he.Path) && File.Exists(he.Path))
+                {
+                    // ファイルロックを避けるため全読み→MemoryStream
+                    byte[] bytes = File.ReadAllBytes(he.Path);
+                    using (var ms = new MemoryStream(bytes))
+                    using (var img = Image.FromStream(ms, useEmbeddedColorManagement: false, validateImageData: false))
+                    {
+                        // サムネを作る（アスペクト比維持で枠内にフィット）
+                        bmp = RenderThumb((Bitmap)img, THUMB_W, THUMB_H);
+                    }
+                }
+                else if (he.Thumb != null)
+                {
+                    bmp = RenderThumb(he.Thumb, THUMB_W, THUMB_H);
+                }
+
+                if (bmp != null)
+                {
+                    he.Thumb = bmp; // キャッシュ（以後は再利用）
+                    AssignThumbToItem(he, bmp);
+                }
+            }
+            catch { /* 壊れた画像などは無視 */ }
+        }
+
+        private static Bitmap RenderThumb(Bitmap src, int w, int h)
+        {
+            // フィット計算（letterbox）
+            float sx = (float)w / src.Width;
+            float sy = (float)h / src.Height;
+            float s = Math.Min(sx, sy);
+            int rw = Math.Max(1, (int)(src.Width * s));
+            int rh = Math.Max(1, (int)(src.Height * s));
+
+            var bmp = new Bitmap(w, h, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.Clear(Color.White);
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                int dx = (w - rw) / 2;
+                int dy = (h - rh) / 2;
+                g.DrawImage(src, new Rectangle(dx, dy, rw, rh));
+                using (var pen = new Pen(Color.Silver))
+                    g.DrawRectangle(pen, 0, 0, w - 1, h - 1);
+            }
+            return bmp;
+        }
+
+        private void AssignThumbToItem(HistoryEntry he, Bitmap bmp)
+        {
+            // ImageList へ登録 → 対応 ListViewItem に割当
+            string key = GetStableKey(he);
+            if (_imgThumbs.Images.ContainsKey(key))
+            {
+                // 既存差し替え（ImageList は直接置換できないので Remove/Add）
+                _imgThumbs.Images.RemoveByKey(key);
+            }
+            _imgThumbs.Images.Add(key, bmp);
+
+            // 対応するListViewItemを探して更新
+            foreach (ListViewItem it in _lvHistory.Items)
+            {
+                if (ReferenceEquals(it.Tag, he))
+                {
+                    it.ImageKey = key;
+                    break;
+                }
+            }
+        }
+
+        internal void SetupHistoryTabIfNeededAndShow(IEnumerable<HistoryEntry> entries)
+        {
+            EnsureHistoryTabUi();
+            _allHistory = (entries == null) ? new List<HistoryEntry>() : new List<HistoryEntry>(entries);
+            ApplyFilterAndSort();
+            RebuildListView(_viewHistory);
+            StartLazyThumbLoad();
+        }
+
+        private void ApplyFilterAndSort()
+        {
+            string q = (_txtSearch != null ? _txtSearch.Text : null);
+            q = string.IsNullOrWhiteSpace(q) ? "" : q.Trim();
+
+            IEnumerable<HistoryEntry> filtered = _allHistory;
+
+            if (!string.IsNullOrEmpty(q))
+            {
+                filtered = filtered.Where(he =>
+                {
+                    // ファイル名・フルパス
+                    string name = Path.GetFileName(he?.Path ?? "") ?? "";
+                    string path = he?.Path ?? "";
+
+                    // OCR（改行をスペース化して検索性UP）
+                    string desc = (he?.Description ?? "").Replace("\r", " ").Replace("\n", " ");
+
+                    return
+                        name.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        path.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        desc.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
+                });
+            }
+
+            IEnumerable<HistoryEntry> sorted;
+            switch (_sortKey)
+            {
+                case SortKey.FileName:
+                    sorted = _sortAsc
+                        ? filtered.OrderBy(he => Path.GetFileName(he.Path ?? ""), StringComparer.OrdinalIgnoreCase)
+                        : filtered.OrderByDescending(he => Path.GetFileName(he.Path ?? ""), StringComparer.OrdinalIgnoreCase);
+                    break;
+                case SortKey.Width:
+                    sorted = _sortAsc
+                        ? filtered.OrderBy(he => he.Resolution.Width)
+                        : filtered.OrderByDescending(he => he.Resolution.Width);
+                    break;
+                case SortKey.Height:
+                    sorted = _sortAsc
+                        ? filtered.OrderBy(he => he.Resolution.Height)
+                        : filtered.OrderByDescending(he => he.Resolution.Height);
+                    break;
+                default: // LoadedAt
+                    sorted = _sortAsc
+                        ? filtered.OrderBy(he => he.LoadedAt)
+                        : filtered.OrderByDescending(he => he.LoadedAt);
+                    break;
+            }
+
+            _viewHistory = sorted.ToList();
+        }
+
+
+
+        private void ApplyFilterAndRefresh()
+        {
+            string q = (_txtSearch != null ? _txtSearch.Text : null);
+            q = string.IsNullOrWhiteSpace(q) ? "" : q.Trim();
+
+            if (string.IsNullOrEmpty(q))
+            {
+                // ★ 検索が空になったら最新スナップショットを再読み込み
+                try
+                {
+                    var snap = HistoryBridge.GetSnapshot(); // 既存の仕組みに合わせてください
+                    _allHistory = snap?.ToList() ?? new List<HistoryEntry>();
+                }
+                catch
+                {
+                    // 取得できなければ現状維持
+                }
+            }
+
+            ApplyFilterAndSort();
+            RebuildListView(_viewHistory);
+            StartLazyThumbLoad();
+        }
+
+        internal void RefreshAllHistory(IEnumerable<HistoryEntry> fresh)
+        {
+            _allHistory = (fresh == null) ? new List<HistoryEntry>() : fresh.ToList();
+            ApplyFilterAndRefresh();
+        }
+
+        private void ApplySortAndRefresh()
+        {
+            ApplyFilterAndSort();
+            RebuildListView(_viewHistory);
+            StartLazyThumbLoad();
+        }
+
+        private void RebuildListView(IEnumerable<HistoryEntry> entries)
+        {
+            _lvHistory.BeginUpdate();
+            _lvHistory.Items.Clear();
+
+            foreach (var he in entries)
+            {
+                string key = GetStableKey(he);
+
+                // 画像は必ず検証してから
+                var img = GetSafeThumb(he);
+                try
+                {
+                    if (!_imgThumbs.Images.ContainsKey(key))
+                        _imgThumbs.Images.Add(key, img);
+                }
+                catch
+                {
+                    // 万一ここで落ちる場合も placeholder にフォールバック
+                    try
+                    {
+                        if (_imgThumbs.Images.ContainsKey(key))
+                            _imgThumbs.Images.RemoveByKey(key);
+                        _imgThumbs.Images.Add(key, _placeholder);
+                    }
+                    catch { /* ここでの失敗は無視 */ }
+                }
+
+                string name = Path.GetFileName(he.Path) ?? "(clipboard)";
+                string sub1 = he.LoadedAt.ToString("yyyy/MM/dd HH:mm");
+                string sub2 = he.Resolution.Width + "×" + he.Resolution.Height;
+
+                var item = new ListViewItem(name) { Tag = he, ImageKey = key };
+                item.SubItems.Add(sub1);
+                item.SubItems.Add(sub2);
+                // ツールチップ（OCR 含む）
+                var tip = he.Path ?? "(clipboard)";
+                if (!string.IsNullOrEmpty(he.Description)) tip += "\r\n" + he.Description;
+                item.ToolTipText = tip;
+
+                _lvHistory.Items.Add(item);
+            }
+
+            _lvHistory.EndUpdate();
+        }
+
+
+
+        private void DeleteSelected()
+        {
+            if (_lvHistory.SelectedItems.Count == 0) return;
+
+            var list = _lvHistory.SelectedItems.Cast<ListViewItem>()
+                        .Select(it => it.Tag as HistoryEntry)
+                        .Where(he => he != null)
+                        .ToList();
+            if (list.Count == 0) return;
+
+            var names = list.Take(5).Select(he => Path.GetFileName(he.Path) ?? "(clipboard)");
+            var msg = (list.Count <= 5)
+                ? $"以下の {list.Count} 件を削除しますか？\n\n- " + string.Join("\n- ", names)
+                : $"選択された {list.Count} 件を削除しますか？";
+
+            if (MessageBox.Show(this, msg, "履歴の削除", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+                return;
+
+            try
+            {
+                // TODO: 実際の削除 API に合わせてください
+                // 例) HistoryBridge.Delete(list);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "削除に失敗しました。\n" + ex.Message, "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // UI側データからも除去
+            var set = new HashSet<HistoryEntry>(list);
+            _allHistory = _allHistory.Where(h => !set.Contains(h)).ToList();
+
+            ApplyFilterAndRefresh();
+        }
+
+    }
+    
+}

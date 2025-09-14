@@ -1,7 +1,9 @@
+using CommunityToolkit.WinUI.Notifications;
 using Kiritori.Helpers;
+using Kiritori.Services.History;
+using Kiritori.Services.Logging;
 using Kiritori.Services.Notifications;
 using Kiritori.Services.Ocr;
-using Kiritori.Services.Logging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -15,7 +17,6 @@ using System.Linq;
 using System.Security.Principal;
 using System.Text;
 using System.Windows.Forms;
-using CommunityToolkit.WinUI.Notifications;
 using Windows.UI.Notifications;
 
 namespace Kiritori
@@ -62,7 +63,12 @@ namespace Kiritori
         private void size200ToolStripMenuItem_Click(object sender, EventArgs e) { ZoomToPercent(200); }
         private void size500ToolStripMenuItem_Click(object sender, EventArgs e) { ZoomToPercent(500); }
         private void dropShadowToolStripMenuItem_Click(object sender, EventArgs e) { ToggleShadow(!this.WindowShadowEnabled); }
-        private void preferencesToolStripMenuItem_Click(object sender, EventArgs e) { PrefForm.ShowSingleton(this.ma); }
+        private void preferencesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            // PrefForm.ShowSingleton(this.ma);
+            var pref = PrefForm.ShowSingleton(this.ma);
+            pref?.SetupHistoryTabIfNeededAndShow(HistoryBridge.GetSnapshot());
+        }
         private void printToolStripMenuItem_Click(object sender, EventArgs e) { printImage(); }
         private void opacity100toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(1.0); ShowOverlay("OPACITY 100%"); }
         private void opacity90toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(0.9); ShowOverlay("OPACITY 90%"); }

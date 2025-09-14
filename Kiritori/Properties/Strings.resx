@@ -741,4 +741,7 @@
   <data name="Extensions.InstallDialog.NotSupported" xml:space="preserve">
     <value>Extension installation is not supported in packaged mode.</value>
   </data>
+  <data name="Tab.History" xml:space="preserve">
+    <value>History</value>
+  </data>
 </root>

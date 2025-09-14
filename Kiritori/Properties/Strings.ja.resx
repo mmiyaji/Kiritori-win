@@ -741,4 +741,7 @@
   <data name="Extensions.InstallDialog.NotSupported" xml:space="preserve">
     <value>Microsoft Store 版ではオンライン導入/更新はサポートしていません。</value>
   </data>
+  <data name="Tab.History" xml:space="preserve">
+    <value>履歴</value>
+  </data>
 </root>

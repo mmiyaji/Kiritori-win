@@ -95,25 +95,38 @@
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+  <!-- >>> added: capture user-specified Version before defaults -->
+  <PropertyGroup>
+    <_UserSpecifiedVersion>$(Version)</_UserSpecifiedVersion>
+  </PropertyGroup>
   <!-- >>> added: Version defaults & build-year (overridable from msbuild /p:...) -->
   <PropertyGroup>
-    <!-- /p:Version を受け取らなければ 1.0.0 を既定に -->
-    <Version Condition="'$(Version)'==''">1.0.0</Version>
+    <!-- /p:Version を受け取らなければ 1.5.0 を既定に -->
+    <Version Condition="'$(Version)'==''">1.5.0</Version>
     <AssemblyVersion Condition="'$(AssemblyVersion)'==''">$(Version).0</AssemblyVersion>
     <FileVersion Condition="'$(FileVersion)'==''">$(Version).0</FileVersion>
     <InformationalVersion Condition="'$(InformationalVersion)'==''">$(Version)</InformationalVersion>
     <!-- ビルド年を Copyright に利用 -->
     <BuildYear>$([System.DateTime]::Now.ToString("yyyy"))</BuildYear>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Store|AnyCPU'">
-    <OutputPath>bin\Store\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  <PropertyGroup>
+    <_HasVersionArg>$([System.String]::Copy('$(MSBuildCommandLineArguments)').ToLower().Contains('/p:version='))</_HasVersionArg>
+    <!-- 手動で強制したいとき用のフラグ（既定 false） -->
+    <EmbedVersionInfo Condition="'$(EmbedVersionInfo)'==''">false</EmbedVersionInfo>
+  </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <PlatformTarget>x64</PlatformTarget>
+    <OutputPath>bin\x64\Release\</OutputPath>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <LangVersion>7.3</LangVersion>
-    <ErrorReport>prompt</ErrorReport>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <PlatformTarget>x64</PlatformTarget>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <Optimize>false</Optimize>
+    <DebugType>full</DebugType>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <!-- <<< added -->
   <ItemGroup>
@@ -160,6 +173,8 @@
     <Compile Include="Services\Extensions\ExtensionsState.cs" />
     <Compile Include="Services\Extensions\ExtensionsUtil.cs" />
     <Compile Include="Services\Extensions\ExtensionsZip.cs" />
+    <Compile Include="Services\History\HistoryBridge.cs" />
+    <Compile Include="Services\History\HistoryManager.cs" />
     <Compile Include="Services\Logging\Log.cs" />
     <Compile Include="Services\Logging\LogViewSharedBuffer.cs" />
     <Compile Include="Services\Logging\LogViewSharedSink.cs" />
@@ -170,10 +185,22 @@
     <Compile Include="Services\Recording\FfmpegPipeRecorder.cs" />
     <Compile Include="Services\Settings\SettingsDirtyTracker.cs" />
     <Compile Include="Services\ThirdParty\ThirdPartyCatalog.cs" />
-    <Compile Include="Views\PrefForm\PrefForm.Appearance.cs">
+    <Compile Include="Views\PrefForm\PrefForm.Advanced.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Views\PrefForm\PrefForm.General.cs">
+    <Compile Include="Views\PrefForm\PrefForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\PrefForm\PrefForm.Designer.cs">
+      <DependentUpon>PrefForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\PrefForm\PrefForm.Extensions.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\PrefForm\PrefForm.History.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\PrefForm\PrefForm.Logs.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Views\PrefForm\PrefForm.Shortcuts.cs">
@@ -211,25 +238,10 @@
     <Compile Include="Helpers\PackageHelper.cs" />
     <Compile Include="Views\LiveCapture\TitleIconBadger.cs" />
     <Compile Include="Views\LiveCapture\WindowAligner.cs" />
-    <Compile Include="Views\PrefForm\PrefForm.Advanced.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Views\PrefForm\PrefForm.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Views\PrefForm\PrefForm.Designer.cs">
-      <DependentUpon>PrefForm.cs</DependentUpon>
-    </Compile>
     <Compile Include="Properties\Strings.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>Strings.resx</DependentUpon>
-    </Compile>
-    <Compile Include="Views\PrefForm\PrefForm.Extensions.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Views\PrefForm\PrefForm.Logs.cs">
-      <SubType>Form</SubType>
     </Compile>
     <Compile Include="Views\ScreenWindow.cs">
       <SubType>Form</SubType>
@@ -245,7 +257,9 @@
     <Compile Include="Views\SnapWindow.Designer.cs">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </Compile>
-    <Compile Include="Views\MainApplication.cs" />
+    <Compile Include="Views\MainApplication.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Views\MainApplication.Designer.cs">
       <DependentUpon>MainApplication.cs</DependentUpon>
     </Compile>
@@ -289,13 +303,13 @@
     <EmbeddedResource Include="Views\MainApplication.resx">
       <DependentUpon>MainApplication.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Views\PrefForm\PrefForm.resx">
-      <DependentUpon>PrefForm.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Strings.ja.resx" />
     <EmbeddedResource Include="Properties\Strings.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Strings.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Views\PrefForm\PrefForm.resx">
+      <DependentUpon>PrefForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Views\ScreenWindow.resx">
       <DependentUpon>ScreenWindow.cs</DependentUpon>
@@ -426,7 +440,7 @@
   </ItemGroup>
   <ItemGroup />
   <!-- >>> added: g.cs 生成（ビルド前）＆ クリーン時の削除 -->
-  <Target Name="GenerateVersionInfo" BeforeTargets="BeforeBuild">
+  <Target Name="GenerateVersionInfo" BeforeTargets="BeforeBuild" Condition="'$(EmbedVersionInfo)'=='true' OR '$(_HasVersionArg)'=='True'">
     <PropertyGroup>
       <_tmpl>Properties\VersionInfo.Template.cs</_tmpl>
       <_out>Properties\VersionInfo.g.cs</_out>
@@ -437,13 +451,13 @@
     <!-- ※ ^ を使わず 1 行で渡す。; 区切りで十分です -->
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$t=Get-Content '$(_tmpl)' -Raw; $t=$t -replace '\$ASMVER\$', '$(AssemblyVersion)'; $t=$t -replace '\$FILEVER\$', '$(FileVersion)'; $t=$t -replace '\$INFOVER\$', '$(InformationalVersion)'; $t=$t -replace '\$YEAR\$', '$(BuildYear)'; Set-Content '$(_out)' $t -Encoding UTF8;&quot;" />
   </Target>
-  <Target Name="CleanGeneratedVersionInfo" AfterTargets="Clean">
+  <Target Name="CleanGeneratedVersionInfo" AfterTargets="Clean" Condition="'$(EmbedVersionInfo)'=='true' OR '$(_HasVersionArg)'=='True'">
     <Delete Files="Properties\VersionInfo.g.cs" ContinueOnError="true" />
   </Target>
   <!-- <<< added -->
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
+      Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>
   <Target Name="AfterBuild">

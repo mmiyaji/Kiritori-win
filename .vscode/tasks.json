@@ -1,58 +1,115 @@
 {
-    "version": "2.0.0",
-    "inputs": [
+  "version": "2.0.0",
+  "inputs": [
     {
-        "id": "relVersion",
-        "type": "promptString",
-        "description": "Release version (e.g. 1.2.3)",
-        "default": "1.2.0"
+      "id": "relVersion",
+      "type": "promptString",
+      "description": "Release version (e.g. 1.5.1)",
+      "default": "1.5.1"
     }
-    ],
-    "tasks": [
-        {
-            "label": "Package Kiritori (build inside)",
-            "type": "shell",
-            "command": ".\\release.bat",
-            "args": ["${input:relVersion}", "--no-pause"],
-            "options": { "cwd": "${workspaceFolder}" },
-            "problemMatcher": []
-        },
-        {
-            "label": "(ALL)Open dist folder",
-            "type": "shell",
-            "command": "explorer",
-            "args": [".\\dist"],
-            "problemMatcher": [],
-            "dependsOn": "Package Kiritori (build inside)",
-            "group": { "kind": "build", "isDefault": true }
-        },
-        {
-            "label": "Restore (Solution)",
-            "command": "${env:ProgramFiles(x86)}\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe",
-            "type": "process",
-            "args": [
-                "${workspaceFolder}\\Kiritori.sln",
-                "/t:Restore",
-                "/p:RestorePackages=true"
-            ],
-            "problemMatcher": "$msCompile",
-            "presentation": { "reveal": "always" }
-        },
-        /* 開発中に手動でビルドだけしたい場合の補助タスク（任意） */
-        {
-            "label": "Build Kiritori (Debug)",
-            "type": "shell",
-            "command": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe",
-            "args": ["Kiritori.sln", "/p:Configuration=Debug", "/m:1"],
-            "problemMatcher": "$msCompile",
-            "group": { "kind": "build", "isDefault": false }
-        },
-        {
-            "label": "Build Kiritori (Release)",
-            "type": "shell",
-            "command": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe",
-            "args": ["Kiritori.sln", "/p:Configuration=Release", "/m:1"],
-            "problemMatcher": "$msCompile"
-        }
-    ]
+  ],
+  "tasks": [
+    // —— Package: ALL (ZIP + Store) → 結果フォルダを開く（既定のビルド）——
+    {
+      "label": "(ALL) Package Kiritori → Open folder",
+      "dependsOn": ["Package Kiritori (ALL)", "Open dist/<version>"],
+      "dependsOrder": "sequence",
+      "group": { "kind": "build", "isDefault": true }
+    },
+
+    // —— Package: ALL（ZIP + Store）——
+    {
+      "label": "Package Kiritori (ALL)",
+      "type": "shell",
+      "command": ".\\release.bat",
+      "args": ["${input:relVersion}"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+
+    // —— Package: ZIP のみ ——  ※スクリプトは --zip-only をサポート
+    {
+      "label": "Package Kiritori (ZIP only)",
+      "type": "shell",
+      "command": ".\\release.bat",
+      "args": ["${input:relVersion}", "--zip-only"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+
+    // —— Package: Store（MSIX） のみ ——  ※スクリプトは --store-only をサポート
+    {
+      "label": "Package Kiritori (Store only)",
+      "type": "shell",
+      "command": ".\\release.bat",
+      "args": ["${input:relVersion}", "--store-only"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+
+    // —— 結果フォルダを開く（バージョンフォルダ直開き）——
+    {
+      "label": "Open dist/<version>",
+      "type": "shell",
+      "command": "explorer",
+      "args": [".\\dist\\${input:relVersion}"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+
+    // —— 補助: dist ルートを開く ——
+    {
+      "label": "(UTIL) Open dist root",
+      "type": "shell",
+      "command": "explorer",
+      "args": [".\\dist"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+
+    // —— 補助: Restore ——
+    {
+      "label": "Restore (Solution)",
+      "type": "process",
+      "command": "${env:ProgramFiles(x86)}\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe",
+      "args": [
+        "${workspaceFolder}\\Kiritori.sln",
+        "/t:Restore",
+        "/p:RestorePackages=true"
+      ],
+      "problemMatcher": "$msCompile",
+      "presentation": { "reveal": "always", "panel": "shared" }
+    },
+
+    // —— 補助: 通常ビルド（デバッグ／リリース）——
+    {
+      "label": "Build Kiritori (Debug)",
+      "type": "process",
+      "command": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe",
+      "args": ["Kiritori.sln", "/p:Configuration=Debug", "/m:1"],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Build Kiritori (Release)",
+      "type": "process",
+      "command": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe",
+      "args": ["Kiritori.sln", "/p:Configuration=Release", "/m:1"],
+      "problemMatcher": "$msCompile"
+    }
+  ]
 }
