@@ -1,6 +1,7 @@
 ﻿using Kiritori.Helpers;
 using Kiritori.Services.Logging; 
 using Kiritori.Services.History;
+using Kiritori.Services.Ocr;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -9,6 +10,8 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Kiritori
 {
@@ -43,6 +46,9 @@ namespace Kiritori
         private ComboBox _cboOrder;
         private Button _btnClearHistory;
         private Button _btnDelete;
+        private ContextMenuStrip _ctxHistory;
+        private ToolStripMenuItem _miOpen, _miOpenFolder, _miCopyPath, _miCopyOcr, _miCopyImage, _miDelete;
+        private ToolStripMenuItem _miRunOcr;
 
         private enum SortKey { LoadedAt, FileName, Width, Height }
         private SortKey _sortKey = SortKey.LoadedAt;
@@ -53,51 +59,7 @@ namespace Kiritori
         {
             EnsureHistoryTabUi();
         }
-        // private void EnsureHistoryTabUi()
-        // {
-        //     if (_historyUiInitialized) return;
 
-        //     _lvHistory = new ListView
-        //     {
-        //         Dock = DockStyle.Fill,
-        //         View = View.LargeIcon,
-        //         BorderStyle = BorderStyle.None,
-        //         HideSelection = false,
-        //         MultiSelect = true,
-        //         BackColor = SystemColors.Window
-        //     };
-
-        //     // ListView のちらつき対策
-        //     _lvHistory.GetType().GetProperty("DoubleBuffered", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
-        //             ?.SetValue(_lvHistory, true, null);
-
-        //     _imgThumbs = new ImageList
-        //     {
-        //         ImageSize = new Size(THUMB_W, THUMB_H),
-        //         ColorDepth = ColorDepth.Depth32Bit
-        //     };
-        //     _lvHistory.LargeImageList = _imgThumbs;
-
-        //     _placeholder = new Bitmap(THUMB_W, THUMB_H);
-        //     using (var g = Graphics.FromImage(_placeholder))
-        //     {
-        //         g.Clear(Color.FromArgb(240, 240, 240));
-        //         using (var p = new Pen(Color.Silver))
-        //             g.DrawRectangle(p, 0, 0, THUMB_W - 1, THUMB_H - 1);
-        //         var s = "…";
-        //         using (var f = new Font("Segoe UI", 18f, FontStyle.Regular, GraphicsUnit.Point))
-        //         using (var br = new SolidBrush(Color.Gray))
-        //         {
-        //             var sz = g.MeasureString(s, f);
-        //             g.DrawString(s, f, br, (THUMB_W - sz.Width) / 2f, (THUMB_H - sz.Height) / 2f);
-        //         }
-        //     }
-        //     _imgThumbs.Images.Add("__placeholder__", _placeholder);
-
-        //     // _tabHistory.Controls.Add(_lvHistory);
-        //     this.tabHistory.Controls.Add(_lvHistory);
-        //     _historyUiInitialized = true;
-        // }
         [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
         private static extern Int32 SendMessage(IntPtr hWnd, int msg, int wParam, string lParam);
         private const int EM_SETCUEBANNER = 0x1501;
@@ -255,11 +217,18 @@ namespace Kiritori
             _imgThumbs.Images.Add("__placeholder__", _placeholder);
             _thumbQueue = new Queue<HistoryEntry>();
 
-            // キー操作（Del で削除）
-            _lvHistory.KeyDown += (s, e) => { if (e.KeyCode == Keys.Delete) DeleteSelected(); };
 
             BuildHistoryToolbar();
+            BuildHistoryContextMenu();
             _historyUiInitialized = true;
+
+            _lvHistory.ItemActivate += (s, e) => OpenSelected();
+            _lvHistory.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Delete) { DeleteSelected(); e.Handled = true; }
+                else if (e.KeyCode == Keys.Enter) { OpenSelected(); e.Handled = true; }
+            };
+
             if (!_subscribedToHistory)
             {
                 Kiritori.Services.History.HistoryBridge.HistoryChanged += (s, e) =>
@@ -303,7 +272,7 @@ namespace Kiritori
                                 + "|" + he.Resolution.Width + "x" + he.Resolution.Height;
 
                 var name = Path.GetFileName(he.Path) ?? "(clipboard)";
-                var tip  = he.Path ?? "(clipboard)";
+                var tip = he.Path ?? "(clipboard)";
                 if (!string.IsNullOrEmpty(he.Description))
                     tip += "\r\n" + he.Description;   // OCR 結果を追記
 
@@ -760,8 +729,6 @@ namespace Kiritori
             _lvHistory.EndUpdate();
         }
 
-
-
         private void DeleteSelected()
         {
             if (_lvHistory.SelectedItems.Count == 0) return;
@@ -782,20 +749,256 @@ namespace Kiritori
 
             try
             {
-                // TODO: 実際の削除 API に合わせてください
-                // 例) HistoryBridge.Delete(list);
+                // 1) 実ファイルを削除（存在するものだけ）
+                foreach (var he in list)
+                {
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(he.Path) && File.Exists(he.Path))
+                            File.Delete(he.Path);
+                    }
+                    catch { /* ロック中などはスキップ */ }
+                }
+
+                // 2) UI側データからも除去
+                var set = new HashSet<HistoryEntry>(list);
+                _allHistory = _allHistory.Where(h => !set.Contains(h)).ToList();
+
+                // 3) 表示更新
+                ApplyFilterAndRefresh();
+
+                // 4) 他画面に通知（トレイの履歴などを追従させる）
+                Kiritori.Services.History.HistoryBridge.RaiseChanged(this);
             }
             catch (Exception ex)
             {
                 MessageBox.Show(this, "削除に失敗しました。\n" + ex.Message, "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
             }
+        }
 
-            // UI側データからも除去
-            var set = new HashSet<HistoryEntry>(list);
-            _allHistory = _allHistory.Where(h => !set.Contains(h)).ToList();
+        private void BuildHistoryContextMenu()
+        {
+            if (_ctxHistory != null) return;
 
-            ApplyFilterAndRefresh();
+            _ctxHistory = new ContextMenuStrip();
+
+            _miOpen       = new ToolStripMenuItem("開く (&O)");
+            _miOpenFolder = new ToolStripMenuItem("フォルダを開く (&F)");
+            _miCopyPath   = new ToolStripMenuItem("パスをコピー (&P)");
+            _miCopyOcr    = new ToolStripMenuItem("OCRテキストをコピー (&T)");
+            _miCopyImage  = new ToolStripMenuItem("画像をクリップボードへ (&C)");
+            _miDelete     = new ToolStripMenuItem("削除 (&D)");
+            // ★ 追加
+            _miRunOcr     = new ToolStripMenuItem("OCRを実行 (&R)");
+
+            _miOpen.Click       += (s, e) => OpenSelected();
+            _miOpenFolder.Click += (s, e) => RevealInExplorerSelected();
+            _miCopyPath.Click   += (s, e) => CopyPathSelected();
+            _miCopyOcr.Click    += (s, e) => CopyOcrSelected();
+            _miCopyImage.Click  += (s, e) => CopyImageSelected();
+            _miDelete.Click     += (s, e) => DeleteSelected();
+            _miRunOcr.Click     += async (s, e) => await RunOcrForSelectedAsync();
+
+            _ctxHistory.Items.AddRange(new ToolStripItem[]
+            {
+                _miOpen,
+                _miOpenFolder,
+                new ToolStripSeparator(),
+                _miCopyPath,
+                _miCopyOcr,
+                _miCopyImage,
+                new ToolStripSeparator(),
+                _miRunOcr,
+                new ToolStripSeparator(),
+                _miDelete
+            });
+
+            _ctxHistory.Opening += (s, e) =>
+            {
+                var sel = GetSelectedEntries();
+                bool single = sel.Count == 1;
+                bool has    = sel.Count > 0;
+                bool hasPath = single && !string.IsNullOrEmpty(sel[0].Path) && File.Exists(sel[0].Path);
+                bool canRunOcr = hasPath && single && string.IsNullOrWhiteSpace(sel[0].Description);
+
+                _miOpen.Enabled       = hasPath;
+                _miOpenFolder.Enabled = hasPath;
+                _miCopyPath.Enabled   = has;
+                _miCopyOcr.Enabled    = has;
+                _miCopyImage.Enabled  = hasPath && single;
+                _miDelete.Enabled     = has;
+                _miRunOcr.Enabled     = canRunOcr;   // ← 追加: Descが空のときだけ実行可
+            };
+
+            _lvHistory.ContextMenuStrip = _ctxHistory;
+        }
+        private async Task RunOcrForSelectedAsync()
+        {
+            var sel = GetSelectedEntries();
+            if (sel.Count != 1) return;
+            var he = sel[0];
+            if (string.IsNullOrEmpty(he.Path) || !File.Exists(he.Path)) return;
+            if (!string.IsNullOrWhiteSpace(he.Description)) return; // Descが既にある場合は実行しない仕様のまま
+
+            Cursor prev = Cursor.Current;
+            try
+            {
+                Cursor.Current = Cursors.WaitCursor;
+
+                // ロック回避: フル読み→MS→Bitmap
+                byte[] bytes = File.ReadAllBytes(he.Path);
+                using (var ms = new MemoryStream(bytes))
+                using (var img = Image.FromStream(ms, useEmbeddedColorManagement: false, validateImageData: false))
+                using (var bmp = new Bitmap(img))
+                {
+                    // ★ ここを copyToClipboard: true に
+                    var text = await OcrFacade.RunAsync(
+                        bmp,
+                        copyToClipboard: true,   // ← クリップボードへコピー
+                        preprocess: true
+                    ).ConfigureAwait(true);
+
+                    if (!string.IsNullOrWhiteSpace(text))
+                    {
+                        he.Description = text;
+
+                        // 念のための保険（ランタイム環境によっては OcrFacade がコピーに失敗した時）
+                        try { Clipboard.SetText(text); } catch { /* noop */ }
+
+                        // ツールチップ更新
+                        foreach (ListViewItem it in _lvHistory.Items)
+                        {
+                            if (ReferenceEquals(it.Tag, he))
+                            {
+                                var tip = he.Path ?? "(clipboard)";
+                                tip += "\r\n" + he.Description;
+                                it.ToolTipText = tip;
+                                break;
+                            }
+                        }
+
+                        _lvHistory.Invalidate();
+
+                        // トレイの履歴メニューの表示テキストも更新（前回追加したメソッド）
+                        var main = Application.OpenForms.OfType<MainApplication>().FirstOrDefault();
+                        try { main?.RefreshHistoryMenuText(he); } catch { /* no-op */ }
+
+                        // 変更通知（任意）
+                        Kiritori.Services.History.HistoryBridge.RaiseChanged(this);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "OCRに失敗しました。\n" + ex.Message, "OCR", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                Cursor.Current = prev;
+            }
+        }
+
+
+        private List<HistoryEntry> GetSelectedEntries()
+        {
+            var list = new List<HistoryEntry>(_lvHistory.SelectedItems.Count);
+            foreach (ListViewItem it in _lvHistory.SelectedItems)
+                if (it?.Tag is HistoryEntry he) list.Add(he);
+            return list;
+        }
+
+        private void OpenSelected()
+        {
+            var sel = GetSelectedEntries();
+            if (sel.Count == 0) return;
+            var he = sel[0];
+            if (string.IsNullOrEmpty(he.Path) || !File.Exists(he.Path)) return;
+
+            // MainApplication の流儀に合わせて SnapWindow を開く（履歴には重複追加しない）
+            var sw = new SnapWindow(Application.OpenForms.OfType<MainApplication>().FirstOrDefault())
+            {
+                StartPosition = FormStartPosition.CenterScreen,
+                SuppressHistory = true
+            };
+            sw.setImageFromPath(he.Path);
+            sw.Show();
+        }
+
+        private void RevealInExplorerSelected()
+        {
+            var sel = GetSelectedEntries();
+            if (sel.Count == 0) return;
+            var he = sel[0];
+            if (string.IsNullOrEmpty(he.Path) || !File.Exists(he.Path)) return;
+
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = "/select,\"" + he.Path + "\"",
+                    UseShellExecute = true
+                });
+            }
+            catch { /* noop */ }
+        }
+
+        private void CopyPathSelected()
+        {
+            var sel = GetSelectedEntries();
+            if (sel.Count == 0) return;
+
+            try
+            {
+                var sb = new StringBuilder();
+                foreach (var he in sel)
+                {
+                    if (!string.IsNullOrEmpty(he.Path)) sb.AppendLine(he.Path);
+                }
+                var text = sb.ToString();
+                if (text.Length > 0) Clipboard.SetText(text);
+            }
+            catch { /* noop */ }
+        }
+
+        private void CopyOcrSelected()
+        {
+            var sel = GetSelectedEntries();
+            if (sel.Count == 0) return;
+
+            try
+            {
+                var sb = new StringBuilder();
+                foreach (var he in sel)
+                {
+                    var t = he.Description ?? "";
+                    if (t.Length > 0) sb.AppendLine(t);
+                }
+                var text = sb.ToString();
+                if (text.Length > 0) Clipboard.SetText(text);
+            }
+            catch { /* noop */ }
+        }
+
+        private void CopyImageSelected()
+        {
+            var sel = GetSelectedEntries();
+            if (sel.Count != 1) return;
+            var he = sel[0];
+            if (string.IsNullOrEmpty(he.Path) || !File.Exists(he.Path)) return;
+
+            try
+            {
+                // ロック回避のためフル読み→MS→Bitmap→Clipboard
+                byte[] bytes = File.ReadAllBytes(he.Path);
+                using (var ms = new MemoryStream(bytes))
+                using (var img = Image.FromStream(ms, useEmbeddedColorManagement: false, validateImageData: false))
+                using (var bmp = new Bitmap(img))
+                {
+                    Clipboard.SetImage(bmp);
+                }
+            }
+            catch { /* noop */ }
         }
 
     }

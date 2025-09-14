@@ -158,6 +158,27 @@ namespace Kiritori
             }
         }
 
+        public void RefreshHistoryMenuText(HistoryEntry entry)
+        {
+            if (entry == null) return;
+            foreach (ToolStripItem tsi in historyToolStripMenuItem.DropDownItems)
+            {
+                if (tsi is ToolStripMenuItem mi && ReferenceEquals(mi.Tag, entry))
+                {
+                    mi.Text = FormatHistoryText(
+                        path: (!string.IsNullOrEmpty(entry.Path) ? entry.Path : null),
+                        method: entry.Method,
+                        res: entry.Resolution,
+                        loadedAt: entry.LoadedAt,
+                        description: entry.Description
+                    );
+                    mi.AutoToolTip = !string.IsNullOrEmpty(entry.Path);
+                    mi.ToolTipText = entry.Path;
+                    break;
+                }
+            }
+            MarkHistoryDirty();
+        }
 
         protected override void WndProc(ref Message m)
         {
