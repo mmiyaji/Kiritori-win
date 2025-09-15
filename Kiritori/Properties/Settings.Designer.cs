@@ -514,5 +514,17 @@ namespace Kiritori.Properties {
                 this["FfmpegPath"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Ctrl + Shift + 7")]
+        public string HotkeyFix {
+            get {
+                return ((string)(this["HotkeyFix"]));
+            }
+            set {
+                this["HotkeyFix"] = value;
+            }
+        }
     }
 }

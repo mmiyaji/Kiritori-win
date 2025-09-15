@@ -125,5 +125,8 @@
     <Setting Name="FfmpegPath" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="HotkeyFix" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Ctrl + Shift + 7</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

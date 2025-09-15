@@ -55,6 +55,22 @@ namespace Kiritori
         private bool _ocr_mode = false;
         // Live mode
         private bool _live_mode = false;
+        // 固定サイズモード
+        private bool _fixed_mode = false;
+        private Size _fixedSizePx = Size.Empty;
+        private int _fixedPresetIndex = -1; // 0-based
+        private static readonly (string Label, Size Size)[] FIXED_PRESETS = new[]
+        {
+            ("1) 640×360 (16:9)",   new Size( 640,  360)),
+            ("2) 800×600 (4:3)",    new Size( 800,  600)),
+            ("3) 1024×768 (4:3)",   new Size(1024,  768)),
+            ("4) 1280×720 (HD)",    new Size(1280,  720)),
+            ("5) 1920×1080 (FHD)",  new Size(1920, 1080)),
+            ("6) 2560×1440 (QHD)",  new Size(2560, 1440)),
+        };
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool GetCursorPos(out POINT lpPoint);
+        private struct POINT { public int X; public int Y; }
 
         // ====== コンストラクタ ======
         public ScreenWindow(MainApplication mainapp, Func<int> getHostDpi = null)
@@ -294,7 +310,131 @@ namespace Kiritori
             this._live_mode = true;
             showScreenAll();
         }
+        // 幅・高さ(px) を指定して固定サイズキャプチャ開始
+        public void ShowScreenFixed(int width, int height)
+        {
+            if (width < 10 || height < 10) return;
 
+            _fixed_mode = true;
+            _fixedSizePx = new Size(width, height);
+            _fixedPresetIndex = FindNearestPresetIndex(_fixedSizePx);
+
+            // 既存：仮想スクリーン全域のオーバーレイ表示
+            showScreenAll();
+
+            // キーを確実に受ける
+            try { this.KeyPreview = true; } catch { }
+            try { this.Activate(); this.Focus(); this.BringToFront(); } catch { }
+
+            // 起動直後にも一度描画しておく
+            RenderFixedOverlay();
+        }
+        private void RenderFixedOverlay()
+        {
+            if (!_fixed_mode || baseBmp == null || bmp == null) return;
+
+            // 現在のカーソル位置（ローカル座標）
+            Point cur = GetCurrentCursorClientPoint();
+            if (IsSnapEnabled()) cur = SnapPoint(cur);
+
+            var rect = GetFixedRectCentered(cur);
+
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.DrawImage(baseBmp, Point.Empty);
+
+                using (var mask = MakeBackgroundMaskBrush())
+                using (var outside = new Region(new Rectangle(0, 0, bmp.Width, bmp.Height)))
+                {
+                    outside.Exclude(rect);
+                    g.FillRegion(mask, outside);
+                }
+                using (var pen = MakeGuidePen())
+                {
+                    pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                    g.DrawRectangle(pen, rect);
+                }
+
+                if (IsGuidesEnabled())
+                {
+                    DrawLabel(g, $"{rect.Width} x {rect.Height}",
+                        new Point(rect.Left, Math.Max(0, rect.Top - 28)));
+                    DrawCrosshair(g, cur);
+                    // 物理スクリーン座標の表示（既存の x,y オフセットを加味）
+                    DrawLabel(g, $"{rect.X + x}, {rect.Y + y}",
+                        new Point(rect.Left + 8, rect.Top + 8));
+                }
+            }
+
+            // 即反映
+            try { pictureBox1.Invalidate(); pictureBox1.Update(); } catch { }
+            _lastPaintTick = Environment.TickCount;
+        }
+
+        private Point GetCurrentCursorClientPoint()
+        {
+            POINT p; GetCursorPos(out p);
+            // x,y は「仮想スクリーンの左上スクリーン座標」を表す既存フィールドを想定
+            return new Point(p.X - x, p.Y - y);
+        }
+
+        private Rectangle GetFixedRectCentered(Point center)
+        {
+            int w = _fixedSizePx.Width;
+            int h = _fixedSizePx.Height;
+
+            int x0 = center.X - w / 2;
+            int y0 = center.Y - h / 2;
+
+            if (baseBmp != null)
+            {
+                x0 = Math.Max(0, Math.Min(x0, baseBmp.Width  - w));
+                y0 = Math.Max(0, Math.Min(y0, baseBmp.Height - h));
+            }
+            return new Rectangle(x0, y0, w, h);
+        }
+
+        private int FindNearestPresetIndex(Size sz)
+        {
+            int best = -1; long bestScore = long.MaxValue;
+            for (int i = 0; i < FIXED_PRESETS.Length; i++)
+            {
+                var p = FIXED_PRESETS[i].Size;
+                long dx = p.Width  - sz.Width;
+                long dy = p.Height - sz.Height;
+                long score = dx * dx + dy * dy;
+                if (score < bestScore) { bestScore = score; best = i; }
+            }
+            return best;
+        }
+
+        private void ApplyFixedPreset(int idx, bool swapToPortrait)
+        {
+            if (idx < 0 || idx >= FIXED_PRESETS.Length) return;
+            _fixedPresetIndex = idx;
+            var sz = FIXED_PRESETS[idx].Size;
+            if (swapToPortrait) sz = new Size(sz.Height, sz.Width);
+            _fixedSizePx = sz;
+
+            Log.Debug($"[Fixed] preset -> #{idx + 1} {_fixedSizePx.Width}x{_fixedSizePx.Height}", "Capture");
+            RenderFixedOverlay(); // ← ここがポイント
+        }
+
+        private void CyclePreset(int dir)
+        {
+            if (FIXED_PRESETS.Length == 0) return;
+            if (_fixedPresetIndex < 0) _fixedPresetIndex = 0;
+            _fixedPresetIndex = (_fixedPresetIndex + dir + FIXED_PRESETS.Length) % FIXED_PRESETS.Length;
+            ApplyFixedPreset(_fixedPresetIndex, false);
+        }
+
+        private void NudgeSize(int dw, int dh)
+        {
+            int w = Math.Max(10, _fixedSizePx.Width  + dw);
+            int h = Math.Max(10, _fixedSizePx.Height + dh);
+            _fixedSizePx = new Size(w, h);
+            RenderFixedOverlay(); // ← ここがポイント
+        }
 
         // ====== 選択操作 ======
         private Point startPoint;
@@ -305,7 +445,15 @@ namespace Kiritori
 
         private void ScreenWindow_MouseDown(object sender, MouseEventArgs e)
         {
-            if ((e.Button & MouseButtons.Left) == MouseButtons.Left)
+            if (_fixed_mode && (e.Button & MouseButtons.Left) == MouseButtons.Left)
+            {
+                var cur = new Point(e.X, e.Y);
+                if (IsSnapEnabled()) cur = SnapPoint(cur);
+                var rect = GetFixedRectCentered(cur);
+                TryCaptureAndOpen(rect);
+                return;
+            }
+            else if ((e.Button & MouseButtons.Left) == MouseButtons.Left)
             {
                 startPoint = new Point(e.X, e.Y);
                 startPointPhys = new Point(e.X + x, e.Y + y);
@@ -317,6 +465,52 @@ namespace Kiritori
         private void ScreenWindow_MouseMove(object sender, MouseEventArgs e)
         {
             hoverPoint = new Point(e.X, e.Y);
+            if (_fixed_mode && baseBmp != null)
+            {
+                // Alt/Ctrl によるスナップ/ガイドの反転は既存関数を流用可能
+                var cur1 = IsSnapEnabled() ? SnapPoint(hoverPoint) : hoverPoint;
+
+                var rect = GetFixedRectCentered(cur1);
+
+                using (g = Graphics.FromImage(bmp))
+                {
+                    // 原本再描画
+                    g.DrawImage(baseBmp, Point.Empty);
+
+                    // 外側マスク（穴あき）
+                    using (var mask = MakeBackgroundMaskBrush())
+                    using (var outside = new Region(new Rectangle(0, 0, bmp.Width, bmp.Height)))
+                    {
+                        outside.Exclude(rect);
+                        g.FillRegion(mask, outside);
+                    }
+
+                    // 枠線（既存のガイド用ペンを活用）
+                    using (var pen = MakeGuidePen())
+                    {
+                        pen.DashStyle = DashStyle.Dash;
+                        g.DrawRectangle(pen, rect);
+                    }
+
+                    // HUD（サイズと座標）
+                    if (IsGuidesEnabled())
+                    {
+                        DrawLabel(g, $"{rect.Width} x {rect.Height}", new Point(rect.Left, rect.Top - 28));
+                        DrawCrosshair(g, cur1);
+                        DrawLabel(g, $"({rect.Left + x}, {rect.Top + y})", new Point(rect.Left + 8, rect.Top + 8));
+                    }
+                }
+
+                // 軽量な再描画（既存のスロットリング変数をそのまま使用）
+                int nowTick = Environment.TickCount;
+                if (nowTick - _lastPaintTick >= 15)
+                {
+                    pictureBox1.Invalidate();
+                    pictureBox1.Update();
+                    _lastPaintTick = nowTick;
+                }
+                return;
+            }
 
             if (!isPressed)
             {
@@ -341,7 +535,7 @@ namespace Kiritori
                 // 通常
                 rc.X = Math.Min(startPoint.X, cur.X);
                 rc.Y = Math.Min(startPoint.Y, cur.Y);
-                rc.Width  = Math.Abs(dx);
+                rc.Width = Math.Abs(dx);
                 rc.Height = Math.Abs(dy);
             }
             else
@@ -355,7 +549,7 @@ namespace Kiritori
 
                 rc.X = x0;
                 rc.Y = y0;
-                rc.Width  = side;
+                rc.Width = side;
                 rc.Height = side;
             }
 
@@ -399,7 +593,8 @@ namespace Kiritori
                 }
 
                 int nowTick = Environment.TickCount;
-                if (nowTick - _lastPaintTick >= 15) {   // ~66fps
+                if (nowTick - _lastPaintTick >= 15)
+                {   // ~66fps
                     pictureBox1.Invalidate();
                     pictureBox1.Update();               // この瞬間だけ同期描画
                     _lastPaintTick = nowTick;
@@ -621,6 +816,41 @@ namespace Kiritori
                 id?.Dispose();
             }
         }
+        private void TryCaptureAndOpen(Rectangle cropLocal)
+        {
+            try
+            {
+                if (baseBmp == null || cropLocal.Width <= 0 || cropLocal.Height <= 0)
+                    return;
+
+                // 安全クロップ
+                var crop = Rectangle.Intersect(cropLocal, new Rectangle(0, 0, baseBmp.Width, baseBmp.Height));
+                if (crop.Width <= 0 || crop.Height <= 0) return;
+
+                this.Opacity = 0.0; // 自己写り抑止
+
+                // 既存の通常スナップと同じ：表示位置はスクリーン座標 (x,y) 加算
+                var desired = new Point(crop.X + x, crop.Y + y);
+
+                var sw = new SnapWindow(this.ma) { StartPosition = FormStartPosition.Manual };
+                sw.CaptureFromBitmap(baseBmp, crop, desired, LoadMethod.Capture); // 既存メソッド
+                this.CloseScreen(); // 既存の後始末（baseBmp破棄を含む）
+
+                sw.FormClosing += new FormClosingEventHandler(SW_FormClosing);
+                captureArray.Add(sw);
+                notifyCaptured(); // 既存トースト
+            }
+            catch (Exception ex)
+            {
+                Log.Debug("[FixedCapture] " + ex, "Capture");
+                this.CloseScreen();
+            }
+            finally
+            {
+                _fixed_mode = false;
+                _fixedSizePx = Size.Empty;
+            }
+        }
 
 
         // ====== 複数ウィンドウ管理（既存） ======
@@ -654,6 +884,8 @@ namespace Kiritori
 
         private void CloseScreen()
         {
+            _fixed_mode = false;
+            _fixedSizePx = Size.Empty;
             this.isOpen = false;
             DisposeCaptureSurface();
             this.Hide();
@@ -668,10 +900,41 @@ namespace Kiritori
         // ====== キー処理 ======
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            var keyOnly = keyData & Keys.KeyCode;
+
+            if (_fixed_mode)
+            {
+                // 1..6 でプリセット（Shiftで縦横入れ替え）
+                if (keyOnly >= Keys.D1 && keyOnly <= Keys.D6)
+                {
+                    int idx = (int)keyOnly - (int)Keys.D1;
+                    bool swap = (keyData & Keys.Shift) == Keys.Shift;
+                    ApplyFixedPreset(idx, swap);
+                    return true;
+                }
+                // [ / ] or ← / → で前後プリセット
+                if (keyOnly == Keys.OemOpenBrackets || keyOnly == Keys.Left)  { CyclePreset(-1); return true; }
+                if (keyOnly == Keys.OemCloseBrackets || keyOnly == Keys.Right) { CyclePreset(+1); return true; }
+
+                // R で縦横スワップ
+                if (keyOnly == Keys.R)
+                {
+                    _fixedSizePx = new Size(_fixedSizePx.Height, _fixedSizePx.Width);
+                    RenderFixedOverlay();
+                    return true;
+                }
+
+                // + / - で 10px 微調整
+                if (keyOnly == Keys.Oemplus || keyOnly == Keys.Add)       { NudgeSize(+10, +10); return true; }
+                if (keyOnly == Keys.OemMinus || keyOnly == Keys.Subtract) { NudgeSize(-10, -10); return true; }
+            }
             switch ((int)keyData)
             {
                 case (int)HOTS.ESCAPE:
                 case (int)HOTS.CLOSE:
+                    _fixed_mode = false;
+                    _fixedSizePx = Size.Empty;
+                    _fixedPresetIndex = -1;
                     this.CloseScreen();
                     break;
                 default:
@@ -988,6 +1251,68 @@ namespace Kiritori
                 Log.Trace("[OCR] failed: " + ex, "OCR");
                 NotifyOcrError();
             }
+        }
+    }
+    internal sealed class FixedSizeInputDialog : Form
+    {
+        private NumericUpDown _w = new NumericUpDown();
+        private NumericUpDown _h = new NumericUpDown();
+        private Button _ok = new Button();
+        private Button _cancel = new Button();
+
+        public int OutW => (int)_w.Value;
+        public int OutH => (int)_h.Value;
+
+        public FixedSizeInputDialog()
+        {
+            this.Text = "Fixed-size Capture";
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.MaximizeBox = false; this.MinimizeBox = false;
+            this.StartPosition = FormStartPosition.CenterParent;
+            this.Font = new Font("Segoe UI", 9f);
+            this.ClientSize = new Size(260, 110);
+
+            var lblW = new Label { Left = 12, Top = 16, Width = 20, Text = "W" };
+            _w.SetBounds(40, 12, 80, 24); _w.Minimum = 10; _w.Maximum = 9999; _w.Value = 640;
+            var lblH = new Label { Left = 132, Top = 16, Width = 20, Text = "H" };
+            _h.SetBounds(160, 12, 80, 24); _h.Minimum = 10; _h.Maximum = 9999; _h.Value = 360;
+
+            _ok.Text = "OK"; _ok.SetBounds(84, 64, 70, 28); _ok.DialogResult = DialogResult.OK;
+            _cancel.Text = "Cancel"; _cancel.SetBounds(164, 64, 76, 28); _cancel.DialogResult = DialogResult.Cancel;
+
+            this.AcceptButton = _ok; this.CancelButton = _cancel;
+            this.Controls.AddRange(new Control[] { lblW, _w, lblH, _h, _ok, _cancel });
+
+            _ok.Click += (s, e) =>
+            {
+                try
+                {
+                    // フェードが走る前に即不可視化
+                    this.Opacity = 0;     // 合成から即外す
+                    this.Hide();          // ShowDialog の終了を待たずに画面から消す
+                }
+                catch { /* ignore */ }
+
+                this.DialogResult = DialogResult.OK; // これで ShowDialog が戻る
+            };
+
+            _cancel.Click += (s, e) =>
+            {
+                try { this.Opacity = 0; this.Hide(); } catch { }
+                this.DialogResult = DialogResult.Cancel;
+            };
+        }
+
+        public static bool TryPrompt(IWin32Window owner, out int w, out int h)
+        {
+            using (var dlg = new FixedSizeInputDialog())
+            {
+                if (dlg.ShowDialog(owner) == DialogResult.OK)
+                {
+                    w = dlg.OutW; h = dlg.OutH; return true;
+                }
+            }
+            w = h = 0; return false;
         }
     }
 }

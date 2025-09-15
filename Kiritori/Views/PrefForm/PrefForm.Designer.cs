@@ -1101,7 +1101,7 @@ namespace Kiritori
                 if (e.Value is decimal d)
                     e.Value = Decimal.ToInt32(d);
             };
-            Log.Debug("Binding history limit {0}", string.Format("{0}", S.HistoryLimit));
+            Log.Debug(string.Format("Binding history limit {0}", S.HistoryLimit), "Settings");
             this.textBoxHistory.DataBindings.Add(b);
 
             // --- Hover preview <-> Settings ---
