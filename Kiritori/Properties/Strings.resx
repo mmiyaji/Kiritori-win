@@ -912,4 +912,7 @@
   <data name="History.Empty.EnableButton" xml:space="preserve">
     <value>Enable history</value>
   </data>
+  <data name="Text.CaptureFixed" xml:space="preserve">
+    <value>Capture at fixed size</value>
+  </data>
 </root>

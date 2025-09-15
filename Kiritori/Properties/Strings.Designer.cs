@@ -1726,6 +1726,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Capture at fixed size に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_CaptureFixed {
+            get {
+                return ResourceManager.GetString("Text.CaptureFixed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Capture Settings(press key duaring capture) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_CaptureOptionSetting {

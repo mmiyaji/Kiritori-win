@@ -912,4 +912,7 @@
   <data name="History.Empty.EnableButton" xml:space="preserve">
     <value>履歴を有効にする</value>
   </data>
+  <data name="Text.CaptureFixed" xml:space="preserve">
+    <value>サイズ指定でキャプチャー</value>
+  </data>
 </root>

@@ -51,6 +51,7 @@ namespace Kiritori
         private HotkeySpec DEF_HOTKEY_CAP = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 };
         private HotkeySpec DEF_HOTKEY_OCR = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 };
         private HotkeySpec DEF_HOTKEY_LIVE = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D6 };
+        private HotkeySpec DEF_HOTKEY_FIXED = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D7 };
         private string _saveButtonDefaultText;
         private System.Windows.Forms.Timer _savedResetTimer;
         private SynchronizationContext _ui;
@@ -608,6 +609,18 @@ namespace Kiritori
                 }
                 Properties.Settings.Default.HotkeyLive = pickedText;
             }
+            else if (mode == CaptureMode.fix)
+            {
+                if (same(pickedText, currentCap) || same(pickedText, currentOcr))
+                {
+                    MessageBox.Show(this,
+                        SR.T("Prefs.Hotkey.DuplicateLive", "Duplicate with another hotkey."),
+                        "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ((HotkeyPicker)this.textBoxHotkeyCaptureFixed)?.SetFromText(currentLive, DEF_HOTKEY_FIXED);
+                    return;
+                }
+                Properties.Settings.Default.HotkeyCaptureFixed = pickedText;
+            }
             else
             {
                 // 未知モードは何もしない
@@ -623,26 +636,36 @@ namespace Kiritori
                 $"Ocr='{Properties.Settings.Default.HotkeyOcr}', Live='{Properties.Settings.Default.HotkeyLive}'", "PrefForm");
         }
 
+        private static bool HotkeyEq(string a, string b) =>
+            string.Equals(a ?? "", b ?? "", StringComparison.OrdinalIgnoreCase);
+
+        // ===== Capture =====
         private void ResetCaptureHotkeyToDefault()
         {
-            var defCapText = HotkeyUtil.ToText(DEF_HOTKEY_CAP);
-            var defOcrText = HotkeyUtil.ToText(DEF_HOTKEY_OCR);
-            var defLiveText = HotkeyUtil.ToText(DEF_HOTKEY_LIVE);
+            var defCapText   = HotkeyUtil.ToText(DEF_HOTKEY_CAP);
+            var defOcrText   = HotkeyUtil.ToText(DEF_HOTKEY_OCR);
+            var defLiveText  = HotkeyUtil.ToText(DEF_HOTKEY_LIVE);
+            var defFixedText = HotkeyUtil.ToText(DEF_HOTKEY_FIXED);
 
-            // 現在値
-            var curOcr = Properties.Settings.Default.HotkeyOcr ?? "";
-            var curLive = Properties.Settings.Default.HotkeyLive ?? "";
+            var curOcr   = Properties.Settings.Default.HotkeyOcr ?? "";
+            var curLive  = Properties.Settings.Default.HotkeyLive ?? "";
+            var curFixed = Properties.Settings.Default.HotkeyCaptureFixed ?? "";
 
-            // Capture 既定と衝突していたら OCR / Live も既定化
-            if (string.Equals(defCapText, curOcr, StringComparison.OrdinalIgnoreCase))
+            // Capture 既定と衝突していたら他を既定化
+            if (HotkeyEq(defCapText, curOcr))
             {
                 Properties.Settings.Default.HotkeyOcr = defOcrText;
                 (this.textBoxHotkeyCaptureOCR as HotkeyPicker)?.SetFromText(defOcrText, DEF_HOTKEY_OCR);
             }
-            if (string.Equals(defCapText, curLive, StringComparison.OrdinalIgnoreCase))
+            if (HotkeyEq(defCapText, curLive))
             {
                 Properties.Settings.Default.HotkeyLive = defLiveText;
                 (this.textBoxHotkeyLivePreview as HotkeyPicker)?.SetFromText(defLiveText, DEF_HOTKEY_LIVE);
+            }
+            if (HotkeyEq(defCapText, curFixed))
+            {
+                Properties.Settings.Default.HotkeyCaptureFixed = defFixedText;
+                (this.textBoxHotkeyCaptureFixed as HotkeyPicker)?.SetFromText(defFixedText, DEF_HOTKEY_FIXED);
             }
 
             Properties.Settings.Default.HotkeyCapture = defCapText;
@@ -651,25 +674,33 @@ namespace Kiritori
             Properties.Settings.Default.Save();
         }
 
+        // ===== OCR =====
         private void ResetOcrHotkeyToDefault()
         {
-            var defCapText = HotkeyUtil.ToText(DEF_HOTKEY_CAP);
-            var defOcrText = HotkeyUtil.ToText(DEF_HOTKEY_OCR);
-            var defLiveText = HotkeyUtil.ToText(DEF_HOTKEY_LIVE);
+            var defCapText   = HotkeyUtil.ToText(DEF_HOTKEY_CAP);
+            var defOcrText   = HotkeyUtil.ToText(DEF_HOTKEY_OCR);
+            var defLiveText  = HotkeyUtil.ToText(DEF_HOTKEY_LIVE);
+            var defFixedText = HotkeyUtil.ToText(DEF_HOTKEY_FIXED);
 
-            var curCap = Properties.Settings.Default.HotkeyCapture ?? "";
-            var curLive = Properties.Settings.Default.HotkeyLive ?? "";
+            var curCap   = Properties.Settings.Default.HotkeyCapture ?? "";
+            var curLive  = Properties.Settings.Default.HotkeyLive ?? "";
+            var curFixed = Properties.Settings.Default.HotkeyCaptureFixed ?? "";
 
-            // OCR 既定と衝突していたら Capture / Live も既定化
-            if (string.Equals(defOcrText, curCap, StringComparison.OrdinalIgnoreCase))
+            // OCR 既定と衝突していたら他を既定化
+            if (HotkeyEq(defOcrText, curCap))
             {
                 Properties.Settings.Default.HotkeyCapture = defCapText;
                 (this.textBoxKiritori as HotkeyPicker)?.SetFromText(defCapText, DEF_HOTKEY_CAP);
             }
-            if (string.Equals(defOcrText, curLive, StringComparison.OrdinalIgnoreCase))
+            if (HotkeyEq(defOcrText, curLive))
             {
                 Properties.Settings.Default.HotkeyLive = defLiveText;
                 (this.textBoxHotkeyLivePreview as HotkeyPicker)?.SetFromText(defLiveText, DEF_HOTKEY_LIVE);
+            }
+            if (HotkeyEq(defOcrText, curFixed))
+            {
+                Properties.Settings.Default.HotkeyCaptureFixed = defFixedText;
+                (this.textBoxHotkeyCaptureFixed as HotkeyPicker)?.SetFromText(defFixedText, DEF_HOTKEY_FIXED);
             }
 
             Properties.Settings.Default.HotkeyOcr = defOcrText;
@@ -678,29 +709,72 @@ namespace Kiritori
             Properties.Settings.Default.Save();
         }
 
+        // ===== Live =====
         private void ResetLiveHotkeyToDefault()
         {
-            var defCapText = HotkeyUtil.ToText(DEF_HOTKEY_CAP);
-            var defOcrText = HotkeyUtil.ToText(DEF_HOTKEY_OCR);
-            var defLiveText = HotkeyUtil.ToText(DEF_HOTKEY_LIVE);
+            var defCapText   = HotkeyUtil.ToText(DEF_HOTKEY_CAP);
+            var defOcrText   = HotkeyUtil.ToText(DEF_HOTKEY_OCR);
+            var defLiveText  = HotkeyUtil.ToText(DEF_HOTKEY_LIVE);
+            var defFixedText = HotkeyUtil.ToText(DEF_HOTKEY_FIXED);
 
-            var curCap = Properties.Settings.Default.HotkeyCapture ?? "";
-            var curOcr = Properties.Settings.Default.HotkeyOcr ?? "";
+            var curCap   = Properties.Settings.Default.HotkeyCapture ?? "";
+            var curOcr   = Properties.Settings.Default.HotkeyOcr ?? "";
+            var curFixed = Properties.Settings.Default.HotkeyCaptureFixed ?? "";
 
-            // Live 既定と衝突していたら Capture / OCR も既定化
-            if (string.Equals(defLiveText, curCap, StringComparison.OrdinalIgnoreCase))
+            // Live 既定と衝突していたら他を既定化
+            if (HotkeyEq(defLiveText, curCap))
             {
                 Properties.Settings.Default.HotkeyCapture = defCapText;
                 (this.textBoxKiritori as HotkeyPicker)?.SetFromText(defCapText, DEF_HOTKEY_CAP);
             }
-            if (string.Equals(defLiveText, curOcr, StringComparison.OrdinalIgnoreCase))
+            if (HotkeyEq(defLiveText, curOcr))
             {
                 Properties.Settings.Default.HotkeyOcr = defOcrText;
                 (this.textBoxHotkeyCaptureOCR as HotkeyPicker)?.SetFromText(defOcrText, DEF_HOTKEY_OCR);
             }
+            if (HotkeyEq(defLiveText, curFixed))
+            {
+                Properties.Settings.Default.HotkeyCaptureFixed = defFixedText;
+                (this.textBoxHotkeyCaptureFixed as HotkeyPicker)?.SetFromText(defFixedText, DEF_HOTKEY_FIXED);
+            }
 
             Properties.Settings.Default.HotkeyLive = defLiveText;
             (this.textBoxHotkeyLivePreview as HotkeyPicker)?.SetFromText(defLiveText, DEF_HOTKEY_LIVE);
+
+            Properties.Settings.Default.Save();
+        }
+
+        // ===== Fixed =====
+        private void ResetFixedHotkeyToDefault()
+        {
+            var defCapText   = HotkeyUtil.ToText(DEF_HOTKEY_CAP);
+            var defOcrText   = HotkeyUtil.ToText(DEF_HOTKEY_OCR);
+            var defLiveText  = HotkeyUtil.ToText(DEF_HOTKEY_LIVE);
+            var defFixedText = HotkeyUtil.ToText(DEF_HOTKEY_FIXED);
+
+            var curCap  = Properties.Settings.Default.HotkeyCapture ?? "";
+            var curOcr  = Properties.Settings.Default.HotkeyOcr ?? "";
+            var curLive = Properties.Settings.Default.HotkeyLive ?? "";
+
+            // Fixed 既定と衝突していたら他を既定化
+            if (HotkeyEq(defFixedText, curCap))
+            {
+                Properties.Settings.Default.HotkeyCapture = defCapText;
+                (this.textBoxKiritori as HotkeyPicker)?.SetFromText(defCapText, DEF_HOTKEY_CAP);
+            }
+            if (HotkeyEq(defFixedText, curOcr))
+            {
+                Properties.Settings.Default.HotkeyOcr = defOcrText;
+                (this.textBoxHotkeyCaptureOCR as HotkeyPicker)?.SetFromText(defOcrText, DEF_HOTKEY_OCR);
+            }
+            if (HotkeyEq(defFixedText, curLive))
+            {
+                Properties.Settings.Default.HotkeyLive = defLiveText;
+                (this.textBoxHotkeyLivePreview as HotkeyPicker)?.SetFromText(defLiveText, DEF_HOTKEY_LIVE);
+            }
+
+            Properties.Settings.Default.HotkeyCaptureFixed = defFixedText;
+            (this.textBoxHotkeyCaptureFixed as HotkeyPicker)?.SetFromText(defFixedText, DEF_HOTKEY_FIXED);
 
             Properties.Settings.Default.Save();
         }
@@ -722,6 +796,7 @@ namespace Kiritori
             var capText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyCapture, DEF_HOTKEY_CAP);
             var ocrGlobalText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyOcr, DEF_HOTKEY_OCR);
             var liveGlobalText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyLive, DEF_HOTKEY_LIVE);
+            // var fixedGlobalText = HotkeyTextForDisplay(Properties.Settings.Default.HotkeyCaptureFixed, DEF_HOTKEY_FIXED);
 
             AddShortcutInfo(tlpShortcutsInfo, capText, "Start capture", tagKey: "Text.StartCapture");
             AddShortcutInfo(tlpShortcutsInfo, ocrGlobalText, "Start OCR capture", tagKey: "Text.StartOcrCapture");

@@ -718,40 +718,56 @@ namespace Kiritori
                 if (sw.ElapsedMilliseconds >= IDLE_TIME_BUDGET_MS) break;
             }
         }
+        private static Bitmap LoadBitmapNoLock(string path)
+        {
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+                return null;
+
+            // useAsync:false（既定）で OverlappedData を増やさない
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var img = Image.FromStream(fs, useEmbeddedColorManagement: false, validateImageData: false))
+            {
+                // Bitmap にクローンしてストリーム寿命から独立させる（ファイルロックを残さない）
+                return new Bitmap(img);
+            }
+        }
 
         private void TryRenderOneThumb(HistoryEntry he)
         {
             try
             {
-                // 既に作っていればスキップ
-                if (he.Thumb != null) { AssignThumbToItem(he, he.Thumb); return; }
+                // 既に作成済みなら割り当てだけ
+                if (he?.Thumb != null) { AssignThumbToItem(he, he.Thumb); return; }
 
                 Bitmap bmp = null;
 
                 if (!string.IsNullOrEmpty(he.Path) && File.Exists(he.Path))
                 {
-                    // ファイルロックを避けるため全読み→MemoryStream
-                    byte[] bytes = File.ReadAllBytes(he.Path);
-                    using (var ms = new MemoryStream(bytes))
-                    using (var img = Image.FromStream(ms, useEmbeddedColorManagement: false, validateImageData: false))
+                    using (var src = LoadBitmapNoLock(he.Path))
                     {
-                        using (var src = new Bitmap(img)) // ← 独立ビットマップに
+                        if (src != null)
                             bmp = RenderThumb(src, THUMB_W, THUMB_H);
                     }
                 }
-                else if (he.Thumb != null)
+                else if (he?.Thumb != null)
                 {
+                    // 念のため（上の早期 return と二重だが安全側）
                     bmp = RenderThumb(he.Thumb, THUMB_W, THUMB_H);
                 }
 
                 if (bmp != null)
                 {
-                    he.Thumb = bmp; // キャッシュ（以後は再利用）
+                    he.Thumb = bmp;            // キャッシュ
                     AssignThumbToItem(he, bmp);
                 }
             }
-            catch { /* 壊れた画像などは無視 */ }
+            catch
+            {
+                // 壊れ画像などは黙殺（プレースホルダーのまま）
+            }
         }
+
+
 
         private static Bitmap RenderThumb(Bitmap src, int w, int h)
         {
@@ -1158,22 +1174,20 @@ namespace Kiritori
             if (sel.Count != 1) return;
             var he = sel[0];
             if (string.IsNullOrEmpty(he.Path) || !File.Exists(he.Path)) return;
-            if (!string.IsNullOrWhiteSpace(he.Description)) return; // Descが既にある場合は実行しない仕様のまま
+            if (!string.IsNullOrWhiteSpace(he.Description)) return; // 既に OCR 済みなら実行しない
 
             Cursor prev = Cursor.Current;
             try
             {
                 Cursor.Current = Cursors.WaitCursor;
 
-                // ロック回避: フル読み→MS→Bitmap
-                byte[] bytes = File.ReadAllBytes(he.Path);
-                using (var ms = new MemoryStream(bytes))
-                using (var img = Image.FromStream(ms, useEmbeddedColorManagement: false, validateImageData: false))
-                using (var bmp = new Bitmap(img))
+                using (var bmp = LoadBitmapNoLock(he.Path))
                 {
+                    if (bmp == null) return;
+
                     var text = await OcrFacade.RunAsync(
                         bmp,
-                        copyToClipboard: true,   // ← クリップボードへコピー
+                        copyToClipboard: true,
                         preprocess: true
                     ).ConfigureAwait(true);
 
@@ -1181,7 +1195,7 @@ namespace Kiritori
                     {
                         he.Description = text;
 
-                        // 念のための保険（ランタイム環境によっては OcrFacade がコピーに失敗した時）
+                        // 念のための保険（環境により OcrFacade が Clipboard 失敗時）
                         try { Clipboard.SetText(text); } catch { /* noop */ }
 
                         // ツールチップ更新
@@ -1198,25 +1212,27 @@ namespace Kiritori
 
                         _lvHistory.Invalidate();
 
-                        // トレイの履歴メニューの表示テキストも更新（前回追加したメソッド）
+                        // トレイ履歴の表示テキスト更新（存在すれば）
                         var main = Application.OpenForms.OfType<MainApplication>().FirstOrDefault();
                         try { main?.RefreshHistoryMenuText(he); } catch { /* no-op */ }
 
-                        // 変更通知（任意）
+                        // 変更通知
                         Kiritori.Services.History.HistoryBridge.RaiseChanged(this);
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, SR.T("History.Dialog.OcrFailed", "Failed to run OCR.") + "\n" + ex.Message, "OCR", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this,
+                    SR.T("History.Dialog.OcrFailed", "Failed to run OCR.") + "\n" + ex.Message,
+                    "OCR",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
                 Cursor.Current = prev;
             }
         }
-
 
         private List<HistoryEntry> GetSelectedEntries()
         {
@@ -1308,16 +1324,17 @@ namespace Kiritori
 
             try
             {
-                // ロック回避のためフル読み→MS→Bitmap→Clipboard
-                byte[] bytes = File.ReadAllBytes(he.Path);
-                using (var ms = new MemoryStream(bytes))
-                using (var img = Image.FromStream(ms, useEmbeddedColorManagement: false, validateImageData: false))
-                using (var bmp = new Bitmap(img))
+                using (var bmp = LoadBitmapNoLock(he.Path))
                 {
+                    if (bmp == null) return;
+                    // Clipboard 側で内部コピーされるが、明示的に using で破棄して OK
                     Clipboard.SetImage(bmp);
                 }
             }
-            catch { /* noop */ }
+            catch
+            {
+                /* noop */
+            }
         }
 
     }

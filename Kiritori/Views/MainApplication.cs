@@ -50,7 +50,7 @@ namespace Kiritori
         private const int HOTKEY_ID_CAPTURE = 9001;
         private const int HOTKEY_ID_OCR = 9002;
         private const int HOTKEY_ID_LIVE = 9003;
-        private const int HOTKEY_ID_FIX = 9004;
+        private const int HOTKEY_ID_FIXED = 9004;
         // Win32のMOD定数（既存MOD_KEYと同値だがintで扱う）
         private const int MOD_ALT = 0x0001;
         private const int MOD_CONTROL = 0x0002;
@@ -124,7 +124,7 @@ namespace Kiritori
                 if (e.PropertyName == nameof(Properties.Settings.Default.HotkeyCapture) ||
                     e.PropertyName == nameof(Properties.Settings.Default.HotkeyOcr) ||
                     e.PropertyName == nameof(Properties.Settings.Default.HotkeyLive) ||
-                    e.PropertyName == nameof(Properties.Settings.Default.HotkeyFix))
+                    e.PropertyName == nameof(Properties.Settings.Default.HotkeyCaptureFixed))
                 {
                     Log.Info($"Settings changed: {e.PropertyName} → reload hotkeys", "Hotkey");
                     // UIスレッドに投げる
@@ -236,7 +236,7 @@ namespace Kiritori
                     openScreenLive();
                     return;
                 }
-                if (id == HOTKEY_ID_FIX)
+                if (id == HOTKEY_ID_FIXED)
                 {
                     Log.Debug("WM_HOTKEY: FIXED", "Hotkey");
                     openScreenFixed();
@@ -451,11 +451,12 @@ namespace Kiritori
 
                 if (!s.Visible)
                 {
-                    int w, h;
-                    if (FixedSizeInputDialog.TryPrompt(this, out w, out h))
-                    {
-                        s.ShowScreenFixed(w, h);
-                    }
+                    s.ShowScreenFixedWithPrompt();
+                    // int w, h;
+                    // if (FixedSizeInputDialog.TryPrompt(this, out w, out h))
+                    // {
+                    //     s.ShowScreenFixed(w, h);
+                    // }
                 }
                 else
                 {
@@ -1367,26 +1368,26 @@ namespace Kiritori
             try { UnregisterHotKey(this.Handle, HOTKEY_ID_CAPTURE); } catch { }
             try { UnregisterHotKey(this.Handle, HOTKEY_ID_OCR); } catch { }
             try { UnregisterHotKey(this.Handle, HOTKEY_ID_LIVE); } catch { }
-            try { UnregisterHotKey(this.Handle, HOTKEY_ID_FIX); } catch { }
+            try { UnregisterHotKey(this.Handle, HOTKEY_ID_FIXED); } catch { }
             HotkeySpec DEF_HOTKEY_CAP   = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 };
             HotkeySpec DEF_HOTKEY_OCR   = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 };
             HotkeySpec DEF_HOTKEY_LIVE  = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D6 };
-            HotkeySpec DEF_HOTKEY_FIX   = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D7 };
+            HotkeySpec DEF_HOTKEY_FIXED = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D7 };
 
 
             // 設定値を解析（ログ多め）
             var capSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyCapture, DEF_HOTKEY_CAP);
             var ocrSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyOcr, DEF_HOTKEY_OCR);
             var liveSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyLive, DEF_HOTKEY_LIVE);
-            var fixSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyFix, DEF_HOTKEY_FIX);
+            var fixedSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyCaptureFixed, DEF_HOTKEY_FIXED);
 
             Log.Debug($"Capture parsed: {HotkeyUtil.ToText(capSpec)}  (Key={capSpec.Key})", "Hotkey");
             Log.Debug($"OCR     parsed: {HotkeyUtil.ToText(ocrSpec)}  (Key={ocrSpec.Key})", "Hotkey");
             Log.Debug($"Live    parsed: {HotkeyUtil.ToText(liveSpec)}  (Key={liveSpec.Key})", "Hotkey");
-            Log.Debug($"Fixed   parsed: {HotkeyUtil.ToText(fixSpec)}  (Key={fixSpec.Key})", "Hotkey");
+            Log.Debug($"Fixed   parsed: {HotkeyUtil.ToText(fixedSpec)}  (Key={fixedSpec.Key})", "Hotkey");
 
             // 変換（intに）
-            int capMods = 0, ocrMods = 0, liveMods = 0, fixMods = 0;
+            int capMods = 0, ocrMods = 0, liveMods = 0, fixedMods = 0;
             if ((capSpec.Mods & ModMask.Ctrl) != 0) capMods |= MOD_CONTROL;
             if ((capSpec.Mods & ModMask.Shift) != 0) capMods |= MOD_SHIFT;
             if ((capSpec.Mods & ModMask.Alt) != 0) capMods |= MOD_ALT;
@@ -1399,9 +1400,9 @@ namespace Kiritori
             if ((liveSpec.Mods & ModMask.Shift) != 0) liveMods |= MOD_SHIFT;
             if ((liveSpec.Mods & ModMask.Alt) != 0) liveMods |= MOD_ALT;
 
-            if ((fixSpec.Mods & ModMask.Ctrl) != 0) fixMods |= MOD_CONTROL;
-            if ((fixSpec.Mods & ModMask.Shift) != 0) fixMods |= MOD_SHIFT;
-            if ((fixSpec.Mods & ModMask.Alt) != 0) fixMods |= MOD_ALT;
+            if ((fixedSpec.Mods & ModMask.Ctrl) != 0) fixedMods |= MOD_CONTROL;
+            if ((fixedSpec.Mods & ModMask.Shift) != 0) fixedMods |= MOD_SHIFT;
+            if ((fixedSpec.Mods & ModMask.Alt) != 0) fixedMods |= MOD_ALT;
 
             // 実登録（Win32直）
             int ok1 = RegisterHotKey(this.Handle, HOTKEY_ID_CAPTURE, capMods /* | MOD_NOREPEAT */, (int)capSpec.Key);
@@ -1436,15 +1437,15 @@ namespace Kiritori
             {
                 Log.Debug($"Register LIVE success. mods={liveMods}, vk={(Keys)liveSpec.Key}", "Hotkey");
             }
-            int ok4 = RegisterHotKey(this.Handle, HOTKEY_ID_FIX, fixMods /* | MOD_NOREPEAT */, (int)fixSpec.Key);
+            int ok4 = RegisterHotKey(this.Handle, HOTKEY_ID_FIXED, fixedMods /* | MOD_NOREPEAT */, (int)fixedSpec.Key);
             if (ok4 == 0)
             {
                 int err = Marshal.GetLastWin32Error();
-                Log.Debug($"Register FIXED failed. mods={fixMods}, vk={(Keys)fixSpec.Key}, lastError=0x{err:X8}", "Hotkey");
+                Log.Debug($"Register FIXED failed. mods={fixedMods}, vk={(Keys)fixedSpec.Key}, lastError=0x{err:X8}", "Hotkey");
             }
             else
             {
-                Log.Debug($"Register FIXED success. mods={fixMods}, vk={(Keys)fixSpec.Key}", "Hotkey");
+                Log.Debug($"Register FIXED success. mods={fixedMods}, vk={(Keys)fixedSpec.Key}", "Hotkey");
             }
 
         }

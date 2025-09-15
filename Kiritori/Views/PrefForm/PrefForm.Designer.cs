@@ -85,6 +85,8 @@ namespace Kiritori
         private TextBox textBoxHotkeyCaptureOCR;
         private Label labelHotkeyLivePreview;       // Live Preview
         private TextBox textBoxHotkeyLivePreview;
+        private Label labelHotkeyCaptureFixed;       // Capture at fixed size
+        private TextBox textBoxHotkeyCaptureFixed;
         private Label labelHotkeyCapturePrev;       // Capture at previous region
         private TextBox textBoxCapturePrev;
 
@@ -392,6 +394,7 @@ namespace Kiritori
             var flowStartup = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false, Dock = DockStyle.Fill };
             this.chkRunAtStartup = new CheckBox { Text = "Run at startup", AutoSize = true, Enabled = false, Tag = "loc:Text.Runatstartup" };
             this.btnOpenStartupSettings = new Button { Text = "Open Startup", AutoSize = true, Tag = "loc:Text.BtnStartupFolder" };
+            this.btnOpenStartupSettings.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             this.btnOpenStartupSettings.Click += new EventHandler(this.btnOpenStartupSettings_Click);
             // this.labelStartupInfo = new Label { AutoSize = true, ForeColor = SystemColors.GrayText, Text = "Startup is managed by Windows.", Dock = DockStyle.Fill };
             // this.toolTip1.SetToolTip(this.labelStartupInfo, "Settings > Apps > Startup");
@@ -425,7 +428,7 @@ namespace Kiritori
             this.grpHotkey.Tag = "loc:Text.Hotkeys";
             this.grpHotkey.Margin = new Padding(0, 8, 0, 0);
 
-            var tlpHot = NewGrid(3, 4);
+            var tlpHot = NewGrid(3, 5);
             this.labelHotkeyCapture = NewRightLabel("Image capture");
             this.labelHotkeyCapture.Tag = "loc:Text.ImageCapture";
             this.textBoxKiritori = new TextBox { Enabled = false, Width = 160, Text = "Ctrl + Shift + 5" };
@@ -434,6 +437,9 @@ namespace Kiritori
 
             this.labelHotkeyLivePreview = NewRightLabel("Live preview");
             this.labelHotkeyLivePreview.Tag = "loc:Text.LivePreview";
+
+            this.labelHotkeyCaptureFixed = NewRightLabel("Capture at fixed size");
+            this.labelHotkeyCaptureFixed.Tag = "loc:Text.CaptureFixed";
 
             this.textBoxKiritori = new HotkeyPicker { ReadOnly = true, Width = 160 };
             ((HotkeyPicker)this.textBoxKiritori).SetFromText(
@@ -459,6 +465,15 @@ namespace Kiritori
                 SaveHotkeyFromPicker(CaptureMode.live, (HotkeyPicker)this.textBoxHotkeyLivePreview);
             };
 
+            this.textBoxHotkeyCaptureFixed = new HotkeyPicker { ReadOnly = true, Width = 160 };
+            ((HotkeyPicker)this.textBoxHotkeyCaptureFixed).SetFromText(
+                Properties.Settings.Default.HotkeyCaptureFixed, DEF_HOTKEY_FIXED);
+            ((HotkeyPicker)this.textBoxHotkeyCaptureFixed).HotkeyPicked += (s, e) =>
+            {
+                SaveHotkeyFromPicker(CaptureMode.fix, (HotkeyPicker)this.textBoxHotkeyCaptureFixed);
+            };
+
+
             var btnResetCap = new Button { Text = "Reset", AutoSize = true };
             btnResetCap.Tag = "loc:Text.ResetDefault";
             btnResetCap.Click += (s, e) => ResetCaptureHotkeyToDefault();
@@ -470,6 +485,10 @@ namespace Kiritori
             var btnResetLive = new Button { Text = "Reset", AutoSize = true };
             btnResetLive.Tag = "loc:Text.ResetDefault";
             btnResetLive.Click += (s, e) => ResetLiveHotkeyToDefault();
+
+            var btnResetFixed = new Button { Text = "Reset", AutoSize = true };
+            btnResetFixed.Tag = "loc:Text.ResetDefault";
+            btnResetFixed.Click += (s, e) => ResetFixedHotkeyToDefault();
 
             this.labelHotkeyCapturePrev = NewRightLabel("Capture at previous region");
             this.labelHotkeyCapturePrev.Tag = "loc:Text.PreviousCapture";
@@ -484,6 +503,9 @@ namespace Kiritori
             tlpHot.Controls.Add(this.labelHotkeyLivePreview, 0, 2);
             tlpHot.Controls.Add(this.textBoxHotkeyLivePreview, 1, 2);
             tlpHot.Controls.Add(btnResetLive, 2, 2);
+            tlpHot.Controls.Add(this.labelHotkeyCaptureFixed, 0, 3);
+            tlpHot.Controls.Add(this.textBoxHotkeyCaptureFixed, 1, 3);
+            tlpHot.Controls.Add(btnResetFixed, 2, 3);
             // tlpHot.Controls.Add(this.labelHotkeyCapturePrev, 0, 3);
             // tlpHot.Controls.Add(this.textBoxCapturePrev, 1, 3);
 

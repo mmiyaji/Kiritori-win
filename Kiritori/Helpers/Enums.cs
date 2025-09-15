@@ -72,6 +72,7 @@ namespace Kiritori.Helpers
         image,
         ocr,
         live,
+        fix
     }
     public enum RenderPolicy
     {

@@ -2,6 +2,7 @@ using Kiritori.Views.LiveCapture;
 using Kiritori.Helpers;
 using Kiritori.Services.Notifications;
 using Kiritori.Services.Logging;
+using Kiritori.Views.Capture;
 using System;
 using System.Collections;
 using System.ComponentModel;
@@ -59,18 +60,31 @@ namespace Kiritori
         private bool _fixed_mode = false;
         private Size _fixedSizePx = Size.Empty;
         private int _fixedPresetIndex = -1; // 0-based
-        private static readonly (string Label, Size Size)[] FIXED_PRESETS = new[]
+        private int _fixed_armTick = 0;
+        private static readonly (string Label, int W, int H)[] FIXED_PRESETS = new[]
         {
-            ("1) 640×360 (16:9)",   new Size( 640,  360)),
-            ("2) 800×600 (4:3)",    new Size( 800,  600)),
-            ("3) 1024×768 (4:3)",   new Size(1024,  768)),
-            ("4) 1280×720 (HD)",    new Size(1280,  720)),
-            ("5) 1920×1080 (FHD)",  new Size(1920, 1080)),
-            ("6) 2560×1440 (QHD)",  new Size(2560, 1440)),
+            ("1) 640×360 (16:9)",   640,  360),
+            ("2) 800×600 (4:3)",    800,  600),
+            ("3) 1024×768 (4:3)",   1024, 768),
+            ("4) 1280×720 (HD)",    1280, 720),
+            ("5) 1920×1080 (FHD)",  1920,1080),
+            ("カスタム",               0,    0), // カスタムサイズ
         };
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern bool GetCursorPos(out POINT lpPoint);
         private struct POINT { public int X; public int Y; }
+        private Panel _fixedPanel;
+        private ComboBox _fixedPreset;
+        private NumericUpDown _fixedW, _fixedH;
+        private Button _fixedOk, _fixedCancel;
+        [System.Runtime.InteropServices.DllImport("dwmapi.dll")] private static extern int DwmFlush();
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")]  private static extern bool GdiFlush();
+        private static void FlushComposition()
+        {
+            try { DwmFlush(); } catch { }
+            try { GdiFlush(); } catch { }
+            try { Application.DoEvents(); } catch { }
+        }
 
         // ====== コンストラクタ ======
         public ScreenWindow(MainApplication mainapp, Func<int> getHostDpi = null)
@@ -313,6 +327,7 @@ namespace Kiritori
         // 幅・高さ(px) を指定して固定サイズキャプチャ開始
         public void ShowScreenFixed(int width, int height)
         {
+            Log.Info("set Fixed mode", "Capture");
             if (width < 10 || height < 10) return;
 
             _fixed_mode = true;
@@ -329,47 +344,6 @@ namespace Kiritori
             // 起動直後にも一度描画しておく
             RenderFixedOverlay();
         }
-        private void RenderFixedOverlay()
-        {
-            if (!_fixed_mode || baseBmp == null || bmp == null) return;
-
-            // 現在のカーソル位置（ローカル座標）
-            Point cur = GetCurrentCursorClientPoint();
-            if (IsSnapEnabled()) cur = SnapPoint(cur);
-
-            var rect = GetFixedRectCentered(cur);
-
-            using (var g = Graphics.FromImage(bmp))
-            {
-                g.DrawImage(baseBmp, Point.Empty);
-
-                using (var mask = MakeBackgroundMaskBrush())
-                using (var outside = new Region(new Rectangle(0, 0, bmp.Width, bmp.Height)))
-                {
-                    outside.Exclude(rect);
-                    g.FillRegion(mask, outside);
-                }
-                using (var pen = MakeGuidePen())
-                {
-                    pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
-                    g.DrawRectangle(pen, rect);
-                }
-
-                if (IsGuidesEnabled())
-                {
-                    DrawLabel(g, $"{rect.Width} x {rect.Height}",
-                        new Point(rect.Left, Math.Max(0, rect.Top - 28)));
-                    DrawCrosshair(g, cur);
-                    // 物理スクリーン座標の表示（既存の x,y オフセットを加味）
-                    DrawLabel(g, $"{rect.X + x}, {rect.Y + y}",
-                        new Point(rect.Left + 8, rect.Top + 8));
-                }
-            }
-
-            // 即反映
-            try { pictureBox1.Invalidate(); pictureBox1.Update(); } catch { }
-            _lastPaintTick = Environment.TickCount;
-        }
 
         private Point GetCurrentCursorClientPoint()
         {
@@ -378,41 +352,11 @@ namespace Kiritori
             return new Point(p.X - x, p.Y - y);
         }
 
-        private Rectangle GetFixedRectCentered(Point center)
-        {
-            int w = _fixedSizePx.Width;
-            int h = _fixedSizePx.Height;
-
-            int x0 = center.X - w / 2;
-            int y0 = center.Y - h / 2;
-
-            if (baseBmp != null)
-            {
-                x0 = Math.Max(0, Math.Min(x0, baseBmp.Width  - w));
-                y0 = Math.Max(0, Math.Min(y0, baseBmp.Height - h));
-            }
-            return new Rectangle(x0, y0, w, h);
-        }
-
-        private int FindNearestPresetIndex(Size sz)
-        {
-            int best = -1; long bestScore = long.MaxValue;
-            for (int i = 0; i < FIXED_PRESETS.Length; i++)
-            {
-                var p = FIXED_PRESETS[i].Size;
-                long dx = p.Width  - sz.Width;
-                long dy = p.Height - sz.Height;
-                long score = dx * dx + dy * dy;
-                if (score < bestScore) { bestScore = score; best = i; }
-            }
-            return best;
-        }
-
         private void ApplyFixedPreset(int idx, bool swapToPortrait)
         {
             if (idx < 0 || idx >= FIXED_PRESETS.Length) return;
             _fixedPresetIndex = idx;
-            var sz = FIXED_PRESETS[idx].Size;
+            var sz = new Size(FIXED_PRESETS[idx].W, FIXED_PRESETS[idx].H);
             if (swapToPortrait) sz = new Size(sz.Height, sz.Width);
             _fixedSizePx = sz;
 
@@ -436,6 +380,105 @@ namespace Kiritori
             RenderFixedOverlay(); // ← ここがポイント
         }
 
+        private static int ClampInt(int v, int min, int max)
+        {
+            if (v < min) return min; if (v > max) return max; return v;
+        }
+
+        private void CenterFixedPromptUi()
+        {
+            if (_fixedPanel == null) return;
+            int cx = (this.ClientSize.Width - _fixedPanel.Width) / 2;
+            int cy = (this.ClientSize.Height - _fixedPanel.Height) / 2;
+            if (cx < 0) cx = 0; if (cy < 0) cy = 0;
+            _fixedPanel.Location = new Point(cx, cy);
+        }
+        public void ShowScreenFixedWithPrompt()
+        {
+            int w, h, presetIdx; bool remember;
+            if (!Kiritori.Views.Capture.FixedSizePresetDialog.TryPrompt(this.ma, out w, out h, out presetIdx, out remember))
+                return;
+
+            // ダイアログを消した直後の合成を確実に完了させる
+            FlushComposition();
+
+            // 既存フローでオーバーレイ表示 → 固定サイズ追随
+            ShowScreenFixed(w, h);
+        }
+
+        private int FindNearestPresetIndex(Size sz)
+        {
+            int best = FIXED_PRESETS.Length - 1; // デフォはカスタム
+            long bestScore = long.MaxValue;
+            for (int i = 0; i < FIXED_PRESETS.Length - 1; i++)
+            {
+                long dx = FIXED_PRESETS[i].W - sz.Width;
+                long dy = FIXED_PRESETS[i].H - sz.Height;
+                long score = dx * dx + dy * dy;
+                if (score < bestScore) { bestScore = score; best = i; }
+            }
+            return best;
+        }
+        // 固定モードを開始（ダイアログOK後に呼ばれる）
+        private void StartFixedMode(int width, int height)
+        {
+            _fixed_mode = true;
+            _fixedSizePx = new Size(width, height);
+            _fixedPresetIndex = FindNearestPresetIndex(_fixedSizePx);
+
+            // 起動直後の描画（マウス未移動でも即反映）
+            RenderFixedOverlay();
+
+            // 誤クリック防止の最短アーム時間（100–150ms 推奨）
+            _fixed_armTick = Environment.TickCount + 150;
+        }
+
+        private Rectangle GetFixedRectCentered(Point center)
+        {
+            int w = _fixedSizePx.Width, h = _fixedSizePx.Height;
+            int x0 = center.X - w / 2, y0 = center.Y - h / 2;
+            if (baseBmp != null)
+            {
+                x0 = Math.Max(0, Math.Min(x0, baseBmp.Width  - w));
+                y0 = Math.Max(0, Math.Min(y0, baseBmp.Height - h));
+            }
+            return new Rectangle(x0, y0, w, h);
+        }
+
+        private void RenderFixedOverlay()
+        {
+            if (!_fixed_mode || baseBmp == null || bmp == null) return;
+
+            Point cur = GetCurrentCursorClientPoint();
+            if (IsSnapEnabled()) cur = SnapPoint(cur);
+
+            var rect = GetFixedRectCentered(cur);
+
+            using (var g2 = Graphics.FromImage(bmp))
+            {
+                g2.DrawImage(baseBmp, Point.Empty);
+                using (var mask = MakeBackgroundMaskBrush())
+                using (var outside = new Region(new Rectangle(0, 0, bmp.Width, bmp.Height)))
+                {
+                    outside.Exclude(rect);
+                    g2.FillRegion(mask, outside);
+                }
+                using (var pen = MakeGuidePen())
+                {
+                    pen.DashStyle = System.Drawing.Drawing2D.DashStyle.Dash;
+                    g2.DrawRectangle(pen, rect);
+                }
+                if (IsGuidesEnabled())
+                {
+                    DrawLabel(g2, rect.Width + " x " + rect.Height, new Point(rect.Left, Math.Max(0, rect.Top - 28)));
+                    DrawCrosshair(g2, cur);
+                    DrawLabel(g2, (rect.X + x) + ", " + (rect.Y + y), new Point(rect.Left + 8, rect.Top + 8));
+                }
+            }
+            pictureBox1.Invalidate();
+            pictureBox1.Update();
+        }
+
         // ====== 選択操作 ======
         private Point startPoint;
         private Point startPointPhys;
@@ -447,7 +490,8 @@ namespace Kiritori
         {
             if (_fixed_mode && (e.Button & MouseButtons.Left) == MouseButtons.Left)
             {
-                var cur = new Point(e.X, e.Y);
+                if (Environment.TickCount < _fixed_armTick) return; // 早押しガード
+                Point cur = new Point(e.X, e.Y);
                 if (IsSnapEnabled()) cur = SnapPoint(cur);
                 var rect = GetFixedRectCentered(cur);
                 TryCaptureAndOpen(rect);
@@ -465,52 +509,7 @@ namespace Kiritori
         private void ScreenWindow_MouseMove(object sender, MouseEventArgs e)
         {
             hoverPoint = new Point(e.X, e.Y);
-            if (_fixed_mode && baseBmp != null)
-            {
-                // Alt/Ctrl によるスナップ/ガイドの反転は既存関数を流用可能
-                var cur1 = IsSnapEnabled() ? SnapPoint(hoverPoint) : hoverPoint;
-
-                var rect = GetFixedRectCentered(cur1);
-
-                using (g = Graphics.FromImage(bmp))
-                {
-                    // 原本再描画
-                    g.DrawImage(baseBmp, Point.Empty);
-
-                    // 外側マスク（穴あき）
-                    using (var mask = MakeBackgroundMaskBrush())
-                    using (var outside = new Region(new Rectangle(0, 0, bmp.Width, bmp.Height)))
-                    {
-                        outside.Exclude(rect);
-                        g.FillRegion(mask, outside);
-                    }
-
-                    // 枠線（既存のガイド用ペンを活用）
-                    using (var pen = MakeGuidePen())
-                    {
-                        pen.DashStyle = DashStyle.Dash;
-                        g.DrawRectangle(pen, rect);
-                    }
-
-                    // HUD（サイズと座標）
-                    if (IsGuidesEnabled())
-                    {
-                        DrawLabel(g, $"{rect.Width} x {rect.Height}", new Point(rect.Left, rect.Top - 28));
-                        DrawCrosshair(g, cur1);
-                        DrawLabel(g, $"({rect.Left + x}, {rect.Top + y})", new Point(rect.Left + 8, rect.Top + 8));
-                    }
-                }
-
-                // 軽量な再描画（既存のスロットリング変数をそのまま使用）
-                int nowTick = Environment.TickCount;
-                if (nowTick - _lastPaintTick >= 15)
-                {
-                    pictureBox1.Invalidate();
-                    pictureBox1.Update();
-                    _lastPaintTick = nowTick;
-                }
-                return;
-            }
+            if (_fixed_mode) { RenderFixedOverlay(); return; }
 
             if (!isPressed)
             {

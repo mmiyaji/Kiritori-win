@@ -518,12 +518,36 @@ namespace Kiritori.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("Ctrl + Shift + 7")]
-        public string HotkeyFix {
+        public string HotkeyCaptureFixed {
             get {
-                return ((string)(this["HotkeyFix"]));
+                return ((string)(this["HotkeyCaptureFixed"]));
             }
             set {
-                this["HotkeyFix"] = value;
+                this["HotkeyCaptureFixed"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("640")]
+        public int FixedCropWidth {
+            get {
+                return ((int)(this["FixedCropWidth"]));
+            }
+            set {
+                this["FixedCropWidth"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("300")]
+        public int FixedCropHeight {
+            get {
+                return ((int)(this["FixedCropHeight"]));
+            }
+            set {
+                this["FixedCropHeight"] = value;
             }
         }
     }

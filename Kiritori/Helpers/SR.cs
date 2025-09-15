@@ -22,8 +22,8 @@ namespace Kiritori.Helpers
                 }
             }
         // 文字埋め込み（string.Format）
-        public static string F(string key, params object[] args) =>
-            string.Format(CultureInfo.CurrentUICulture, T(key), args);
+        public static string F(string key, string fallback, params object[] args) =>
+            string.Format(CultureInfo.CurrentUICulture, T(key, fallback), args);
         
         public static event System.Action CultureChanged;
 
