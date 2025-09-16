@@ -150,6 +150,7 @@
           <span class="chip">ホットキー</span>
           <span class="chip">ズーム & 透過</span>
           <span class="chip">OCR</span>
+          <span class="chip">ライブプレビュー</span>
         </div>
         <div style="display:flex; gap:12px; margin-top:18px">
           <a class="btn-primary" href="#download">今すぐ入手</a>
@@ -169,6 +170,17 @@
               <a class="btn-primary" id="dlWinZip" href="#">ZIP</a>
               <a class="btn-primary" id="dlWinExe" href="#">EXE</a>
             </div>
+          </div>
+          <div class="dl-row">
+            <div>
+              <strong>Microsoft Store</strong>
+              <div class="muted">インストール（自動更新対応）</div>
+            </div>
+            <a href="https://apps.microsoft.com/detail/9pd5wck38p07?hl=ja-JP&gl=JP"
+              target="_blank" rel="noopener">
+              <img src="https://get.microsoft.com/images/en-us%20dark.svg"
+                  alt="Get it from Microsoft" style="height:40px">
+            </a>
           </div>
           <div class="dl-row" aria-disabled="true">
             <div>
@@ -249,7 +261,9 @@
         <h2>よくある質問（FAQ）</h2>
         <details>
           <summary>配布ファイルは EXE と ZIP どちらが良い？</summary>
-          <p>ブラウザやプロキシで誤検知されにくい ZIP を推奨します。また、EXE単体では多言語対応切り替えができません。ZIPを展開して使ってください（EXEと同じ階層に言語ファイル（ja/*.dll）が必要です）</p>
+          <p>ブラウザやプロキシで誤検知されにくい ZIP を推奨します。
+            ただし、録画機能で用いるFFMPEGバイナリを含むためサイズが比較的大きいです。
+            FFMPEGを使わない場合は軽量なEXEでの実行も可能です。</p>
         </details>
         <details>
           <summary>SmartScreen が出ます</summary>

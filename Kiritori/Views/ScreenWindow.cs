@@ -63,20 +63,17 @@ namespace Kiritori
         private int _fixed_armTick = 0;
         private static readonly (string Label, int W, int H)[] FIXED_PRESETS = new[]
         {
-            ("1) 640×360 (16:9)",   640,  360),
-            ("2) 800×600 (4:3)",    800,  600),
-            ("3) 1024×768 (4:3)",   1024, 768),
-            ("4) 1280×720 (HD)",    1280, 720),
-            ("5) 1920×1080 (FHD)",  1920,1080),
+            ("1) 500×500 (1:1)",    500,  500),
+            ("2) 640×360 (16:9)",   640,  360),
+            ("3) 800×600 (4:3)",    800,  600),
+            ("4) 1024×768 (4:3)",   1024, 768),
+            ("5) 1280×720 (HD)",    1280, 720),
+            ("6) 1920×1080 (FHD)",  1920,1080),
             ("カスタム",               0,    0), // カスタムサイズ
         };
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern bool GetCursorPos(out POINT lpPoint);
         private struct POINT { public int X; public int Y; }
-        private Panel _fixedPanel;
-        private ComboBox _fixedPreset;
-        private NumericUpDown _fixedW, _fixedH;
-        private Button _fixedOk, _fixedCancel;
         [System.Runtime.InteropServices.DllImport("dwmapi.dll")] private static extern int DwmFlush();
         [System.Runtime.InteropServices.DllImport("gdi32.dll")]  private static extern bool GdiFlush();
         private static void FlushComposition()
@@ -385,14 +382,6 @@ namespace Kiritori
             if (v < min) return min; if (v > max) return max; return v;
         }
 
-        private void CenterFixedPromptUi()
-        {
-            if (_fixedPanel == null) return;
-            int cx = (this.ClientSize.Width - _fixedPanel.Width) / 2;
-            int cy = (this.ClientSize.Height - _fixedPanel.Height) / 2;
-            if (cx < 0) cx = 0; if (cy < 0) cy = 0;
-            _fixedPanel.Location = new Point(cx, cy);
-        }
         public void ShowScreenFixedWithPrompt()
         {
             int w, h, presetIdx; bool remember;

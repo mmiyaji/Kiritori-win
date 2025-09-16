@@ -639,7 +639,33 @@ namespace Kiritori
         private static bool HotkeyEq(string a, string b) =>
             string.Equals(a ?? "", b ?? "", StringComparison.OrdinalIgnoreCase);
 
-        // ===== Capture =====
+        private static Form GetMainForm()
+        {
+            // 型名が "MainApplication" の開いているフォームを探す
+            // （型に直接依存したくない場合に有効）
+            foreach (Form f in Application.OpenForms)
+            {
+                if (f != null && f.GetType().Name == "MainApplication")
+                    return f;
+            }
+            return null;
+        }
+        private void ExecCaptureHotkeyToDefault()
+        {
+
+        }
+        private void ExecLiveHotkeyToDefault()
+        { 
+            
+        }
+        private void ExecOcrHotkeyToDefault()
+        { 
+            
+        }
+        private void ExecFixedHotkeyToDefault()
+        { 
+            
+        }
         private void ResetCaptureHotkeyToDefault()
         {
             var defCapText   = HotkeyUtil.ToText(DEF_HOTKEY_CAP);

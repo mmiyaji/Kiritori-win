@@ -1717,7 +1717,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Open Startup Setting に類似しているローカライズされた文字列を検索します。
+        ///   Open Startup に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_BtnStartupSetting {
             get {
@@ -1866,6 +1866,15 @@ namespace Kiritori.Properties {
         internal static string Text_DropShadow {
             get {
                 return ResourceManager.GetString("Text.DropShadow", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Exec に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_ExecDefault {
+            get {
+                return ResourceManager.GetString("Text.ExecDefault", resourceCulture);
             }
         }
         

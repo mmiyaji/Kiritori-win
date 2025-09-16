@@ -10,6 +10,7 @@ using System.Text;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace Kiritori.Services.Extensions
 {
@@ -271,14 +272,14 @@ namespace Kiritori.Services.Extensions
             // 通常ツールは bin/<id>/<ver> を規約に
             return Path.Combine(ExtensionsPaths.Root, "bin", id, ver);
         }
-        public static void RepairStateIfMissing()
+public static void RepairStateIfMissing()
         {
             try
             {
                 ExtensionsPaths.EnsureDirs();
                 var path = ExtensionsPaths.StateJson;
 
-                // 既存 state が有効ならそれを採用（「ファイルはあるが空/壊れている」ケースもここで弾く）
+                // 既存 state が有効なら採用
                 bool needRepair = true;
                 try
                 {
@@ -304,7 +305,6 @@ namespace Kiritori.Services.Extensions
                 }
                 catch
                 {
-                    // ロード失敗 → 復旧へ
                     Log.Debug("State file load failed: " + path, "Extensions");
                 }
 
@@ -312,7 +312,7 @@ namespace Kiritori.Services.Extensions
 
                 var st = new ExtensionState();
 
-                // bin\<id>\<ver> をスキャンして最新（文字列降順）を採用
+                // --- 1) bin\<id>\<ver> をスキャン（従来通り） ---
                 var binRoot = Path.Combine(ExtensionsPaths.Root, "bin");
                 if (Directory.Exists(binRoot))
                 {
@@ -333,14 +333,15 @@ namespace Kiritori.Services.Extensions
 
                         if (!string.IsNullOrEmpty(latestVer))
                         {
+                            // 何かしら入っていることを軽く確認
                             var vdir = Path.Combine(idDir, latestVer);
                             bool hasAny = false;
                             try
                             {
                                 hasAny = Directory.Exists(vdir) &&
-                                        Directory.GetFileSystemEntries(vdir).Length > 0;
+                                         Directory.GetFileSystemEntries(vdir).Length > 0;
                             }
-                            catch { /* ignore */ }
+                            catch { }
 
                             if (hasAny)
                             {
@@ -356,7 +357,7 @@ namespace Kiritori.Services.Extensions
                     }
                 }
 
-                // i18n\<culture>\Kiritori.resources.dll → id=lang_<culture>
+                // --- 2) i18n\<culture>\Kiritori.resources.dll → lang_<culture>（従来通り） ---
                 var i18nRoot = Path.Combine(ExtensionsPaths.Root, "i18n");
                 if (Directory.Exists(i18nRoot))
                 {
@@ -377,29 +378,150 @@ namespace Kiritori.Services.Extensions
                     }
                 }
 
+                // --- 3) exe の横（AppContext.BaseDirectory）も見る ---
+                var exeDir = GetExeDirSafe();
+
+                // 3-a) exe の横の ja\Kiritori.resources.dll → lang_ja
+                var exeJaDir = Path.Combine(exeDir, "ja");
+                var exeJaDll = Path.Combine(exeJaDir, "Kiritori.resources.dll");
+                if (File.Exists(exeJaDll))
+                {
+                    if (!st.Items.ContainsKey("lang_ja"))
+                    {
+                        st.Items["lang_ja"] = new ExtensionState.Item
+                        {
+                            Installed = true,
+                            Enabled = true,
+                            Version = "embedded"
+                        };
+                        Log.Debug("Repaired state: lang_ja embedded (exe side)", "Extensions");
+                    }
+                }
+
+                // 3-b) exe の横の ThirdParty\ffmpeg\ffmpeg.exe
+                //      さらに保険で exe\ffmpeg\ffmpeg.exe も見る
+                var ffmpegExeCandidates = new[]
+                {
+                    Path.Combine(exeDir, "ThirdParty", "ffmpeg", "ffmpeg.exe"),
+                    Path.Combine(exeDir, "ffmpeg", "ffmpeg.exe"),
+                };
+
+                string ffmpegFound = null;
+                foreach (var p in ffmpegExeCandidates)
+                {
+                    if (File.Exists(p)) { ffmpegFound = p; break; }
+                }
+
+                // 3-c) まだ無ければ PATH も探す（起動ディレクトリ以外の同梱やユーザー配布を拾う）
+                if (ffmpegFound == null)
+                {
+                    ffmpegFound = FindOnPath("ffmpeg.exe");
+                }
+
+                if (ffmpegFound != null)
+                {
+                    // すでに bin スキャンで入っている場合は上書きしない
+                    if (!st.Items.ContainsKey("ffmpeg"))
+                    {
+                        var ver = GetFileVersionOrFallback(ffmpegFound, "external");
+                        st.Items["ffmpeg"] = new ExtensionState.Item
+                        {
+                            Installed = true,
+                            Enabled = true,
+                            Version = ver
+                        };
+                        Log.Debug($"Repaired state: ffmpeg {ver} ({ffmpegFound})", "Extensions");
+                    }
+                }
+
+                // 保存
                 ExtensionState.SaveState(st);
-                State = st; // メモリにも反映
-                Kiritori.Services.Logging.Log.Info(
-                    "Repaired missing state: " + path + " (" + st.Items.Count + " items)", "Extensions");
+                State = st;
+                Log.Info("Repaired missing state: " + path + " (" + st.Items.Count + " items)", "Extensions");
 
 #if DEBUG
-                var len = new FileInfo(path).Length;
-                Log.Debug($"State saved: {path} ({len} bytes)", "Extensions");
-                // 先頭文字プレビュー
-                try {
+                try
+                {
+                    var len = new FileInfo(path).Length;
+                    Log.Debug($"State saved: {path} ({len} bytes)", "Extensions");
                     using (var r = new StreamReader(path, Encoding.UTF8))
                     {
                         char[] buf = new char[300];
                         int n = r.ReadBlock(buf, 0, buf.Length);
                         Log.Debug("State preview: " + new string(buf, 0, n), "Extensions");
                     }
-                } catch {}
+                }
+                catch { }
 #endif
             }
             catch (Exception ex)
             {
-                Kiritori.Services.Logging.Log.Warn("RepairStateIfMissing failed: " + ex.Message, "Extensions");
+                Log.Warn("RepairStateIfMissing failed: " + ex.Message, "Extensions");
             }
+        }
+
+        // ====== ここから private ヘルパー ======
+
+        private static string GetExeDirSafe()
+        {
+            try
+            {
+                // WinForms/WPF でなくても使える、.NET 標準の exe ベースディレクトリ取得
+                var d = AppContext.BaseDirectory;
+                if (!string.IsNullOrEmpty(d)) return Path.GetFullPath(d);
+            }
+            catch { }
+
+            try
+            {
+                var d = AppDomain.CurrentDomain.BaseDirectory;
+                if (!string.IsNullOrEmpty(d)) return Path.GetFullPath(d);
+            }
+            catch { }
+
+            // フォールバック：ExtensionsPaths.Root にしない（そこは AppData 用）
+            return Environment.CurrentDirectory;
+        }
+
+        private static string FindOnPath(string fileName)
+        {
+            try
+            {
+                var path = Environment.GetEnvironmentVariable("PATH") ?? "";
+                var parts = path.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var raw in parts)
+                {
+                    string dir = raw;
+                    try { dir = Path.GetFullPath(raw); } catch { }
+                    var p = Path.Combine(dir, fileName);
+                    if (File.Exists(p)) return p;
+                }
+            }
+            catch { }
+            return null;
+        }
+        private static string GetFileVersionOrFallback(string filePath, string fallback)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+                    return fallback;
+
+                var vi = FileVersionInfo.GetVersionInfo(filePath);
+                if (vi != null)
+                {
+                    // FileVersion が優先、無ければ ProductVersion
+                    if (!string.IsNullOrWhiteSpace(vi.FileVersion))
+                        return vi.FileVersion;
+                    if (!string.IsNullOrWhiteSpace(vi.ProductVersion))
+                        return vi.ProductVersion;
+                }
+            }
+            catch
+            {
+                // ignore and fallback
+            }
+            return fallback;
         }
 
         // ---- ここから下はヘルパー（private） ----

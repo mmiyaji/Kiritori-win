@@ -337,8 +337,6 @@ namespace Kiritori
             buttons.Controls.AddRange(new Control[] { _btnResetSel, _btnResetAll, _btnReload, _btnExport, _btnImport });
             root.Controls.Add(buttons, 0, 2);
 
-            // 初期ロード
-            ReloadSettingsIntoGrid();
         }
 
         // 設定キーから説明文字列を引くヘルパ
@@ -475,7 +473,7 @@ namespace Kiritori
             }
 
             _rows = new BindingList<SettingRow>(list.OrderBy(r => r.Name).ToList());
-            Log.Debug($"Loaded {_rows.Count} settings into Advanced tab");
+            Log.Debug($"Loaded {_rows.Count} settings into Advanced tab", "Advanced");
             // foreach (var r in _rows)
             // {
             //     Log.Debug($"  {r.Name} = {r.ValueString} (Default={r.DefaultValue}, Type={r.TypeName}, ReadOnly={r.ReadOnly})");

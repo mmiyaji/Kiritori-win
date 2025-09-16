@@ -2,7 +2,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-
+using Kiritori;
 // アセンブリに関する一般情報は以下の属性セットをとおして制御されます。
 // アセンブリに関連付けられている情報を変更するには、
 // これらの属性値を変更してください。
@@ -36,3 +36,13 @@ using System.Runtime.InteropServices;
 // [assembly: AssemblyVersion("1.0.*")]
 // [assembly: AssemblyVersion("1.2.0.0")]
 // [assembly: AssemblyFileVersion("1.2.0.0")]
+#if EMBED_VERSION_INFO
+[assembly: System.Reflection.AssemblyVersion(Kiritori.VersionInfo.AssemblyVersion)]
+[assembly: System.Reflection.AssemblyFileVersion(Kiritori.VersionInfo.FileVersion)]
+[assembly: System.Reflection.AssemblyInformationalVersion(Kiritori.VersionInfo.InformationalVersion)]
+#else
+// 通常ビルド時の既定値（お好みで調整可）
+[assembly: System.Reflection.AssemblyVersion("1.5.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.5.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersion("1.5.0")]
+#endif

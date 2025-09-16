@@ -256,7 +256,7 @@
     <value>• 画面を切り取って付箋のように固定します</value>
   </data>
   <data name="Text.BtnStartupSetting" xml:space="preserve">
-    <value>スタートアップ設定を開く</value>
+    <value>スタートアップを開く</value>
   </data>
   <data name="Text.PlaySound" xml:space="preserve">
     <value>キャプチャー時に音を鳴らす</value>
@@ -914,5 +914,8 @@
   </data>
   <data name="Text.CaptureFixed" xml:space="preserve">
     <value>サイズ指定でキャプチャー</value>
+  </data>
+  <data name="Text.ExecDefault" xml:space="preserve">
+    <value>実行</value>
   </data>
 </root>

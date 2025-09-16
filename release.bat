@@ -72,7 +72,7 @@ REM ============================================================
 if /I not "%MODE%"=="STORE" (
   echo.
   echo "[STEP] Building Kiritori.csproj (Release|x64) with version !VERSION!..."
-  "%MSBUILD%" "%CS_PROJ%" /t:Build /m /p:Configuration=!CONF! /p:Platform="x64" /p:Version=!VERSION!
+  "%MSBUILD%" "%CS_PROJ%" /t:Build /m /p:Configuration=!CONF! /p:Platform="x64" /p:Version=!VERSION! /p:UserVersion=!VERSION! /p:EmbedVersionInfo=true
   if errorlevel 1 (
     echo "[ERROR] Project build failed."
     goto :end_fail
@@ -118,7 +118,8 @@ if /I not "%MODE%"=="ZIP" (
     /p:AppxBundlePlatforms=x64 ^
     /p:UapAppxPackageBuildMode=StoreUpload ^
     /p:AppxPackageSigningEnabled=false ^
-    /p:BuildProjectReferences=false
+    /p:BuildProjectReferences=false ^
+    /p:UserVersion=!VERSION! /p:EmbedVersionInfo=true
   if errorlevel 1 (
     echo "[ERROR] Store package build failed."
     goto :restore_manifest
@@ -141,14 +142,12 @@ REM ============================================================
 set "APP_ZIP="
 if /I not "%MODE%"=="STORE" (
   echo.
-  echo "[STEP] Creating app ZIP package from packaged output..."
+  echo "[STEP] Creating app ZIP package..."
   set "APP_OUT=KiritoriPackage\bin\!PLAT!\!CONF!\Kiritori"
   if not exist "!APP_OUT!\Kiritori.exe" (
-    echo "[WARN] Not found packaged output: !APP_OUT!\Kiritori.exe"
-    echo "[INFO] Falling back to project output: Kiritori\bin\Any CPU\!CONF!"
-    set "APP_OUT=Kiritori\bin\Any CPU\!CONF!"
+    echo "[WARN] Packaged output not found. Fallback to Kiritori\bin\Release"
+    set "APP_OUT=Kiritori\bin\Release"
   )
-
   if not exist "!APP_OUT!\Kiritori.exe" (
     echo "[ERROR] Built binary not found: !APP_OUT!\Kiritori.exe"
     goto :restore_manifest
@@ -161,20 +160,18 @@ if /I not "%MODE%"=="STORE" (
   xcopy /e /i /y "!APP_OUT!\*" "!ZIP_STAGING!\" >nul
   del /q "!ZIP_STAGING!\*.pdb" 2>nul
   del /q "!ZIP_STAGING!\*.xml" 2>nul
-
-  if exist "Kiritori\ThirdParty" (
-    xcopy /e /i /y "Kiritori\ThirdParty\*" "!ZIP_STAGING!\ThirdParty\" >nul
-  )
+  if exist "Kiritori\ThirdParty" xcopy /e /i /y "Kiritori\ThirdParty\*" "!ZIP_STAGING!\ThirdParty\" >nul
 
   set "APP_ZIP=!ZIP_DIR!\Kiritori-!VERSION!.zip"
   if exist "!APP_ZIP!" del "!APP_ZIP!"
-  powershell -NoProfile -Command "Compress-Archive -Path '!ZIP_STAGING!\*' -DestinationPath '!APP_ZIP!' -Force"
+  rem ★フォルダごと圧縮する（中身ではなくフォルダを指定）
+  powershell -NoProfile -Command "Compress-Archive -Path '!ZIP_STAGING!' -DestinationPath '!APP_ZIP!' -Force"
+
   if errorlevel 1 (
     echo "[ERROR] Compress-Archive failed."
     goto :restore_manifest
   )
   echo "[INFO] App ZIP created: !APP_ZIP!"
-
   for /f "usebackq tokens=*" %%H in (`powershell -NoProfile -Command "(Get-FileHash -Algorithm SHA256 '!APP_ZIP!').Hash"`) do set "APP_SHA=%%H"
   echo "[SHA256] !APP_ZIP! = !APP_SHA!"
 )
