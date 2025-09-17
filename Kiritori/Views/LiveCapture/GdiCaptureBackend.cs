@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Kiritori.Services.Logging;
+using System;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -21,6 +22,7 @@ namespace Kiritori.Views.LiveCapture
             get { lock (_rectLock) return _captureRect; }
             set { lock (_rectLock) _captureRect = value; }
         }
+        public Rectangle CaptureRectPhysical { get; set; } = Rectangle.Empty;
 
         private volatile bool _running;
         private Thread _thread;
@@ -64,7 +66,8 @@ namespace Kiritori.Views.LiveCapture
                         continue;
                     }
 
-                    var rPhysical = DpiUtil.LogicalToPhysical(rLogical);
+                    // var rPhysical = DpiUtil.LogicalToPhysical(rLogical);
+                    var rPhysical = ResolvePhysical();
 
                     // バッファを確実に用意
                     EnsureBuffers(rPhysical.Size);
@@ -89,6 +92,7 @@ namespace Kiritori.Views.LiveCapture
 
                             hdcDst = _g.GetHdc();
                         }
+                        Log.Debug($"[Backend] BitBlt from Phys={rPhysical}  size={rPhysical.Width}x{rPhysical.Height}", "LivePreview");
 
                         // コピー
                         NativeMethods.BitBlt(hdcDst, 0, 0, rPhysical.Width, rPhysical.Height,
@@ -133,6 +137,11 @@ namespace Kiritori.Views.LiveCapture
             {
                 // TODO: ログ
             }
+        }
+        private Rectangle ResolvePhysical()
+        {
+            if (!CaptureRectPhysical.IsEmpty) return CaptureRectPhysical;
+            return DpiUtil.LogicalToPhysical(CaptureRect);
         }
 
         private void EnsureBuffers(Size size)

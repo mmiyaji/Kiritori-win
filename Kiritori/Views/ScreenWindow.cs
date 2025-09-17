@@ -664,20 +664,31 @@ namespace Kiritori
                             // var rPhysical = new Rectangle(crop.X + x, crop.Y + y, crop.Width, crop.Height);
                             // var rScreenLogical = Kiritori.Helpers.DpiUtil.PhysicalToLogical(rPhysical);
                             // var desired = new Point(crop.X + x, crop.Y + y);
-                            var rPhysical = new Rectangle(crop.X + x, crop.Y + y, crop.Width, crop.Height);
-                            var rLogical  = Kiritori.Helpers.DpiUtil.PhysicalToLogical(rPhysical);
-                            var liveWin = new LivePreviewWindow
-                            {
-                                // LivePreviewWindow は CaptureRect を「論理px（スクリーン座標）」として解釈する前提
-                                CaptureRect = rLogical,
+                            var srcPhys = new Rectangle(
+                                crop.X + x,
+                                crop.Y + y,
+                                (crop.Width  & ~1),
+                                (crop.Height & ~1)
+                            );
+                            var srcLog = Kiritori.Helpers.DpiUtil.PhysicalToLogical(srcPhys);
+                            Log.Debug($"[LivePreview] [Select] rPhys={srcPhys}  rLog={srcLog}", "LivePreview");
+                            // var rPhys = new Rectangle(crop.X + x, crop.Y + y, crop.Width, crop.Height);
+                            // var rLog  = DpiUtil.PhysicalToLogical(rPhys); // ←重要：論理に戻す
+                            // Log.Debug($"[Select] rPhys={rPhys}  rLog={rLog}", "LivePreview");
+
+                            // ここは"論理px"を渡す
+                            var liveWin = new LivePreviewWindow {
+                                CaptureRect = srcLog,
+                                SourceRectPhysical = srcPhys,
                                 StartPosition = FormStartPosition.Manual,
                                 MainApp = this.ma,
                                 AutoTopMost = true,
                             };
+                            liveWin.Show();
 
                             // クライアント左上が rScreenLogical.Left/Top に一致するように、
                             // DPI と非クライアント（枠/タイトルバー）を API で加味して配置。
-                            // WindowAligner.MoveFormToMatchClient(liveWin, rScreenLogical, topMost: true);
+                            WindowAligner.MoveFormToMatchClient(liveWin, srcLog, topMost: true);
 
                             // 表示（TopMost は MoveFormToMatchClient 内でも設定している）
                             liveWin.Show();

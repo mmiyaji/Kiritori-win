@@ -19,6 +19,7 @@ namespace Kiritori.Views.LiveCapture
         private Bitmap _latest;
         private readonly object _frameSync = new object();
         public Rectangle CaptureRect { get; set; }   // 論理px（スクリーン座標）
+        public Rectangle SourceRectPhysical { get; set; } = Rectangle.Empty;
         public bool AutoTopMost { get; set; } = true;
         private ContextMenuStrip _ctx;
         private ToolStripMenuItem
@@ -244,16 +245,47 @@ namespace Kiritori.Views.LiveCapture
         }
         private Size GetDesiredClientLogical()
         {
-            // 1) ソース矩形（CaptureRect）は論理px → 物理pxへ（ソース側DPI）
-            var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
+            // 表示先（このウィンドウが居るモニタ）の論理pxに合わせる
+            float sDst = this.DeviceDpi / 96f;
 
-            // 2) 表示先DPI（このウィンドウがいま居るモニタ）で論理pxに戻す
-            float sDst = this.DeviceDpi / 96f; // 例: 150%なら1.5
-            int wLog = (int)Math.Round((rPhys.Width / sDst) * _zoom);
-            int hLog = (int)Math.Round((rPhys.Height / sDst) * _zoom);
-            return new Size(wLog, hLog);
+            if (!SourceRectPhysical.IsEmpty)
+            {
+                int w = (int)Math.Round(SourceRectPhysical.Width  / sDst * _zoom);
+                int h = (int)Math.Round(SourceRectPhysical.Height / sDst * _zoom);
+                return new Size(w, h);
+            }
+
+            // フォールバック：CaptureRect(論理)→物理→表示先論理
+            var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
+            int w2 = (int)Math.Round(rPhys.Width  / sDst * _zoom);
+            int h2 = (int)Math.Round(rPhys.Height / sDst * _zoom);
+            return new Size(w2, h2);
         }
 
+        private void SnapClientSizeLogical(Size wantClientLog, string tag)
+        {
+            // 現在のInsetsを使って外形を再計算 → 実測Client差分ぶんだけ詰める
+            const int MAX_ITERS = 4;
+            for (int i = 0; i < MAX_ITERS; i++)
+            {
+                if (!GetClientRect(this.Handle, out var crc)) break;
+                int curW = crc.Right - crc.Left;
+                int curH = crc.Bottom - crc.Top;
+
+                int dW = wantClientLog.Width  - curW;
+                int dH = wantClientLog.Height - curH;
+                if (dW == 0 && dH == 0) break;
+
+                var ins = GetNcInsets();
+                int outerW = wantClientLog.Width  + ins.Left + ins.Right;
+                int outerH = wantClientLog.Height + ins.Top  + ins.Bottom;
+
+                Log.Debug($"{tag}: SizeSnap#{i} cur={curW}x{curH} -> want={wantClientLog.Width}x{wantClientLog.Height} outer={outerW}x{outerH}", "LivePreview");
+
+                SetWindowPos(this.Handle, IntPtr.Zero, this.Left, this.Top,
+                    outerW, outerH, SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+            }
+        }
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
             switch ((int)keyData)
@@ -723,37 +755,35 @@ namespace Kiritori.Views.LiveCapture
         {
             base.OnLoad(e);
 
-            // WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: AutoTopMost);
-            // ResizeToKeepClient(GetDesiredClient());
-            // 先に物理サイズを決めてから、クライアント左上=CaptureRectへ位置合わせ
-            // ResizeToKeepClient(GetDesiredClientPhysical());
-            // WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: AutoTopMost);
-            // MoveThenResizePhysicalWithLogs("OnLoad", AutoTopMost);
+            var wantClient = GetDesiredClientLogical();
+            ResizeToKeepClient(wantClient);               // 一度当てる
+            AlignClientTopLeftPhysical("OnLoad", AutoTopMost);
+            SnapClientSizeLogical(wantClient, "OnLoad");  // ★サイズ押し込み
 
-            // ResizeToKeepClient(GetDesiredClientLogical());
-            // AlignClientTopLeftPhysical("OnLoad", AutoTopMost);
-            ResizeToKeepClient(GetDesiredClientLogical());
-            WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: AutoTopMost);
             TrySyncFirstCaptureIntoLatest(CaptureRect);
             Invalidate();
 
             try
             {
-                var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
+                // var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
                 Log.Debug($"OnLoad: DeviceDpi={this.DeviceDpi}, CaptionHidden={_captionHidden}, TopMost={this.TopMost}", "LivePreview");
-                Log.Debug($"OnLoad: CaptureRect logical={RectStr(CaptureRect)} physical={RectStr(rPhys)}", "LivePreview");
+                // Log.Debug($"OnLoad: CaptureRect logical={RectStr(CaptureRect)} physical={RectStr(rPhys)}", "LivePreview");
                 var ins = GetNcInsets();
                 Log.Debug($"OnLoad: Insets {InsetsStr(ins)}", "LivePreview");
                 Log.Debug($"OnLoad: Client={this.ClientSize.Width}x{this.ClientSize.Height}, Bounds={RectStr(new Rectangle(this.Left, this.Top, this.Width, this.Height))}", "LivePreview");
             }
             catch { /* no-op */ }
 
-            var gdi = new GdiCaptureBackend
-            {
-                MaxFps = _maxFps,
-                CaptureRect = this.CaptureRect
-            };
-
+            // var gdi = new GdiCaptureBackend
+            // {
+            //     MaxFps = _maxFps,
+            //     CaptureRect = this.CaptureRect
+            // };
+            var gdi = new GdiCaptureBackend { MaxFps = _maxFps };
+            if (!SourceRectPhysical.IsEmpty)
+                gdi.CaptureRectPhysical = SourceRectPhysical; // ← 新規（下の #3 参照）
+            else
+                gdi.CaptureRect = this.CaptureRect; // 従来互換
             gdi.ExcludeWindow = this.Handle;
             gdi.FrameArrived += OnFrameArrived;
             _backend = gdi;
@@ -1304,7 +1334,9 @@ namespace Kiritori.Views.LiveCapture
         {
             if (rLogical.Width <= 0 || rLogical.Height <= 0) return;
 
-            var rPhysical = DpiUtil.LogicalToPhysical(rLogical);
+            // var rPhysical = DpiUtil.LogicalToPhysicalAtSource(rLogical);
+            var rPhysical = !SourceRectPhysical.IsEmpty ? SourceRectPhysical
+                                                        : DpiUtil.LogicalToPhysical(rLogical);
 
             var bmp = new Bitmap(rPhysical.Width, rPhysical.Height, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
             using (var g = Graphics.FromImage(bmp))
@@ -1746,23 +1778,31 @@ namespace Kiritori.Views.LiveCapture
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
-            Log.Debug($"LivePreview shown: Handle={this.Handle}, DeviceDpi={this.DeviceDpi}", "LivePreview");
-            if (SupportsExcludeFromCapture())
+
+            // 1フレーム後に“確定した”Insetsで再調整
+            BeginInvoke((Action)(() =>
             {
-                // 設定を実ウィンドウに同期（冪等）
-                bool desired = Properties.Settings.Default.LivePreviewPrivacyMode;
-                ApplyCaptureExclusion(desired);
-                if (_miPrivacy != null) _miPrivacy.Checked = desired; // 表示だけ合わせる
-            }
-            else
+                var wantClient = GetDesiredClientLogical();
+                SnapClientSizeLogical(wantClient, "OnShown");
+                // 位置も最終確認（既存の位置スナップを併用）
+                var wantPhys = !SourceRectPhysical.IsEmpty ? SourceRectPhysical : DpiUtil.LogicalToPhysical(CaptureRect);
+                SnapClientTopLeftToPhysical(new Point(wantPhys.X, wantPhys.Y), "OnShown");
+            }));
+        }
+        private void SnapClientTopLeftToPhysical(Point wantPhysTL, string tag)
+        {
+            const int MAX_ITERS = 4; // だいたい1～2回で一致します
+            for (int i = 0; i < MAX_ITERS; i++)
             {
-                // サポート外：項目を無効化して誤操作を防ぐ
-                if (_miPrivacy != null)
-                {
-                    _miPrivacy.Enabled = false;
-                    _miPrivacy.Checked = false; // 見た目もOFF
-                }
-                ApplyCaptureExclusion(false); // 念のため解除
+                var cur = GetClientTopLeftOnScreen(); // 物理px
+                int dx = wantPhysTL.X - cur.X;
+                int dy = wantPhysTL.Y - cur.Y;
+
+                Log.Debug($"{tag}: Snap#{i} cur=({cur.X},{cur.Y}) -> delta=({dx},{dy})", "LivePreview");
+                if (dx == 0 && dy == 0) break;
+
+                SetWindowPos(this.Handle, IntPtr.Zero, this.Left + dx, this.Top + dy,
+                    0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
             }
         }
         private void ToggleRecord()
@@ -1923,7 +1963,7 @@ namespace Kiritori.Views.LiveCapture
         private Size GetDesiredClientPhysical()
         {
             // CaptureRect は論理px。ソース側モニタDPIで物理pxへ。
-            var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
+            var rPhys = DpiUtil.LogicalToPhysicalAtSource(CaptureRect);
             int w = (int)Math.Round(rPhys.Width * _zoom);
             int h = (int)Math.Round(rPhys.Height * _zoom);
             Log.Debug($"DesiredClient: logical={CaptureRect.Width}x{CaptureRect.Height} -> physical={w}x{h} (zoom={_zoom:F2})", "LivePreview");
@@ -1939,23 +1979,26 @@ namespace Kiritori.Views.LiveCapture
         // クライアント左上を「物理pxの CaptureRect.X/Y」に合わせる
         private void AlignClientTopLeftPhysical(string tag, bool topMost)
         {
-            var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
+            // まず従来の計算で大まかに移動
+            var wantPhys = !SourceRectPhysical.IsEmpty
+                ? SourceRectPhysical
+                : DpiUtil.LogicalToPhysical(CaptureRect);
+
+            float sDst = this.DeviceDpi / 96f;
             var ins = GetNcInsets();
-            float sDst = this.DeviceDpi / 96f; // このウィンドウが今いるモニタのスケール
-
-            // 目的のクライアント左上（このモニタの“論理px”）= 物理 / sDst
-            int clientL = (int)Math.Round(rPhys.X / sDst);
-            int clientT = (int)Math.Round(rPhys.Y / sDst);
-
+            int clientL = (int)Math.Round(wantPhys.X / sDst);
+            int clientT = (int)Math.Round(wantPhys.Y / sDst);
             int newLeft = clientL - ins.Left;
-            int newTop = clientT - ins.Top;
+            int newTop  = clientT - ins.Top;
 
             SetWindowPos(this.Handle, IntPtr.Zero, newLeft, newTop, 0, 0,
                 SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
 
+            // ★最重要★：実際のクライアント左上を読んで、目標(物理)に“押し込む”
+            SnapClientTopLeftToPhysical(new Point(wantPhys.X, wantPhys.Y), tag);
+
             var cur = GetClientTopLeftOnScreen();
-            Log.Debug($"{tag}: AlignPhysical: wantPhysTL=({rPhys.X},{rPhys.Y}), sDst={sDst:F2}, set LeftTop=({newLeft},{newTop}), " +
-                $"clientTL(after)=({cur.X},{cur.Y})", "LivePreview");
+            Log.Debug($"{tag}: clientTL(final)=({cur.X},{cur.Y}) target=({wantPhys.X},{wantPhys.Y})", "LivePreview");
         }
         private readonly Stopwatch _recFpsWatch = Stopwatch.StartNew();
         //private long _recLastTicks;
