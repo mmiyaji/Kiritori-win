@@ -31,7 +31,7 @@ namespace Kiritori.Views.Capture
         public FixedSizePresetDialog()
         {
             Text = "Fixed-size Capture";
-            Font = new Font("Segoe UI", 9f);
+            Font = new Font("Segoe UI", 9f, GraphicsUnit.Point);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false; MinimizeBox = false;
             ShowInTaskbar = false;

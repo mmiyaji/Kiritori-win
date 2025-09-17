@@ -145,7 +145,7 @@ namespace Kiritori.Views
             _rtb.ReadOnly = true;
             _rtb.Dock = DockStyle.Fill;
             _rtb.BorderStyle = BorderStyle.FixedSingle;
-            _rtb.Font = new Font("Consolas", 10f);
+            _rtb.Font = new Font("Consolas", 10f, GraphicsUnit.Point);
             _rtb.WordWrap = true;
 
             rightPanel.Controls.Add(btnRow, 0, 0);

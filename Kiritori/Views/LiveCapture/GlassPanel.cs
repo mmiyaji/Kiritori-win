@@ -121,7 +121,7 @@ namespace Kiritori.Views.LiveCapture
             // ラベル
             string text = Paused ? "▶  Resume" : "⏸  Pause";
             using (var fmt = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
-            using (var f = new Font(Font.FontFamily, 9f, FontStyle.Bold))
+            using (var f = new Font(Font.FontFamily, 9f, FontStyle.Bold, GraphicsUnit.Point))
             using (var brText = new SolidBrush(Color.White))
                 g.DrawString(text, f, brText, _btnRect, fmt);
         }

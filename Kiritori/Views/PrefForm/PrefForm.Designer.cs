@@ -378,13 +378,13 @@ namespace Kiritori
 
             this.labelLanguage = NewRightLabel("Language");
             this.labelLanguage.Tag = "loc:Text.Language";
-            this.cmbLanguage = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 220 };
+            this.cmbLanguage = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Dock = DockStyle.Fill };
             this.cmbLanguage.Items.AddRange(new object[] { "English (en)", "日本語 (ja)" });
             this.cmbLanguage.SelectedIndex = 0;
 
             this.labelOCRLanguage = NewRightLabel("OCR Language");
             this.labelOCRLanguage.Tag = "loc:Text.OcrLanguage";
-            this.cmbOCRLanguage = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 220 };
+            this.cmbOCRLanguage = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Dock = DockStyle.Fill};
 
             PopulateOcrLanguageCombo();
             RestoreOcrLanguageSelection();
@@ -403,9 +403,15 @@ namespace Kiritori
 
             this.labelHistory = NewRightLabel("History limit");
             this.labelHistory.Tag = "loc:Text.HistoryLimit";
-            this.textBoxHistory = new NumericUpDown { Minimum = 0, Maximum = 100, Value = 20, Width = 80, Anchor = AnchorStyles.Left };
-            this.textBoxHistory.Minimum = 0;
-            this.textBoxHistory.Maximum = 100;
+            this.textBoxHistory = new NumericUpDown
+            {
+                Minimum = 0,
+                Maximum = 100,
+                Value = 20,
+                Anchor = AnchorStyles.Left,
+                Dock = DockStyle.Fill
+            };
+            this.textBoxHistory.MaximumSize = new Size(120, 0);
 
             tlpApp.Controls.Add(this.labelLanguage, 0, 0);
             tlpApp.Controls.Add(this.cmbLanguage, 1, 0);
@@ -431,7 +437,13 @@ namespace Kiritori
             var tlpHot = NewGrid(4, 5);
             this.labelHotkeyCapture = NewRightLabel("Image capture");
             this.labelHotkeyCapture.Tag = "loc:Text.ImageCapture";
-            this.textBoxKiritori = new TextBox { Enabled = false, Width = 160, Text = "Ctrl + Shift + 5" };
+            // this.textBoxKiritori = new TextBox
+            // {
+            //     Enabled = false,
+            //     Width = 160,
+            //     Text = "Ctrl + Shift + 5",
+            //     Dock = DockStyle.Fill
+            // };
             this.labelHotkeyCaptureOCR = NewRightLabel("OCR capture");
             this.labelHotkeyCaptureOCR.Tag = "loc:Text.OCRCapture";
 
@@ -652,7 +664,15 @@ namespace Kiritori
             // 太さ（残す）
             this.labelHoverThickness = NewRightLabel("Highlight thickness (px)");
             this.labelHoverThickness.Tag = "loc:Text.HighlightThickness";
-            this.numHoverThickness = new NumericUpDown { Minimum = 1, Maximum = 10, Value = 2, Width = 60, Anchor = AnchorStyles.Left };
+            this.numHoverThickness = new NumericUpDown
+            {
+                Minimum = 1,
+                Maximum = 10,
+                Value = 2,
+                Anchor = AnchorStyles.Left,
+                Dock = DockStyle.Fill,
+            };
+            this.numHoverThickness.MaximumSize = new Size(120, 0);
             tlpWin.Controls.Add(this.labelHoverThickness, 0, 2);
             tlpWin.Controls.Add(this.numHoverThickness, 1, 2);
 
@@ -771,7 +791,8 @@ namespace Kiritori
             this.labelAppName.Font = new Font(
                 this.Font.FontFamily,
                 this.Font.Size + 6,
-                FontStyle.Bold
+                FontStyle.Bold,
+                GraphicsUnit.Point
             );
 
             // バージョン（ApplyDynamicTexts で差し替え）

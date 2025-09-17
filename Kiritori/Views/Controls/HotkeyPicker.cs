@@ -14,6 +14,7 @@ namespace Kiritori
             this.ReadOnly = true;
             this.ShortcutsEnabled = false; // Ctrl+C 等のショートカットを無効に
             this.TabStop = true;
+            this.Dock = DockStyle.Fill;
         }
 
         public void SetFromText(string text, HotkeySpec fallback)

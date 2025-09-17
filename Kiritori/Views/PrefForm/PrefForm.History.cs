@@ -110,7 +110,7 @@ namespace Kiritori
             {
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font("Segoe UI", 11f, FontStyle.Bold),
+                Font = new Font("Segoe UI", 11f, FontStyle.Bold, GraphicsUnit.Point),
                 Dock = DockStyle.Top,
                 Height = 36
             };
@@ -119,7 +119,7 @@ namespace Kiritori
             {
                 AutoSize = false,
                 TextAlign = ContentAlignment.TopCenter,
-                Font = new Font("Segoe UI", 9f, FontStyle.Regular),
+                Font = new Font("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point),
                 Dock = DockStyle.Top,
                 Height = 48
             };
@@ -601,9 +601,9 @@ namespace Kiritori
                 desc = desc.Replace("\r", " ").Replace("\n", " ").Trim();
             }
 
-            using (var fBold = new Font("Segoe UI", 9f, FontStyle.Bold))
-            using (var f = new Font("Segoe UI", 9f, FontStyle.Regular))
-            using (var fDesc = new Font("Segoe UI", 8f, FontStyle.Regular))
+            using (var fBold = new Font("Segoe UI", 9f, FontStyle.Bold, GraphicsUnit.Point))
+            using (var f = new Font("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point))
+            using (var fDesc = new Font("Segoe UI", 8f, FontStyle.Regular, GraphicsUnit.Point))
             {
                 var r1 = new Rectangle(textX, y, textW, 20);
                 TextRenderer.DrawText(e.Graphics, date, fBold, r1, cMain, TextFormatFlags.EndEllipsis);

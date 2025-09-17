@@ -206,13 +206,13 @@ REM ============================================================
 REM  5) Checksums file
 REM ============================================================
 echo.
-echo "[STEP] Generating SHA256 checksums file..."
+echo "[STEP] Generating SHA256 checksums file (with sizes)..."
 set "CS_OUT=!DIST!\checksums.txt"
 if exist "!CS_OUT!" del "!CS_OUT!"
 
-for %%F in ("!ZIP_DIR!\*.zip") do powershell -NoProfile -Command "$h=(Get-FileHash -Algorithm SHA256 '%%~fF').Hash; Add-Content -Path '!CS_OUT!' -Value ('{0}  {1}' -f $h,'%%~nxF')"
-for %%F in ("!TOP_DIST!\lang-*-!VERSION!.zip") do if exist "%%~fF" powershell -NoProfile -Command "$h=(Get-FileHash -Algorithm SHA256 '%%~fF').Hash; Add-Content -Path '!CS_OUT!' -Value ('{0}  {1}' -f $h,'%%~nxF')"
-for %%F in ("!STORE_DIR!\*.msix*" "!STORE_DIR!\*.appx*" "!STORE_DIR!\*.eappx*" "!STORE_DIR!\*.msixbundle*") do if exist "%%~fF" powershell -NoProfile -Command "$h=(Get-FileHash -Algorithm SHA256 '%%~fF').Hash; Add-Content -Path '!CS_OUT!' -Value ('{0}  {1}' -f $h,'%%~nxF')"
+for %%F in ("!ZIP_DIR!\*.zip") do powershell -NoProfile -Command "$f='%%~fF'; $it=Get-Item $f; $h=(Get-FileHash -Algorithm SHA256 $f).Hash; Add-Content -Path '!CS_OUT!' -Value ('{0}  {1,12} bytes  ({2,6:N2} MiB)  {3}' -f $h, $it.Length, ($it.Length/1MB), $it.Name)"
+for %%F in ("!TOP_DIST!\lang-*-!VERSION!.zip") do if exist "%%~fF" powershell -NoProfile -Command "$f='%%~fF'; $it=Get-Item $f; $h=(Get-FileHash -Algorithm SHA256 $f).Hash; Add-Content -Path '!CS_OUT!' -Value ('{0}  {1,12} bytes  ({2,6:N2} MiB)  {3}' -f $h, $it.Length, ($it.Length/1MB), $it.Name)"
+for %%F in ("!STORE_DIR!\*.msix*" "!STORE_DIR!\*.appx*" "!STORE_DIR!\*.eappx*" "!STORE_DIR!\*.msixbundle*") do if exist "%%~fF" powershell -NoProfile -Command "$f='%%~fF'; $it=Get-Item $f; $h=(Get-FileHash -Algorithm SHA256 $f).Hash; Add-Content -Path '!CS_OUT!' -Value ('{0}  {1,12} bytes  ({2,6:N2} MiB)  {3}' -f $h, $it.Length, ($it.Length/1MB), $it.Name)"
 
 type "!CS_OUT!"
 

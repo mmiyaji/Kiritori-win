@@ -93,7 +93,7 @@ namespace Kiritori.Views.LiveCapture
         private readonly int _overlayDurationMs = 2000;
         private readonly int _overlayFadeMs = 300;
         private System.Windows.Forms.Timer _overlayTimer;
-        private Font _overlayFont = new Font("Segoe UI", 10f, FontStyle.Bold);
+        private Font _overlayFont = new Font("Segoe UI", 10f, FontStyle.Bold, GraphicsUnit.Point);
         // private int _dpi = 96;
 
 
@@ -160,6 +160,7 @@ namespace Kiritori.Views.LiveCapture
         // タイトルバーがある時は OS の×があるので自前は非表示にする
         private bool ShouldShowInlineClose() => _captionHidden && _windowHot;
         private bool _privacyExclusionEnabled = true; // 現在の状態（true=映らない）
+        // private bool _closing = false;
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS margins);
@@ -230,6 +231,7 @@ namespace Kiritori.Views.LiveCapture
         private static string RectStr(RECT r) => $"({r.Left},{r.Top}) {r.Right - r.Left}x{r.Bottom - r.Top}";
         private static string InsetsStr(NcInsets i) => $"L{i.Left} T{i.Top} R{i.Right} B{i.Bottom}";
         // ===========================================================================
+        
         private void MoveThenResizePhysicalWithLogs(string tag, bool topMost)
         {
             // 位置合わせ（※これが内部で“論理サイズ”に変えるので、この後でサイズを上書きする）
@@ -239,6 +241,17 @@ namespace Kiritori.Views.LiveCapture
             // 物理サイズへ上書き
             ResizeToKeepClient(GetDesiredClientPhysical());
             Log.Debug($"{tag}: after ResizePhysical: Client={this.ClientSize.Width}x{this.ClientSize.Height}, Bounds=({this.Left},{this.Top}) {this.Width}x{this.Height}, Insets {InsetsStr(GetNcInsets())}", "LivePreview");
+        }
+        private Size GetDesiredClientLogical()
+        {
+            // 1) ソース矩形（CaptureRect）は論理px → 物理pxへ（ソース側DPI）
+            var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
+
+            // 2) 表示先DPI（このウィンドウがいま居るモニタ）で論理pxに戻す
+            float sDst = this.DeviceDpi / 96f; // 例: 150%なら1.5
+            int wLog = (int)Math.Round((rPhys.Width / sDst) * _zoom);
+            int hLog = (int)Math.Round((rPhys.Height / sDst) * _zoom);
+            return new Size(wLog, hLog);
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
@@ -407,11 +420,20 @@ namespace Kiritori.Views.LiveCapture
             _overlayTimer = new System.Windows.Forms.Timer { Interval = 33 };
             _overlayTimer.Tick += (s, e) =>
             {
-                if (_overlayText == null) { _overlayTimer.Stop(); return; }
+                if (this.IsDisposed || this.Disposing || !this.IsHandleCreated || !this.Visible)
+                {
+                    _overlayTimer.Stop();
+                    return;
+                }
+
+                if (_overlayText == null)
+                {
+                    _overlayTimer.Stop();
+                    return;
+                }
 
                 if ((DateTime.Now - _overlayStart).TotalMilliseconds > _overlayDurationMs)
                 {
-                    // 終了時：前回領域も含めて消し込み
                     if (!_overlayLastRect.IsEmpty) Invalidate(_overlayLastRect);
                     _overlayLastRect = Rectangle.Empty;
                     _overlayText = null;
@@ -419,16 +441,17 @@ namespace Kiritori.Views.LiveCapture
                     return;
                 }
 
-                // 今回の矩形を計算して、前回との和を Invalidate
-                using (var g = this.CreateGraphics())
+                try
                 {
-                    var curr = ComputeOverlayRect(g, _overlayText ?? "");
+                    // Invalidate を使う方式の方が安定する
+                    var curr = ComputeOverlayRect(this.CreateGraphics(), _overlayText ?? "");
                     var inv = _overlayLastRect.IsEmpty ? curr : Rectangle.Union(_overlayLastRect, curr);
                     _overlayLastRect = curr;
                     if (!inv.IsEmpty) Invalidate(inv);
                 }
+                catch (ObjectDisposedException) { /* ignore */ }
+                catch (InvalidOperationException) { /* ignore */ }
             };
-
         }
         private Rectangle _overlayLastRect = Rectangle.Empty;
         private Rectangle ComputeOverlayRect(Graphics g, string text)
@@ -684,6 +707,12 @@ namespace Kiritori.Views.LiveCapture
         }
         protected override void OnHandleDestroyed(EventArgs e)
         {
+            if (!this.RecreatingHandle && _overlayTimer != null)
+            {
+                _overlayTimer.Stop();
+                _overlayTimer.Dispose();
+                _overlayTimer = null;
+            }
             // 破棄中にタイマーが走らないよう即停止
             try { _perfTimer?.Change(Timeout.Infinite, Timeout.Infinite); } catch { }
             base.OnHandleDestroyed(e);
@@ -700,8 +729,11 @@ namespace Kiritori.Views.LiveCapture
             // ResizeToKeepClient(GetDesiredClientPhysical());
             // WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: AutoTopMost);
             // MoveThenResizePhysicalWithLogs("OnLoad", AutoTopMost);
-            ResizeToKeepClient(GetDesiredClientPhysical());
-            AlignClientTopLeftPhysical("OnLoad", AutoTopMost);
+
+            // ResizeToKeepClient(GetDesiredClientLogical());
+            // AlignClientTopLeftPhysical("OnLoad", AutoTopMost);
+            ResizeToKeepClient(GetDesiredClientLogical());
+            WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: AutoTopMost);
             TrySyncFirstCaptureIntoLatest(CaptureRect);
             Invalidate();
 
@@ -815,7 +847,7 @@ namespace Kiritori.Views.LiveCapture
 
                 if (_paused)
                 {
-                    using (var font = new Font("Segoe UI", 12, FontStyle.Bold))
+                    using (var font = new Font("Segoe UI", 12, FontStyle.Bold, GraphicsUnit.Point))
                     using (var fg = new SolidBrush(Color.Yellow))
                     using (var shadow = new SolidBrush(Color.FromArgb(160, 0, 0, 0)))
                     using (var bg = new SolidBrush(Color.FromArgb(bgA, 0, 0, 0)))
@@ -846,7 +878,7 @@ namespace Kiritori.Views.LiveCapture
                     //     _fps, _cpuUsage, _memUsage / 1024 / 1024);
                     string info = string.Format("FPS: {0} / {1}  CPU: {2:F1}%  MEM: {3} MB",
                         _dispFps, _srcFps, _cpuUsage, _memUsage / 1024 / 1024);
-                    using (var font = new Font("Segoe UI", 9))
+                    using (var font = new Font("Segoe UI", 9, GraphicsUnit.Point))
                     using (var fg = new SolidBrush(Color.White))
                     using (var shadow = new SolidBrush(Color.FromArgb(128, 0, 0, 0)))
                     using (var bg = new SolidBrush(Color.FromArgb(bgA, 0, 0, 0)))
@@ -1208,30 +1240,61 @@ namespace Kiritori.Views.LiveCapture
             return (ptClient.X <= grip) || (ptClient.X >= w - grip) ||
                     (ptClient.Y <= grip) || (ptClient.Y >= h - grip);
         }
+        // protected override void OnFormClosing(FormClosingEventArgs e)
+        // {
+        //     _closing = true;
+        //     base.OnFormClosing(e);
+        // }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            StopRecording();
-            try { _perfTimer?.Change(Timeout.Infinite, Timeout.Infinite); } catch { }
-            try { _perfTimer?.Dispose(); } catch { }
-            _perfTimer = null;
-
-            try { _backend?.Dispose(); } catch { }
-            _backend = null;
-
-            lock (_frameSync)
+            // ---- Timers ----
+            var ot = _overlayTimer; _overlayTimer = null;
+            if (ot != null)
             {
-                _latest?.Dispose();
-                _latest = null;
+                try { ot.Stop(); } catch { }
+                try { ot.Dispose(); } catch { }
             }
 
-            try { _iconBadge?.Dispose(); } catch { }
-            _iconBadge = null;
+            var ft = _fadeTimer; _fadeTimer = null;
+            if (ft != null)
+            {
+                try { ft.Stop(); } catch { }
+                try { ft.Dispose(); } catch { }
+            }
 
-            try { _fadeTimer?.Stop(); _fadeTimer?.Dispose(); } catch { }
-            _fadeTimer = null;
+            var pt = _perfTimer; _perfTimer = null;
+            if (pt != null)
+            {
+                try { pt.Change(Timeout.Infinite, Timeout.Infinite); } catch { }
+                try { pt.Dispose(); } catch { }
+            }
 
-            try { _ctx?.Dispose(); } catch { }
+            // ---- Backend / Recording ----
+            var bk = _backend; _backend = null;
+            if (bk != null)
+            {
+                try { bk.FrameArrived -= OnFrameArrived; } catch { }
+                try { bk.Dispose(); } catch { }
+            }
+
+            try { StopRecording(); } catch { }
+
+            // ---- Bitmaps ----
+            lock (_frameSync)
+            {
+                if (_latest != null) { try { _latest.Dispose(); } catch { } _latest = null; }
+                if (_lastPresentedFrame != null) { try { _lastPresentedFrame.Dispose(); } catch { } _lastPresentedFrame = null; }
+            }
+
+            // ---- Misc UI resources ----
+            if (_iconBadge != null) { try { _iconBadge.Dispose(); } catch { } _iconBadge = null; }
+
+            var cm = _ctx; _ctx = null;
+            if (cm != null)
+            {
+                try { cm.Dispose(); } catch { }
+            }
 
             base.OnFormClosed(e);
         }
@@ -1280,7 +1343,7 @@ namespace Kiritori.Views.LiveCapture
             // ResizeToKeepClient(GetDesiredClient());
             // WindowAligner.MoveFormToMatchClient(this, CaptureRect, topMost: _miTopMost?.Checked ?? true);
             // MoveThenResizePhysicalWithLogs("Realign", _miTopMost?.Checked ?? true);
-            ResizeToKeepClient(GetDesiredClientPhysical());
+            ResizeToKeepClient(GetDesiredClientLogical());
             AlignClientTopLeftPhysical("Realign", _miTopMost?.Checked ?? true);
             Invalidate();
             ShowOverlay("POSITION RESET");
@@ -1791,7 +1854,7 @@ namespace Kiritori.Views.LiveCapture
             //     topMost: _miTopMost?.Checked ?? this.TopMost
             // );
             // タイトルバー/枠を含めた DPI 正確なサイズに調整（左上は維持）
-            ResizeToKeepClient(GetDesiredClientPhysical());
+            ResizeToKeepClient(GetDesiredClientLogical());
             // TopMost は必要なら維持
             this.TopMost = _miTopMost?.Checked ?? this.TopMost;
             _lastPresentedClientSize = Size.Empty;

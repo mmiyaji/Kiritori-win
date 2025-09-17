@@ -35,7 +35,7 @@ namespace Kiritori
         private Bitmap baseBmp; // キャプチャ原本
         private Boolean isOpen;
         private ArrayList captureArray;
-        private Font fnt = new Font("Segoe UI", 10);
+        private Font fnt = new Font("Segoe UI", 10, GraphicsUnit.Point);
         private MainApplication ma;
         private int currentDpi = 96;
 
@@ -652,27 +652,32 @@ namespace Kiritori
                             // ここで物理pxに変換しないこと（キャプチャ側だけで物理化する設計）
 
                             // 幅・高さを偶数に丸める
-                            int evenWidth = crop.Width & ~1;
-                            int evenHeight = crop.Height & ~1;
-                            var rPhysical = new Rectangle(
-                                crop.X + x,
-                                crop.Y + y,
-                                evenWidth,
-                                evenHeight
-                            );
-                            var rScreenLogical = Kiritori.Views.LiveCapture.GdiCaptureBackend.DpiUtil.PhysicalToLogical(rPhysical);
-
+                            // int evenWidth = crop.Width & ~1;
+                            // int evenHeight = crop.Height & ~1;
+                            // var rPhysical = new Rectangle(
+                            //     crop.X + x,
+                            //     crop.Y + y,
+                            //     evenWidth,
+                            //     evenHeight
+                            // );
+                            // var rScreenLogical = Kiritori.Views.LiveCapture.GdiCaptureBackend.DpiUtil.PhysicalToLogical(rPhysical);
+                            // var rPhysical = new Rectangle(crop.X + x, crop.Y + y, crop.Width, crop.Height);
+                            // var rScreenLogical = Kiritori.Helpers.DpiUtil.PhysicalToLogical(rPhysical);
+                            // var desired = new Point(crop.X + x, crop.Y + y);
+                            var rPhysical = new Rectangle(crop.X + x, crop.Y + y, crop.Width, crop.Height);
+                            var rLogical  = Kiritori.Helpers.DpiUtil.PhysicalToLogical(rPhysical);
                             var liveWin = new LivePreviewWindow
                             {
                                 // LivePreviewWindow は CaptureRect を「論理px（スクリーン座標）」として解釈する前提
-                                CaptureRect = rScreenLogical,
+                                CaptureRect = rLogical,
                                 StartPosition = FormStartPosition.Manual,
                                 MainApp = this.ma,
+                                AutoTopMost = true,
                             };
 
                             // クライアント左上が rScreenLogical.Left/Top に一致するように、
                             // DPI と非クライアント（枠/タイトルバー）を API で加味して配置。
-                            WindowAligner.MoveFormToMatchClient(liveWin, rScreenLogical, topMost: true);
+                            // WindowAligner.MoveFormToMatchClient(liveWin, rScreenLogical, topMost: true);
 
                             // 表示（TopMost は MoveFormToMatchClient 内でも設定している）
                             liveWin.Show();
@@ -1257,7 +1262,7 @@ namespace Kiritori
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false; this.MinimizeBox = false;
             this.StartPosition = FormStartPosition.CenterParent;
-            this.Font = new Font("Segoe UI", 9f);
+            this.Font = new Font("Segoe UI", 9f, GraphicsUnit.Point);
             this.ClientSize = new Size(260, 110);
 
             var lblW = new Label { Left = 12, Top = 16, Width = 20, Text = "W" };

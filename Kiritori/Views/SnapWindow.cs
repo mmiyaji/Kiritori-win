@@ -56,7 +56,7 @@ namespace Kiritori
         private readonly int _overlayDurationMs = 2000;
         private readonly int _overlayFadeMs = 300;
         private readonly Timer _overlayTimer;
-        private Font _overlayFont = new Font("Segoe UI", 10f, FontStyle.Bold);
+        private Font _overlayFont = new Font("Segoe UI", 10f, FontStyle.Bold, GraphicsUnit.Point);
         // private int _dpi = 96;
 
         // 画像・ズーム関連
