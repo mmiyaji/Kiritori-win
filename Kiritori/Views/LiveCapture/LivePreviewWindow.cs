@@ -161,7 +161,12 @@ namespace Kiritori.Views.LiveCapture
         // タイトルバーがある時は OS の×があるので自前は非表示にする
         private bool ShouldShowInlineClose() => _captionHidden && _windowHot;
         private bool _privacyExclusionEnabled = true; // 現在の状態（true=映らない）
-        // private bool _closing = false;
+                                                      // private bool _closing = false;
+        private bool _deferReveal = true;       // 最初は隠しておく
+        private bool _shownOnce = false;        // OnShown を通過したか
+        private bool _firstFrameReady = false;  // 初回フレームが用意できたか
+        private DateTime _revealStart;
+        private System.Windows.Forms.Timer _revealGuard;
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS margins);
@@ -232,7 +237,18 @@ namespace Kiritori.Views.LiveCapture
         private static string RectStr(RECT r) => $"({r.Left},{r.Top}) {r.Right - r.Left}x{r.Bottom - r.Top}";
         private static string InsetsStr(NcInsets i) => $"L{i.Left} T{i.Top} R{i.Right} B{i.Bottom}";
         // ===========================================================================
-        
+
+        private void RevealIfReady()
+        {
+            if (!_deferReveal) return;
+            if (!_shownOnce || !_firstFrameReady) return;
+
+            this.Opacity = 1.0;      // ← この瞬間にだけ“見せる”
+            _deferReveal = false;
+            try { _revealGuard?.Stop(); } catch { }
+            Log.Debug("[LivePreview] Revealed (Opacity=1)", "LivePreview");
+        }
+
         private void MoveThenResizePhysicalWithLogs(string tag, bool topMost)
         {
             // 位置合わせ（※これが内部で“論理サイズ”に変えるので、この後でサイズを上書きする）
@@ -754,6 +770,21 @@ namespace Kiritori.Views.LiveCapture
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
+            _revealStart = DateTime.Now;
+            _revealGuard = new System.Windows.Forms.Timer { Interval = 200 };
+            _revealGuard.Tick += (s, _e) =>
+            {
+                if (!_deferReveal) { _revealGuard.Stop(); return; }
+                var elapsed = (DateTime.Now - _revealStart).TotalMilliseconds;
+                if (elapsed >= 1200)
+                {
+                    Log.Debug("[LivePreview] RevealGuard: timeout -> force reveal", "LivePreview");
+                    this.Opacity = 1.0;
+                    _deferReveal = false;
+                    _revealGuard.Stop();
+                }
+            };
+            _revealGuard.Start();
 
             var wantClient = GetDesiredClientLogical();
             ResizeToKeepClient(wantClient);               // 一度当てる
@@ -780,14 +811,21 @@ namespace Kiritori.Views.LiveCapture
             //     CaptureRect = this.CaptureRect
             // };
             var gdi = new GdiCaptureBackend { MaxFps = _maxFps };
-            if (!SourceRectPhysical.IsEmpty)
-                gdi.CaptureRectPhysical = SourceRectPhysical; // ← 新規（下の #3 参照）
-            else
-                gdi.CaptureRect = this.CaptureRect; // 従来互換
+            var rLog  = this.CaptureRect;
+            var rPhys = !SourceRectPhysical.IsEmpty
+                        ? SourceRectPhysical
+                        : DpiUtil.LogicalToPhysical(rLog);
+            gdi.CaptureRect          = rLog;   // 論理（スクリーン座標）
+            gdi.CaptureRectPhysical  = rPhys;  // 物理（実ピクセル）
+
             gdi.ExcludeWindow = this.Handle;
             gdi.FrameArrived += OnFrameArrived;
+
+            Log.Trace($"[LivePreview][BackendInit] Log={rLog}  Phys={rPhys}", "LivePreview");
+
             _backend = gdi;
             _backend.Start();
+            Log.Trace("[LivePreview][BackendInit] Backend.Start() called", "LivePreview");
 
             _iconBadge = new TitleIconBadger(this);
             _iconBadge.SetState(LiveBadgeState.Rendering);
@@ -1360,8 +1398,10 @@ namespace Kiritori.Views.LiveCapture
             _latest = bmp;
             if (old != null) old.Dispose();
 
-            if (this.Opacity < 1.0) this.Opacity = 1.0;
+            // if (this.Opacity < 1.0) this.Opacity = 1.0;
             _firstFrameShown = true;
+            _firstFrameReady = true;
+            RevealIfReady();
             Log.Debug($"FirstCapture: logical={RectStr(rLogical)} physical={RectStr(rPhysical)} bmp={_latest?.Width}x{_latest?.Height}", "LivePreview");
         }
 
@@ -1788,6 +1828,8 @@ namespace Kiritori.Views.LiveCapture
                 var wantPhys = !SourceRectPhysical.IsEmpty ? SourceRectPhysical : DpiUtil.LogicalToPhysical(CaptureRect);
                 SnapClientTopLeftToPhysical(new Point(wantPhys.X, wantPhys.Y), "OnShown");
             }));
+            _shownOnce = true;
+            RevealIfReady();
         }
         private void SnapClientTopLeftToPhysical(Point wantPhysTL, string tag)
         {
@@ -2004,6 +2046,8 @@ namespace Kiritori.Views.LiveCapture
         //private long _recLastTicks;
         private void OnFrameArrived(Bitmap bmp)
         {
+            Log.Trace($"[LivePreview] FrameArrived: paused={_paused}, maxFps={_maxFps}, policy={_policy}", "LivePreview");
+
             if (_paused) return;
             Interlocked.Increment(ref _srcCount);
 
@@ -2083,7 +2127,9 @@ namespace Kiritori.Views.LiveCapture
                     if (!_firstFrameShown)
                     {
                         _firstFrameShown = true;
-                        if (this.Opacity < 1.0) this.Opacity = 1.0;
+                        _firstFrameReady = true;
+                        // if (this.Opacity < 1.0) this.Opacity = 1.0;
+                        RevealIfReady();
                     }
                 }));
             }
