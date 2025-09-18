@@ -117,5 +117,6 @@ namespace Kiritori.Helpers
 
             return new Rectangle(L, T, W, H);
         }
+        
     }
 }

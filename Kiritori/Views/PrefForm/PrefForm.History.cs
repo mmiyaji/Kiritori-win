@@ -675,7 +675,7 @@ namespace Kiritori
             Application.Idle += _idleHandler;
             _thumbLoadingActive = true;
         }
-        private static string GetStableKey(HistoryEntry he) =>
+        public static string GetStableKey(HistoryEntry he) =>
             (he.Path ?? "clipboard")
             + "|" + he.LoadedAt.Ticks.ToString()
             + "|" + he.Resolution.Width + "x" + he.Resolution.Height;
@@ -720,17 +720,12 @@ namespace Kiritori
         }
         private static Bitmap LoadBitmapNoLock(string path)
         {
-            if (string.IsNullOrEmpty(path) || !File.Exists(path))
-                return null;
-
-            // useAsync:false（既定）で OverlappedData を増やさない
+            if (string.IsNullOrEmpty(path) || !File.Exists(path)) return null;
             using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
             using (var img = Image.FromStream(fs, useEmbeddedColorManagement: false, validateImageData: false))
-            {
-                // Bitmap にクローンしてストリーム寿命から独立させる（ファイルロックを残さない）
                 return new Bitmap(img);
-            }
         }
+
 
         private void TryRenderOneThumb(HistoryEntry he)
         {
@@ -771,7 +766,6 @@ namespace Kiritori
 
         private static Bitmap RenderThumb(Bitmap src, int w, int h)
         {
-            // フィット計算（letterbox）
             float sx = (float)w / src.Width;
             float sy = (float)h / src.Height;
             float s = Math.Min(sx, sy);
@@ -785,14 +779,14 @@ namespace Kiritori
                 g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
                 g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-                int dx = (w - rw) / 2;
-                int dy = (h - rh) / 2;
+                int dx = (w - rw) / 2, dy = (h - rh) / 2;
                 g.DrawImage(src, new Rectangle(dx, dy, rw, rh));
                 using (var pen = new Pen(Color.Silver))
                     g.DrawRectangle(pen, 0, 0, w - 1, h - 1);
             }
             return bmp;
         }
+
 
         private void AssignThumbToItem(HistoryEntry he, Bitmap bmp)
         {

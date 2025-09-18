@@ -92,7 +92,7 @@ namespace Kiritori.Views.LiveCapture
 
                             hdcDst = _g.GetHdc();
                         }
-                        Log.Debug($"[Backend] BitBlt from Phys={rPhysical}  size={rPhysical.Width}x{rPhysical.Height}", "LivePreview");
+                        Log.Trace($"[Backend] BitBlt from Phys={rPhysical}  size={rPhysical.Width}x{rPhysical.Height}", "LivePreview");
 
                         // コピー
                         NativeMethods.BitBlt(hdcDst, 0, 0, rPhysical.Width, rPhysical.Height,

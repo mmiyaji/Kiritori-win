@@ -451,8 +451,7 @@
     <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
   <!-- >>> added: g.cs 生成（ビルド前）＆ クリーン時の削除 -->
-  <Target Name="GenerateVersionInfo" BeforeTargets="BeforeBuild"
-        Condition="'$(UserVersion)' != '' OR '$(EmbedVersionInfo)' == 'true'">
+  <Target Name="GenerateVersionInfo" BeforeTargets="BeforeBuild" Condition="'$(UserVersion)' != '' OR '$(EmbedVersionInfo)' == 'true'">
     <PropertyGroup>
       <_tmpl>Properties\VersionInfo.Template.cs</_tmpl>
       <_out>Properties\VersionInfo.g.cs</_out>
@@ -463,8 +462,7 @@
     <!-- ※ ^ を使わず 1 行で渡す。; 区切りで十分です -->
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$t=Get-Content '$(_tmpl)' -Raw; $t=$t -replace '\$ASMVER\$', '$(AssemblyVersion)'; $t=$t -replace '\$FILEVER\$', '$(FileVersion)'; $t=$t -replace '\$INFOVER\$', '$(InformationalVersion)'; $t=$t -replace '\$YEAR\$', '$(BuildYear)'; Set-Content '$(_out)' $t -Encoding UTF8;&quot;" />
   </Target>
-  <Target Name="CleanGeneratedVersionInfo" AfterTargets="Clean"
-        Condition="'$(UserVersion)' != '' OR '$(EmbedVersionInfo)' == 'true'">
+  <Target Name="CleanGeneratedVersionInfo" AfterTargets="Clean" Condition="'$(UserVersion)' != '' OR '$(EmbedVersionInfo)' == 'true'">
     <Delete Files="Properties\VersionInfo.g.cs" ContinueOnError="true" />
   </Target>
   <!-- <<< added -->

@@ -1,69 +1,37 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Package
-  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
-  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
-  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
-  xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"
-  IgnorableNamespaces="uap rescap desktop com">
-
-  <Identity Name="mmiyaji.kiritori"
-            Publisher="CN=663C5D03-791A-4B2C-8509-629FA1CA125A"
-            Version="1.5.0.0" />
-
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities" xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10" xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10" IgnorableNamespaces="uap rescap desktop com">
+  <Identity Name="mmiyaji.kiritori" Publisher="CN=663C5D03-791A-4B2C-8509-629FA1CA125A" Version="1.5.3.0" />
   <Properties>
     <DisplayName>kiritori</DisplayName>
     <PublisherDisplayName>mmiyaji</PublisherDisplayName>
     <Logo>Images\StoreLogo.png</Logo>
   </Properties>
-
   <Dependencies>
     <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.16299.0" MaxVersionTested="10.0.19041.0" />
-    <TargetDeviceFamily Name="Windows.Desktop"   MinVersion="10.0.16299.0" MaxVersionTested="10.0.19041.0" />
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.16299.0" MaxVersionTested="10.0.19041.0" />
   </Dependencies>
-
   <Resources>
     <Resource Language="en" />
     <Resource Language="ja" />
   </Resources>
-
   <Applications>
-    <Application Id="App"
-                Executable="Kiritori\Kiritori.exe"
-                EntryPoint="Windows.FullTrustApplication">
-      <uap:VisualElements
-        DisplayName="Kiritori"
-        Description="ホットキーで即キャプチャ、キャプチャした領域は付箋のように画面の最前面に固定されます。 画面の一部を切り取り・表示することで、一時的に別々の画面情報を並べることができ、開発・検証・資料作成の速度を上げます。"
-        BackgroundColor="transparent"
-        Square150x150Logo="Images\Square150x150Logo.png"
-        Square44x44Logo="Images\Square44x44Logo.png">
-        <uap:DefaultTile Wide310x150Logo="Images\Wide310x150Logo.png"
-                        Square71x71Logo="Images\SmallTile.png"
-                        Square310x310Logo="Images\LargeTile.png"/>
-        <uap:SplashScreen Image="Images\SplashScreen.png"/>
+    <Application Id="App" Executable="Kiritori\Kiritori.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements DisplayName="Kiritori" Description="ホットキーで即キャプチャ、キャプチャした領域は付箋のように画面の最前面に固定されます。 画面の一部を切り取り・表示することで、一時的に別々の画面情報を並べることができ、開発・検証・資料作成の速度を上げます。" BackgroundColor="transparent" Square150x150Logo="Images\Square150x150Logo.png" Square44x44Logo="Images\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Images\Wide310x150Logo.png" Square71x71Logo="Images\SmallTile.png" Square310x310Logo="Images\LargeTile.png" />
+        <uap:SplashScreen Image="Images\SplashScreen.png" />
       </uap:VisualElements>
-
       <Extensions>
-        <desktop:Extension Category="windows.startupTask"
-                          Executable="Kiritori\Kiritori.exe"
-                          EntryPoint="Windows.FullTrustApplication">
-          <desktop:StartupTask TaskId="KiritoriStartup"
-                              Enabled="false"
-                              DisplayName="Kiritori" />
+        <desktop:Extension Category="windows.startupTask" Executable="Kiritori\Kiritori.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="KiritoriStartup" Enabled="false" DisplayName="Kiritori" />
         </desktop:Extension>
-
         <!-- Toast アクティベーション (Desktop Bridge) -->
         <desktop:Extension Category="windows.toastNotificationActivation">
-          <desktop:ToastNotificationActivation
-              ToastActivatorCLSID="B1D2B1C3-3B77-4F26-9A39-1D1A8D3A9A10" />
+          <desktop:ToastNotificationActivation ToastActivatorCLSID="B1D2B1C3-3B77-4F26-9A39-1D1A8D3A9A10" />
         </desktop:Extension>
-
         <!-- COM サーバとして Win32 EXE を公開 -->
         <com:Extension Category="windows.comServer">
           <com:ComServer>
-            <com:ExeServer Executable="Kiritori\Kiritori.exe"
-                            Arguments="-ToastActivated"
-                            DisplayName="Kiritori">
+            <com:ExeServer Executable="Kiritori\Kiritori.exe" Arguments="-ToastActivated" DisplayName="Kiritori">
               <com:Class Id="B1D2B1C3-3B77-4F26-9A39-1D1A8D3A9A10" />
             </com:ExeServer>
           </com:ComServer>
@@ -71,7 +39,6 @@
       </Extensions>
     </Application>
   </Applications>
-
   <Capabilities>
     <Capability Name="internetClient" />
     <rescap:Capability Name="runFullTrust" />

@@ -435,7 +435,7 @@ namespace Kiritori
             this.grpHotkey.Tag = "loc:Text.Hotkeys";
             this.grpHotkey.Margin = new Padding(0, 8, 0, 0);
 
-            var tlpHot = NewGrid(4, 5);
+            var tlpHot = NewGrid(4, 3);
             this.labelHotkeyCapture = NewRightLabel("Image capture");
             this.labelHotkeyCapture.Tag = "loc:Text.ImageCapture";
             // this.textBoxKiritori = new TextBox
@@ -486,7 +486,6 @@ namespace Kiritori
                 SaveHotkeyFromPicker(CaptureMode.fix, (HotkeyPicker)this.textBoxHotkeyCaptureFixed);
             };
 
-
             var btnResetCap = new Button { Text = "Reset", AutoSize = true };
             btnResetCap.Tag = "loc:Text.ResetDefault";
             btnResetCap.Click += (s, e) => ResetCaptureHotkeyToDefault();
@@ -503,21 +502,21 @@ namespace Kiritori
             btnResetFixed.Tag = "loc:Text.ResetDefault";
             btnResetFixed.Click += (s, e) => ResetFixedHotkeyToDefault();
 
-            var btnExecCap = new Button { Text = "Reset", AutoSize = true };
+            var btnExecCap = new Button { Text = "Exec", AutoSize = true };
             btnExecCap.Tag = "loc:Text.ExecDefault";
             btnExecCap.Click += (s, e) => ExecCaptureHotkeyToDefault();
 
-            var btnExecOcr = new Button { Text = "Reset", AutoSize = true };
+            var btnExecOcr = new Button { Text = "Exec", AutoSize = true };
             btnExecOcr.Tag = "loc:Text.ExecDefault";
             btnExecOcr.Click += (s, e) => ExecOcrHotkeyToDefault();
 
-            var btnExecLive = new Button { Text = "Reset", AutoSize = true };
+            var btnExecLive = new Button { Text = "Exec", AutoSize = true };
             btnExecLive.Tag = "loc:Text.ExecDefault";
             btnExecLive.Click += (s, e) => ExecLiveHotkeyToDefault();
 
-            var btnExecFixed = new Button { Text = "Reset", AutoSize = true };
+            var btnExecFixed = new Button { Text = "Exec", AutoSize = true };
             btnExecFixed.Tag = "loc:Text.ExecDefault";
-            btnResetFixed.Click += (s, e) => ResetFixedHotkeyToDefault();
+            btnExecFixed.Click += (s, e) => ExecFixedHotkeyToDefault();
 
             this.labelHotkeyCapturePrev = NewRightLabel("Capture at previous region");
             this.labelHotkeyCapturePrev.Tag = "loc:Text.PreviousCapture";
@@ -525,22 +524,19 @@ namespace Kiritori
 
             tlpHot.Controls.Add(this.labelHotkeyCapture, 0, 0);
             tlpHot.Controls.Add(this.textBoxKiritori, 1, 0);
-            tlpHot.Controls.Add(btnResetCap, 2, 0);
-            tlpHot.Controls.Add(btnExecCap, 3, 0);
+            tlpHot.Controls.Add(PackButtons(btnResetCap, btnExecCap), 3, 0);
+
             tlpHot.Controls.Add(this.labelHotkeyCaptureOCR, 0, 1);
             tlpHot.Controls.Add(this.textBoxHotkeyCaptureOCR, 1, 1);
-            tlpHot.Controls.Add(btnResetOcr, 2, 1);
-            tlpHot.Controls.Add(btnExecOcr, 3, 1);
+            tlpHot.Controls.Add(PackButtons(btnResetOcr, btnExecOcr), 3, 1);
+
             tlpHot.Controls.Add(this.labelHotkeyLivePreview, 0, 2);
             tlpHot.Controls.Add(this.textBoxHotkeyLivePreview, 1, 2);
-            tlpHot.Controls.Add(btnResetLive, 2, 2);
-            tlpHot.Controls.Add(btnExecLive, 3, 2);
+            tlpHot.Controls.Add(PackButtons(btnResetLive, btnExecLive), 3, 2);
+
             tlpHot.Controls.Add(this.labelHotkeyCaptureFixed, 0, 3);
             tlpHot.Controls.Add(this.textBoxHotkeyCaptureFixed, 1, 3);
-            tlpHot.Controls.Add(btnResetFixed, 2, 3);
-            tlpHot.Controls.Add(btnExecFixed, 3, 3);
-            // tlpHot.Controls.Add(this.labelHotkeyCapturePrev, 0, 3);
-            // tlpHot.Controls.Add(this.textBoxCapturePrev, 1, 3);
+            tlpHot.Controls.Add(PackButtons(btnResetFixed, btnExecFixed), 3, 3);
 
             this.grpHotkey.Controls.Add(tlpHot);
 
@@ -948,6 +944,22 @@ namespace Kiritori
         }
 
         // ========= helpers =========
+        FlowLayoutPanel PackButtons(Button reset, Button exec)
+        {
+            // 余白を詰める設定
+            reset.Margin = new Padding(0, 0, 6, 0);
+            exec.Margin  = new Padding(0);
+
+            return new FlowLayoutPanel {
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Margin = new Padding(0),
+                Padding = new Padding(0),
+                Controls = { reset, exec }
+            };
+        }
         private static TableLayoutPanel NewGrid(int rows, int cols)
         {
             var tlp = new TableLayoutPanel

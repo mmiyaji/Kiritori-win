@@ -39,6 +39,7 @@ namespace Kiritori
         /// </summary>
         public static PrefForm InstanceIfOpen
             => (_instance != null && !_instance.IsDisposed) ? _instance : null;
+        private MainApplication _mainApp { get; set; } = null;
         private bool _initStartupToggle = false;
         private bool _initLang = false;
         // private bool _loadingUi = false;
@@ -119,6 +120,16 @@ namespace Kiritori
             WireAdvancedDirtyEvents();
             InitLogTab();
         }
+        private MainApplication ResolveMain()
+        {
+            if (_mainApp != null && !_mainApp.IsDisposed) return _mainApp;
+
+            // 既存の GetMainForm() は型名で探すので流用
+            var f = GetMainForm();
+            _mainApp = f as MainApplication;
+            return _mainApp;
+        }
+
 
         // =========================================================
         // ===================== Public API ========================
@@ -126,12 +137,17 @@ namespace Kiritori
         /// <summary>
         /// 設定ウィンドウを常に1つだけ表示する。既にあれば前面化。
         /// </summary>
+        /// 
         public static PrefForm ShowSingleton(IWin32Window owner = null)
         {
             if (_instance == null || _instance.IsDisposed)
             {
                 _instance = new PrefForm();
                 _instance.FormClosed += (s, e) => _instance = null;
+
+                // ★ owner が MainApplication ならその場で流し込む
+                var host = owner as MainApplication;
+                if (host != null) _instance._mainApp = host;
 
                 if (owner != null) _instance.Show(owner);
                 else _instance.Show();
@@ -146,6 +162,11 @@ namespace Kiritori
 
                 _instance.BringToFront();
                 _instance.Activate();
+
+                // ★ 既存インスタンスにも後から流し込めるように
+                var host = owner as MainApplication;
+                if (host != null && _instance._mainApp == null)
+                    _instance._mainApp = host;
             }
             return _instance;
         }
@@ -652,19 +673,79 @@ namespace Kiritori
         }
         private void ExecCaptureHotkeyToDefault()
         {
+            ResetCaptureHotkeyToDefault();
+            RebuildShortcutsInfo();
+            UpdateDirtyUI();
 
+            var host = ResolveMain();
+            if (host == null || host.IsDisposed) return;
+
+            try
+            {
+                this.BeginInvoke((Action)(() =>
+                {
+                    try { host.openScreen(); } catch { /* ignore */ }
+                }));
+            }
+            catch { /* ignore */ }
         }
         private void ExecLiveHotkeyToDefault()
         { 
-            
+            ResetOcrHotkeyToDefault();
+            RebuildShortcutsInfo();
+            UpdateDirtyUI();
+
+            var host = ResolveMain();
+            if (host == null || host.IsDisposed) return;
+
+            try
+            {
+                this.BeginInvoke((Action)(() =>
+                {
+                    try { host.openScreenLive(); } catch { /* ignore */ }
+                }));
+            }
+            catch { /* ignore */ }
         }
         private void ExecOcrHotkeyToDefault()
         { 
-            
+            ResetLiveHotkeyToDefault();
+            RebuildShortcutsInfo();
+            UpdateDirtyUI();
+
+            var host = ResolveMain();
+            if (host == null || host.IsDisposed) return;
+
+            try
+            {
+                this.BeginInvoke((Action)(() =>
+                {
+                    try { host.openScreenOCR(); } catch { /* ignore */ }
+                }));
+            }
+            catch { /* ignore */ }
         }
         private void ExecFixedHotkeyToDefault()
         { 
-            
+            ResetFixedHotkeyToDefault();
+            RebuildShortcutsInfo();
+            UpdateDirtyUI();
+
+            var host = ResolveMain();
+            if (host == null || host.IsDisposed) return;
+
+            try
+            {
+                this.BeginInvoke((Action)(() =>
+                {
+                    try { host.openScreenFixed(); }
+                    catch (Exception ex)
+                    {
+                        Log.Debug($"Failed to open fixed capture window: {ex.Message}", "PrefForm");
+                    }
+                }));
+            }
+            catch { /* ignore */ }
         }
         private void ResetCaptureHotkeyToDefault()
         {
