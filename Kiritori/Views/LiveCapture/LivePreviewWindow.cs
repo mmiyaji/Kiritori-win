@@ -17,6 +17,8 @@ namespace Kiritori.Views.LiveCapture
     {
         private LiveCaptureBackend _backend;
         private Bitmap _latest;
+        private Size _hudRectBasisClient;
+        private int  _hudRectBasisDpi;
         private readonly object _frameSync = new object();
         public Rectangle CaptureRect { get; set; }   // 論理px（スクリーン座標）
         public Rectangle SourceRectPhysical { get; set; } = Rectangle.Empty;
@@ -236,6 +238,19 @@ namespace Kiritori.Views.LiveCapture
         private static string RectStr(Rectangle r) => $"({r.X},{r.Y}) {r.Width}x{r.Height}";
         private static string RectStr(RECT r) => $"({r.Left},{r.Top}) {r.Right - r.Left}x{r.Bottom - r.Top}";
         private static string InsetsStr(NcInsets i) => $"L{i.Left} T{i.Top} R{i.Right} B{i.Bottom}";
+        private void EnsureHudRect()
+        {
+            // ClientSize / DPI が変わっていたら HUD を再計算
+            if (_hudRect.IsEmpty ||
+                _hudRectBasisDpi != this.DeviceDpi ||
+                _hudRectBasisClient != this.ClientSize)
+            {
+                CenterOverlay();
+                _hudRectBasisDpi   = this.DeviceDpi;
+                _hudRectBasisClient = this.ClientSize;
+            }
+        }
+
         // ===========================================================================
 
         private void RevealIfReady()
@@ -638,6 +653,7 @@ namespace Kiritori.Views.LiveCapture
         private void ShowPlaybackOverlay()
         {
             if (_inSizingLoop) return;
+            EnsureHudRect();
 
             _hudTargetAlpha = _hudRect.IsEmpty ? 0 : 140;  // ← HUDは従来通りフェード
             SetHoverInstant(true);                         // ← ホバーは即時ON
@@ -648,6 +664,7 @@ namespace Kiritori.Views.LiveCapture
         private void HideOverlay()
         {
             _hudHot = _hudDown = false;
+            EnsureHudRect();
             _hudTargetAlpha = 0;       // HUDはフェードアウト
             SetHoverInstant(false);    // ホバーは即時OFF
 
@@ -657,6 +674,7 @@ namespace Kiritori.Views.LiveCapture
 
         private void FadeOutOverlay()
         {
+            EnsureHudRect();
             _hudTargetAlpha = 0;       // HUDのみフェード
             SetHoverInstant(false);    // ホバーは即時OFF
             if (!_fadeTimer.Enabled) _fadeTimer.Start();
@@ -1760,6 +1778,7 @@ namespace Kiritori.Views.LiveCapture
             {
                 if (_ctx != null && _ctx.Handle != IntPtr.Zero) TryExcludeFromCapture(_ctx.Handle);
                 UpdateShadowMenuState();
+                HideOverlay();
             };
             _ctx.Closed += (s, e) =>
             {
@@ -1773,8 +1792,8 @@ namespace Kiritori.Views.LiveCapture
                         ResizeToKeepClient(desiredClient);
                     }));
                 }
+                RefreshHoverStateByCursor();
             };
-
             // --- ドロップダウンはキャプチャ除外（LivePreview への線描画対策）
             void MarkDropDownExclusion(ToolStripDropDownItem item)
             {
@@ -1790,6 +1809,17 @@ namespace Kiritori.Views.LiveCapture
             MarkDropDownExclusion(_miOpacity);
             MarkDropDownExclusion(_miFpsRoot);
             DisableShadowsRecursive(_ctx.Items);
+        }
+        protected override void OnActivated(EventArgs e)
+        {
+            base.OnActivated(e);
+            RefreshHoverStateByCursor();
+        }
+
+        protected override void OnDeactivate(EventArgs e)
+        {
+            base.OnDeactivate(e);
+            HideOverlay();
         }
         private static void DisableShadowsRecursive(ToolStripItemCollection items)
         {
