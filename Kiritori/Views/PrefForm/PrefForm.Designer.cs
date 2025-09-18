@@ -411,6 +411,7 @@ namespace Kiritori
                 Anchor = AnchorStyles.Left,
                 Dock = DockStyle.Fill
             };
+            this.textBoxHistory.AutoSize = true;
             this.textBoxHistory.MaximumSize = new Size(120, 0);
 
             tlpApp.Controls.Add(this.labelLanguage, 0, 0);
@@ -672,6 +673,7 @@ namespace Kiritori
                 Anchor = AnchorStyles.Left,
                 Dock = DockStyle.Fill,
             };
+            this.numHoverThickness.AutoSize = true;
             this.numHoverThickness.MaximumSize = new Size(120, 0);
             tlpWin.Controls.Add(this.labelHoverThickness, 0, 2);
             tlpWin.Controls.Add(this.numHoverThickness, 1, 2);
@@ -679,7 +681,16 @@ namespace Kiritori
             // Default Window Opacity（ここに統合）
             this.labelDefaultOpacity = NewRightLabel("Default opacity");
             this.labelDefaultOpacity.Tag = "loc:Text.WindowOpacity";
-            this.trackbarDefaultOpacity = new TrackBar { Minimum = 10, Maximum = 100, TickFrequency = 10, Value = 100, Width = 240, Anchor = AnchorStyles.Left };
+            this.trackbarDefaultOpacity = new TrackBar
+            {
+                Minimum = 10,
+                Maximum = 100,
+                TickFrequency = 10,
+                Value = 100,
+                Width = 240,
+                Anchor = AnchorStyles.Left
+            };
+            this.trackbarDefaultOpacity.AutoSize = true;
             this.labelDefaultOpacityVal = new Label { AutoSize = true, Text = "100%", Anchor = AnchorStyles.Left };
 
             var flowOpacity = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };

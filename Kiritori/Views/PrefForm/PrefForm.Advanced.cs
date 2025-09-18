@@ -337,6 +337,8 @@ namespace Kiritori
             buttons.Controls.AddRange(new Control[] { _btnResetSel, _btnResetAll, _btnReload, _btnExport, _btnImport });
             root.Controls.Add(buttons, 0, 2);
 
+            // 初期ロード
+            ReloadSettingsIntoGrid();
         }
 
         // 設定キーから説明文字列を引くヘルパ

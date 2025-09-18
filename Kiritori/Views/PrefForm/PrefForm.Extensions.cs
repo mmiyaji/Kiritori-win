@@ -56,6 +56,7 @@ namespace Kiritori
                 ScrollBars = ScrollBars.Both,
             };
             _gridExt.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.AllCells;
+            _gridExt.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
 
             // 列
             _gridExt.Columns.Add(new DataGridViewTextBoxColumn {
