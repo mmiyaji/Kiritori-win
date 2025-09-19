@@ -682,7 +682,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Search (filename / path / OCR) に類似しているローカライズされた文字列を検索します。
+        ///   Search に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string History_Toolbar_SearchPlaceholder {
             get {

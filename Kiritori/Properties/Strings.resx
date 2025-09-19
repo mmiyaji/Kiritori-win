@@ -853,7 +853,7 @@
     <value>Delete</value>
   </data>
   <data name="History.Toolbar.SearchPlaceholder" xml:space="preserve">
-    <value>Search (filename / path / OCR)</value>
+    <value>Search</value>
   </data>
   <data name="History.Toolbar.SortByDate" xml:space="preserve">
     <value>Captured Time</value>

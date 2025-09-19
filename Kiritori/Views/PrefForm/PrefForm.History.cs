@@ -220,12 +220,12 @@ namespace Kiritori
                 BackColor = SystemColors.Control
             };
 
-            _txtSearch = new TextBox { Left = 8, Top = 6, Width = 260 };
+            _txtSearch = new TextBox { Left = 8, Top = 6, Width = 150 };
             // プレースホルダー（ハンドル生成後に設定）
             // _txtSearch.HandleCreated += (s, e) => { try { SendMessage(_txtSearch.Handle, EM_SETCUEBANNER, 1, "検索（ファイル名 / パス）"); } catch { } };
             _txtSearch.TextChanged += (s, e) => ApplyFilterAndRefresh();
 
-            _cboSort = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Left = _txtSearch.Right + 8, Top = 6, Width = 140 };
+            _cboSort = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Left = _txtSearch.Right + 8, Top = 6, Width = 120 };
             _cboSort.Items.AddRange(new object[] {
                 SR.T("History.Toolbar.SortByDate", "Captured Time"),
                 SR.T("History.Toolbar.SortByName", "File Name"),
@@ -253,7 +253,15 @@ namespace Kiritori
             _cboOrder.SelectedIndex = 0; // 既定：降順
             _cboOrder.SelectedIndexChanged += (s, e) => { _sortAsc = (_cboOrder.SelectedIndex == 1); ApplySortAndRefresh(); };
 
-            _btnClearHistory = new Button { Text = "クリア", Left = _cboOrder.Right + 8, Top = 5, Width = 70 };
+            _btnClearHistory = new Button
+            {
+                Text = SR.T("History.Toolbar.Clear", "Clear"),
+                Left = _cboOrder.Right + 8,
+                Top = 5,
+                Width = 70,
+                AutoSize = true,
+                Tag = "History.Toolbar.Clear"
+            };
             _btnClearHistory.Click += (s, e) =>
             {
                 _txtSearch.Text = "";
@@ -272,7 +280,8 @@ namespace Kiritori
                 Text = SR.T("History.Toolbar.DeleteSelected", "Delete Selected"),
                 Left = _btnClearHistory.Right + 8,
                 Top = 5,
-                Width = 110
+                Width = 110,
+                AutoSize = true
             };
             _btnDelete.Click += (s, e) => DeleteSelected();
 
@@ -428,7 +437,7 @@ namespace Kiritori
             if (_historyToolbar == null) return;
 
             // 検索プレースホルダー
-            var placeholder = SR.T("History.Toolbar.SearchPlaceholder", "Search (filename / path / OCR)");
+            var placeholder = SR.T("History.Toolbar.SearchPlaceholder", "Search");
             SetCueBanner(_txtSearch, placeholder, showWhenFocused: true);
 
             // ソートキー（順番は固定、表示だけ差し替え）

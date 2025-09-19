@@ -136,6 +136,24 @@ if /I not "%MODE%"=="ZIP" (
   dir /b "!STORE_DIR!"
 )
 
+rem --- Copy latest .msixbundle to dist\<version> ---
+set "MSIX_BUNDLE="
+for /f "usebackq delims=" %%B in (`powershell -NoProfile -Command ^
+  "$c=@();" ^
+  "if (Test-Path '!STORE_DIR!') { $c += Get-ChildItem -Path '!STORE_DIR!' -Filter '*.msixbundle' -Recurse -ErrorAction SilentlyContinue }" ^
+  "$c += Get-ChildItem -Path 'KiritoriPackage\\bin\\!PLAT!\\!CONF!\\Upload' -Filter '*.msixbundle' -Recurse -ErrorAction SilentlyContinue;" ^
+  "$b = $c | Sort-Object LastWriteTime -Descending | Select-Object -First 1;" ^
+  "if ($b) { $b.FullName }"`) do set "MSIX_BUNDLE=%%B"
+
+if defined MSIX_BUNDLE (
+  echo "[INFO] Found bundle: !MSIX_BUNDLE!"
+  echo "[STEP] Copying .msixbundle to '!STORE_DIR!'..."
+  copy /y "!MSIX_BUNDLE!" "!STORE_DIR!\" >nul
+) else (
+  echo "[WARN] .msixbundle not found in STORE_DIR or Upload."
+)
+
+
 REM ============================================================
 REM  3) Create App ZIP from packaged output (preferred)
 REM ============================================================

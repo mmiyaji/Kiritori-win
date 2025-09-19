@@ -632,52 +632,83 @@ namespace Kiritori.Views.LiveCapture
         private void RefreshHoverStateByCursor()
         {
             if (_inSizingLoop) return;
+            if (_fadeTimer == null) return;
 
-            // いまのカーソル位置がクライアント内か
-            var screen = Cursor.Position;
-            var client = this.PointToClient(screen);
-            bool inside = this.Visible && this.ClientRectangle.Contains(client);
+            try
+            {
+                // いまのカーソル位置がクライアント内か
+                var screen = Cursor.Position;
+                var client = this.PointToClient(screen);
+                bool inside = this.Visible && this.ClientRectangle.Contains(client);
 
-            _windowHot = inside;
+                _windowHot = inside;
 
-            // HUDは中にいる時だけ点灯、枠は即時 ON/OFF
-            _hudTargetAlpha = (inside && !_hudRect.IsEmpty) ? 140 : 0;
-            SetHoverInstant(inside);
+                // HUDは中にいる時だけ点灯、枠は即時 ON/OFF
+                _hudTargetAlpha = (inside && !_hudRect.IsEmpty) ? 140 : 0;
+                SetHoverInstant(inside);
 
-            if (!_fadeTimer.Enabled) _fadeTimer.Start();
+                if (!_fadeTimer.Enabled) _fadeTimer.Start();
 
-            var inv = Rectangle.Union(GetHudInvalidateRect(), GetHoverInvalidateRect());
-            if (!inv.IsEmpty) Invalidate(inv);
+                var inv = Rectangle.Union(GetHudInvalidateRect(), GetHoverInvalidateRect());
+                if (!inv.IsEmpty) Invalidate(inv);
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"RefreshHoverStateByCursor failed: {ex.Message}", "LivePreview");
+            }
         }
 
         private void ShowPlaybackOverlay()
         {
             if (_inSizingLoop) return;
-            EnsureHudRect();
+            if (_fadeTimer == null) return;
+            try
+            {
+                EnsureHudRect();
 
-            _hudTargetAlpha = _hudRect.IsEmpty ? 0 : 140;  // ← HUDは従来通りフェード
-            SetHoverInstant(true);                         // ← ホバーは即時ON
+                _hudTargetAlpha = _hudRect.IsEmpty ? 0 : 140;  // ← HUDは従来通りフェード
+                SetHoverInstant(true);                         // ← ホバーは即時ON
 
-            if (!_fadeTimer.Enabled) _fadeTimer.Start();   // HUD用
+                if (!_fadeTimer.Enabled) _fadeTimer.Start();   // HUD用
+                
+            } catch (Exception ex)
+            {
+                Log.Error($"ShowPlaybackOverlay failed: {ex.Message}", "LivePreview");
+            }
         }
 
         private void HideOverlay()
         {
-            _hudHot = _hudDown = false;
-            EnsureHudRect();
-            _hudTargetAlpha = 0;       // HUDはフェードアウト
-            SetHoverInstant(false);    // ホバーは即時OFF
+            try
+            {
+                if(_fadeTimer == null) return;
+                _hudHot = _hudDown = false;
+                EnsureHudRect();
+                _hudTargetAlpha = 0;       // HUDはフェードアウト
+                SetHoverInstant(false);    // ホバーは即時OFF
 
-            if (!_fadeTimer.Enabled) _fadeTimer.Start();   // HUD用
-            if (_hudCursorIsHand) { Cursor = Cursors.Default; _hudCursorIsHand = false; }
+                if (!_fadeTimer.Enabled) _fadeTimer.Start();   // HUD用
+                if (_hudCursorIsHand) { Cursor = Cursors.Default; _hudCursorIsHand = false; }
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"HideOverlay failed: {ex.Message}", "LivePreview");
+            }
         }
 
         private void FadeOutOverlay()
         {
-            EnsureHudRect();
-            _hudTargetAlpha = 0;       // HUDのみフェード
-            SetHoverInstant(false);    // ホバーは即時OFF
-            if (!_fadeTimer.Enabled) _fadeTimer.Start();
+            try
+            {
+                EnsureHudRect();
+                _hudTargetAlpha = 0;       // HUDのみフェード
+                SetHoverInstant(false);    // ホバーは即時OFF
+                if (!_fadeTimer.Enabled) _fadeTimer.Start();
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"FadeOutOverlay early exit failed: {ex.Message}", "LivePreview");
+            }
         }
         private Rectangle GetCloseRect()
         {
@@ -807,7 +838,7 @@ namespace Kiritori.Views.LiveCapture
             var wantClient = GetDesiredClientLogical();
             ResizeToKeepClient(wantClient);               // 一度当てる
             AlignClientTopLeftPhysical("OnLoad", AutoTopMost);
-            SnapClientSizeLogical(wantClient, "OnLoad");  // ★サイズ押し込み
+            SnapClientSizeLogical(wantClient, "OnLoad");  // サイズ押し込み
 
             TrySyncFirstCaptureIntoLatest(CaptureRect);
             Invalidate();
