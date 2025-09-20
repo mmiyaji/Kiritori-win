@@ -383,11 +383,16 @@ namespace Kiritori
             this.cmbLanguage.SelectedIndex = 0;
 
             this.labelOCRLanguage = NewRightLabel("OCR Language");
-            this.labelOCRLanguage.Tag = "loc:Text.OcrLanguage";
+            this.labelOCRLanguage.Tag = "loc:Setting.Display.OcrLanguage";
             this.cmbOCRLanguage = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Dock = DockStyle.Fill};
 
             PopulateOcrLanguageCombo();
             RestoreOcrLanguageSelection();
+            this.cmbOCRLanguage.SelectedIndexChanged += (s, e) =>
+            {
+                if (_loadingUi) return;          // 初期化中は無視
+                SaveOcrLanguageSelection();
+            };
 
             this.labelStartup = NewRightLabel("Startup");
             this.labelStartup.Tag = "loc:Text.Startup";

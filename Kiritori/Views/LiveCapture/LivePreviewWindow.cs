@@ -19,6 +19,7 @@ namespace Kiritori.Views.LiveCapture
         private Bitmap _latest;
         private Size _hudRectBasisClient;
         private int  _hudRectBasisDpi;
+        private bool _tempExcludeUntilFirstFrame = false;
         private readonly object _frameSync = new object();
         public Rectangle CaptureRect { get; set; }   // 論理px（スクリーン座標）
         public Rectangle SourceRectPhysical { get; set; } = Rectangle.Empty;
@@ -800,7 +801,8 @@ namespace Kiritori.Views.LiveCapture
                 _perfTimer.Change(1000, 1000);
 
             // 自ウィンドウをキャプチャ除外に追加
-            TryExcludeFromCapture(this.Handle);
+            if (Properties.Settings.Default.LivePreviewPrivacyMode)
+                TryExcludeFromCapture(this.Handle);
         }
         protected override void OnHandleDestroyed(EventArgs e)
         {
@@ -836,50 +838,51 @@ namespace Kiritori.Views.LiveCapture
             _revealGuard.Start();
 
             var wantClient = GetDesiredClientLogical();
-            ResizeToKeepClient(wantClient);               // 一度当てる
+            ResizeToKeepClient(wantClient);
             AlignClientTopLeftPhysical("OnLoad", AutoTopMost);
-            SnapClientSizeLogical(wantClient, "OnLoad");  // サイズ押し込み
+            SnapClientSizeLogical(wantClient, "OnLoad");
 
             TrySyncFirstCaptureIntoLatest(CaptureRect);
             Invalidate();
 
             try
             {
-                // var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
                 Log.Debug($"OnLoad: DeviceDpi={this.DeviceDpi}, CaptionHidden={_captionHidden}, TopMost={this.TopMost}", "LivePreview");
-                // Log.Debug($"OnLoad: CaptureRect logical={RectStr(CaptureRect)} physical={RectStr(rPhys)}", "LivePreview");
                 var ins = GetNcInsets();
                 Log.Debug($"OnLoad: Insets {InsetsStr(ins)}", "LivePreview");
                 Log.Debug($"OnLoad: Client={this.ClientSize.Width}x{this.ClientSize.Height}, Bounds={RectStr(new Rectangle(this.Left, this.Top, this.Width, this.Height))}", "LivePreview");
             }
             catch { /* no-op */ }
 
-            // var gdi = new GdiCaptureBackend
-            // {
-            //     MaxFps = _maxFps,
-            //     CaptureRect = this.CaptureRect
-            // };
-            var gdi = new GdiCaptureBackend { MaxFps = _maxFps };
-            var rLog  = this.CaptureRect;
-            var rPhys = !SourceRectPhysical.IsEmpty
-                        ? SourceRectPhysical
-                        : DpiUtil.LogicalToPhysical(rLog);
-            gdi.CaptureRect          = rLog;   // 論理（スクリーン座標）
-            gdi.CaptureRectPhysical  = rPhys;  // 物理（実ピクセル）
+            // プライバシーモードの初期値を先に決める
+            bool wantExclude = Properties.Settings.Default.LivePreviewPrivacyMode;
 
-            gdi.ExcludeWindow = this.Handle;
-            gdi.FrameArrived += OnFrameArrived;
+            // Backend 準備
+            var backend = new GdiCaptureBackend { MaxFps = _maxFps };
+            var rLog = this.CaptureRect;
+            var rPhys = !SourceRectPhysical.IsEmpty ? SourceRectPhysical : DpiUtil.LogicalToPhysical(rLog);
+            backend.CaptureRect = rLog;
+            backend.CaptureRectPhysical = rPhys;
+            backend.FrameArrived += OnFrameArrived;
 
-            Log.Trace($"[LivePreview][BackendInit] Log={rLog}  Phys={rPhys}", "LivePreview");
+            // ★ 初期は「必ず除外ON」で立ち上げる（自分写り防止）
+            // 設定がOFFでも、初回フレームまでだけはONにしておく
+            ApplyCaptureExclusion(true);
+            backend.ExcludeWindow = this.Handle;
+            _tempExcludeUntilFirstFrame = !wantExclude;   // 後でOFFに戻す必要があるか
 
-            _backend = gdi;
+            _backend = backend;
             _backend.Start();
+
+            // 初期同期キャプチャ（自分が写らない状態で実施）
+            TrySyncFirstCaptureIntoLatest(CaptureRect);
             Log.Trace("[LivePreview][BackendInit] Backend.Start() called", "LivePreview");
 
             _iconBadge = new TitleIconBadger(this);
             _iconBadge.SetState(LiveBadgeState.Rendering);
             ShowOverlay("LIVE PREVIEW KIRITORI");
         }
+
 
         private float GetCurrentAspect()
         {
@@ -1448,7 +1451,7 @@ namespace Kiritori.Views.LiveCapture
             if (old != null) old.Dispose();
 
             // if (this.Opacity < 1.0) this.Opacity = 1.0;
-            _firstFrameShown = true;
+            // _firstFrameShown = true;
             _firstFrameReady = true;
             RevealIfReady();
             Log.Debug($"FirstCapture: logical={RectStr(rLogical)} physical={RectStr(rPhysical)} bmp={_latest?.Width}x{_latest?.Height}", "LivePreview");
@@ -1653,6 +1656,8 @@ namespace Kiritori.Views.LiveCapture
                     _miPrivacy.Checked = wantExclude;
                     Properties.Settings.Default.LivePreviewPrivacyMode = wantExclude;
                     try { Properties.Settings.Default.Save(); } catch { /* no-op */ }
+                    if (_backend is GdiCaptureBackend gdi)
+                        gdi.ExcludeWindow = wantExclude ? this.Handle : IntPtr.Zero;
                 }
                 else
                 {
@@ -1807,7 +1812,11 @@ namespace Kiritori.Views.LiveCapture
             // ApplyCaptureExclusion(_miPrivacy.Checked);
             _ctx.Opened += (s, e) =>
             {
-                if (_ctx != null && _ctx.Handle != IntPtr.Zero) TryExcludeFromCapture(_ctx.Handle);
+                if (Properties.Settings.Default.LivePreviewPrivacyMode)
+                {
+                    if (_ctx != null && _ctx.Handle != IntPtr.Zero)
+                        TryExcludeFromCapture(_ctx.Handle);
+                }
                 UpdateShadowMenuState();
                 HideOverlay();
             };
@@ -2186,12 +2195,28 @@ namespace Kiritori.Views.LiveCapture
                 {
                     Invalidate();
                     if (!_firstFrameShown)
-                    {
-                        _firstFrameShown = true;
-                        _firstFrameReady = true;
-                        // if (this.Opacity < 1.0) this.Opacity = 1.0;
-                        RevealIfReady();
-                    }
+                        {
+                            _firstFrameShown = true;
+                            _firstFrameReady = true;
+
+                            if (_tempExcludeUntilFirstFrame)
+                            {
+                            try
+                            {
+                                Log.Info("LivePreview: Disabled temporary capture exclusion after first frame.", "LivePreview");
+                                ApplyCaptureExclusion(false);
+                                if (_backend is GdiCaptureBackend gdi)
+                                    gdi.ExcludeWindow = IntPtr.Zero;
+                            }
+                            finally
+                            {
+                                _tempExcludeUntilFirstFrame = false;
+                            }
+                            }
+
+                            // 初期フレームが出たタイミングでオーバーレイを表示するならここで
+                            // ShowOverlay("LIVE PREVIEW KIRITORI");
+                        }
                 }));
             }
 
@@ -2790,7 +2815,7 @@ namespace Kiritori.Views.LiveCapture
                 int dW = client.Width - curW;
                 int dH = client.Height - curH;
 
-                Log.Debug($"ResizeToKeepClient: after1 realClient={curW}x{curH} -> delta dW={dW}, dH={dH}");
+                Log.Debug($"ResizeToKeepClient: after1 realClient={curW}x{curH} -> delta dW={dW}, dH={dH}", "LivePreview");
 
                 if (dW != 0 || dH != 0)
                 {
