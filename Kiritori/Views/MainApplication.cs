@@ -954,11 +954,9 @@ namespace Kiritori
             try
             {
                 using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                using (var ms = new MemoryStream())
+                using (var img = Image.FromStream(fs, useEmbeddedColorManagement: false, validateImageData: false))
                 {
-                    fs.CopyTo(ms);
-                    ms.Position = 0;
-                    return Image.FromStream(ms);
+                    return new Bitmap(img); // ストリームに依存しない独立ビットマップ
                 }
             }
             catch { return null; }

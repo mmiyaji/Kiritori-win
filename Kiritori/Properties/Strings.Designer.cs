@@ -961,11 +961,20 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Recording に類似しているローカライズされた文字列を検索します。
+        ///   Recording (MP4) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_Recording {
             get {
                 return ResourceManager.GetString("Menu.Recording", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Recording (Animated GIF) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_RecordingGif {
+            get {
+                return ResourceManager.GetString("Menu.RecordingGif", resourceCulture);
             }
         }
         

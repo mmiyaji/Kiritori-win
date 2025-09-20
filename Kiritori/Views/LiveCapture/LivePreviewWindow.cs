@@ -3,9 +3,11 @@ using Kiritori.Services.History;
 using Kiritori.Services.Logging;
 using Kiritori.Services.Recording;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -13,12 +15,19 @@ using System.Windows.Forms;
 
 namespace Kiritori.Views.LiveCapture
 {
+    internal sealed class GifRecordOptions
+    {
+        public int  MaxWidth   = 640;   // 長辺の上限（0以下で無効）
+        public int  GifFps     = 10;    // GIF用ターゲットFPS（例: 8〜12）
+        public bool Posterize  = true;  // 色数削減（3/3/2bit）
+        public int  HashStep   = 12;    // 差分判定の間引き（既存の ComputeFastHash の step）
+    }
     public partial class LivePreviewWindow : Form
     {
         private LiveCaptureBackend _backend;
         private Bitmap _latest;
         private Size _hudRectBasisClient;
-        private int  _hudRectBasisDpi;
+        private int _hudRectBasisDpi;
         private bool _tempExcludeUntilFirstFrame = false;
         private readonly object _frameSync = new object();
         public Rectangle CaptureRect { get; set; }   // 論理px（スクリーン座標）
@@ -32,7 +41,7 @@ namespace Kiritori.Views.LiveCapture
             _miOpacity, _miPauseResume, _miRealign, _miTopMost, _miClose,
             _miPref, _miExit, _miTitlebar, _miShowStats,
             _miPolicyRoot, _miPolicyAlways, _miPolicyHash,
-            _miRecoding, _miPrivacy;
+            _miRecording, _miPrivacy, _miRecordingGif;
 
         private float _zoom = 1.0f;     // 表示倍率（1.0=100%）
         private bool _paused = false;
@@ -113,7 +122,7 @@ namespace Kiritori.Views.LiveCapture
         private System.Drawing.Point _downScreen;
         private int _downTick;
         private const int DRAG_SLOP = 6;   // px
-        private const int CLICK_MS  = 300; // ms
+        private const int CLICK_MS = 300; // ms
         [StructLayout(LayoutKind.Sequential)]
         private struct MARGINS
         {
@@ -173,6 +182,13 @@ namespace Kiritori.Views.LiveCapture
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS margins);
+        // ライブプレビュー側のフィールド例
+        private GifRecordOptions _gifOpt;
+        private List<Bitmap> _gifFrames;
+        private List<int>    _gifDelaysCs;
+        private int _gifAccumDelayCs;
+        private int _gifLastHash;
+        private Stopwatch _gifTick = new Stopwatch();
 
         public LivePreviewWindow()
         {
@@ -190,7 +206,7 @@ namespace Kiritori.Views.LiveCapture
                 if (e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightColor) ||
                     e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightAlphaPercent) ||
                     e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightThickness) ||
-                    e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightEnabled) || 
+                    e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightEnabled) ||
                     e.PropertyName == nameof(Properties.Settings.Default.OverlayEnabled))
                 {
                     LoadHoverAppearanceFromSettings();
@@ -247,7 +263,7 @@ namespace Kiritori.Views.LiveCapture
                 _hudRectBasisClient != this.ClientSize)
             {
                 CenterOverlay();
-                _hudRectBasisDpi   = this.DeviceDpi;
+                _hudRectBasisDpi = this.DeviceDpi;
                 _hudRectBasisClient = this.ClientSize;
             }
         }
@@ -282,14 +298,14 @@ namespace Kiritori.Views.LiveCapture
 
             if (!SourceRectPhysical.IsEmpty)
             {
-                int w = (int)Math.Round(SourceRectPhysical.Width  / sDst * _zoom);
+                int w = (int)Math.Round(SourceRectPhysical.Width / sDst * _zoom);
                 int h = (int)Math.Round(SourceRectPhysical.Height / sDst * _zoom);
                 return new Size(w, h);
             }
 
             // フォールバック：CaptureRect(論理)→物理→表示先論理
             var rPhys = DpiUtil.LogicalToPhysical(CaptureRect);
-            int w2 = (int)Math.Round(rPhys.Width  / sDst * _zoom);
+            int w2 = (int)Math.Round(rPhys.Width / sDst * _zoom);
             int h2 = (int)Math.Round(rPhys.Height / sDst * _zoom);
             return new Size(w2, h2);
         }
@@ -304,13 +320,13 @@ namespace Kiritori.Views.LiveCapture
                 int curW = crc.Right - crc.Left;
                 int curH = crc.Bottom - crc.Top;
 
-                int dW = wantClientLog.Width  - curW;
+                int dW = wantClientLog.Width - curW;
                 int dH = wantClientLog.Height - curH;
                 if (dW == 0 && dH == 0) break;
 
                 var ins = GetNcInsets();
-                int outerW = wantClientLog.Width  + ins.Left + ins.Right;
-                int outerH = wantClientLog.Height + ins.Top  + ins.Bottom;
+                int outerW = wantClientLog.Width + ins.Left + ins.Right;
+                int outerH = wantClientLog.Height + ins.Top + ins.Bottom;
 
                 Log.Debug($"{tag}: SizeSnap#{i} cur={curW}x{curH} -> want={wantClientLog.Width}x{wantClientLog.Height} outer={outerW}x{outerH}", "LivePreview");
 
@@ -522,16 +538,16 @@ namespace Kiritori.Views.LiveCapture
         {
             float scale = this.DeviceDpi / 96f;
             int padding = (int)Math.Ceiling(10 * scale);
-            int margin  = (int)Math.Ceiling(12 * scale);
+            int margin = (int)Math.Ceiling(12 * scale);
 
             // パディングの無い厳密な測定
             var flags = TextFormatFlags.NoPadding;
             var ts = TextRenderer.MeasureText(g, text, _overlayFont, new Size(int.MaxValue, int.MaxValue), flags);
 
-            int w = ts.Width  + padding * 2;
+            int w = ts.Width + padding * 2;
             int h = ts.Height + padding * 2;
 
-            int x = this.ClientSize.Width  - w - margin;
+            int x = this.ClientSize.Width - w - margin;
             int y = this.ClientSize.Height - h - margin;
 
             if (x < 0) x = 0;
@@ -690,7 +706,7 @@ namespace Kiritori.Views.LiveCapture
         {
             try
             {
-                if(_fadeTimer == null) return;
+                if (_fadeTimer == null) return;
                 _hudHot = _hudDown = false;
                 EnsureHudRect();
                 _hudTargetAlpha = 0;       // HUDはフェードアウト
@@ -1535,13 +1551,13 @@ namespace Kiritori.Views.LiveCapture
                 _miOpacity.DropDownItems.Add(mi);
             }
 
-            _miRecoding = new ToolStripMenuItem(SR.T("Menu.Recording", "Recording"))
+            _miRecording = new ToolStripMenuItem(SR.T("Menu.Recording", "Recording"))
             {
                 CheckOnClick = true
             };
-            _miRecoding.CheckedChanged += (s, e) =>
+            _miRecording.CheckedChanged += (s, e) =>
             {
-                if (_miRecoding.Checked)
+                if (_miRecording.Checked)
                 {
                     try
                     {
@@ -1553,7 +1569,7 @@ namespace Kiritori.Views.LiveCapture
                     catch (Exception ex)
                     {
                         Log.Debug("Failed to start recording: " + ex.Message, "LivePreview");
-                        _miRecoding.Checked = false; // 状態を元に戻す
+                        _miRecording.Checked = false; // 状態を元に戻す
                         _iconBadge.SetState(LiveBadgeState.Rendering);
                     }
                 }
@@ -1570,12 +1586,57 @@ namespace Kiritori.Views.LiveCapture
                     {
                         Log.Debug("Failed to stop recording: " + ex.Message, "LivePreview");
                         // 停止失敗時は再チェックに戻すかどうかは好みで
-                        _miRecoding.Checked = true;
+                        _miRecording.Checked = true;
                         _iconBadge.SetState(LiveBadgeState.Rendering);
                     }
                 }
             };
-            _miRecoding.ShortcutKeys = (Keys)HOTS.RECORD;
+            _miRecording.ShortcutKeys = (Keys)HOTS.RECORD;
+
+
+            _miRecordingGif = new ToolStripMenuItem(SR.T("Menu.RecordingGif", "Recording GIF"))
+            {
+                CheckOnClick = true
+            };
+            _miRecordingGif.CheckedChanged += (s, e) =>
+            {
+                if (_miRecordingGif.Checked)
+                {
+                    try
+                    {
+                        StartGifRecord();
+                        Log.Debug("Recording GIF started", "LivePreview");
+                        ShowOverlay("RECORDING GIF");
+                        _iconBadge.SetState(LiveBadgeState.Recording);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug("Failed to start recording: " + ex.Message, "LivePreview");
+                        _miRecordingGif.Checked = false; // 状態を元に戻す
+                        _iconBadge.SetState(LiveBadgeState.Rendering);
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        var outPath = Path.Combine(Path.GetTempPath(), "Kiritori",
+                            $"Kiritori_{DateTime.Now:yyyyMMdd_HHmmss}.gif");
+                        StopGifRecordAndSave(outPath);
+                        Log.Debug("Recording GIF stopped", "LivePreview");
+                        ShowOverlay("STOP RECORDING GIF");
+                        _iconBadge.SetState(LiveBadgeState.Rendering);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug("Failed to stop recording: " + ex.Message, "LivePreview");
+                        // 停止失敗時は再チェックに戻すかどうかは好みで
+                        _miRecordingGif.Checked = true;
+                        _iconBadge.SetState(LiveBadgeState.Rendering);
+                    }
+                }
+            };
+            // _miRecording.ShortcutKeys = (Keys)HOTS.RECORD;
 
             _miPauseResume = new ToolStripMenuItem(SR.T("Menu.Pause", "Pause"));
             _miPauseResume.Click += (s, e) => TogglePause();
@@ -1686,7 +1747,7 @@ namespace Kiritori.Views.LiveCapture
                 _miFpsItems[i] = mi;
                 _miFpsRoot.DropDownItems.Add(mi);
             }
-            try { _showStats = Properties.Settings.Default.LivePreviewShowStats; } catch { }            
+            try { _showStats = Properties.Settings.Default.LivePreviewShowStats; } catch { }
             _miShowStats = new ToolStripMenuItem(SR.T("Menu.ShowStats", "Show Stats (FPS/CPU/MEM)"))
             {
                 Checked = _showStats,
@@ -1800,7 +1861,8 @@ namespace Kiritori.Views.LiveCapture
                 // LivePreview ではまず Close のみを同位置に配置（後で統合可能）
                 _miClose,
                 _miPauseResume,
-                _miRecoding,
+                _miRecording,
+                _miRecordingGif,
                 _miFpsRoot,
                 _miPolicyRoot,
                 new ToolStripSeparator(),
@@ -1930,8 +1992,8 @@ namespace Kiritori.Views.LiveCapture
         }
         private void ToggleRecord()
         {
-            if (_miRecoding == null) return;
-            _miRecoding.Checked = !_miRecoding.Checked;
+            if (_miRecording == null) return;
+            _miRecording.Checked = !_miRecording.Checked;
         }
         private void miStartRecMp4_Click(object sender, EventArgs e)
         {
@@ -2022,7 +2084,7 @@ namespace Kiritori.Views.LiveCapture
             this.TopMost = _miTopMost?.Checked ?? this.TopMost;
             _lastPresentedClientSize = Size.Empty;
             Invalidate();
-            ShowOverlay($"ZOOM {(_zoom*100):F0}%");
+            ShowOverlay($"ZOOM {(_zoom * 100):F0}%");
         }
         private void TogglePause()
         {
@@ -2112,7 +2174,7 @@ namespace Kiritori.Views.LiveCapture
             int clientL = (int)Math.Round(wantPhys.X / sDst);
             int clientT = (int)Math.Round(wantPhys.Y / sDst);
             int newLeft = clientL - ins.Left;
-            int newTop  = clientT - ins.Top;
+            int newTop = clientT - ins.Top;
 
             SetWindowPos(this.Handle, IntPtr.Zero, newLeft, newTop, 0, 0,
                 SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
@@ -2134,9 +2196,9 @@ namespace Kiritori.Views.LiveCapture
 
             if (_fpsWindowWatch.ElapsedMilliseconds >= 1000)
             {
-                _srcFps  = Interlocked.Exchange(ref _srcCount, 0);
+                _srcFps = Interlocked.Exchange(ref _srcCount, 0);
                 _dispFps = Interlocked.Exchange(ref _dispCount, 0);
-                _fps     = _dispFps;
+                _fps = _dispFps;
                 _fpsWindowWatch.Restart();
                 LogPerfStats();
                 if (IsHandleCreated) BeginInvoke((Action)(() => Invalidate())); // オーバーレイ更新
@@ -2152,7 +2214,50 @@ namespace Kiritori.Views.LiveCapture
             {
                 _rec.UpdateLatestFrame(bmp); // 到着ベースで差し替え、送出はワーカーが一定間隔で実施
             }
+            if (_gifFrames != null && bmp != null)
+            {
+                // GIF用ターゲットFPSに従って“収集間引き”
+                int minIntervalMs = (int)Math.Round(1000.0 / Math.Max(1, _gifOpt.GifFps));
+                if (_gifTick.ElapsedMilliseconds < minIntervalMs)
+                {
+                    // フレームは積まずに遅延だけ後で加算する
+                }
+                else
+                {
+                    _gifTick.Restart();
 
+                    // ① 前処理（縮小/ポスタライズ）
+                    using (var prepped = PrepareGifFrame(bmp, _gifOpt))
+                    {
+                        // ② 差分判定（ハッシュは前処理後に）
+                        int hash = ComputeFastHash(prepped, _gifOpt.HashStep);
+                        int frameCs = Math.Max(2, (int)Math.Round(100.0 / Math.Max(1, _gifOpt.GifFps))); // 1/100秒単位
+
+                        if (_gifFrames.Count == 0)
+                        {
+                            _gifFrames.Add((Bitmap)prepped.Clone());
+                            _gifDelaysCs.Add(frameCs);
+                            _gifLastHash = hash;
+                            _gifAccumDelayCs = 0;
+                        }
+                        else if (hash == _gifLastHash)
+                        {
+                            // 同一と見なして遅延をためる
+                            _gifAccumDelayCs += frameCs;
+                        }
+                        else
+                        {
+                            // 直前フレームにためた遅延を反映してから追加
+                            _gifDelaysCs[_gifDelaysCs.Count - 1] += _gifAccumDelayCs;
+                            _gifAccumDelayCs = 0;
+
+                            _gifFrames.Add((Bitmap)prepped.Clone());
+                            _gifDelaysCs.Add(frameCs);
+                            _gifLastHash = hash;
+                        }
+                    }
+                }
+            }
             bool forceBySize = (_lastPresentedClientSize != this.ClientSize);
             bool shouldDraw;
 
@@ -2206,12 +2311,12 @@ namespace Kiritori.Views.LiveCapture
                 {
                     Invalidate();
                     if (!_firstFrameShown)
-                        {
-                            _firstFrameShown = true;
-                            _firstFrameReady = true;
+                    {
+                        _firstFrameShown = true;
+                        _firstFrameReady = true;
 
-                            if (_tempExcludeUntilFirstFrame)
-                            {
+                        if (_tempExcludeUntilFirstFrame)
+                        {
                             try
                             {
                                 Log.Info("LivePreview: Disabled temporary capture exclusion after first frame.", "LivePreview");
@@ -2223,11 +2328,11 @@ namespace Kiritori.Views.LiveCapture
                             {
                                 _tempExcludeUntilFirstFrame = false;
                             }
-                            }
-
-                            // 初期フレームが出たタイミングでオーバーレイを表示するならここで
-                            // ShowOverlay("LIVE PREVIEW KIRITORI");
                         }
+
+                        // 初期フレームが出たタイミングでオーバーレイを表示するならここで
+                        // ShowOverlay("LIVE PREVIEW KIRITORI");
+                    }
                 }));
             }
 
@@ -2483,7 +2588,7 @@ namespace Kiritori.Views.LiveCapture
                     // SystemInformation.DragSize/2 か固定スロップ
                     var drag = SystemInformation.DragSize;
                     bool exceed =
-                        Math.Abs(curClient.X - _downClient.X) >= Math.Max(DRAG_SLOP, drag.Width  / 2) ||
+                        Math.Abs(curClient.X - _downClient.X) >= Math.Max(DRAG_SLOP, drag.Width / 2) ||
                         Math.Abs(curClient.Y - _downClient.Y) >= Math.Max(DRAG_SLOP, drag.Height / 2);
 
                     if (exceed)
@@ -2508,7 +2613,8 @@ namespace Kiritori.Views.LiveCapture
                     _closeDown = false;
                     bool insideX = GetCloseRect().Contains(this.PointToClient(Cursor.Position));
                     Invalidate(GetCloseRect());
-                    if (insideX) {
+                    if (insideX)
+                    {
                         Log.Info("LivePreviewWindow closed by user (icon)", "LivePreview");
                         this.Close();
                         return;
@@ -2524,12 +2630,12 @@ namespace Kiritori.Views.LiveCapture
 
                 // “その場クリック”の判定
                 int elapsed = Environment.TickCount - _downTick;
-                var curScr  = Cursor.Position;
+                var curScr = Cursor.Position;
                 int dx = Math.Abs(curScr.X - _downScreen.X);
                 int dy = Math.Abs(curScr.Y - _downScreen.Y);
 
                 bool nearNoMove = (dx < DRAG_SLOP && dy < DRAG_SLOP);
-                bool quick      = (elapsed <= CLICK_MS);
+                bool quick = (elapsed <= CLICK_MS);
                 bool upInsideHud = (_hudAlpha > 0 && _hudRect.Contains(this.PointToClient(Cursor.Position)) && IsHudInteractable());
 
                 if (wasMaybeDrag && _downOnHud && upInsideHud && nearNoMove && quick)
@@ -2748,8 +2854,8 @@ namespace Kiritori.Views.LiveCapture
 
         [DllImport("user32.dll")] private static extern bool GetWindowDisplayAffinity(IntPtr hWnd, out uint pdwAffinity);
 
-        private const uint WDA_NONE               = 0x0;
-        private const uint WDA_MONITOR            = 0x1;   // 旧式
+        private const uint WDA_NONE = 0x0;
+        private const uint WDA_MONITOR = 0x1;   // 旧式
         private const uint WDA_EXCLUDEFROMCAPTURE = 0x11;  // 推奨（Win10 2004+）
         const uint RDW_INVALIDATE = 0x0001, RDW_UPDATENOW = 0x0100, RDW_FRAME = 0x0400, RDW_ALLCHILDREN = 0x0080;
 
@@ -2890,6 +2996,139 @@ namespace Kiritori.Views.LiveCapture
             }
         }
 
+        private void StartGifRecord()
+        {
+            _gifOpt = new GifRecordOptions();
+            _gifFrames = new List<Bitmap>();
+            _gifDelaysCs = new List<int>();
+            _gifAccumDelayCs = 0;
+            _gifLastHash = 0;
+            _gifTick.Restart();
+        }
+
+        private void StopGifRecordAndSave(string path)
+        {
+            if (_gifFrames != null && _gifFrames.Count > 0 && _gifAccumDelayCs > 0)
+                _gifDelaysCs[_gifDelaysCs.Count - 1] += _gifAccumDelayCs;
+
+            if (_gifFrames != null && _gifFrames.Count > 0)
+                GifWriter.SaveAnimatedGif(_gifFrames, _gifDelaysCs, path, true);
+
+            if (_gifFrames != null)
+            {
+                for (int i = 0; i < _gifFrames.Count; i++) _gifFrames[i].Dispose();
+            }
+            _gifFrames = null; _gifDelaysCs = null; _gifAccumDelayCs = 0;
+            _gifTick.Reset();
+            try
+            {
+                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                {
+                    try
+                    {
+                        // エクスプローラーで選択状態で開く
+                        Process.Start("explorer.exe", $"/select,\"{path}\"");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Debug("Open Explorer EX: " + ex.Message, "LivePreview");
+                    }
+                }
+            }
+            catch { /* no-op */ }
+        }
+        private static Bitmap PrepareGifFrame(Bitmap src, GifRecordOptions opt)
+        {
+            Bitmap work = src;
+
+            // 1) 縮小（長辺 MaxWidth）
+            if (opt != null && opt.MaxWidth > 0)
+            {
+                int w = src.Width, h = src.Height;
+                int longSide = Math.Max(w, h);
+                if (longSide > opt.MaxWidth)
+                {
+                    double scale = (double)opt.MaxWidth / longSide;
+                    int nw = Math.Max(1, (int)Math.Round(w * scale));
+                    int nh = Math.Max(1, (int)Math.Round(h * scale));
+                    work = ResizeBitmap(src, nw, nh);
+                    if (!ReferenceEquals(work, src)) src = null;
+                }
+            }
+
+            // 2) ポスタライズ（3/3/2bit = 最大256色）
+            if (opt != null && opt.Posterize)
+            {
+                var reduced = Posterize332(work);
+                if (!ReferenceEquals(work, reduced)) work.Dispose();
+                work = reduced;
+            }
+
+            // ここで 24/32bpp のままでもOK。GDI+エンコーダがGIF用に256色へ量子化します。
+            return work;
+        }
+
+        private static Bitmap ResizeBitmap(Bitmap src, int width, int height)
+        {
+            var dst = new Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            using (var g = Graphics.FromImage(dst))
+            {
+                g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                g.SmoothingMode      = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                g.InterpolationMode  = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.DrawImage(src, new Rectangle(0,0,width,height));
+            }
+            return dst;
+        }
+
+        // 3/3/2bit に丸める（最大256色内）:  R:3bit, G:3bit, B:2bit
+        private static Bitmap Posterize332(Bitmap src)
+        {
+            var rect = new Rectangle(0, 0, src.Width, src.Height);
+            var dst = new Bitmap(src.Width, src.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+            var sd = src.LockBits(rect, ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            var dd = dst.LockBits(rect, ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            try
+            {
+                unsafe
+                {
+                    byte* sp = (byte*)sd.Scan0;
+                    byte* dp = (byte*)dd.Scan0;
+                    int sStride = sd.Stride, dStride = dd.Stride;
+                    for (int y = 0; y < src.Height; y++)
+                    {
+                        byte* srow = sp + y * sStride;
+                        byte* drow = dp + y * dStride;
+                        for (int x = 0; x < src.Width; x++)
+                        {
+                            // BGRA
+                            byte b = srow[x * 4 + 0];
+                            byte g = srow[x * 4 + 1];
+                            byte r = srow[x * 4 + 2];
+                            byte a = srow[x * 4 + 3];
+
+                            // 量子化: 3/3/2bit（0..255を段階化）
+                            // 3bit: 8段階 -> * (255/7), 2bit: 4段階 -> * (255/3)
+                            byte rq = (byte)((r >> 5) * 255 / 7);
+                            byte gq = (byte)((g >> 5) * 255 / 7);
+                            byte bq = (byte)((b >> 6) * 255 / 3);
+
+                            drow[x * 4 + 0] = bq;
+                            drow[x * 4 + 1] = gq;
+                            drow[x * 4 + 2] = rq;
+                            drow[x * 4 + 3] = a; // 透過はそのまま（通常は不使用）
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                src.UnlockBits(sd);
+                dst.UnlockBits(dd);
+            }
+            return dst;
+        }
 
 
         private static class NativeMethods
@@ -2902,6 +3141,6 @@ namespace Kiritori.Views.LiveCapture
             public static extern bool BitBlt(IntPtr hdcDest, int nXDest, int nYDest, int nWidth, int nHeight,
                                             IntPtr hdcSrc, int nXSrc, int nYSrc, int dwRop);
         }
-        
+
     }
 }

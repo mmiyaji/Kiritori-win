@@ -571,7 +571,7 @@
     <value>オーバーレイ表示</value>
   </data>
   <data name="Menu.Recording" xml:space="preserve">
-    <value>録画</value>
+    <value>録画 (MP4形式)</value>
   </data>
   <data name="Menu.Rendering" xml:space="preserve">
     <value>レンダリング</value>
@@ -923,5 +923,8 @@
   </data>
   <data name="Text.LivePreviewSetting" xml:space="preserve">
     <value>ライブプレビュー設定</value>
+  </data>
+  <data name="Menu.RecordingGif" xml:space="preserve">
+    <value>録画 (アニメーションGIF形式)</value>
   </data>
 </root>

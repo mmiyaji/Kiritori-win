@@ -571,7 +571,7 @@
     <value>Show Overlay</value>
   </data>
   <data name="Menu.Recording" xml:space="preserve">
-    <value>Recording</value>
+    <value>Recording (MP4)</value>
   </data>
   <data name="Menu.Rendering" xml:space="preserve">
     <value>Rendering</value>
@@ -923,5 +923,8 @@
   </data>
   <data name="Text.LivePreviewSetting" xml:space="preserve">
     <value>Live Preview Settings</value>
+  </data>
+  <data name="Menu.RecordingGif" xml:space="preserve">
+    <value>Recording (Animated GIF)</value>
   </data>
 </root>

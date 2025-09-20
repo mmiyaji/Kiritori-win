@@ -9,6 +9,7 @@ using Windows.Globalization;
 using Windows.Graphics.Imaging;
 using Windows.Media.Ocr;
 using System.Runtime.InteropServices.WindowsRuntime;
+using Windows.Storage.Streams;
 
 namespace Kiritori.Services.Ocr
 {
@@ -258,15 +259,17 @@ namespace Kiritori.Services.Ocr
 
         private static async Task<SoftwareBitmap> ToSoftwareBitmapAsync(Bitmap bmp)
         {
-            // BMP で中間保存（簡易・互換優先）
-            using (var ms = new MemoryStream())
+            // 中間 MemoryStream を使わず、InMemoryRandomAccessStream に直接 Save する
+            using (var ras = new InMemoryRandomAccessStream())
+            using (var s = ras.AsStreamForWrite())
             {
-                bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
-                ms.Position = 0;
+                // BMP で保存（互換性重視）: .NET の GDI+ → 直接WinRTラッパに書き込み
+                bmp.Save(s, System.Drawing.Imaging.ImageFormat.Bmp);
+                s.Flush();
+                s.Position = 0; // 読み戻し位置を先頭に
 
-                var ras = ms.AsRandomAccessStream();
                 var dec = await BitmapDecoder.CreateAsync(ras);
-                return await dec.GetSoftwareBitmapAsync();
+                return await dec.GetSoftwareBitmapAsync(); // 呼び出し側で必要に応じて Dispose
             }
         }
 

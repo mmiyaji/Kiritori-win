@@ -190,6 +190,7 @@
     <Compile Include="Services\Ocr\WindowsOcrHelper.cs" />
     <Compile Include="Services\Recording\FfmpegLocator.cs" />
     <Compile Include="Services\Recording\FfmpegPipeRecorder.cs" />
+    <Compile Include="Services\Recording\GifWriter.cs" />
     <Compile Include="Services\Settings\SettingsDirtyTracker.cs" />
     <Compile Include="Services\ThirdParty\ThirdPartyCatalog.cs" />
     <Compile Include="Views\Capture\FixedSizePresetDialog.cs">
@@ -233,9 +234,7 @@
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="Views\LiveCapture\LiveCaptureBackend.cs" />
-    <Compile Include="Views\LiveCapture\LivePreviewWindow.cs">
-      <SubType>Form</SubType>
-    </Compile>
+    <Compile Include="Views\LiveCapture\LivePreviewWindow.cs" />
     <Compile Include="Views\LiveCapture\LivePreviewWindow.Designer.cs">
       <DependentUpon>LivePreviewWindow.cs</DependentUpon>
     </Compile>
