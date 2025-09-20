@@ -40,8 +40,20 @@ namespace Kiritori
 
         private void BuildShortcutsTab()
         {
+            var scrollShortcuts = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                AutoScrollMargin = new Size(0, 12),
+                Padding = new Padding(12)
+            };
+            this.tabShortcuts.Controls.Add(scrollShortcuts);
+
             var stackShort = NewStack();
             this.tabShortcuts.Controls.Add(stackShort);
+            stackShort.Dock = DockStyle.Top;
+            stackShort.AutoSize = true;
+            stackShort.AutoSizeMode = AutoSizeMode.GrowAndShrink;
 
             this.grpShortcutsWindowOps = NewGroup("Window operations");
             this.grpShortcutsWindowOps.Tag = "loc:Text.WindowOperation";

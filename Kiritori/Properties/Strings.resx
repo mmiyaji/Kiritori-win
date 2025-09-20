@@ -918,4 +918,10 @@
   <data name="Text.ExecDefault" xml:space="preserve">
     <value>Exec</value>
   </data>
+  <data name="Text.ShowStats" xml:space="preserve">
+    <value>Show stats (FPS/CPU/MEM)</value>
+  </data>
+  <data name="Text.LivePreviewSetting" xml:space="preserve">
+    <value>Live Preview Settings</value>
+  </data>
 </root>

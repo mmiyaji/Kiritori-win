@@ -133,7 +133,7 @@ namespace Kiritori.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public bool HoverHighlightEnabled {
             get {
                 return ((bool)(this["HoverHighlightEnabled"]));
@@ -548,6 +548,18 @@ namespace Kiritori.Properties {
             }
             set {
                 this["FixedCropHeight"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool LivePreviewShowStats {
+            get {
+                return ((bool)(this["LivePreviewShowStats"]));
+            }
+            set {
+                this["LivePreviewShowStats"] = value;
             }
         }
     }

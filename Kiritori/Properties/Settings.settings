@@ -30,7 +30,7 @@
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="HoverHighlightEnabled" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">True</Value>
+      <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="HoverHighlightColor" Type="System.Drawing.Color" Scope="User">
       <Value Profile="(Default)">Cyan</Value>
@@ -133,6 +133,9 @@
     </Setting>
     <Setting Name="FixedCropHeight" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">300</Value>
+    </Setting>
+    <Setting Name="LivePreviewShowStats" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
     </Setting>
   </Settings>
 </SettingsFile>

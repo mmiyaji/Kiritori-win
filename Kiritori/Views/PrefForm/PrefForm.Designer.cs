@@ -117,6 +117,8 @@ namespace Kiritori
         private Label labelDefaultOpacity;
         private TrackBar trackbarDefaultOpacity;
         private Label labelDefaultOpacityVal;
+        private GroupBox grpLivePreview;
+        private CheckBox chkLiveShowStats;
 
         // ========= Shortcuts ==========
         private TabPage tabShortcuts;
@@ -368,7 +370,18 @@ namespace Kiritori
             // =========================================================
             // General タブ（縦積みレイアウト）
             // =========================================================
+            var scrollGeneral = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                AutoScrollMargin = new Size(0, 12),
+                Padding = new Padding(12)
+            };
+            this.tabGeneral.Controls.Add(scrollGeneral);
             var stackGeneral = NewStack();
+            stackGeneral.Dock = DockStyle.Top;
+            stackGeneral.AutoSize = true;
+            stackGeneral.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             this.tabGeneral.Controls.Add(stackGeneral);
 
             // Application Settings
@@ -552,7 +565,19 @@ namespace Kiritori
             // =========================================================
             // Appearance タブ（1画面に収まるシンプル構成）
             // =========================================================
+            var scrollLivePreview = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                AutoScrollMargin = new Size(0, 12),
+                Padding = new Padding(12)
+            };
+            this.tabAppearance.Controls.Add(scrollLivePreview);
+
             var stackAppearance = NewStack();
+            stackAppearance.Dock = DockStyle.Top;
+            stackAppearance.AutoSize = true;
+            stackAppearance.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             this.tabAppearance.Controls.Add(stackAppearance);
 
             // Capture settings（プリセット＋右プレビュー）
@@ -564,7 +589,7 @@ namespace Kiritori
             this.chkTrayNotify = new CheckBox { Text = "Notify in tray on capture", AutoSize = true, Tag = "loc:Text.NotifyTray" };
             this.chkTrayNotifyOCR = new CheckBox { Text = "Notify in tray on OCR capture", AutoSize = true, Tag = "loc:Text.NotifyTrayOCR" };
             // this.chkPlaySound = new CheckBox { Text = "Play sound on capture", AutoSize = true, Enabled = false, Tag = "loc:Text.PlaySound" };
-
+    
             var flowToggles = new FlowLayoutPanel
             {
                 FlowDirection = FlowDirection.LeftToRight,
@@ -730,9 +755,49 @@ namespace Kiritori
                 this.labelDefaultOpacityVal.Text = this.trackbarDefaultOpacity.Value + "%";
             };
 
+            this.grpLivePreview = NewGroup("Live Preview Settings");
+            this.grpLivePreview.Tag = "loc:Text.LivePreviewSetting";
+            this.grpLivePreview.Margin = new Padding(0, 8, 0, 0);
+
+            var tlpLive = NewGrid(2, 2);
+
+            // チェックボックス群
+            var flowLiveToggles = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                WrapContents = true,
+            };
+
+            // Stats 表示
+            this.chkLiveShowStats = new CheckBox {
+                Text = "Show stats (FPS/CPU/MEM)",
+                AutoSize = true,
+                Tag = "loc:Text.ShowStats",
+                Checked = Properties.Settings.Default.LivePreviewShowStats
+            };
+            this.chkLiveShowStats.CheckedChanged += (s, e) =>
+            {
+                Properties.Settings.Default.LivePreviewShowStats = this.chkLiveShowStats.Checked;
+                try { Properties.Settings.Default.Save(); } catch { }
+            };
+            flowLiveToggles.Controls.Add(this.chkLiveShowStats);
+
+            tlpLive.Controls.Add(new Label {
+                Text = "Options",
+                AutoSize = true,
+                TextAlign = ContentAlignment.MiddleRight,
+                Anchor = AnchorStyles.Right,
+                Tag = "loc:Text.Option"
+            }, 0, 0);
+            tlpLive.Controls.Add(flowLiveToggles, 1, 0);
+
+            this.grpLivePreview.Controls.Add(tlpLive);
+
             // stack へ追加（2グループのみ）
             stackAppearance.Controls.Add(this.grpCaptureSettings, 0, 0);
             stackAppearance.Controls.Add(this.grpWindowSettings, 0, 1);
+            stackAppearance.Controls.Add(this.grpLivePreview, 0, 2);
 
             // =========================================================
             // Shortcuts タブ（縦積み）

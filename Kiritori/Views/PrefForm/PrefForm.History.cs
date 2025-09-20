@@ -359,7 +359,7 @@ namespace Kiritori
                 HideSelection = false,
                 FullRowSelect = true,
                 MultiSelect = true,
-                BackColor = SystemColors.Window,
+                BackColor = SystemColors.Control,
                 UseCompatibleStateImageBehavior = false,
                 ShowItemToolTips = true
             };
@@ -576,16 +576,28 @@ namespace Kiritori
 
             bool selected = e.Item.Selected;
             Color bg = selected ? SystemColors.Highlight : _lvHistory.BackColor;
-            using (var b = new SolidBrush(bg)) e.Graphics.FillRectangle(b, r);
 
+            // 背景
+            using (var b = new SolidBrush(bg))
+                e.Graphics.FillRectangle(b, r);
+
+            // コンテンツの内側領域（サムネ/テキスト配置用）
             var inner = Rectangle.Inflate(r, -pad, -pad);
 
+            // ホバー時の枠（非選択時のみ）
             if (!selected && e.ItemIndex == _historyHotIndex)
             {
-                using (var pen = new Pen(Color.FromArgb(90, 0, 120, 215), 2f))
-                    e.Graphics.DrawRectangle(pen, Rectangle.Inflate(inner, -1, -1));
-            }
+                // 領域は背景の外周と同じにする
+                var hoverRect = Rectangle.Inflate(r, -1, -1);
 
+                // 点線で描く（フォーカス矩形と同じスタイル）
+                ControlPaint.DrawFocusRectangle(
+                    e.Graphics,
+                    hoverRect,
+                    SystemColors.Highlight,   // 点線色（必要ならカスタム色に変更可能）
+                    bg                        // 背景色
+                );
+            }
             var thumbRect = new Rectangle(inner.Left, inner.Top, THUMB_W, THUMB_H);
             Image img = null;
             try { img = _imgThumbs.Images[e.Item.ImageKey]; } catch { }
@@ -643,9 +655,16 @@ namespace Kiritori
 
             if (e.Item.Focused)
             {
-                var focusRect = Rectangle.Inflate(inner, -1, -1);
-                ControlPaint.DrawFocusRectangle(e.Graphics, focusRect,
-                    selected ? SystemColors.HighlightText : SystemColors.ControlText, Color.Transparent);
+                // e.Bounds に合わせ、クリップ対策で 1px だけ内側
+                var focusRect = Rectangle.Inflate(r, -1, -1);
+
+                // 前景色/背景色を指定（背景色に bg を渡すとドットの抜きが背景と一致）
+                ControlPaint.DrawFocusRectangle(
+                    e.Graphics,
+                    focusRect,
+                    selected ? SystemColors.HighlightText : SystemColors.ControlText,
+                    bg
+                );
             }
         }
 

@@ -2014,6 +2014,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Live Preview Settings に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_LivePreviewSetting {
+            get {
+                return ResourceManager.GetString("Text.LivePreviewSetting", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   LogLevel に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_LogLevel {
@@ -2253,6 +2262,15 @@ namespace Kiritori.Properties {
         internal static string Text_ShowScreen {
             get {
                 return ResourceManager.GetString("Text.ShowScreen", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Show stats (FPS/CPU/MEM) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_ShowStats {
+            get {
+                return ResourceManager.GetString("Text.ShowStats", resourceCulture);
             }
         }
         

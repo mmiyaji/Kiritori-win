@@ -667,12 +667,20 @@ namespace Kiritori.Views.LiveCapture
             {
                 EnsureHudRect();
 
-                _hudTargetAlpha = _hudRect.IsEmpty ? 0 : 140;  // ← HUDは従来通りフェード
-                SetHoverInstant(true);                         // ← ホバーは即時ON
+                _hudTargetAlpha = _hudRect.IsEmpty ? 0 : 140;  // HUDは従来通りフェード
+
+                if (Properties.Settings.Default.HoverHighlightEnabled)
+                {
+                    SetHoverInstant(true);   // ON時のみ強調
+                }
+                else
+                {
+                    SetHoverInstant(false);  // OFFなら常に無効
+                }
 
                 if (!_fadeTimer.Enabled) _fadeTimer.Start();   // HUD用
-                
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
                 Log.Error($"ShowPlaybackOverlay failed: {ex.Message}", "LivePreview");
             }
@@ -1678,7 +1686,7 @@ namespace Kiritori.Views.LiveCapture
                 _miFpsItems[i] = mi;
                 _miFpsRoot.DropDownItems.Add(mi);
             }
-
+            try { _showStats = Properties.Settings.Default.LivePreviewShowStats; } catch { }            
             _miShowStats = new ToolStripMenuItem(SR.T("Menu.ShowStats", "Show Stats (FPS/CPU/MEM)"))
             {
                 Checked = _showStats,
@@ -1687,6 +1695,9 @@ namespace Kiritori.Views.LiveCapture
             _miShowStats.CheckedChanged += (s, e) =>
             {
                 _showStats = _miShowStats.Checked;
+                Properties.Settings.Default.LivePreviewShowStats = _showStats;
+                try { Properties.Settings.Default.Save(); } catch { }
+
                 if (_showStats)
                 {
                     if (_perfTimer == null)

@@ -179,6 +179,7 @@
     <Compile Include="Services\Extensions\ExtensionsState.cs" />
     <Compile Include="Services\Extensions\ExtensionsUtil.cs" />
     <Compile Include="Services\Extensions\ExtensionsZip.cs" />
+    <Compile Include="Services\History\DiskThumbCache.cs" />
     <Compile Include="Services\History\HistoryBridge.cs" />
     <Compile Include="Services\History\HistoryManager.cs" />
     <Compile Include="Services\Logging\Log.cs" />

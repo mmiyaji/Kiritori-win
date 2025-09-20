@@ -1,12 +1,12 @@
 {
   "id": "lang_ja",
   "displayName": "Japanese UI Pack",
-  "version": "1.5.2",
+  "version": "1.5.5",
   "kind": "satellite",
   "download": {
-    "url": "https://github.com/mmiyaji/Kiritori-win/releases/download/v1.5.2/lang-ja-1.5.2.zip",
-    "sha256": "851ADD47FF68964922289DD0D383389FFF741E39396D8E98F5AEF2BF37B5519",
-    "size": 9427
+    "url": "https://github.com/mmiyaji/Kiritori-win/releases/download/v1.5.5/lang-ja-1.5.5.zip",
+    "sha256": "B79D674F15C9304E8594C0486548EC53172B895DE26E4DFA22216E1DE3A86B96",
+    "size": 9463
   },
   "install": {
     "targetDir": "i18n/ja",
