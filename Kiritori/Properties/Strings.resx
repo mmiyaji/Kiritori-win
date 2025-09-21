@@ -927,4 +927,40 @@
   <data name="Menu.RecordingGif" xml:space="preserve">
     <value>Recording (Animated GIF)</value>
   </data>
+  <data name="Setting.Display.GifMaxDurationSec" xml:space="preserve">
+    <value>GIF Max Duration (sec)</value>
+  </data>
+  <data name="Setting.Display.LivePreviewSaveFolder" xml:space="preserve">
+    <value>Recording Folder</value>
+  </data>
+  <data name="GifNotice.Title" xml:space="preserve">
+    <value>About GIF recording</value>
+  </data>
+  <data name="GifNotice.Header" xml:space="preserve">
+    <value>Animated GIF recording has the following limitations</value>
+  </data>
+  <data name="GifNotice.Line.Fps" xml:space="preserve">
+    <value>• Frame rate: up to {0} fps (time-based downsampling)</value>
+    <comment>@MutedRule(WhiteSpaceTail)@MutedRule(StringFormat)@MutedRule(PunctuationTail)@MutedRule(PunctuationLead)</comment>
+  </data>
+  <data name="GifNotice.Line.SizeGeneric" xml:space="preserve">
+    <value>• Size optimization: downscale / palette reduction to keep file size small</value>
+    <comment>@MutedRule(PunctuationLead)</comment>
+  </data>
+  <data name="GifNotice.Line.SizeWithWidth" xml:space="preserve">
+    <value>• Size optimization: max width {0}px (downscale / palette reduction)</value>
+    <comment>@MutedRule(PunctuationLead)</comment>
+  </data>
+  <data name="GifNotice.Line.LimitOn" xml:space="preserve">
+    <value>• Time limit: auto-stop after {0} seconds</value>
+    <comment>@MutedRule(PunctuationLead)</comment>
+  </data>
+  <data name="GifNotice.Line.LimitOff" xml:space="preserve">
+    <value>• Time limit: none (auto-stop disabled)</value>
+    <comment>@MutedRule(PunctuationLead)</comment>
+  </data>
+  <data name="GifNotice.Footer" xml:space="preserve">
+    <value>You can adjust these in Appearance &gt; Live Preview.</value>
+    <comment>@MutedRule(PunctuationTail)@MutedRule(PunctuationLead)</comment>
+  </data>
 </root>

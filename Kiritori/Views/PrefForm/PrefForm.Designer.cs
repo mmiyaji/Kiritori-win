@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using Kiritori.Services.Logging;
+using System.IO;
 
 namespace Kiritori
 {
@@ -119,6 +120,14 @@ namespace Kiritori
         private Label labelDefaultOpacityVal;
         private GroupBox grpLivePreview;
         private CheckBox chkLiveShowStats;
+        private Label lblSaveFolder, lblGifMax;
+        private TextBox txtSaveFolder;
+        private Button btnBrowseSaveFolder, btnClearSaveFolder;
+        private NumericUpDown numGifMax;
+        private ToolTip tips;
+        private Label lblGifFps, lblGifOptimize;
+        private NumericUpDown numGifFps;
+        private CheckBox chkGifOptimize;
 
         // ========= Shortcuts ==========
         private TabPage tabShortcuts;
@@ -783,6 +792,106 @@ namespace Kiritori
             };
             flowLiveToggles.Controls.Add(this.chkLiveShowStats);
 
+            tips = new ToolTip();
+
+            // --- 保存先フォルダ ---
+            lblSaveFolder = NewRightLabel("Live Preview Save Folder");
+            lblSaveFolder.Tag = "loc:Setting.Display.LivePreviewSaveFolder";
+
+            txtSaveFolder = new TextBox { ReadOnly = true, Dock = DockStyle.Fill };
+            btnBrowseSaveFolder = new Button { Text = "参照...", AutoSize = true };
+            btnClearSaveFolder  = new Button { Text = "クリア",  AutoSize = true };
+
+            var flowFolder = new FlowLayoutPanel {
+                Dock = DockStyle.Fill, AutoSize = true, WrapContents = false, FlowDirection = FlowDirection.LeftToRight
+            };
+            flowFolder.Controls.Add(txtSaveFolder);
+            flowFolder.Controls.Add(btnBrowseSaveFolder);
+            flowFolder.Controls.Add(btnClearSaveFolder);
+
+            // --- GIF 最大時間 ---
+            lblGifMax = NewRightLabel("GIF Max Duration (sec)");
+            lblGifMax.Tag = "loc:Setting.Display.GifMaxDurationSec";
+
+            numGifMax = new NumericUpDown {
+                Minimum = 0, Maximum = 3600, Increment = 1, Dock = DockStyle.Left, Width = 120
+            };
+            tips.SetToolTip(numGifMax, "0 = 無制限 / それ以外は上限秒数");
+            txtSaveFolder.DataBindings.Add(
+                new Binding("Text",
+                    Properties.Settings.Default,
+                    nameof(Properties.Settings.Default.LivePreviewSaveFolder),
+                    true, DataSourceUpdateMode.OnPropertyChanged));
+
+            numGifMax.DataBindings.Add(
+                new Binding("Value",
+                    Properties.Settings.Default,
+                    nameof(Properties.Settings.Default.GifMaxDurationSec),
+                    true, DataSourceUpdateMode.OnPropertyChanged));
+
+            // ボタン: 参照 / クリア
+            btnBrowseSaveFolder.Click += (s, e) =>
+            {
+                using (var fbd = new FolderBrowserDialog {
+                    Description = "Live Preview の保存先フォルダを選択",
+                    ShowNewFolderButton = true
+                })
+                {
+                    var cur = Properties.Settings.Default.LivePreviewSaveFolder;
+                    if (!string.IsNullOrWhiteSpace(cur) && Directory.Exists(cur))
+                        fbd.SelectedPath = cur;
+
+                    if (fbd.ShowDialog(this) == DialogResult.OK)
+                    {
+                        Properties.Settings.Default.LivePreviewSaveFolder = fbd.SelectedPath;
+                        try { Properties.Settings.Default.Save(); } catch { }
+                    }
+                }
+            };
+
+            btnClearSaveFolder.Click += (s, e) =>
+            {
+                Properties.Settings.Default.LivePreviewSaveFolder = string.Empty; // 未指定へ
+                try { Properties.Settings.Default.Save(); } catch { }
+            };
+
+            // NumericUpDown の変更を即保存（バインドでも反映されますが保険で）
+            numGifMax.ValueChanged += (s, e) => {
+                Properties.Settings.Default.GifMaxDurationSec = (int)numGifMax.Value;
+                try { Properties.Settings.Default.Save(); } catch { }
+            };
+
+            // ツールチップ
+            tips.SetToolTip(numGifMax, "0 = 無制限 / それ以外は上限秒数");
+            tips.SetToolTip(txtSaveFolder,
+                string.IsNullOrWhiteSpace(Properties.Settings.Default.LivePreviewSaveFolder)
+                ? "未指定（従来の保存先を使用）"
+                : Properties.Settings.Default.LivePreviewSaveFolder);
+
+            // --- GIF 最大FPS ---
+            lblGifFps = NewRightLabel("GIF max FPS");
+            lblGifFps.Tag = "loc:Setting.Display.GifMaxFps";
+            numGifFps = new NumericUpDown {
+                Minimum = 1, Maximum = 30, Increment = 1, Dock = DockStyle.Left, Width = 120
+            };
+
+            // --- 最適化ON/OFF ---
+            lblGifOptimize = NewRightLabel("Optimize for size");
+            lblGifOptimize.Tag = "loc:Setting.Display.GifOptimize";
+            chkGifOptimize = new CheckBox {
+                Text = "Downscale / palette reduction",
+                AutoSize = true
+            };
+            numGifFps.DataBindings.Add(new Binding(
+                "Value", Properties.Settings.Default, nameof(Properties.Settings.Default.GifMaxFps),
+                true, DataSourceUpdateMode.OnPropertyChanged));
+
+            chkGifOptimize.DataBindings.Add(new Binding(
+                "Checked", Properties.Settings.Default, nameof(Properties.Settings.Default.GifOptimize),
+                true, DataSourceUpdateMode.OnPropertyChanged));
+
+
+            // 追加（行インクリメントは既存パターンと同じ）
             tlpLive.Controls.Add(new Label {
                 Text = "Options",
                 AutoSize = true,
@@ -791,6 +900,30 @@ namespace Kiritori
                 Tag = "loc:Text.Option"
             }, 0, 0);
             tlpLive.Controls.Add(flowLiveToggles, 1, 0);
+
+            int row = tlpLive.RowCount;
+            row = tlpLive.RowCount;
+            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tlpLive.Controls.Add(lblSaveFolder, 0, row);
+            tlpLive.Controls.Add(flowFolder,   1, row);
+            tlpLive.RowCount++;
+
+            row = tlpLive.RowCount;
+            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tlpLive.Controls.Add(lblGifMax, 0, row);
+            tlpLive.Controls.Add(numGifMax, 1, row);
+            tlpLive.RowCount++;
+
+            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tlpLive.Controls.Add(lblGifFps, 0, row);
+            tlpLive.Controls.Add(numGifFps, 1, row);
+            tlpLive.RowCount++;
+
+            row = tlpLive.RowCount;
+            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tlpLive.Controls.Add(lblGifOptimize, 0, row);
+            tlpLive.Controls.Add(chkGifOptimize, 1, row);
+            tlpLive.RowCount++;
 
             this.grpLivePreview.Controls.Add(tlpLive);
 

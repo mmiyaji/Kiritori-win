@@ -484,6 +484,78 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   You can adjust these in Appearance &gt; Live Preview. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string GifNotice_Footer {
+            get {
+                return ResourceManager.GetString("GifNotice.Footer", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Animated GIF recording has the following limitations に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string GifNotice_Header {
+            get {
+                return ResourceManager.GetString("GifNotice.Header", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   • Frame rate: up to {0} fps (time-based downsampling) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string GifNotice_Line_Fps {
+            get {
+                return ResourceManager.GetString("GifNotice.Line.Fps", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   • Time limit: none (auto-stop disabled) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string GifNotice_Line_LimitOff {
+            get {
+                return ResourceManager.GetString("GifNotice.Line.LimitOff", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   • Time limit: auto-stop after {0} seconds に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string GifNotice_Line_LimitOn {
+            get {
+                return ResourceManager.GetString("GifNotice.Line.LimitOn", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   • Size optimization: downscale / palette reduction to keep file size small に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string GifNotice_Line_SizeGeneric {
+            get {
+                return ResourceManager.GetString("GifNotice.Line.SizeGeneric", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   • Size optimization: max width {0}px (downscale / palette reduction) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string GifNotice_Line_SizeWithWidth {
+            get {
+                return ResourceManager.GetString("GifNotice.Line.SizeWithWidth", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   About GIF recording に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string GifNotice_Title {
+            get {
+                return ResourceManager.GetString("GifNotice.Title", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Delete these {0} item(s)? に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string History_Dialog_DeleteConfirmFew {
@@ -1231,6 +1303,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   GIF Max Duration (sec) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_GifMaxDurationSec {
+            get {
+                return ResourceManager.GetString("Setting.Display.GifMaxDurationSec", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Include OCR Results in History に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Setting_Display_HistoryIncludeOcr {
@@ -1335,6 +1416,15 @@ namespace Kiritori.Properties {
         internal static string Setting_Display_LivePreviewRenderPolicy {
             get {
                 return ResourceManager.GetString("Setting.Display.LivePreviewRenderPolicy", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Recording Folder に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LivePreviewSaveFolder {
+            get {
+                return ResourceManager.GetString("Setting.Display.LivePreviewSaveFolder", resourceCulture);
             }
         }
         

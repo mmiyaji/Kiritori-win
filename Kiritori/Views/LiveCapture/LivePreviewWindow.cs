@@ -10,17 +10,19 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 
 namespace Kiritori.Views.LiveCapture
 {
-    internal sealed class GifRecordOptions
+    internal class GifRecordOptions
     {
-        public int  MaxWidth   = 640;   // 長辺の上限（0以下で無効）
-        public int  GifFps     = 10;    // GIF用ターゲットFPS（例: 8〜12）
-        public bool Posterize  = true;  // 色数削減（3/3/2bit）
-        public int  HashStep   = 12;    // 差分判定の間引き（既存の ComputeFastHash の step）
+        public int GifFps { get; set; } = 10;
+        public bool UseOptimization { get; set; } = true;
+        public int HashStep { get; set; } = 8;
+        public int MaxWidth { get; set; } = 0; // あれば
+        public bool Posterize { get; set; } = true;
     }
     public partial class LivePreviewWindow : Form
     {
@@ -187,9 +189,19 @@ namespace Kiritori.Views.LiveCapture
         private GifRecordOptions _gifOpt;
         private List<Bitmap> _gifFrames;
         private List<int>    _gifDelaysCs;
-        private int _gifAccumDelayCs;
         private int _gifLastHash;
         private Stopwatch _gifTick = new Stopwatch();
+        private readonly object _gifSync = new object();
+        private System.Diagnostics.Stopwatch _gifClock = new System.Diagnostics.Stopwatch();
+        private int _gifLastMs = 0;            // 最後にサンプルした時刻(ms)
+        private int _gifPendingDelayCs = 0;    // 直近フレームに積む遅延(centiseconds)
+        private int _gifMinIntervalCs = 10;    // 目標FPSから算出 (例: 10fps → 10cs)
+        private int _gifStopGate = 0; // 0:未停止, 1:停止中
+        private System.Windows.Forms.Timer _gifLimitTimer;
+        private static bool _gifStartNoticeShownOnce = false;
+        private bool _suppressGifCheckedChanged = false; // チェックイベントの一時無効化
+        private int _gifIgnoreUntilTick = 0;             // このTickまではフレーム無視
+        private const int GIF_UI_GUARD_MS = 220;         // UIが消えるのを待つ時間
 
         public LivePreviewWindow()
         {
@@ -1436,6 +1448,11 @@ namespace Kiritori.Views.LiveCapture
             {
                 try { cm.Dispose(); } catch { }
             }
+            var gt = _gifTick; _gifTick = null;
+            if (gt != null)
+            {
+                try { gt.Stop(); } catch { }
+            }
 
             base.OnFormClosed(e);
         }
@@ -1595,46 +1612,60 @@ namespace Kiritori.Views.LiveCapture
             {
                 CheckOnClick = true
             };
-            _miRecordingGif.CheckedChanged += (s, e) =>
-            {
-                if (_miRecordingGif.Checked)
-                {
-                    try
-                    {
-                        StartGifRecord();
-                        Log.Debug("Recording GIF started", "LivePreview");
-                        ShowOverlay("RECORDING GIF");
-                        _iconBadge.SetState(LiveBadgeState.Recording);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Debug("Failed to start recording: " + ex.Message, "LivePreview");
-                        _miRecordingGif.Checked = false; // 状態を元に戻す
-                        _iconBadge.SetState(LiveBadgeState.Rendering);
-                    }
-                }
-                else
-                {
-                    try
-                    {
-                        var outPath = Path.Combine(Path.GetTempPath(), "Kiritori",
-                            $"Kiritori_{DateTime.Now:yyyyMMdd_HHmmss}.gif");
-                        string outPath2 = ResolveLivePreviewSavePath(".gif");
-                        Log.Info("Saving GIF to: " + (outPath2), "LivePreview");
-                        StopGifRecordAndSave(outPath2);
-                        Log.Debug("Recording GIF stopped", "LivePreview");
-                        ShowOverlay("STOP RECORDING GIF");
-                        _iconBadge.SetState(LiveBadgeState.Rendering);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Debug("Failed to stop recording: " + ex.Message, "LivePreview");
-                        // 停止失敗時は再チェックに戻すかどうかは好みで
-                        _miRecordingGif.Checked = true;
-                        _iconBadge.SetState(LiveBadgeState.Rendering);
-                    }
-                }
-            };
+            // _miRecordingGif.CheckedChanged += (s, e) =>
+            // {
+            //     if (_miRecordingGif.Checked)
+            //     {
+            //         try
+            //         {
+            //             StartGifRecord();
+            //             Log.Debug("Recording GIF started", "LivePreview");
+            //             ShowOverlay("RECORDING GIF");
+            //             _iconBadge.SetState(LiveBadgeState.Recording);
+            //         }
+            //         catch (Exception ex)
+            //         {
+            //             Log.Debug("Failed to start recording: " + ex.Message, "LivePreview");
+            //             _miRecordingGif.Checked = false;
+            //             _iconBadge.SetState(LiveBadgeState.Rendering);
+            //         }
+            //     }
+            //     else
+            //     {
+            //         try
+            //         {
+            //             // 自動停止タイマーはここで破棄
+            //             _gifLimitTimer?.Stop();
+            //             _gifLimitTimer?.Dispose();
+            //             _gifLimitTimer = null;
+
+            //             // 再入防止（同時に二度止めない）
+            //             if (Interlocked.Exchange(ref _gifStopGate, 1) != 0) return;
+
+            //             // パス解決は停止関数側に任せてもOKだが、ここで渡すならこう
+            //             string outPath = ResolveLivePreviewSavePath(".gif");
+            //             StopGifRecordAndSave(outPath);
+
+            //             Log.Debug("Recording GIF stopped", "LivePreview");
+            //             ShowOverlay("STOP RECORDING GIF");
+            //             _iconBadge.SetState(LiveBadgeState.Rendering);
+            //         }
+            //         catch (Exception ex)
+            //         {
+            //             Log.Debug("Failed to stop recording: " + ex.Message, "LivePreview");
+            //             // 失敗時は視覚的に録画継続の扱いに戻す
+            //             _miRecordingGif.Checked = true;
+            //             _iconBadge.SetState(LiveBadgeState.Rendering);
+            //         }
+            //         finally
+            //         {
+            //             // 停止フロー終了後にゲート解放
+            //             Interlocked.Exchange(ref _gifStopGate, 0);
+            //         }
+            //     }
+            // };
+            _miRecordingGif.CheckedChanged -= MiRecordingGif_CheckedChanged;
+            _miRecordingGif.CheckedChanged += MiRecordingGif_CheckedChanged;
             // _miRecording.ShortcutKeys = (Keys)HOTS.RECORD;
 
             _miPauseResume = new ToolStripMenuItem(SR.T("Menu.Pause", "Pause"));
@@ -1922,6 +1953,74 @@ namespace Kiritori.Views.LiveCapture
             MarkDropDownExclusion(_miFpsRoot);
             DisableShadowsRecursive(_ctx.Items);
         }
+        private void TryAutoStopGifIfCapReached()
+        {
+            if (!IsHandleCreated) return;
+            if (_miRecordingGif != null && _miRecordingGif.Checked)
+                BeginInvoke((Action)(() => _miRecordingGif.Checked = false));
+        }
+
+        private void MiRecordingGif_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_suppressGifCheckedChanged) return;
+
+            if (_miRecordingGif.Checked)
+            {
+                // いったんOFFに戻して、UIが閉じてから開始する
+                _suppressGifCheckedChanged = true;
+                _miRecordingGif.Checked = false;
+                _suppressGifCheckedChanged = false;
+
+                // 開始時の注意メッセージ（ここで表示、録画はまだ始めない）
+                ShowGifStartNoticeIfNeeded();
+
+                // メニューが閉じた後、少し待ってから開始（UI映り込み防止）
+                BeginInvoke((Action)(() =>
+                {
+                    var t = new System.Windows.Forms.Timer { Interval = GIF_UI_GUARD_MS };
+                    t.Tick += (s2, _e2) =>
+                    {
+                        t.Stop(); t.Dispose();
+
+                        // 開始直後の数百msはフレームを無視させる（保険）
+                        _gifIgnoreUntilTick = Environment.TickCount + GIF_UI_GUARD_MS;
+
+                        try
+                        {
+                            StartGifRecord();                    // ← 実際の開始（既存の初期化）
+                            _suppressGifCheckedChanged = true;   // チェックをON表示にするがイベントは抑制
+                            _miRecordingGif.Checked = true;
+                        }
+                        finally
+                        {
+                            _suppressGifCheckedChanged = false;
+                        }
+                    };
+                    t.Start();
+                }));
+            }
+            else
+            {
+                // 停止側（再入防止ゲート付きの既存ロジックをそのまま）
+                if (Interlocked.Exchange(ref _gifStopGate, 1) != 0) return;
+                try
+                {
+                    _gifLimitTimer?.Stop(); _gifLimitTimer?.Dispose(); _gifLimitTimer = null;
+                    StopGifRecordAndSave(null);
+                    _iconBadge?.SetState(LiveBadgeState.Rendering);
+                }
+                catch (Exception ex)
+                {
+                    Log.Debug("Failed to stop recording: " + ex, "LivePreview");
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _gifStopGate, 0);
+                }
+            }
+        }
+
+
         protected override void OnActivated(EventArgs e)
         {
             base.OnActivated(e);
@@ -2216,46 +2315,53 @@ namespace Kiritori.Views.LiveCapture
             }
             if (_gifFrames != null && bmp != null)
             {
-                // GIF用ターゲットFPSに従って“収集間引き”
-                int minIntervalMs = (int)Math.Round(1000.0 / Math.Max(1, _gifOpt.GifFps));
-                if (_gifTick.ElapsedMilliseconds < minIntervalMs)
+                try
                 {
-                    // フレームは積まずに遅延だけ後で加算する
-                }
-                else
-                {
-                    _gifTick.Restart();
+                    // 実時間をcsへ換算して pending に積む
+                    int nowMs = (int)_gifClock.ElapsedMilliseconds;
+                    int deltaMs = nowMs - _gifLastMs; if (deltaMs < 0) deltaMs = 0;
+                    _gifLastMs = nowMs;
+                    // 実時間を 1/100 秒に（丸め推奨）
+                    int deltaCs = Math.Max(1, (int)Math.Round(deltaMs / 10.0));
+                    _gifPendingDelayCs += deltaCs;
 
-                    // ① 前処理（縮小/ポスタライズ）
+                    // まだ最初のフレームが無ければ作る（※ここでは pending を消費しない：B参照）
+                    if (_gifFrames.Count == 0)
+                    {
+                        using (var prepped = PrepareGifFrame(bmp, _gifOpt))
+                        {
+                            _gifFrames.Add((Bitmap)prepped.Clone());
+                            _gifDelaysCs.Add(2); // 最小だけ入れておく（実時間はあとで積む）
+                            _gifLastHash = ComputeFastHash(prepped, _gifOpt.HashStep);
+                        }
+                        return; // pending は保持
+                    }
+
+                    // 目標FPS未満なら、画像処理せず前フレームの遅延だけ伸ばすタイミングまで待つ
+                    if (_gifPendingDelayCs < _gifMinIntervalCs) return;
+
+                    // ここで前処理＆差分判定
                     using (var prepped = PrepareGifFrame(bmp, _gifOpt))
                     {
-                        // ② 差分判定（ハッシュは前処理後に）
+                        // まず「直前フレーム」に pending 遅延を加算してリセット
+                        int last = _gifDelaysCs.Count - 1;
+                        _gifDelaysCs[last] = ClampDelay(_gifDelaysCs[last] + _gifPendingDelayCs);
+                        _gifPendingDelayCs = 0;
+
                         int hash = ComputeFastHash(prepped, _gifOpt.HashStep);
-                        int frameCs = Math.Max(2, (int)Math.Round(100.0 / Math.Max(1, _gifOpt.GifFps))); // 1/100秒単位
 
-                        if (_gifFrames.Count == 0)
+                        if (hash != _gifLastHash)
                         {
+                            // 変化があれば新フレーム開始（遅延は最小。以後 pending で伸びる）
                             _gifFrames.Add((Bitmap)prepped.Clone());
-                            _gifDelaysCs.Add(frameCs);
-                            _gifLastHash = hash;
-                            _gifAccumDelayCs = 0;
-                        }
-                        else if (hash == _gifLastHash)
-                        {
-                            // 同一と見なして遅延をためる
-                            _gifAccumDelayCs += frameCs;
-                        }
-                        else
-                        {
-                            // 直前フレームにためた遅延を反映してから追加
-                            _gifDelaysCs[_gifDelaysCs.Count - 1] += _gifAccumDelayCs;
-                            _gifAccumDelayCs = 0;
-
-                            _gifFrames.Add((Bitmap)prepped.Clone());
-                            _gifDelaysCs.Add(frameCs);
+                            _gifDelaysCs.Add(2);
                             _gifLastHash = hash;
                         }
                     }
+                }
+                catch (Exception ex)
+                {
+                    Log.Warn("Failed to process GIF frame: " + ex.Message, "LivePreview");
                 }
             }
             bool forceBySize = (_lastPresentedClientSize != this.ClientSize);
@@ -2339,6 +2445,7 @@ namespace Kiritori.Views.LiveCapture
             swDraw.Stop();
             _drawTimeTotal += swDraw.ElapsedMilliseconds; _drawCount++;
         }
+        private static int ClampDelay(int cs) => Math.Min(65535, Math.Max(2, cs));
 
         private void LogPerfStats()
         {
@@ -3135,76 +3242,189 @@ namespace Kiritori.Views.LiveCapture
                 _rec = null;
             }
         }
+        private void ShowGifStartNoticeIfNeeded()
+        {
+            if (_gifStartNoticeShownOnce) return;
+
+            // FPS（オプションから／無ければ10）
+            int fps = Math.Max(1, Properties.Settings.Default.GifMaxFps);
+            bool opt = Properties.Settings.Default.GifOptimize;
+
+            // 時間上限
+            int maxSec = 0;
+            try { maxSec = Math.Max(0, Properties.Settings.Default.GifMaxDurationSec); } catch { }
+
+            // MaxWidth があれば表示に使う（無ければ汎用文）
+            int? maxWidth = null;
+            try
+            {
+                var p = _gifOpt?.GetType().GetProperty("MaxWidth");
+                if (p != null)
+                {
+                    var v = p.GetValue(_gifOpt, null);
+                    if (v is int mw && mw > 0) maxWidth = mw;
+                }
+            }
+            catch { /* ignore */ }
+
+            // ---- 多言語文字列（英語をフォールバックに） ----
+            string title = SR.T("GifNotice.Title", "About GIF recording");
+            string header = SR.T("GifNotice.Header", "Animated GIF recording has the following limitations:");
+            string fpsFmt = SR.T("GifNotice.Line.Fps", "• Frame rate: up to {0} fps (time-based downsampling)");
+            string sizeGen = SR.T("GifNotice.Line.SizeGeneric",
+                                    "• Size optimization: downscale / palette reduction to keep file size small");
+            string sizeFmt = SR.T("GifNotice.Line.SizeWithWidth",
+                                    "• Size optimization: max width {0}px (downscale / palette reduction)");
+            string limOn = SR.T("GifNotice.Line.LimitOn",
+                                    "• Time limit: auto-stop after {0} seconds");
+            string limOff = SR.T("GifNotice.Line.LimitOff",
+                                    "• Time limit: none (auto-stop disabled)");
+            string footer = SR.T("GifNotice.Footer",
+                                    "You can adjust these in Appearance > Live Preview.");
+            string optLine = opt
+                ? SR.T("GifNotice.Line.OptimizeOn",  "• Size optimization: enabled (downscale / palette reduction)")
+                : SR.T("GifNotice.Line.OptimizeOff", "• Size optimization: disabled");
+
+            // ---- メッセージ組み立て ----
+            var sb = new StringBuilder();
+            sb.AppendLine(header).AppendLine();
+            sb.AppendLine(string.Format(fpsFmt, fps));
+            sb.AppendLine(optLine).AppendLine();
+            sb.AppendLine(maxWidth.HasValue ? string.Format(sizeFmt, maxWidth.Value) : sizeGen);
+            sb.AppendLine(maxSec > 0 ? string.Format(limOn, maxSec) : limOff);
+            sb.AppendLine().AppendLine(footer);
+
+            MessageBox.Show(this, sb.ToString(), title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            _gifStartNoticeShownOnce = true;
+        }
 
         private void StartGifRecord()
         {
+            ShowGifStartNoticeIfNeeded();
             _gifOpt = new GifRecordOptions();
             _gifFrames = new List<Bitmap>();
             _gifDelaysCs = new List<int>();
-            _gifAccumDelayCs = 0;
             _gifLastHash = 0;
-            _gifTick.Restart();
-        }
 
+            int setFps = 10;
+            try { setFps = Math.Max(1, Properties.Settings.Default.GifMaxFps); } catch {}
+            bool useOpt = true;
+            try { useOpt = Properties.Settings.Default.GifOptimize; } catch {}
+
+            _gifOpt.GifFps = setFps;
+            _gifOpt.UseOptimization = useOpt;   // ← 新規プロパティ（下で説明）
+
+            // 間隔（centiseconds）
+            _gifMinIntervalCs = Math.Max(2, (int)Math.Round(100.0 / _gifOpt.GifFps));
+
+            _gifClock.Restart();
+            _gifLastMs = 0;
+            _gifPendingDelayCs = 0;
+            _gifMinIntervalCs = Math.Max(2, (int)Math.Round(100.0 / Math.Max(1, _gifOpt.GifFps)));
+
+            // 再入防止ゲート＆タイマー初期化
+            Interlocked.Exchange(ref _gifStopGate, 0);
+            _gifLimitTimer?.Stop();
+            _gifLimitTimer?.Dispose();
+            _gifLimitTimer = null;
+
+            _gifLimitTimer?.Stop(); _gifLimitTimer?.Dispose(); _gifLimitTimer = null;
+            int maxSec = Math.Max(0, Properties.Settings.Default.GifMaxDurationSec);
+            if (maxSec > 0)
+            {
+                _gifLimitTimer = new System.Windows.Forms.Timer { Interval = maxSec * 1000 };
+                _gifLimitTimer.Tick += (s, e) =>
+                {
+                    _gifLimitTimer.Stop();
+                    if (_miRecordingGif != null && _miRecordingGif.Checked)
+                        _miRecordingGif.Checked = false; // ★停止はこの一本だけ
+                };
+                _gifLimitTimer.Start();
+            }
+        }
         private void StopGifRecordAndSave(string path)
         {
-            if (_gifFrames != null && _gifFrames.Count > 0 && _gifAccumDelayCs > 0)
-                _gifDelaysCs[_gifDelaysCs.Count - 1] += _gifAccumDelayCs;
+            List<Bitmap> frames; List<int> delays; int pendingCs;
 
-            if (_gifFrames != null && _gifFrames.Count > 0)
-                GifWriter.SaveAnimatedGif(_gifFrames, _gifDelaysCs, path, true);
-
-            if (_gifFrames != null)
+            lock (_gifSync)
             {
-                for (int i = 0; i < _gifFrames.Count; i++) _gifFrames[i].Dispose();
+                if (_gifFrames == null || _gifDelaysCs == null || _gifFrames.Count == 0) return;
+
+                frames = _gifFrames;      _gifFrames = null;
+                delays = _gifDelaysCs;    _gifDelaysCs = null;
+
+                pendingCs = _gifPendingDelayCs; _gifPendingDelayCs = 0;
+                _gifTick.Reset();
             }
-            _gifFrames = null; _gifDelaysCs = null; _gifAccumDelayCs = 0;
-            _gifTick.Reset();
+
+            // 最後の遅延をローカル配列に反映
+            if (frames.Count > 0 && pendingCs > 0)
+            {
+                int last = delays.Count - 1;
+                int sum  = delays[last] + pendingCs;
+                delays[last] = Math.Min(65535, Math.Max(2, sum));
+            }
+
+            // パス未指定なら必ず解決（設定→既存→フォールバック）
+            if (string.IsNullOrWhiteSpace(path))
+                path = ResolveLivePreviewSavePath(".gif"); // 必ず非nullを返す実装に
+
+            Log.Info("[LivePreview] Saving GIF to: " + path, "LivePreview"); // ★ここだけで出す
+
             try
             {
-                if (!string.IsNullOrEmpty(path) && File.Exists(path))
-                {
-                    try
-                    {
-                        // エクスプローラーで選択状態で開く
-                        Process.Start("explorer.exe", $"/select,\"{path}\"");
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Debug("Open Explorer EX: " + ex.Message, "LivePreview");
-                    }
-                }
+                GifWriter.SaveAnimatedGif(frames, delays, path, true);
+                Log.Info($"[LivePreview] GIF saved: {path}", "LivePreview");
             }
-            catch { /* no-op */ }
+            catch (Exception ex)
+            {
+                Log.Error("Failed to save GIF: " + ex, "LivePreview");
+            }
+            finally
+            {
+                for (int i = 0; i < frames.Count; i++) { try { frames[i].Dispose(); } catch {} }
+            }
+
+            try
+            {
+                if (File.Exists(path))
+                    Process.Start("explorer.exe", $"/select,\"{path}\"");
+            }
+            catch (Exception ex)
+            {
+                Log.Debug("Open Explorer EX: " + ex.Message, "LivePreview");
+            }
         }
         private static Bitmap PrepareGifFrame(Bitmap src, GifRecordOptions opt)
         {
             Bitmap work = src;
 
             // 1) 縮小（長辺 MaxWidth）
-            if (opt != null && opt.MaxWidth > 0)
+            if (opt != null && opt.UseOptimization)
             {
-                int w = src.Width, h = src.Height;
-                int longSide = Math.Max(w, h);
-                if (longSide > opt.MaxWidth)
+                if (opt != null && opt.MaxWidth > 0)
                 {
-                    double scale = (double)opt.MaxWidth / longSide;
-                    int nw = Math.Max(1, (int)Math.Round(w * scale));
-                    int nh = Math.Max(1, (int)Math.Round(h * scale));
-                    work = ResizeBitmap(src, nw, nh);
-                    if (!ReferenceEquals(work, src)) src = null;
+                    int w = src.Width, h = src.Height;
+                    int longSide = Math.Max(w, h);
+                    if (longSide > opt.MaxWidth)
+                    {
+                        double scale = (double)opt.MaxWidth / longSide;
+                        int nw = Math.Max(1, (int)Math.Round(w * scale));
+                        int nh = Math.Max(1, (int)Math.Round(h * scale));
+                        work = ResizeBitmap(src, nw, nh);
+                        if (!ReferenceEquals(work, src)) src = null;
+                    }
+                }
+
+                // 2) ポスタライズ（3/3/2bit = 最大256色）
+                if (opt != null && opt.Posterize)
+                {
+                    var reduced = Posterize332(work);
+                    if (!ReferenceEquals(work, reduced)) work.Dispose();
+                    work = reduced;
                 }
             }
-
-            // 2) ポスタライズ（3/3/2bit = 最大256色）
-            if (opt != null && opt.Posterize)
-            {
-                var reduced = Posterize332(work);
-                if (!ReferenceEquals(work, reduced)) work.Dispose();
-                work = reduced;
-            }
-
-            // ここで 24/32bpp のままでもOK。GDI+エンコーダがGIF用に256色へ量子化します。
             return work;
         }
 

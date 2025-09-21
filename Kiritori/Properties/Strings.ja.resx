@@ -927,4 +927,34 @@
   <data name="Menu.RecordingGif" xml:space="preserve">
     <value>録画 (アニメーションGIF形式)</value>
   </data>
+  <data name="Setting.Display.GifMaxDurationSec" xml:space="preserve">
+    <value>GIF最大秒数</value>
+  </data>
+  <data name="Setting.Display.LivePreviewSaveFolder" xml:space="preserve">
+    <value>録画保存先</value>
+  </data>
+  <data name="GifNotice.Title" xml:space="preserve">
+    <value>GIF 録画について</value>
+  </data>
+  <data name="GifNotice.Header" xml:space="preserve">
+    <value>アニメーション GIF 録画には次の制限があります</value>
+  </data>
+  <data name="GifNotice.Line.Fps" xml:space="preserve">
+    <value>・フレームレート: 最大 {0} fps（実時間ベースで間引き）</value>
+  </data>
+  <data name="GifNotice.Line.SizeGeneric" xml:space="preserve">
+    <value>・サイズ最適化: 縮小/減色でファイルサイズを抑えます</value>
+  </data>
+  <data name="GifNotice.Line.SizeWithWidth" xml:space="preserve">
+    <value>・サイズ最適化: 横幅上限 {0}px（縮小/減色を適用）</value>
+  </data>
+  <data name="GifNotice.Line.LimitOn" xml:space="preserve">
+    <value>・時間上限: {0} 秒で自動停止します</value>
+  </data>
+  <data name="GifNotice.Line.LimitOff" xml:space="preserve">
+    <value>・時間上限: 指定なし（自動停止は無効）</value>
+  </data>
+  <data name="GifNotice.Footer" xml:space="preserve">
+    <value>※ これらの設定は［Appearance &gt; Live Preview］で調整できます。</value>
+  </data>
 </root>

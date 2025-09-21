@@ -586,5 +586,29 @@ namespace Kiritori.Properties {
                 this["GifMaxDurationSec"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("10")]
+        public int GifMaxFps {
+            get {
+                return ((int)(this["GifMaxFps"]));
+            }
+            set {
+                this["GifMaxFps"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool GifOptimize {
+            get {
+                return ((bool)(this["GifOptimize"]));
+            }
+            set {
+                this["GifOptimize"] = value;
+            }
+        }
     }
 }
