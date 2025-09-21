@@ -51,145 +51,121 @@ namespace Kiritori
             mousePoint = new Point(e.X, e.Y);
             _isDragging = true;
         }
+        private ResizeAnchor _lastHoverAnchor = ResizeAnchor.None;
+        private Cursor _lastCursor = null;
 
-        private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
+        private void SetCursorIfChanged(Cursor c)
         {
-            if (!_closeBtnRect.IsEmpty && _closeBtnRect.Contains(e.Location))
+            if (!ReferenceEquals(_lastCursor, c))
             {
-                this.Cursor = Cursors.Hand;
-                return;
-            }
-
-            if (_isResizing)
-            {
-                var now = Cursor.Position;
-                int dx = now.X - _dragStartScreen.X;
-                int dy = now.Y - _dragStartScreen.Y;
-
-                // 基準値
-                int newW = _startSize.Width;
-                int newH = _startSize.Height;
-                int newLeft = _startLocation.X;
-                int newTop = _startLocation.Y;
-
-                switch (_anchor)
-                {
-                    // 角４つ（既存と同じ：Left/Top 側は位置も動かす）
-                    case ResizeAnchor.BottomRight:
-                        newW = _startSize.Width + dx;
-                        newH = _startSize.Height + dy;
-                        break;
-                    case ResizeAnchor.BottomLeft:
-                        newW = _startSize.Width - dx;
-                        newH = _startSize.Height + dy;
-                        newLeft = _startLocation.X + dx;
-                        break;
-                    case ResizeAnchor.TopRight:
-                        newW = _startSize.Width + dx;
-                        newH = _startSize.Height - dy;
-                        newTop = _startLocation.Y + dy;
-                        break;
-                    case ResizeAnchor.TopLeft:
-                        newW = _startSize.Width - dx;
-                        newH = _startSize.Height - dy;
-                        newLeft = _startLocation.X + dx;
-                        newTop = _startLocation.Y + dy;
-                        break;
-
-                    // 辺４つ（横だけ/縦だけ、Left/Top は位置も動かす）
-                    case ResizeAnchor.Left:
-                        newW = _startSize.Width - dx;
-                        newLeft = _startLocation.X + dx;
-                        break;
-                    case ResizeAnchor.Right:
-                        newW = _startSize.Width + dx;
-                        break;
-                    case ResizeAnchor.Top:
-                        newH = _startSize.Height - dy;
-                        newTop = _startLocation.Y + dy;
-                        break;
-                    case ResizeAnchor.Bottom:
-                        newH = _startSize.Height + dy;
-                        break;
-                }
-
-                // 角のみアスペクト固定を適用（Shift）
-                bool isCorner =
-                    _anchor == ResizeAnchor.TopLeft || _anchor == ResizeAnchor.TopRight ||
-                    _anchor == ResizeAnchor.BottomLeft || _anchor == ResizeAnchor.BottomRight;
-
-                if (isCorner && (Control.ModifierKeys & Keys.Shift) == Keys.Shift && _imgAspect != null)
-                {
-                    float ar = _imgAspect.Value;
-                    if (Math.Abs(newW - _startSize.Width) >= Math.Abs(newH - _startSize.Height))
-                        newH = (int)Math.Round(newW / ar);
-                    else
-                        newW = (int)Math.Round(newH * ar);
-
-                    // 左/上の場合は位置補正
-                    if (_anchor == ResizeAnchor.BottomLeft || _anchor == ResizeAnchor.TopLeft)
-                        newLeft = _startLocation.X + (_startSize.Width - newW);
-                    if (_anchor == ResizeAnchor.TopLeft || _anchor == ResizeAnchor.TopRight)
-                        newTop = _startLocation.Y + (_startSize.Height - newH);
-                }
-
-                // 最小サイズクリップ＋位置補正（共通ヘルパーを再利用）
-                ClampAndAdjustForAnchor(ref newW, ref newH, ref newLeft, ref newTop, _anchor);
-                this.SuspendLayout();
-                try
-                {
-                    this.Location = new Point(newLeft, newTop);
-                    this.ClientSize = new Size(newW, newH);
-                    pictureBox1.Size = this.ClientSize;
-                }
-                finally
-                {
-                    this.ResumeLayout();
-                }
-
-                // 最小サイズ
-                newW = Math.Max(this.MinimumSize.Width, newW);
-                newH = Math.Max(this.MinimumSize.Height, newH);
-
-                // 反映
-                this.SuspendLayout();
-                try
-                {
-                    this.Location = new Point(newLeft, newTop);
-                    this.ClientSize = new Size(newW, newH);
-                    pictureBox1.Size = this.ClientSize;
-                }
-                finally
-                {
-                    this.ResumeLayout();
-                }
-
-                this.Cursor = GetCursorForAnchor(_anchor);
-
-                int nowTick = Environment.TickCount;
-                if (nowTick - _lastPaintTick >= 15)
-                {
-                    pictureBox1.Invalidate();
-                    pictureBox1.Update();
-                    _lastPaintTick = nowTick;
-                }
-                return;
-            }
-
-            // 非リサイズ時のカーソル表示
-            var hoverAnchor = HitTestAnchor(e.Location);
-
-            this.Cursor = GetCursorForAnchor(hoverAnchor);
-
-            // 移動（既存）
-            if (_isDragging && (e.Button & MouseButtons.Left) == MouseButtons.Left)
-            {
-                this.Left += e.X - mousePoint.X;
-                this.Top += e.Y - mousePoint.Y;
-                this.Opacity = this.WindowOpacityPercent * DRAG_ALPHA;
+                this.Cursor = c;
+                _lastCursor = c;
             }
         }
 
+        // ← ResizeAnchor.None のときは必ず SizeAll を返すようにしておく
+        private Cursor GetCursorForAnchor(ResizeAnchor a)
+        {
+            switch (a)
+            {
+                case ResizeAnchor.Left: 
+                case ResizeAnchor.Right:  return Cursors.SizeWE;
+                case ResizeAnchor.Top: 
+                case ResizeAnchor.Bottom: return Cursors.SizeNS;
+                case ResizeAnchor.TopLeft: 
+                case ResizeAnchor.BottomRight: return Cursors.SizeNWSE;
+                case ResizeAnchor.TopRight: 
+                case ResizeAnchor.BottomLeft: return Cursors.SizeNESW;
+                case ResizeAnchor.None:
+                default: return Cursors.SizeAll;   // ★ 通常ホバーは SizeAll
+            }
+        }
+
+        private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
+        {
+            // === 非リサイズ時：ここでカーソルを確定して return ===
+            if (!_isResizing)
+            {
+                // 1) クローズボタン上なら Hand にして即 return（上書き防止）
+                if (!_closeBtnRect.IsEmpty && _closeBtnRect.Contains(e.Location))
+                {
+                    SetCursorIfChanged(Cursors.Hand);
+                    return;
+                }
+
+                // 2) リサイズの“縁”かどうかヒットテスト（縁ならサイズカーソル、そうでなければ SizeAll）
+                var hoverAnchor = HitTestAnchor(e.Location);   // ← ここで判定
+                _lastHoverAnchor = hoverAnchor;
+                SetCursorIfChanged(GetCursorForAnchor(hoverAnchor));
+
+                // 3) ドラッグ移動（必要なら）
+                if (_isDragging && (e.Button & MouseButtons.Left) == MouseButtons.Left)
+                {
+                    this.Left += e.X - mousePoint.X;
+                    this.Top  += e.Y - mousePoint.Y;
+                    this.Opacity = this.WindowOpacityPercent * DRAG_ALPHA;
+                }
+                return; // ★ ここで終わる
+            }
+
+            // === ここからリサイズ中 ===
+            var now = Cursor.Position;
+            int dx = now.X - _dragStartScreen.X;
+            int dy = now.Y - _dragStartScreen.Y;
+
+            int newW = _startSize.Width, newH = _startSize.Height;
+            int newLeft = _startLocation.X, newTop = _startLocation.Y;
+
+            switch (_anchor)
+            {
+                case ResizeAnchor.BottomRight: newW += dx; newH += dy; break;
+                case ResizeAnchor.BottomLeft:  newW -= dx; newH += dy; newLeft += dx; break;
+                case ResizeAnchor.TopRight:    newW += dx; newH -= dy; newTop  += dy; break;
+                case ResizeAnchor.TopLeft:     newW -= dx; newH -= dy; newLeft += dx; newTop += dy; break;
+                case ResizeAnchor.Left:        newW -= dx; newLeft += dx; break;
+                case ResizeAnchor.Right:       newW += dx; break;
+                case ResizeAnchor.Top:         newH -= dy; newTop  += dy; break;
+                case ResizeAnchor.Bottom:      newH += dy; break;
+            }
+
+            bool isCorner = (_anchor == ResizeAnchor.TopLeft || _anchor == ResizeAnchor.TopRight ||
+                            _anchor == ResizeAnchor.BottomLeft || _anchor == ResizeAnchor.BottomRight);
+
+            if (isCorner && (Control.ModifierKeys & Keys.Shift) == Keys.Shift && _imgAspect != null)
+            {
+                float ar = _imgAspect.Value;
+                if (Math.Abs(newW - _startSize.Width) >= Math.Abs(newH - _startSize.Height))
+                    newH = (int)Math.Round(newW / ar);
+                else
+                    newW = (int)Math.Round(newH * ar);
+
+                if (_anchor == ResizeAnchor.BottomLeft || _anchor == ResizeAnchor.TopLeft)
+                    newLeft = _startLocation.X + (_startSize.Width - newW);
+                if (_anchor == ResizeAnchor.TopLeft || _anchor == ResizeAnchor.TopRight)
+                    newTop  = _startLocation.Y + (_startSize.Height - newH);
+            }
+
+            ClampAndAdjustForAnchor(ref newW, ref newH, ref newLeft, ref newTop, _anchor);
+            newW = Math.Max(this.MinimumSize.Width,  newW);
+            newH = Math.Max(this.MinimumSize.Height, newH);
+
+            this.SuspendLayout();
+            try
+            {
+                this.SetBounds(newLeft, newTop, newW, newH, BoundsSpecified.Location | BoundsSpecified.Size);
+            }
+            finally { this.ResumeLayout(); }
+
+            // リサイズ中は“そのアンカーに対応する”カーソル
+            SetCursorIfChanged(GetCursorForAnchor(_anchor));
+
+            int nowTick = Environment.TickCount;
+            if (nowTick - _lastPaintTick >= 15)
+            {
+                pictureBox1.Invalidate();
+                _lastPaintTick = nowTick;
+            }
+        }
 
         private void pictureBox1_MouseUp(object sender, MouseEventArgs e)
         {
@@ -313,22 +289,6 @@ namespace Kiritori
             foreach (var kv in GripRectsOnPB())
                 if (kv.Value.Contains(p)) return kv.Key;
             return ResizeAnchor.None;
-        }
-
-        private static Cursor GetCursorForAnchor(ResizeAnchor a)
-        {
-            switch (a)
-            {
-                case ResizeAnchor.TopLeft:
-                case ResizeAnchor.BottomRight: return Cursors.SizeNWSE;
-                case ResizeAnchor.TopRight:
-                case ResizeAnchor.BottomLeft: return Cursors.SizeNESW;
-                case ResizeAnchor.Left:
-                case ResizeAnchor.Right: return Cursors.SizeWE;
-                case ResizeAnchor.Top:
-                case ResizeAnchor.Bottom: return Cursors.SizeNS;
-                default: return Cursors.Default;
-            }
         }
 
         #endregion

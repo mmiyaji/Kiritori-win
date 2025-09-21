@@ -79,6 +79,7 @@ namespace Kiritori.Views.LiveCapture
         private bool IsHudInteractable() => _hudAlpha >= HUD_INTERACTABLE_ALPHA && !_hudRect.IsEmpty;
 
         // === SnapWindow互換：ホバー強調設定（外観） ===
+        private bool _hoverEnabled = false;
         private Color _hoverColor = Color.DeepSkyBlue;  // SnapWindow同等の鮮やか系を既定に
         private int _hoverAlphaPercent = 60;          // 0-100（SnapWindow互換の%表現）
         private int _hoverThicknessPx = 3;           // 論理px（DPIで実厚算出）
@@ -431,6 +432,7 @@ namespace Kiritori.Views.LiveCapture
         {
             try
             {
+                _hoverEnabled = Properties.Settings.Default.HoverHighlightEnabled;
                 _hoverColor = Properties.Settings.Default.HoverHighlightColor;
                 _hoverAlphaPercent = Properties.Settings.Default.HoverHighlightAlphaPercent;   // 0–100 (%)
                 _hoverThicknessPx = Properties.Settings.Default.HoverHighlightThickness;    // 論理px
@@ -443,6 +445,7 @@ namespace Kiritori.Views.LiveCapture
             catch
             {
                 // フォールバック（設定未定義時）
+                _hoverEnabled = false;
                 _hoverColor = Color.DeepSkyBlue;
                 _hoverAlphaPercent = 60;
                 _hoverThicknessPx = 3;
@@ -626,8 +629,8 @@ namespace Kiritori.Views.LiveCapture
                 }
                 UpdateCloseHover(me.Location);
 
-                if (canClick && !_hudCursorIsHand) { Cursor = Cursors.Hand; _hudCursorIsHand = true; }
-                else if (!canClick && _hudCursorIsHand) { Cursor = Cursors.Default; _hudCursorIsHand = false; }
+                // if (canClick && !_hudCursorIsHand) { Cursor = Cursors.Hand; _hudCursorIsHand = true; }
+                // else if (!canClick && _hudCursorIsHand) { Cursor = Cursors.Default; _hudCursorIsHand = false; }
             };
 
             this.MouseLeave += (s, e) =>
@@ -643,7 +646,7 @@ namespace Kiritori.Views.LiveCapture
                 var inv = Rectangle.Union(GetHudInvalidateRect(), GetHoverInvalidateRect());
                 if (!inv.IsEmpty) Invalidate(inv);
 
-                if (_hudCursorIsHand) { Cursor = Cursors.Default; _hudCursorIsHand = false; }
+                // if (_hudCursorIsHand) { Cursor = Cursors.Default; _hudCursorIsHand = false; }
             };
         }
         private void RefreshHoverStateByCursor()
@@ -685,14 +688,7 @@ namespace Kiritori.Views.LiveCapture
 
                 _hudTargetAlpha = _hudRect.IsEmpty ? 0 : 140;  // HUDは従来通りフェード
 
-                if (Properties.Settings.Default.HoverHighlightEnabled)
-                {
-                    SetHoverInstant(true);   // ON時のみ強調
-                }
-                else
-                {
-                    SetHoverInstant(false);  // OFFなら常に無効
-                }
+                SetHoverInstant(_hoverEnabled);   // ON時のみ強調
 
                 if (!_fadeTimer.Enabled) _fadeTimer.Start();   // HUD用
             }
@@ -1098,6 +1094,7 @@ namespace Kiritori.Views.LiveCapture
         }
         private void SetHoverInstant(bool on)
         {
+            if (!_hoverEnabled) return;
             _hoverTargetAlpha = on ? HOVER_ALPHA_ON : HOVER_ALPHA_OFF;
             // ← アニメ禁止：ターゲットに即座に合わせる
             int before = _hoverAlpha;
@@ -1622,7 +1619,9 @@ namespace Kiritori.Views.LiveCapture
                     {
                         var outPath = Path.Combine(Path.GetTempPath(), "Kiritori",
                             $"Kiritori_{DateTime.Now:yyyyMMdd_HHmmss}.gif");
-                        StopGifRecordAndSave(outPath);
+                        string outPath2 = ResolveLivePreviewSavePath(".gif");
+                        Log.Info("Saving GIF to: " + (outPath2), "LivePreview");
+                        StopGifRecordAndSave(outPath2);
                         Log.Debug("Recording GIF stopped", "LivePreview");
                         ShowOverlay("STOP RECORDING GIF");
                         _iconBadge.SetState(LiveBadgeState.Rendering);
@@ -2005,8 +2004,9 @@ namespace Kiritori.Views.LiveCapture
             w = w & ~1;
             h = h & ~1;
 
-            var outPath = Path.Combine(Path.GetTempPath(), "Kiritori",
-                            $"Kiritori_{DateTime.Now:yyyyMMdd_HHmmss}.mp4");
+            // var outPath = Path.Combine(Path.GetTempPath(), "Kiritori",
+            //                 $"Kiritori_{DateTime.Now:yyyyMMdd_HHmmss}.mp4");
+            string outPath = ResolveLivePreviewSavePath(".mp4");
 
             StartRecordingMp4(outPath, w, h, fps);
             // ShowOverlay($"REC ● {w}x{h} {fps}fps");
@@ -2470,14 +2470,75 @@ namespace Kiritori.Views.LiveCapture
                     SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
             }
         }
+        private const int WM_MOUSEMOVE = 0x0200;
+        private const int WM_LBUTTONDBLCLK = 0x0203;
+        private const int WM_ENTERSIZEMOVE = 0x0231;
+        private const int WM_EXITSIZEMOVE = 0x0232;
+        private const int WM_SIZING = 0x0214;
+        private const int WM_SETCURSOR = 0x0020;
+        private const int RESIZE_GRIP  = 6;   // リサイズ縁の幅は好みで
+        private Cursor _lastCursor;
+
+        // 必要なら既存を使ってOK（例：GetCloseRect() があるならそれを使う）
+        private bool IsPointOverClose(Point p)
+        {
+            var rc = GetCloseRect(); // 既存ヘルパ
+            return !rc.IsEmpty && rc.Contains(p);
+        }
+
+        // HUD がクリック可能かどうか（既存の状態を利用）
+        private bool IsHudClickableAt(Point p)
+        {
+            return !_hudRect.IsEmpty && _hudRect.Contains(p) && IsHudInteractable();
+        }
+
+        // “縁”かどうかを判定して適切なサイズカーソルを返す
+        private bool IsInResizeHotZone(Point p, out Cursor cur)
+        {
+            int w = this.ClientSize.Width, h = this.ClientSize.Height;
+            bool left   = p.X < RESIZE_GRIP;
+            bool right  = p.X >= w - RESIZE_GRIP;
+            bool top    = p.Y < RESIZE_GRIP;
+            bool bottom = p.Y >= h - RESIZE_GRIP;
+
+            // 四隅優先
+            if ((left && top) || (right && bottom))   { cur = Cursors.SizeNWSE; return true; }
+            if ((right && top) || (left && bottom))   { cur = Cursors.SizeNESW; return true; }
+            if (left || right)                        { cur = Cursors.SizeWE;  return true; }
+            if (top  || bottom)                       { cur = Cursors.SizeNS;  return true; }
+
+            cur = Cursors.Default;
+            return false;
+        }
+
+        // 何度も代入しない（ちらつき防止）
+        private void SetCursorOnce(Cursor c, ref Message m)
+        {
+            if (!ReferenceEquals(_lastCursor, c))
+            {
+                Cursor.Current = c;
+                _lastCursor = c;
+            }
+            m.Result = (IntPtr)1; // handled
+        }
+        private static Cursor CursorFromHit(int hit)
+        {
+            switch (hit)
+            {
+                case HTLEFT:
+                case HTRIGHT:       return Cursors.SizeWE;
+                case HTTOP:
+                case HTBOTTOM:      return Cursors.SizeNS;
+                case HTTOPLEFT:
+                case HTBOTTOMRIGHT: return Cursors.SizeNWSE;
+                case HTTOPRIGHT:
+                case HTBOTTOMLEFT:  return Cursors.SizeNESW;
+                default:            return null; // リサイズ系以外は null を返す
+            }
+        }
 
         protected override void WndProc(ref Message m)
         {
-            const int WM_MOUSEMOVE = 0x0200;
-            const int WM_LBUTTONDBLCLK = 0x0203;
-            const int WM_ENTERSIZEMOVE = 0x0231;
-            const int WM_EXITSIZEMOVE = 0x0232;
-            const int WM_SIZING = 0x0214;
             // const int WM_DPICHANGED    = 0x02E0;
 
             // if (m.Msg == WM_DPICHANGED)
@@ -2703,8 +2764,45 @@ namespace Kiritori.Views.LiveCapture
                 var inv = Rectangle.Union(GetHudInvalidateRect(), GetHoverInvalidateRect());
                 if (!inv.IsEmpty) Invalidate(inv);
             }
+            if (m.Msg == WM_SETCURSOR)
+            {
+                int hit = unchecked((int)((long)m.LParam & 0xFFFF));
 
+                // 1) リサイズ系 HT なら、そのままサイズカーソルを明示
+                var rz = CursorFromHit(hit);
+                if (rz != null)
+                {
+                    SetCursorOnce(rz, ref m);
+                    return;
+                }
+
+                // 2) クライアント/キャプションは Hand or SizeAll
+                if (hit == HTCLIENT || hit == HTCAPTION)
+                {
+                    var pt = this.PointToClient(Cursor.Position);
+
+                    // ×ボタン or クリック可能HUDは Hand
+                    if (IsPointOverClose(pt) || IsHudClickableAt(pt))
+                    {
+                        SetCursorOnce(Cursors.Hand, ref m);
+                        return;
+                    }
+
+                    // 通常ホバーは SizeAll
+                    SetCursorOnce(Cursors.SizeAll, ref m);
+                    return;
+                }
+
+                // 3) その他（HTNOWHERE 等）も安全側で SizeAll にしておく
+                SetCursorOnce(Cursors.SizeAll, ref m);
+                return;
+            }
             base.WndProc(ref m);
+        }
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            _lastCursor = null; // 次回の WM_SETCURSOR で必ず更新させる
         }
 
         private static bool IsShiftDown()
@@ -2953,6 +3051,48 @@ namespace Kiritori.Views.LiveCapture
             }
         }
         private FfmpegPipeRecorder _rec;
+        private static string ResolveLivePreviewBaseFolderOrNull()
+        {
+            string folder = null;
+            try { folder = Properties.Settings.Default.LivePreviewSaveFolder; } catch { }
+            if (string.IsNullOrWhiteSpace(folder)) return null;
+
+            try
+            {
+                folder = Environment.ExpandEnvironmentVariables(folder);
+                Directory.CreateDirectory(folder);
+                return folder;
+            }
+            catch
+            {
+                return null; // 作れなければ未指定扱い（従来の経路へフォールバック）
+            }
+        }
+        private static string ResolveLivePreviewSavePath(string ext /*例: ".gif" ".mp4"*/)
+        {
+            var baseFolder = ResolveLivePreviewBaseFolderOrNull();
+            if (string.IsNullOrEmpty(baseFolder))
+            {
+                baseFolder = Path.Combine(Path.GetTempPath(), "Kiritori");
+            };
+            Log.Debug($"ResolveLivePreviewSavePath: baseFolder='{baseFolder}' ext='{ext}'", "LivePreview");
+            var file = $"Kiritori_{DateTime.Now:yyyyMMdd_HHmmss}{ext}";
+            return EnsureUniquePath(Path.Combine(baseFolder, file));
+        }
+        private static string EnsureUniquePath(string path)
+        {
+            if (!File.Exists(path)) return path;
+            string dir = Path.GetDirectoryName(path) ?? "";
+            string name = Path.GetFileNameWithoutExtension(path);
+            string ext = Path.GetExtension(path);
+            for (int i = 2; i < 1000; i++)
+            {
+                var p2 = Path.Combine(dir, $"{name}_{i}{ext}");
+                if (!File.Exists(p2)) return p2;
+            }
+            return Path.Combine(dir, $"{name}_{DateTime.Now:HHmmssfff}{ext}");
+        }
+
         private void StartRecordingMp4(string path, int width, int height, int fps)
         {
             Log.Debug($"StartRecordingMp4 path='{path}' size={width}x{height} fps={fps}", "LivePreview");

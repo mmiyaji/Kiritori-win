@@ -562,5 +562,29 @@ namespace Kiritori.Properties {
                 this["LivePreviewShowStats"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string LivePreviewSaveFolder {
+            get {
+                return ((string)(this["LivePreviewSaveFolder"]));
+            }
+            set {
+                this["LivePreviewSaveFolder"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("10")]
+        public int GifMaxDurationSec {
+            get {
+                return ((int)(this["GifMaxDurationSec"]));
+            }
+            set {
+                this["GifMaxDurationSec"] = value;
+            }
+        }
     }
 }
