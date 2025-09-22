@@ -115,6 +115,24 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Browse… に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Button_Browse {
+            get {
+                return ResourceManager.GetString("Button.Browse", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Clear に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Button_Clear {
+            get {
+                return ResourceManager.GetString("Button.Clear", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Disable に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Button_Extensions_Disable {
@@ -372,6 +390,15 @@ namespace Kiritori.Properties {
         internal static string Desc_HideFromCapture {
             get {
                 return ResourceManager.GetString("Desc.HideFromCapture", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Choose a folder for Live Preview recordings に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Dialog_SaveFolder_Description {
+            get {
+                return ResourceManager.GetString("Dialog.SaveFolder.Description", resourceCulture);
             }
         }
         
@@ -1308,6 +1335,42 @@ namespace Kiritori.Properties {
         internal static string Setting_Display_GifMaxDurationSec {
             get {
                 return ResourceManager.GetString("Setting.Display.GifMaxDurationSec", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   GIF max FPS に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_GifMaxFps {
+            get {
+                return ResourceManager.GetString("Setting.Display.GifMaxFps", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   GIF max Width に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_GifMaxWidth {
+            get {
+                return ResourceManager.GetString("Setting.Display.GifMaxWidth", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   GIF Optimize for size に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_GifOptimize {
+            get {
+                return ResourceManager.GetString("Setting.Display.GifOptimize", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Downscale / palette reduction に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_GifOptimizeTip {
+            get {
+                return ResourceManager.GetString("Setting.Display.GifOptimizeTip", resourceCulture);
             }
         }
         
@@ -2541,6 +2604,24 @@ namespace Kiritori.Properties {
         internal static string Text_ZoomReset {
             get {
                 return ResourceManager.GetString("Text.ZoomReset", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   0 = Unlimited; otherwise acts as a cap に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Tip_GifMax {
+            get {
+                return ResourceManager.GetString("Tip.GifMax", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Unspecified (uses the default location) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Tip_SaveFolder_Unset {
+            get {
+                return ResourceManager.GetString("Tip.SaveFolder.Unset", resourceCulture);
             }
         }
         

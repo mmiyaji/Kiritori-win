@@ -963,4 +963,31 @@
     <value>You can adjust these in Appearance &gt; Live Preview.</value>
     <comment>@MutedRule(PunctuationTail)@MutedRule(PunctuationLead)</comment>
   </data>
+  <data name="Setting.Display.GifOptimize" xml:space="preserve">
+    <value>GIF Optimize for size</value>
+  </data>
+  <data name="Setting.Display.GifMaxFps" xml:space="preserve">
+    <value>GIF max FPS</value>
+  </data>
+  <data name="Setting.Display.GifOptimizeTip" xml:space="preserve">
+    <value>Downscale / palette reduction</value>
+  </data>
+  <data name="Setting.Display.GifMaxWidth" xml:space="preserve">
+    <value>GIF max Width</value>
+  </data>
+  <data name="Button.Browse" xml:space="preserve">
+    <value>Browse…</value>
+  </data>
+  <data name="Button.Clear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Dialog.SaveFolder.Description" xml:space="preserve">
+    <value>Choose a folder for Live Preview recordings</value>
+  </data>
+  <data name="Tip.GifMax" xml:space="preserve">
+    <value>0 = Unlimited; otherwise acts as a cap</value>
+  </data>
+  <data name="Tip.SaveFolder.Unset" xml:space="preserve">
+    <value>Unspecified (uses the default location)</value>
+  </data>
 </root>

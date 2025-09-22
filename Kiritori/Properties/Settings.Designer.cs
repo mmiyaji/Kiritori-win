@@ -610,5 +610,17 @@ namespace Kiritori.Properties {
                 this["GifOptimize"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("900")]
+        public int GifMaxWidth {
+            get {
+                return ((int)(this["GifMaxWidth"]));
+            }
+            set {
+                this["GifMaxWidth"] = value;
+            }
+        }
     }
 }

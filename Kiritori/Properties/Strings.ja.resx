@@ -955,6 +955,33 @@
     <value>・時間上限: 指定なし（自動停止は無効）</value>
   </data>
   <data name="GifNotice.Footer" xml:space="preserve">
-    <value>※ これらの設定は［Appearance &gt; Live Preview］で調整できます。</value>
+    <value>※ これらの設定は［表示 &gt; ライブプレビュー］で調整できます。</value>
+  </data>
+  <data name="Setting.Display.GifOptimize" xml:space="preserve">
+    <value>GIFサイズ最適化</value>
+  </data>
+  <data name="Setting.Display.GifMaxFps" xml:space="preserve">
+    <value>GIF最大FPS</value>
+  </data>
+  <data name="Setting.Display.GifOptimizeTip" xml:space="preserve">
+    <value>縮小 / 減色</value>
+  </data>
+  <data name="Setting.Display.GifMaxWidth" xml:space="preserve">
+    <value>GIF最大横幅</value>
+  </data>
+  <data name="Button.Browse" xml:space="preserve">
+    <value>参照…</value>
+  </data>
+  <data name="Button.Clear" xml:space="preserve">
+    <value>クリア</value>
+  </data>
+  <data name="Dialog.SaveFolder.Description" xml:space="preserve">
+    <value>ライブプレビューの録画保存先を選択</value>
+  </data>
+  <data name="Tip.GifMax" xml:space="preserve">
+    <value>0 = 無制限 / それ以外は上限秒数</value>
+  </data>
+  <data name="Tip.SaveFolder.Unset" xml:space="preserve">
+    <value>未指定（従来の保存先を使用）</value>
   </data>
 </root>

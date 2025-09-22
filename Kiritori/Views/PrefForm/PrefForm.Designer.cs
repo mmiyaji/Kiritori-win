@@ -8,6 +8,7 @@ using System.Linq;
 using System.Windows.Forms;
 using Kiritori.Services.Logging;
 using System.IO;
+using System.Globalization;
 
 namespace Kiritori
 {
@@ -125,8 +126,9 @@ namespace Kiritori
         private Button btnBrowseSaveFolder, btnClearSaveFolder;
         private NumericUpDown numGifMax;
         private ToolTip tips;
-        private Label lblGifFps, lblGifOptimize;
+        private Label lblGifFps, lblGifOptimize, lblGifWidth;
         private NumericUpDown numGifFps;
+        private NumericUpDown numGifWidth;
         private CheckBox chkGifOptimize;
 
         // ========= Shortcuts ==========
@@ -799,8 +801,8 @@ namespace Kiritori
             lblSaveFolder.Tag = "loc:Setting.Display.LivePreviewSaveFolder";
 
             txtSaveFolder = new TextBox { ReadOnly = true, Dock = DockStyle.Fill };
-            btnBrowseSaveFolder = new Button { Text = "参照...", AutoSize = true };
-            btnClearSaveFolder  = new Button { Text = "クリア",  AutoSize = true };
+            btnBrowseSaveFolder = new Button { Tag = "loc:Button.Browse", AutoSize = true };
+            btnClearSaveFolder  = new Button { Tag = "loc:Button.Clear",  AutoSize = true };
 
             var flowFolder = new FlowLayoutPanel {
                 Dock = DockStyle.Fill, AutoSize = true, WrapContents = false, FlowDirection = FlowDirection.LeftToRight
@@ -816,30 +818,30 @@ namespace Kiritori
             numGifMax = new NumericUpDown {
                 Minimum = 0, Maximum = 3600, Increment = 1, Dock = DockStyle.Left, Width = 120
             };
-            tips.SetToolTip(numGifMax, "0 = 無制限 / それ以外は上限秒数");
             txtSaveFolder.DataBindings.Add(
                 new Binding("Text",
                     Properties.Settings.Default,
                     nameof(Properties.Settings.Default.LivePreviewSaveFolder),
                     true, DataSourceUpdateMode.OnPropertyChanged));
 
-            numGifMax.DataBindings.Add(
-                new Binding("Value",
-                    Properties.Settings.Default,
-                    nameof(Properties.Settings.Default.GifMaxDurationSec),
-                    true, DataSourceUpdateMode.OnPropertyChanged));
+            // numGifMax.DataBindings.Add(
+            //     new Binding("Value",
+            //         Properties.Settings.Default,
+            //         nameof(Properties.Settings.Default.GifMaxDurationSec),
+            //         true, DataSourceUpdateMode.OnPropertyChanged));
 
             // ボタン: 参照 / クリア
             btnBrowseSaveFolder.Click += (s, e) =>
             {
                 using (var fbd = new FolderBrowserDialog {
-                    Description = "Live Preview の保存先フォルダを選択",
+                    Description = SR.T("Dialog.SaveFolder.Description",
+                        "Choose a folder for Live Preview recordings"),
                     ShowNewFolderButton = true
                 })
                 {
-                    var cur = Properties.Settings.Default.LivePreviewSaveFolder;
-                    if (!string.IsNullOrWhiteSpace(cur) && Directory.Exists(cur))
-                        fbd.SelectedPath = cur;
+                    var cur1 = Properties.Settings.Default.LivePreviewSaveFolder;
+                    if (!string.IsNullOrWhiteSpace(cur1) && Directory.Exists(cur1))
+                        fbd.SelectedPath = cur1;
 
                     if (fbd.ShowDialog(this) == DialogResult.OK)
                     {
@@ -855,18 +857,59 @@ namespace Kiritori
                 try { Properties.Settings.Default.Save(); } catch { }
             };
 
-            // NumericUpDown の変更を即保存（バインドでも反映されますが保険で）
-            numGifMax.ValueChanged += (s, e) => {
-                Properties.Settings.Default.GifMaxDurationSec = (int)numGifMax.Value;
-                try { Properties.Settings.Default.Save(); } catch { }
+            // // NumericUpDown の変更を即保存（バインドでも反映されますが保険で）
+            // numGifMax.ValueChanged += (s, e) => {
+            //     Properties.Settings.Default.GifMaxDurationSec = (int)numGifMax.Value;
+            //     try { Properties.Settings.Default.Save(); } catch { }
+            // };
+            var bMax = new Binding(
+                "Value",
+                Properties.Settings.Default,
+                nameof(Properties.Settings.Default.GifMaxDurationSec),
+                formattingEnabled: true,
+                DataSourceUpdateMode.OnPropertyChanged);
+
+            // UI ← 設定 の方向（decimalに変換）
+            bMax.Format += (s, e) =>
+            {
+                // 設定側が string/int/その他でも安全に decimal へ
+                e.Value = Convert.ToDecimal(CoerceInt(e.Value, 0, 3600, 0), CultureInfo.InvariantCulture);
             };
 
+            // 設定 ← UI の方向（decimal→int）
+            bMax.Parse += (s, e) =>
+            {
+                if (e.Value is decimal dec)
+                    e.Value = (int)dec;
+            };
+
+            // numGifMax.DataBindings.Add(bMax);
+
+            // 例: numGifFps（1..30）
+            var bFps = new Binding(
+                "Value",
+                Properties.Settings.Default,
+                nameof(Properties.Settings.Default.GifMaxFps),
+                true,
+                DataSourceUpdateMode.OnPropertyChanged);
+            bFps.Format += (s, e) =>
+            {
+                e.Value = Convert.ToDecimal(CoerceInt(e.Value, 1, 30, 10), CultureInfo.InvariantCulture);
+            };
+            bFps.Parse += (s, e) =>
+            {
+                if (e.Value is decimal dec)
+                    e.Value = (int)dec;
+            };
+            // numGifFps.DataBindings.Add(bFps);
+
             // ツールチップ
-            tips.SetToolTip(numGifMax, "0 = 無制限 / それ以外は上限秒数");
-            tips.SetToolTip(txtSaveFolder,
-                string.IsNullOrWhiteSpace(Properties.Settings.Default.LivePreviewSaveFolder)
-                ? "未指定（従来の保存先を使用）"
-                : Properties.Settings.Default.LivePreviewSaveFolder);
+            tips.SetToolTip(numGifMax, SR.T("Tip.GifMax",
+                                "0 = Unlimited; otherwise acts as a cap"));
+            var cur = Properties.Settings.Default.LivePreviewSaveFolder;
+            string unset = SR.T("Tip.SaveFolder.Unset",
+                                "Unspecified (uses the default location)");
+            tips.SetToolTip(txtSaveFolder, string.IsNullOrWhiteSpace(cur) ? unset : cur);
 
             // --- GIF 最大FPS ---
             lblGifFps = NewRightLabel("GIF max FPS");
@@ -878,42 +921,40 @@ namespace Kiritori
             // --- 最適化ON/OFF ---
             lblGifOptimize = NewRightLabel("Optimize for size");
             lblGifOptimize.Tag = "loc:Setting.Display.GifOptimize";
-            chkGifOptimize = new CheckBox {
+            chkGifOptimize = new CheckBox
+            {
                 Text = "Downscale / palette reduction",
-                AutoSize = true
+                AutoSize = true,
+                Tag = "loc:Setting.Display.GifOptimizeTip"
             };
-            numGifFps.DataBindings.Add(new Binding(
-                "Value", Properties.Settings.Default, nameof(Properties.Settings.Default.GifMaxFps),
-                true, DataSourceUpdateMode.OnPropertyChanged));
+            // --- GIF 最大横幅 ---
+            lblGifWidth = NewRightLabel("GIF max Width");
+            lblGifWidth.Tag = "loc:Setting.Display.GifMaxWidth";
+            numGifWidth = new NumericUpDown {
+                Minimum = 1, Maximum = 1920, Increment = 1, Dock = DockStyle.Left, Width = 120
+            };
+
+            // numGifFps.DataBindings.Add(new Binding(
+            //     "Value", Properties.Settings.Default, nameof(Properties.Settings.Default.GifMaxFps),
+            //     true, DataSourceUpdateMode.OnPropertyChanged));
 
             chkGifOptimize.DataBindings.Add(new Binding(
                 "Checked", Properties.Settings.Default, nameof(Properties.Settings.Default.GifOptimize),
                 true, DataSourceUpdateMode.OnPropertyChanged));
 
+            // numGifWidth.DataBindings.Add(new Binding(
+            //     "Value", Properties.Settings.Default, nameof(Properties.Settings.Default.GifMaxWidth),
+            //     true, DataSourceUpdateMode.OnPropertyChanged));
 
             // 追加（行インクリメントは既存パターンと同じ）
-            tlpLive.Controls.Add(new Label {
-                Text = "Options",
-                AutoSize = true,
-                TextAlign = ContentAlignment.MiddleRight,
-                Anchor = AnchorStyles.Right,
-                Tag = "loc:Text.Option"
-            }, 0, 0);
-            tlpLive.Controls.Add(flowLiveToggles, 1, 0);
-
+            
             int row = tlpLive.RowCount;
-            row = tlpLive.RowCount;
             tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             tlpLive.Controls.Add(lblSaveFolder, 0, row);
             tlpLive.Controls.Add(flowFolder,   1, row);
             tlpLive.RowCount++;
 
             row = tlpLive.RowCount;
-            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            tlpLive.Controls.Add(lblGifMax, 0, row);
-            tlpLive.Controls.Add(numGifMax, 1, row);
-            tlpLive.RowCount++;
-
             tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             tlpLive.Controls.Add(lblGifFps, 0, row);
             tlpLive.Controls.Add(numGifFps, 1, row);
@@ -924,6 +965,27 @@ namespace Kiritori
             tlpLive.Controls.Add(lblGifOptimize, 0, row);
             tlpLive.Controls.Add(chkGifOptimize, 1, row);
             tlpLive.RowCount++;
+            
+            row = tlpLive.RowCount;
+            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tlpLive.Controls.Add(lblGifWidth, 0, row);
+            tlpLive.Controls.Add(numGifWidth, 1, row);
+            tlpLive.RowCount++;
+
+            row = tlpLive.RowCount;
+            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tlpLive.Controls.Add(lblGifMax, 0, row);
+            tlpLive.Controls.Add(numGifMax, 1, row);
+            tlpLive.RowCount++;
+
+            tlpLive.Controls.Add(new Label {
+                Text = "Options",
+                AutoSize = true,
+                TextAlign = ContentAlignment.MiddleRight,
+                Anchor = AnchorStyles.Right,
+                Tag = "loc:Text.Option"
+            }, 0, 0);
+            tlpLive.Controls.Add(flowLiveToggles, 1, 0);
 
             this.grpLivePreview.Controls.Add(tlpLive);
 
@@ -1391,7 +1453,7 @@ namespace Kiritori
                     e.Value = Decimal.ToInt32(d);
             };
             Log.Debug(string.Format("Binding history limit {0}", S.HistoryLimit), "Settings");
-            this.textBoxHistory.DataBindings.Add(b);
+            // this.textBoxHistory.DataBindings.Add(b);
 
             // --- Hover preview <-> Settings ---
             this.previewHover.DataBindings.Add(
@@ -1410,8 +1472,8 @@ namespace Kiritori
                 new Binding("Checked", S, nameof(S.HoverHighlightEnabled), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkShowOverlay.DataBindings.Add(
                 new Binding("Checked", S, nameof(S.OverlayEnabled), true, DataSourceUpdateMode.OnPropertyChanged));
-            this.numHoverThickness.DataBindings.Add(
-                new Binding("Value", S, nameof(S.HoverHighlightThickness), true, DataSourceUpdateMode.OnPropertyChanged));
+            // this.numHoverThickness.DataBindings.Add(
+            //     new Binding("Value", S, nameof(S.HoverHighlightThickness), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkScreenGuide.DataBindings.Add(
                 new Binding("Checked", S, nameof(S.ScreenGuideEnabled), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkTrayNotify.DataBindings.Add(
@@ -1616,6 +1678,63 @@ namespace Kiritori
                 // ログ出力など
                 // AppLog.Info($"[OCR] Preferred language set: {val}");
             }
+        }
+
+        // フォーマット例外/NRE対策のユーティリティ（以前の提案と同じ）
+        private int CoerceInt(object raw, int min, int max, int fallback)
+        {
+            try
+            {
+                if (raw == null) return fallback;
+                if (raw is int i) return Math.Min(max, Math.Max(min, i));
+                if (raw is decimal d) return Math.Min(max, Math.Max(min, (int)d));
+                if (raw is string s && int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var v))
+                    return Math.Min(max, Math.Max(min, v));
+                return Math.Min(max, Math.Max(min, Convert.ToInt32(raw, CultureInfo.InvariantCulture)));
+            }
+            catch { return fallback; }
+        }
+        private void SanitizeNumericSettings()
+        {
+            var S = Properties.Settings.Default;
+            S.HistoryLimit            = CoerceInt(S["HistoryLimit"],            0, 100, 20);
+            S.HoverHighlightThickness = CoerceInt(S["HoverHighlightThickness"], 1, 10,  2);
+            S.GifMaxDurationSec       = CoerceInt(S["GifMaxDurationSec"],       0, 3600, 0);
+            S.GifMaxFps               = CoerceInt(S["GifMaxFps"],               1, 30,  10);
+            S.GifMaxWidth             = CoerceInt(S["GifMaxWidth"],             1, 1920, 960);
+            try { S.Save(); } catch { }
+        }
+        private bool CoerceBool(object raw, bool fallback)
+        {
+            try
+            {
+                if (raw == null) return fallback;
+                if (raw is bool b) return b;
+                if (raw is string s && bool.TryParse(s, out var bb)) return bb;
+                return Convert.ToBoolean(raw, CultureInfo.InvariantCulture);
+            }
+            catch { return fallback; }
+        }
+        private void BindIntNumeric(NumericUpDown ctrl, object settings, string propName,
+                            int min, int max, int fallback,
+                            DataSourceUpdateMode mode = DataSourceUpdateMode.OnPropertyChanged)
+        {
+            if (ctrl == null) return;
+            ctrl.Minimum = min; ctrl.Maximum = max;
+
+            var b = new Binding("Value", settings, propName, true, mode);
+            b.Format += (s, e) =>
+            {
+                e.Value = Convert.ToDecimal(CoerceInt(e.Value, min, max, fallback), CultureInfo.InvariantCulture);
+            };
+            b.Parse += (s, e) =>
+            {
+                if (e.Value is decimal d) e.Value = Decimal.ToInt32(d);
+                else                      e.Value = CoerceInt(e.Value, min, max, fallback);
+            };
+
+            ctrl.DataBindings.Clear(); // 多重バインド防止
+            ctrl.DataBindings.Add(b);
         }
 
         private sealed class ComboItem

@@ -88,6 +88,16 @@ namespace Kiritori
 
             PopulatePresetCombos();
             WireUpDataBindings();
+
+            SanitizeNumericSettings();
+            var S = Properties.Settings.Default;
+            BindIntNumeric(textBoxHistory,   S, nameof(S.HistoryLimit),            0, 100, 20);
+            BindIntNumeric(numHoverThickness,S, nameof(S.HoverHighlightThickness), 1, 10,   2);
+            BindIntNumeric(numGifMax,        S, nameof(S.GifMaxDurationSec),       0, 3600, 0);
+            BindIntNumeric(numGifFps,        S, nameof(S.GifMaxFps),               1, 30,  10);
+            BindIntNumeric(numGifWidth,      S, nameof(S.GifMaxWidth),             1, 1920, 960);
+            // BindGifSettings();
+
             SelectPresetComboFromSettings();
 
             // デザイナの勝手なバインディングを解除

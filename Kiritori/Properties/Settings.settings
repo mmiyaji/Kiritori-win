@@ -149,5 +149,8 @@
     <Setting Name="GifOptimize" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
+    <Setting Name="GifMaxWidth" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">900</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

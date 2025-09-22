@@ -3254,7 +3254,7 @@ namespace Kiritori.Views.LiveCapture
             int maxSec = 0;
             try { maxSec = Math.Max(0, Properties.Settings.Default.GifMaxDurationSec); } catch { }
 
-            // MaxWidth があれば表示に使う（無ければ汎用文）
+            // MaxWidth
             int? maxWidth = null;
             try
             {
@@ -3311,9 +3311,12 @@ namespace Kiritori.Views.LiveCapture
             try { setFps = Math.Max(1, Properties.Settings.Default.GifMaxFps); } catch {}
             bool useOpt = true;
             try { useOpt = Properties.Settings.Default.GifOptimize; } catch {}
+            int setWidth = 10;
+            try { setWidth = Math.Max(1, Properties.Settings.Default.GifMaxWidth); } catch {}
 
             _gifOpt.GifFps = setFps;
             _gifOpt.UseOptimization = useOpt;   // ← 新規プロパティ（下で説明）
+            _gifOpt.MaxWidth = setWidth;
 
             // 間隔（centiseconds）
             _gifMinIntervalCs = Math.Max(2, (int)Math.Round(100.0 / _gifOpt.GifFps));
