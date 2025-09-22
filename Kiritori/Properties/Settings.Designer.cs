@@ -622,5 +622,17 @@ namespace Kiritori.Properties {
                 this["GifMaxWidth"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int FixedCropPreset {
+            get {
+                return ((int)(this["FixedCropPreset"]));
+            }
+            set {
+                this["FixedCropPreset"] = value;
+            }
+        }
     }
 }

@@ -193,7 +193,10 @@ namespace Kiritori
                 bool autoScroll;
                 _chkAutoScroll.Checked = bool.TryParse(auto, out autoScroll) ? autoScroll : true;
             }
-            catch { /* 初回などは無視 */ }
+            catch
+            { 
+                Log.Debug("LoadLogViewPrefs: Could not load log view prefs", "Preferences");
+            }
 
             _cmbLogLevel.SelectedIndex = LevelToIndex(_viewLevel);
         }
@@ -206,7 +209,10 @@ namespace Kiritori
                 Properties.Settings.Default[SettingsKey_AutoScroll] = _chkAutoScroll.Checked.ToString();
                 Properties.Settings.Default.Save();
             }
-            catch { /* 非致命 */ }
+            catch
+            { 
+                Log.Debug("SaveLogViewPrefs: Could not save log view prefs", "Preferences");
+            }
         }
 
         /// <summary>外部から PrefForm のビューにも流したい場合に使用。</summary>

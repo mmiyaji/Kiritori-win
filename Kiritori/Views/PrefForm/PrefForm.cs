@@ -406,6 +406,7 @@ namespace Kiritori
                 _isDirty = false;
                 _gridSettings?.Invalidate();
                 UpdateDirtyUI();
+                Log.Info("Settings saved by user", "PrefForm");
             }
             // this.Close();
         }
@@ -419,13 +420,14 @@ namespace Kiritori
                 _baselineMap = SettingsDirtyTracker.BuildSettingsSnapshotMap();
                 _isDirty = false;
                 UpdateDirtyUI();
+                Log.Info("Settings canceled by user", "PrefForm");
             }
             this.Close();
         }
 
         private void btnExitApp_Click(object sender, EventArgs e)
         {
-            Log.Debug("Exit button clicked", "PrefForm");
+            Log.Info("Exit button clicked", "PrefForm");
             exitApp();
 
         }

@@ -30,7 +30,6 @@ namespace Kiritori.Services.History
 
         // 直近の変更をまとめて保存したいときに使うフラグ（IdleでFlush用）
         private bool _dirty;
-
         public event EventHandler Changed;
 
         public HistoryManager(string rootDir, int maxEntries = 500)

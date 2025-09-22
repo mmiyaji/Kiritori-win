@@ -1342,18 +1342,28 @@ namespace Kiritori
             return tcs.Task;
         }
 
+        private bool _hotkeysEverRegistered;
+        private HotkeySpec _lastCapSpec, _lastOcrSpec, _lastLiveSpec, _lastFixedSpec;
 
+        private static bool SameHotkey(HotkeySpec a, HotkeySpec b)
+            => a.Key == b.Key && a.Mods == b.Mods;
+
+        private static int ToWinMods(ModMask m)
+        {
+            int mods = 0;
+            if ((m & ModMask.Ctrl)  != 0) mods |= MOD_CONTROL;
+            if ((m & ModMask.Shift) != 0) mods |= MOD_SHIFT;
+            if ((m & ModMask.Alt)   != 0) mods |= MOD_ALT;
+            return mods;
+        }
         public void ReloadHotkeysFromSettings()
         {
             Log.Debug("ReloadHotkeysFromSettings() called", "Hotkey");
             Log.Debug($"raw settings: Cap='{Properties.Settings.Default.HotkeyCapture}', Ocr='{Properties.Settings.Default.HotkeyOcr}'", "Hotkey");
 
-            // ウィンドウ ハンドルが未作成だと RegisterHotKey に失敗するので保護
             if (!this.IsHandleCreated)
             {
                 Log.Debug("Handle not created; deferring until HandleCreated.", "Hotkey");
-
-                // 起動直後などで未作成なら、HandleCreated 後にもう一度やる
                 void handler(object s, EventArgs e)
                 {
                     this.HandleCreated -= handler;
@@ -1362,90 +1372,172 @@ namespace Kiritori
                 this.HandleCreated += handler;
                 return;
             }
-            // 念のため一旦解除
-            try { UnregisterHotKey(this.Handle, HOTKEY_ID_CAPTURE); } catch { }
-            try { UnregisterHotKey(this.Handle, HOTKEY_ID_OCR); } catch { }
-            try { UnregisterHotKey(this.Handle, HOTKEY_ID_LIVE); } catch { }
-            try { UnregisterHotKey(this.Handle, HOTKEY_ID_FIXED); } catch { }
+
+            // 既定値
             HotkeySpec DEF_HOTKEY_CAP   = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 };
             HotkeySpec DEF_HOTKEY_OCR   = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 };
             HotkeySpec DEF_HOTKEY_LIVE  = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D6 };
             HotkeySpec DEF_HOTKEY_FIXED = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D7 };
 
-
-            // 設定値を解析（ログ多め）
-            var capSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyCapture, DEF_HOTKEY_CAP);
-            var ocrSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyOcr, DEF_HOTKEY_OCR);
-            var liveSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyLive, DEF_HOTKEY_LIVE);
+            // 解析
+            var capSpec   = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyCapture,      DEF_HOTKEY_CAP);
+            var ocrSpec   = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyOcr,          DEF_HOTKEY_OCR);
+            var liveSpec  = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyLive,         DEF_HOTKEY_LIVE);
             var fixedSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyCaptureFixed, DEF_HOTKEY_FIXED);
 
             Log.Debug($"Capture parsed: {HotkeyUtil.ToText(capSpec)}  (Key={capSpec.Key})", "Hotkey");
             Log.Debug($"OCR     parsed: {HotkeyUtil.ToText(ocrSpec)}  (Key={ocrSpec.Key})", "Hotkey");
             Log.Debug($"Live    parsed: {HotkeyUtil.ToText(liveSpec)}  (Key={liveSpec.Key})", "Hotkey");
-            Log.Debug($"Fixed   parsed: {HotkeyUtil.ToText(fixedSpec)}  (Key={fixedSpec.Key})", "Hotkey");
+            Log.Debug($"Fixed   parsed: {HotkeyUtil.ToText(fixedSpec)} (Key={fixedSpec.Key})", "Hotkey");
 
-            // 変換（intに）
-            int capMods = 0, ocrMods = 0, liveMods = 0, fixedMods = 0;
-            if ((capSpec.Mods & ModMask.Ctrl) != 0) capMods |= MOD_CONTROL;
-            if ((capSpec.Mods & ModMask.Shift) != 0) capMods |= MOD_SHIFT;
-            if ((capSpec.Mods & ModMask.Alt) != 0) capMods |= MOD_ALT;
-
-            if ((ocrSpec.Mods & ModMask.Ctrl) != 0) ocrMods |= MOD_CONTROL;
-            if ((ocrSpec.Mods & ModMask.Shift) != 0) ocrMods |= MOD_SHIFT;
-            if ((ocrSpec.Mods & ModMask.Alt) != 0) ocrMods |= MOD_ALT;
-
-            if ((liveSpec.Mods & ModMask.Ctrl) != 0) liveMods |= MOD_CONTROL;
-            if ((liveSpec.Mods & ModMask.Shift) != 0) liveMods |= MOD_SHIFT;
-            if ((liveSpec.Mods & ModMask.Alt) != 0) liveMods |= MOD_ALT;
-
-            if ((fixedSpec.Mods & ModMask.Ctrl) != 0) fixedMods |= MOD_CONTROL;
-            if ((fixedSpec.Mods & ModMask.Shift) != 0) fixedMods |= MOD_SHIFT;
-            if ((fixedSpec.Mods & ModMask.Alt) != 0) fixedMods |= MOD_ALT;
-
-            // 実登録（Win32直）
-            int ok1 = RegisterHotKey(this.Handle, HOTKEY_ID_CAPTURE, capMods /* | MOD_NOREPEAT */, (int)capSpec.Key);
-            if (ok1 == 0)
+            // ---- 変更無しなら何もしない（ただし未登録の初回は必ず実行）----
+            if (_hotkeysEverRegistered &&
+                SameHotkey(capSpec,   _lastCapSpec)   &&
+                SameHotkey(ocrSpec,   _lastOcrSpec)   &&
+                SameHotkey(liveSpec,  _lastLiveSpec)  &&
+                SameHotkey(fixedSpec, _lastFixedSpec))
             {
-                int err = Marshal.GetLastWin32Error();
-                Log.Debug($"Register CAPTURE failed. mods={capMods}, vk={(Keys)capSpec.Key}, lastError=0x{err:X8}", "Hotkey");
-            }
-            else
-            {
-                Log.Debug($"Register CAPTURE success. mods={capMods}, vk={(Keys)capSpec.Key}", "Hotkey");
+                Log.Debug("[Hotkey] No changes detected. Skip re-register.", "Hotkey");
+                return;
             }
 
-            int ok2 = RegisterHotKey(this.Handle, HOTKEY_ID_OCR, ocrMods /* | MOD_NOREPEAT */, (int)ocrSpec.Key);
-            if (ok2 == 0)
-            {
-                int err = Marshal.GetLastWin32Error();
-                Log.Debug($"Register OCR failed. mods={ocrMods}, vk={(Keys)ocrSpec.Key}, lastError=0x{err:X8}", "Hotkey");
-            }
-            else
-            {
-                Log.Debug($"Register OCR success. mods={ocrMods}, vk={(Keys)ocrSpec.Key}", "Hotkey");
-            }
+            // ---- 変更のあるIDだけ再登録 ----
+            ReRegisterIfChanged(HOTKEY_ID_CAPTURE, capSpec,   ref _lastCapSpec,   "CAPTURE");
+            ReRegisterIfChanged(HOTKEY_ID_OCR,     ocrSpec,   ref _lastOcrSpec,   "OCR");
+            ReRegisterIfChanged(HOTKEY_ID_LIVE,    liveSpec,  ref _lastLiveSpec,  "LIVE");
+            ReRegisterIfChanged(HOTKEY_ID_FIXED,   fixedSpec, ref _lastFixedSpec, "FIXED");
 
-            int ok3 = RegisterHotKey(this.Handle, HOTKEY_ID_LIVE, liveMods /* | MOD_NOREPEAT */, (int)liveSpec.Key);
-            if (ok3 == 0)
-            {
-                int err = Marshal.GetLastWin32Error();
-                Log.Debug($"Register LIVE failed. mods={liveMods}, vk={(Keys)liveSpec.Key}, lastError=0x{err:X8}", "Hotkey");
-            }
-            else
-            {
-                Log.Debug($"Register LIVE success. mods={liveMods}, vk={(Keys)liveSpec.Key}", "Hotkey");
-            }
-            int ok4 = RegisterHotKey(this.Handle, HOTKEY_ID_FIXED, fixedMods /* | MOD_NOREPEAT */, (int)fixedSpec.Key);
-            if (ok4 == 0)
-            {
-                int err = Marshal.GetLastWin32Error();
-                Log.Debug($"Register FIXED failed. mods={fixedMods}, vk={(Keys)fixedSpec.Key}, lastError=0x{err:X8}", "Hotkey");
-            }
-            else
-            {
-                Log.Debug($"Register FIXED success. mods={fixedMods}, vk={(Keys)fixedSpec.Key}", "Hotkey");
-            }
-
+            _hotkeysEverRegistered = true;
         }
+
+        // 1 ID 分の差分再登録
+        private void ReRegisterIfChanged(int id, HotkeySpec next, ref HotkeySpec last, string tag)
+        {
+            if (_hotkeysEverRegistered && SameHotkey(next, last))
+            {
+                // 変更なし
+                return;
+            }
+
+            try { UnregisterHotKey(this.Handle, id); } catch { /* ignore */ }
+
+            int mods = ToWinMods(next.Mods);
+            // 必要なら | MOD_NOREPEAT を足す
+            int ok = RegisterHotKey(this.Handle, id, mods /* | MOD_NOREPEAT */, (int)next.Key);
+            if (ok == 0)
+            {
+                int err = Marshal.GetLastWin32Error();
+                Log.Debug($"Register {tag} failed. mods={mods}, vk={(Keys)next.Key}, lastError=0x{err:X8}", "Hotkey");
+                // 失敗したら last は更新しない（次回変更で再試行）
+            }
+            else
+            {
+                Log.Debug($"Register {tag} success. mods={mods}, vk={(Keys)next.Key}", "Hotkey");
+                last = next; // 成功時のみキャッシュ更新
+            }
+        }
+        // public void ReloadHotkeysFromSettings()
+        // {
+        //     Log.Debug("ReloadHotkeysFromSettings() called", "Hotkey");
+        //     Log.Debug($"raw settings: Cap='{Properties.Settings.Default.HotkeyCapture}', Ocr='{Properties.Settings.Default.HotkeyOcr}'", "Hotkey");
+
+        //     // ウィンドウ ハンドルが未作成だと RegisterHotKey に失敗するので保護
+        //     if (!this.IsHandleCreated)
+        //     {
+        //         Log.Debug("Handle not created; deferring until HandleCreated.", "Hotkey");
+
+        //         // 起動直後などで未作成なら、HandleCreated 後にもう一度やる
+        //         void handler(object s, EventArgs e)
+        //         {
+        //             this.HandleCreated -= handler;
+        //             ReloadHotkeysFromSettings();
+        //         }
+        //         this.HandleCreated += handler;
+        //         return;
+        //     }
+        //     // 念のため一旦解除
+        //     try { UnregisterHotKey(this.Handle, HOTKEY_ID_CAPTURE); } catch { }
+        //     try { UnregisterHotKey(this.Handle, HOTKEY_ID_OCR); } catch { }
+        //     try { UnregisterHotKey(this.Handle, HOTKEY_ID_LIVE); } catch { }
+        //     try { UnregisterHotKey(this.Handle, HOTKEY_ID_FIXED); } catch { }
+        //     HotkeySpec DEF_HOTKEY_CAP   = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D5 };
+        //     HotkeySpec DEF_HOTKEY_OCR   = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D4 };
+        //     HotkeySpec DEF_HOTKEY_LIVE  = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D6 };
+        //     HotkeySpec DEF_HOTKEY_FIXED = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D7 };
+
+
+        //     // 設定値を解析（ログ多め）
+        //     var capSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyCapture, DEF_HOTKEY_CAP);
+        //     var ocrSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyOcr, DEF_HOTKEY_OCR);
+        //     var liveSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyLive, DEF_HOTKEY_LIVE);
+        //     var fixedSpec = HotkeyUtil.ParseOrDefault(Properties.Settings.Default.HotkeyCaptureFixed, DEF_HOTKEY_FIXED);
+
+        //     Log.Debug($"Capture parsed: {HotkeyUtil.ToText(capSpec)}  (Key={capSpec.Key})", "Hotkey");
+        //     Log.Debug($"OCR     parsed: {HotkeyUtil.ToText(ocrSpec)}  (Key={ocrSpec.Key})", "Hotkey");
+        //     Log.Debug($"Live    parsed: {HotkeyUtil.ToText(liveSpec)}  (Key={liveSpec.Key})", "Hotkey");
+        //     Log.Debug($"Fixed   parsed: {HotkeyUtil.ToText(fixedSpec)}  (Key={fixedSpec.Key})", "Hotkey");
+
+        //     // 変換（intに）
+        //     int capMods = 0, ocrMods = 0, liveMods = 0, fixedMods = 0;
+        //     if ((capSpec.Mods & ModMask.Ctrl) != 0) capMods |= MOD_CONTROL;
+        //     if ((capSpec.Mods & ModMask.Shift) != 0) capMods |= MOD_SHIFT;
+        //     if ((capSpec.Mods & ModMask.Alt) != 0) capMods |= MOD_ALT;
+
+        //     if ((ocrSpec.Mods & ModMask.Ctrl) != 0) ocrMods |= MOD_CONTROL;
+        //     if ((ocrSpec.Mods & ModMask.Shift) != 0) ocrMods |= MOD_SHIFT;
+        //     if ((ocrSpec.Mods & ModMask.Alt) != 0) ocrMods |= MOD_ALT;
+
+        //     if ((liveSpec.Mods & ModMask.Ctrl) != 0) liveMods |= MOD_CONTROL;
+        //     if ((liveSpec.Mods & ModMask.Shift) != 0) liveMods |= MOD_SHIFT;
+        //     if ((liveSpec.Mods & ModMask.Alt) != 0) liveMods |= MOD_ALT;
+
+        //     if ((fixedSpec.Mods & ModMask.Ctrl) != 0) fixedMods |= MOD_CONTROL;
+        //     if ((fixedSpec.Mods & ModMask.Shift) != 0) fixedMods |= MOD_SHIFT;
+        //     if ((fixedSpec.Mods & ModMask.Alt) != 0) fixedMods |= MOD_ALT;
+
+        //     // 実登録（Win32直）
+        //     int ok1 = RegisterHotKey(this.Handle, HOTKEY_ID_CAPTURE, capMods /* | MOD_NOREPEAT */, (int)capSpec.Key);
+        //     if (ok1 == 0)
+        //     {
+        //         int err = Marshal.GetLastWin32Error();
+        //         Log.Debug($"Register CAPTURE failed. mods={capMods}, vk={(Keys)capSpec.Key}, lastError=0x{err:X8}", "Hotkey");
+        //     }
+        //     else
+        //     {
+        //         Log.Debug($"Register CAPTURE success. mods={capMods}, vk={(Keys)capSpec.Key}", "Hotkey");
+        //     }
+
+        //     int ok2 = RegisterHotKey(this.Handle, HOTKEY_ID_OCR, ocrMods /* | MOD_NOREPEAT */, (int)ocrSpec.Key);
+        //     if (ok2 == 0)
+        //     {
+        //         int err = Marshal.GetLastWin32Error();
+        //         Log.Debug($"Register OCR failed. mods={ocrMods}, vk={(Keys)ocrSpec.Key}, lastError=0x{err:X8}", "Hotkey");
+        //     }
+        //     else
+        //     {
+        //         Log.Debug($"Register OCR success. mods={ocrMods}, vk={(Keys)ocrSpec.Key}", "Hotkey");
+        //     }
+
+        //     int ok3 = RegisterHotKey(this.Handle, HOTKEY_ID_LIVE, liveMods /* | MOD_NOREPEAT */, (int)liveSpec.Key);
+        //     if (ok3 == 0)
+        //     {
+        //         int err = Marshal.GetLastWin32Error();
+        //         Log.Debug($"Register LIVE failed. mods={liveMods}, vk={(Keys)liveSpec.Key}, lastError=0x{err:X8}", "Hotkey");
+        //     }
+        //     else
+        //     {
+        //         Log.Debug($"Register LIVE success. mods={liveMods}, vk={(Keys)liveSpec.Key}", "Hotkey");
+        //     }
+        //     int ok4 = RegisterHotKey(this.Handle, HOTKEY_ID_FIXED, fixedMods /* | MOD_NOREPEAT */, (int)fixedSpec.Key);
+        //     if (ok4 == 0)
+        //     {
+        //         int err = Marshal.GetLastWin32Error();
+        //         Log.Debug($"Register FIXED failed. mods={fixedMods}, vk={(Keys)fixedSpec.Key}, lastError=0x{err:X8}", "Hotkey");
+        //     }
+        //     else
+        //     {
+        //         Log.Debug($"Register FIXED success. mods={fixedMods}, vk={(Keys)fixedSpec.Key}", "Hotkey");
+        //     }
+        // }
     }
 }

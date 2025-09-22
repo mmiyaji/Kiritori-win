@@ -380,7 +380,14 @@ namespace Kiritori
         private bool IsRowDirty(SettingRow r)
         {
             object persisted = null;
-            try { persisted = Properties.Settings.Default[r.Name]; } catch { }
+            try
+            {
+                persisted = Properties.Settings.Default[r.Name];
+            }
+            catch
+            {
+                Log.Debug($"IsRowDirty: Could not get persisted value for {r.Name}", "Advanced");
+            }
             return !ValueEquals(r.RawValue, persisted, r.TypeName);
         }
 
@@ -588,22 +595,24 @@ namespace Kiritori
         {
             if (_suppressExternalSync || _rows == null || string.IsNullOrEmpty(e.PropertyName)) return;
 
-            var row = _rows.FirstOrDefault(r => r.Name == e.PropertyName);
-            if (row == null) return;
-
-            var persisted = Properties.Settings.Default[e.PropertyName];
-
-            // ユーザーがこの画面で未編集（Raw == Original）なら、外部保存をそのまま取り込む
-            if (ValueEquals(row.RawValue, row.OriginalValue, row.TypeName))
+            try
             {
-                row.RawValue = persisted;      // 表示値を外部保存に追従
-                row.OriginalValue = persisted; // 基準値も更新
-                InvalidateRowByName(e.PropertyName);
+                var row = _rows.FirstOrDefault(r => r.Name == e.PropertyName);
+                if (row == null) return;
+
+                var persisted = Properties.Settings.Default[e.PropertyName];
+
+                // ユーザーがこの画面で未編集（Raw == Original）なら、外部保存をそのまま取り込む
+                if (ValueEquals(row.RawValue, row.OriginalValue, row.TypeName))
+                {
+                    row.RawValue = persisted;      // 表示値を外部保存に追従
+                    row.OriginalValue = persisted; // 基準値も更新
+                    InvalidateRowByName(e.PropertyName);
+                }
             }
-            else
+            catch
             {
-                // すでにこの画面で編集済みなら、“未保存強調”のまま（ユーザー編集を優先）
-                // 視覚的には dirty（太字＋濃色）のままなので特別処理は不要
+                Log.Debug($"Settings_PropertyChanged: Could not sync changed property {e.PropertyName}", "Advanced");
             }
         }
 
