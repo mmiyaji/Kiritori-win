@@ -28,8 +28,8 @@ namespace Kiritori
         private LogLevel _viewLevel = LogLevel.Info;
 
         // Settings キー
-        private const string SettingsKey_ViewLevel = "LogView.Level";
-        private const string SettingsKey_AutoScroll = "LogView.AutoScroll";
+        private const string SettingsKey_ViewLevel = "LogViewLevel";
+        private const string SettingsKey_AutoScroll = "LogViewAutoScroll";
 
         /// <summary>コンストラクタの末尾などで呼んでください。</summary>
         private void InitLogTab()

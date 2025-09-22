@@ -81,7 +81,7 @@ namespace Kiritori
             _dirtySelBg = System.Drawing.Color.FromArgb(255, 236, 147);
 
             // 画面ロード → 値読み込み
-            ReloadSettingsIntoGrid();
+            // ReloadSettingsIntoGrid();
 
             // Settings の外部変更を監視
             HookSettingsEvents();

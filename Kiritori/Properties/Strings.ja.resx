@@ -984,4 +984,31 @@
   <data name="Tip.SaveFolder.Unset" xml:space="preserve">
     <value>未指定（従来の保存先を使用）</value>
   </data>
+  <data name="Setting.Display.EdgeSnapTolerancePx" xml:space="preserve">
+    <value>エッジ吸着の許容距離 (px)</value>
+  </data>
+  <data name="Setting.Display.FixedCropHeight" xml:space="preserve">
+    <value>固定切り抜きの高さ (px)</value>
+  </data>
+  <data name="Setting.Display.FixedCropPreset" xml:space="preserve">
+    <value>固定切り抜きプリセット</value>
+  </data>
+  <data name="Setting.Display.FixedCropWidth" xml:space="preserve">
+    <value>固定切り抜きの幅 (px)</value>
+  </data>
+  <data name="Setting.Display.HotkeyCaptureFixed" xml:space="preserve">
+    <value>ホットキー: 固定サイズ切り抜き</value>
+  </data>
+  <data name="Setting.Display.LivePreviewShowStats" xml:space="preserve">
+    <value>ライブプレビューの統計を表示</value>
+  </data>
+  <data name="Setting.Display.LogViewAutoScroll" xml:space="preserve">
+    <value>ログビューを自動スクロール</value>
+  </data>
+  <data name="Setting.Display.LogViewLevel" xml:space="preserve">
+    <value>ログビューの表示レベル</value>
+  </data>
+  <data name="Setting.Display.SnapGridPx" xml:space="preserve">
+    <value>スナップグリッド間隔 (px)</value>
+  </data>
 </root>

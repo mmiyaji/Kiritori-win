@@ -472,7 +472,7 @@ namespace Kiritori
         internal void ReleaseScreenGate()
         {
             Interlocked.Exchange(ref _screenOpenGate, 0);
-            Log.Debug("screen gate released", "Hotkey");
+            // Log.Debug("screen gate released", "Hotkey");
         }
         public void openImage(String path = null)
         {
@@ -1388,7 +1388,7 @@ namespace Kiritori
             Log.Debug($"Capture parsed: {HotkeyUtil.ToText(capSpec)}  (Key={capSpec.Key})", "Hotkey");
             Log.Debug($"OCR     parsed: {HotkeyUtil.ToText(ocrSpec)}  (Key={ocrSpec.Key})", "Hotkey");
             Log.Debug($"Live    parsed: {HotkeyUtil.ToText(liveSpec)}  (Key={liveSpec.Key})", "Hotkey");
-            Log.Debug($"Fixed   parsed: {HotkeyUtil.ToText(fixedSpec)} (Key={fixedSpec.Key})", "Hotkey");
+            Log.Debug($"Fixed   parsed: {HotkeyUtil.ToText(fixedSpec)}  (Key={fixedSpec.Key})", "Hotkey");
 
             // ---- 変更無しなら何もしない（ただし未登録の初回は必ず実行）----
             if (_hotkeysEverRegistered &&

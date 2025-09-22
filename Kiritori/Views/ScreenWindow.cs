@@ -1054,6 +1054,7 @@ namespace Kiritori
         // ====== 終了処理 ======
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            Log.Info("Screen capture ended", "Capture");
             try { ma?.ReleaseScreenGate(); } catch { }
             DisposeCaptureSurface();
 

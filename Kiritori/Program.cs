@@ -150,48 +150,69 @@ namespace Kiritori
             }
 
             Debug.Listeners.Add(new TextWriterTraceListener(Console.Out));
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+            Application.ThreadException += (s, e) =>
+            {
+                if (IsKnownUiaDgvBug(e.Exception))
+                {
+                    Kiritori.Services.Logging.Log.Warn(
+                        "Ignored known WinForms UIA/DataGridView bug:\n" + e.Exception, "UIA");
+                    return; // 握り潰す
+                }
+                Kiritori.Services.Logging.Log.Error(e.Exception.ToString(), "Unhandled");
+                MessageBox.Show("Unexpected error:\n" + e.Exception.Message, "Kiritori");
+            };
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-
+#if DEBUG
+            AppDomain.CurrentDomain.FirstChanceException += (s, e) =>
+            {
+                if (e.Exception is System.Configuration.SettingsPropertyNotFoundException)
+                {
+                    Kiritori.Services.Logging.Log.Warn(
+                        $"SettingsPropertyNotFound: {e.Exception.Message}", "Settings");
+                }
+            };
+#endif
             if (Helpers.PackagedHelper.IsPackaged())
             {
                 Log.Info("Running in packaged mode", "Startup");
             }
-            if(args != null && args.Length > 0)
+            if (args != null && args.Length > 0)
             {
                 Log.Info("Command line args: " + string.Join(" ", args), "Startup");
             }
             var opt = ParseArgs(args);
             using (var mutex = new Mutex(true, SingleInstance.MutexName, out bool isNew))
+            {
+                if (isNew)
                 {
-                    if (isNew)
+                    // 1) まず待受け開始（Mainより前）
+                    SingleInstance.StartServer(null);
+
+                    // 2) Main を作成
+                    var main = new MainApplication(opt);
+
+                    // 3) Main ができたらハンドラを登録（キュー分も即消化）
+                    SingleInstance.SetHandler(paths =>
                     {
-                        // 1) まず待受け開始（Mainより前）
-                        SingleInstance.StartServer(null);
+                        if (main != null && main.IsHandleCreated)
+                            main.BeginInvoke(new Action(() => main.OpenImagesFromIpc(paths)));
+                    });
 
-                        // 2) Main を作成
-                        var main = new MainApplication(opt);
-
-                        // 3) Main ができたらハンドラを登録（キュー分も即消化）
-                        SingleInstance.SetHandler(paths =>
-                        {
-                            if (main != null && main.IsHandleCreated)
-                                main.BeginInvoke(new Action(() => main.OpenImagesFromIpc(paths)));
-                        });
-
-                        Application.ApplicationExit += (s, e) => SingleInstance.StopServer();
-                        Application.Run(main);
-                    }
-                    else
-                    {
-                        // 既存へ渡して終了（リトライ込み）
-                        if (opt.Mode == AppStartupMode.Viewer && opt.ImagePaths.Length > 0)
-                            if (SingleInstance.TrySendToExisting(opt.ImagePaths)) return;
-
-                        // 渡すものがない場合は単に終了でもOK
-                        return;
-                    }
+                    Application.ApplicationExit += (s, e) => SingleInstance.StopServer();
+                    Application.Run(main);
                 }
+                else
+                {
+                    // 既存へ渡して終了（リトライ込み）
+                    if (opt.Mode == AppStartupMode.Viewer && opt.ImagePaths.Length > 0)
+                        if (SingleInstance.TrySendToExisting(opt.ImagePaths)) return;
+
+                    // 渡すものがない場合は単に終了でもOK
+                    return;
+                }
+            }
         }
         private static void RegisterAssemblyResolvers()
         {
@@ -358,6 +379,14 @@ namespace Kiritori
                 }
             }
         }
+        private static bool IsKnownUiaDgvBug(Exception ex)
+        {
+            var st = ex?.StackTrace ?? "";
+            return ex is NullReferenceException &&
+                (st.Contains("DataGridViewCellAccessibleObject.get_FragmentRoot")
+                || st.Contains("System.Windows.Forms.DataGridViewCell.DataGridViewCellAccessibleObject"));
+        }
+
     }
     public static class LoggerSettingsLoader
     {
@@ -368,19 +397,19 @@ namespace Kiritori
             {
                 // ※ Properties.Settings.Default に追加した設定項目を読み取る
                 var s = Properties.Settings.Default;
-                o.Enabled           = s.LogEnabled;
-                o.MinLevel          = (LogLevel) s.LogMinLevel;
-                o.WriteToDebug      = s.LogWriteToDebug;
-                o.WriteToFile       = s.LogWriteToFile;
-                o.FilePath          = string.IsNullOrEmpty(s.LogFilePath)
+                o.Enabled = s.LogEnabled;
+                o.MinLevel = (LogLevel)s.LogMinLevel;
+                o.WriteToDebug = s.LogWriteToDebug;
+                o.WriteToFile = s.LogWriteToFile;
+                o.FilePath = string.IsNullOrEmpty(s.LogFilePath)
                                     ? o.FilePath : s.LogFilePath;
-                o.MaxFileSizeBytes  = s.LogMaxFileSizeBytes;
-                o.MaxRollFiles      = s.LogMaxRollFiles;
-                o.IncludeTimestamp  = s.LogIncludeTimestamp;
-                o.IncludeThreadId   = s.LogIncludeThreadId;
-                o.IncludeProcessId  = s.LogIncludeProcessId;
-                o.IncludeCategoryTag= s.LogIncludeCategoryTag;
-                o.TimestampFormat   = string.IsNullOrEmpty(s.LogTimestampFormat)
+                o.MaxFileSizeBytes = s.LogMaxFileSizeBytes;
+                o.MaxRollFiles = s.LogMaxRollFiles;
+                o.IncludeTimestamp = s.LogIncludeTimestamp;
+                o.IncludeThreadId = s.LogIncludeThreadId;
+                o.IncludeProcessId = s.LogIncludeProcessId;
+                o.IncludeCategoryTag = s.LogIncludeCategoryTag;
+                o.TimestampFormat = string.IsNullOrEmpty(s.LogTimestampFormat)
                                     ? o.TimestampFormat : s.LogTimestampFormat;
             }
             catch { /* 既定値で継続 */ }

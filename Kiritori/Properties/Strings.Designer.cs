@@ -1312,6 +1312,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Edge snap tolerance (px) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_EdgeSnapTolerancePx {
+            get {
+                return ResourceManager.GetString("Setting.Display.EdgeSnapTolerancePx", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   FFmpeg Path に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Setting_Display_FfmpegPath {
@@ -1326,6 +1335,33 @@ namespace Kiritori.Properties {
         internal static string Setting_Display_FirstRunShown {
             get {
                 return ResourceManager.GetString("Setting.Display.FirstRunShown", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Fixed crop height (px) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_FixedCropHeight {
+            get {
+                return ResourceManager.GetString("Setting.Display.FixedCropHeight", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Fixed crop preset に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_FixedCropPreset {
+            get {
+                return ResourceManager.GetString("Setting.Display.FixedCropPreset", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Fixed crop width (px) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_FixedCropWidth {
+            get {
+                return ResourceManager.GetString("Setting.Display.FixedCropWidth", resourceCulture);
             }
         }
         
@@ -1398,6 +1434,15 @@ namespace Kiritori.Properties {
         internal static string Setting_Display_HotkeyCapture {
             get {
                 return ResourceManager.GetString("Setting.Display.HotkeyCapture", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Hotkey: Fixed-size capture に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_HotkeyCaptureFixed {
+            get {
+                return ResourceManager.GetString("Setting.Display.HotkeyCaptureFixed", resourceCulture);
             }
         }
         
@@ -1492,6 +1537,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Show live preview stats に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LivePreviewShowStats {
+            get {
+                return ResourceManager.GetString("Setting.Display.LivePreviewShowStats", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Enable Logging に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Setting_Display_LogEnabled {
@@ -1582,6 +1636,24 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Log view auto-scroll に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LogViewAutoScroll {
+            get {
+                return ResourceManager.GetString("Setting.Display.LogViewAutoScroll", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Log view level filter に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_LogViewLevel {
+            get {
+                return ResourceManager.GetString("Setting.Display.LogViewLevel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Write to Debug Output に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Setting_Display_LogWriteToDebug {
@@ -1668,6 +1740,15 @@ namespace Kiritori.Properties {
         internal static string Setting_Display_ShowNotificationOnOcr {
             get {
                 return ResourceManager.GetString("Setting.Display.ShowNotificationOnOcr", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Snap grid size (px) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Setting_Display_SnapGridPx {
+            get {
+                return ResourceManager.GetString("Setting.Display.SnapGridPx", resourceCulture);
             }
         }
         

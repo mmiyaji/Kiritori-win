@@ -155,5 +155,17 @@
     <Setting Name="FixedCropPreset" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">0</Value>
     </Setting>
+    <Setting Name="SnapGridPx" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">10</Value>
+    </Setting>
+    <Setting Name="EdgeSnapTolerancePx" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">6</Value>
+    </Setting>
+    <Setting Name="LogViewLevel" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Info</Value>
+    </Setting>
+    <Setting Name="LogViewAutoScroll" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

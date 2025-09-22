@@ -990,4 +990,31 @@
   <data name="Tip.SaveFolder.Unset" xml:space="preserve">
     <value>Unspecified (uses the default location)</value>
   </data>
+  <data name="Setting.Display.EdgeSnapTolerancePx" xml:space="preserve">
+    <value>Edge snap tolerance (px)</value>
+  </data>
+  <data name="Setting.Display.FixedCropHeight" xml:space="preserve">
+    <value>Fixed crop height (px)</value>
+  </data>
+  <data name="Setting.Display.FixedCropPreset" xml:space="preserve">
+    <value>Fixed crop preset</value>
+  </data>
+  <data name="Setting.Display.FixedCropWidth" xml:space="preserve">
+    <value>Fixed crop width (px)</value>
+  </data>
+  <data name="Setting.Display.HotkeyCaptureFixed" xml:space="preserve">
+    <value>Hotkey: Fixed-size capture</value>
+  </data>
+  <data name="Setting.Display.LivePreviewShowStats" xml:space="preserve">
+    <value>Show live preview stats</value>
+  </data>
+  <data name="Setting.Display.LogViewAutoScroll" xml:space="preserve">
+    <value>Log view auto-scroll</value>
+  </data>
+  <data name="Setting.Display.LogViewLevel" xml:space="preserve">
+    <value>Log view level filter</value>
+  </data>
+  <data name="Setting.Display.SnapGridPx" xml:space="preserve">
+    <value>Snap grid size (px)</value>
+  </data>
 </root>

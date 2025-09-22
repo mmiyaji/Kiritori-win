@@ -634,5 +634,53 @@ namespace Kiritori.Properties {
                 this["FixedCropPreset"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("10")]
+        public int SnapGridPx {
+            get {
+                return ((int)(this["SnapGridPx"]));
+            }
+            set {
+                this["SnapGridPx"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("6")]
+        public int EdgeSnapTolerancePx {
+            get {
+                return ((int)(this["EdgeSnapTolerancePx"]));
+            }
+            set {
+                this["EdgeSnapTolerancePx"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Info")]
+        public string LogViewLevel {
+            get {
+                return ((string)(this["LogViewLevel"]));
+            }
+            set {
+                this["LogViewLevel"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool LogViewAutoScroll {
+            get {
+                return ((bool)(this["LogViewAutoScroll"]));
+            }
+            set {
+                this["LogViewAutoScroll"] = value;
+            }
+        }
     }
 }
