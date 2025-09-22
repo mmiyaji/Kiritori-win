@@ -1990,6 +1990,7 @@ namespace Kiritori.Views.LiveCapture
                             StartGifRecord();                    // ← 実際の開始（既存の初期化）
                             _suppressGifCheckedChanged = true;   // チェックをON表示にするがイベントは抑制
                             _miRecordingGif.Checked = true;
+                            _iconBadge?.SetState(LiveBadgeState.Recording);
                         }
                         finally
                         {
@@ -3403,33 +3404,44 @@ namespace Kiritori.Views.LiveCapture
         {
             Bitmap work = src;
 
-            // 1) 縮小（長辺 MaxWidth）
-            if (opt != null && opt.UseOptimization)
+            // 0) Posterize を使うなら事前に 32bppArgb に正規化（PArgb→Argb 変換）
+            if (opt != null && opt.Posterize && work.PixelFormat != PixelFormat.Format32bppArgb)
             {
-                if (opt != null && opt.MaxWidth > 0)
-                {
-                    int w = src.Width, h = src.Height;
-                    int longSide = Math.Max(w, h);
-                    if (longSide > opt.MaxWidth)
-                    {
-                        double scale = (double)opt.MaxWidth / longSide;
-                        int nw = Math.Max(1, (int)Math.Round(w * scale));
-                        int nh = Math.Max(1, (int)Math.Round(h * scale));
-                        work = ResizeBitmap(src, nw, nh);
-                        if (!ReferenceEquals(work, src)) src = null;
-                    }
-                }
+                var conv = work.Clone(
+                    new Rectangle(0, 0, work.Width, work.Height),
+                    PixelFormat.Format32bppArgb
+                );
+                if (!ReferenceEquals(work, src)) work.Dispose();
+                work = conv;
+            }
 
-                // 2) ポスタライズ（3/3/2bit = 最大256色）
-                if (opt != null && opt.Posterize)
+            // 1) 縮小
+            if (opt != null && opt.UseOptimization && opt.MaxWidth > 0)
+            {
+                int w = work.Width, h = work.Height;
+                int longSide = Math.Max(w, h);
+                if (longSide > opt.MaxWidth)
                 {
-                    var reduced = Posterize332(work);
-                    if (!ReferenceEquals(work, reduced)) work.Dispose();
-                    work = reduced;
+                    double scale = (double)opt.MaxWidth / longSide;
+                    int nw = Math.Max(1, (int)Math.Round(w * scale));
+                    int nh = Math.Max(1, (int)Math.Round(h * scale));
+                    var resized = ResizeBitmap(work, nw, nh);
+                    if (!ReferenceEquals(work, src)) work.Dispose();
+                    work = resized;
                 }
             }
+
+            // 2) ポスタライズ（ここからは常に 32bppArgb になっている）
+            if (opt != null && opt.Posterize)
+            {
+                var reduced = Posterize332(work);
+                if (!ReferenceEquals(work, reduced)) work.Dispose();
+                work = reduced;
+            }
+
             return work;
         }
+
 
         private static Bitmap ResizeBitmap(Bitmap src, int width, int height)
         {
