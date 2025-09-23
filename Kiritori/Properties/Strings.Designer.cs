@@ -871,7 +871,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Cut(copy and close) に類似しているローカライズされた文字列を検索します。
+        ///   Cut (copy and close) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_Cut {
             get {
@@ -961,7 +961,16 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   OCR(text recognition) に類似しているローカライズされた文字列を検索します。
+        ///   New Capture に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_NewCapture {
+            get {
+                return ResourceManager.GetString("Menu.NewCapture", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   OCR (text recognition) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_OCR {
             get {
@@ -1060,7 +1069,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Recording (MP4) に類似しているローカライズされた文字列を検索します。
+        ///   Recording に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Menu_Recording {
             get {
@@ -1074,6 +1083,15 @@ namespace Kiritori.Properties {
         internal static string Menu_RecordingGif {
             get {
                 return ResourceManager.GetString("Menu.RecordingGif", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Recording (MP4) に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Menu_RecordingMp4 {
+            get {
+                return ResourceManager.GetString("Menu.RecordingMp4", resourceCulture);
             }
         }
         
@@ -1978,7 +1996,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   Capture Settings(press key duaring capture) に類似しているローカライズされた文字列を検索します。
+        ///   Capture Settings (press key duaring capture) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_CaptureOptionSetting {
             get {
@@ -2320,7 +2338,7 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
-        ///   OCR Capture(no image) に類似しているローカライズされた文字列を検索します。
+        ///   OCR Capture (no image) に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_OCRCapture {
             get {

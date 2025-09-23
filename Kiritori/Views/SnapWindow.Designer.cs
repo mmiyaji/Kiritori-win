@@ -9,6 +9,7 @@ namespace Kiritori
         private System.ComponentModel.IContainer components = null;
         private PictureBox pictureBox1;
         private ContextMenuStrip rightContextMenuStrip;
+        private ToolStripMenuItem newCaptureParentMenu;
         private ToolStripMenuItem fileParentMenu;
         private ToolStripMenuItem editParentMenu;
         private ToolStripMenuItem viewParentMenu;
@@ -74,6 +75,7 @@ namespace Kiritori
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SnapWindow));
             this.pictureBox1 = new PictureBox();
             this.rightContextMenuStrip = new ContextMenuStrip(this.components);
+            this.newCaptureParentMenu = new ToolStripMenuItem();
             this.fileParentMenu = new ToolStripMenuItem();
             this.editParentMenu = new ToolStripMenuItem();
             this.viewParentMenu = new ToolStripMenuItem();
@@ -132,9 +134,7 @@ namespace Kiritori
             this.rightContextMenuStrip.Items.AddRange(new ToolStripItem[] {
                 this.closeESCToolStripMenuItem,
                 new ToolStripSeparator(),
-                this.captureToolStripMenuItem,
-                this.captureOCRToolStripMenuItem,
-                this.livePreviewToolStripMenuItem,
+                this.newCaptureParentMenu,
                 new ToolStripSeparator(),
                 this.fileParentMenu,
                 this.editParentMenu,
@@ -146,6 +146,18 @@ namespace Kiritori
             });
             this.rightContextMenuStrip.Name = "rightContextMenuStrip";
             this.rightContextMenuStrip.Size = new System.Drawing.Size(232, 392);
+            // 
+            // newCaptureParentMenu
+            // 
+            this.newCaptureParentMenu.DropDownItems.AddRange(new ToolStripItem[] {
+                this.captureToolStripMenuItem,
+                this.captureOCRToolStripMenuItem,
+                this.livePreviewToolStripMenuItem,
+            });
+            this.newCaptureParentMenu.Name = "newCaptureParentMenu";
+            this.newCaptureParentMenu.Size = new System.Drawing.Size(231, 22);
+            this.newCaptureParentMenu.Text = "New Capture";
+            this.newCaptureParentMenu.Tag = "loc:Menu.NewCapture";
             // 
             // fileParentMenu
             // 

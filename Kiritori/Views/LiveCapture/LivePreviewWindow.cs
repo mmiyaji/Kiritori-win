@@ -1565,7 +1565,7 @@ namespace Kiritori.Views.LiveCapture
                 _miOpacity.DropDownItems.Add(mi);
             }
 
-            _miRecording = new ToolStripMenuItem(SR.T("Menu.Recording", "Recording"))
+            _miRecording = new ToolStripMenuItem(SR.T("Menu.RecordingMp4", "Recording MP4"))
             {
                 CheckOnClick = true
             };
@@ -1612,58 +1612,6 @@ namespace Kiritori.Views.LiveCapture
             {
                 CheckOnClick = true
             };
-            // _miRecordingGif.CheckedChanged += (s, e) =>
-            // {
-            //     if (_miRecordingGif.Checked)
-            //     {
-            //         try
-            //         {
-            //             StartGifRecord();
-            //             Log.Debug("Recording GIF started", "LivePreview");
-            //             ShowOverlay("RECORDING GIF");
-            //             _iconBadge.SetState(LiveBadgeState.Recording);
-            //         }
-            //         catch (Exception ex)
-            //         {
-            //             Log.Debug("Failed to start recording: " + ex.Message, "LivePreview");
-            //             _miRecordingGif.Checked = false;
-            //             _iconBadge.SetState(LiveBadgeState.Rendering);
-            //         }
-            //     }
-            //     else
-            //     {
-            //         try
-            //         {
-            //             // 自動停止タイマーはここで破棄
-            //             _gifLimitTimer?.Stop();
-            //             _gifLimitTimer?.Dispose();
-            //             _gifLimitTimer = null;
-
-            //             // 再入防止（同時に二度止めない）
-            //             if (Interlocked.Exchange(ref _gifStopGate, 1) != 0) return;
-
-            //             // パス解決は停止関数側に任せてもOKだが、ここで渡すならこう
-            //             string outPath = ResolveLivePreviewSavePath(".gif");
-            //             StopGifRecordAndSave(outPath);
-
-            //             Log.Debug("Recording GIF stopped", "LivePreview");
-            //             ShowOverlay("STOP RECORDING GIF");
-            //             _iconBadge.SetState(LiveBadgeState.Rendering);
-            //         }
-            //         catch (Exception ex)
-            //         {
-            //             Log.Debug("Failed to stop recording: " + ex.Message, "LivePreview");
-            //             // 失敗時は視覚的に録画継続の扱いに戻す
-            //             _miRecordingGif.Checked = true;
-            //             _iconBadge.SetState(LiveBadgeState.Rendering);
-            //         }
-            //         finally
-            //         {
-            //             // 停止フロー終了後にゲート解放
-            //             Interlocked.Exchange(ref _gifStopGate, 0);
-            //         }
-            //     }
-            // };
             _miRecordingGif.CheckedChanged -= MiRecordingGif_CheckedChanged;
             _miRecordingGif.CheckedChanged += MiRecordingGif_CheckedChanged;
             // _miRecording.ShortcutKeys = (Keys)HOTS.RECORD;
@@ -1853,11 +1801,26 @@ namespace Kiritori.Views.LiveCapture
                 ResetFpsWindow();
                 Log.Debug("RenderPolicy -> HashSkip", "LivePreview");
             };
-            _miPolicyRoot.DropDownItems.AddRange(new ToolStripItem[] { _miPolicyAlways, _miPolicyHash });
+            _miPolicyRoot.DropDownItems.AddRange(new ToolStripItem[] {
+                _miFpsRoot,
+                _miPolicyAlways,
+                _miPolicyHash,
+            });
             // 既存の _ctx.Items.AddRange(...) に混ぜる場所へ
             SyncPolicyChecks();
 
             // ---------- サブメニュー（SnapWindow 構成に寄せる） ----------
+            var miRecording = new ToolStripMenuItem(SR.T("Menu.Recording", "Recording"));
+            miRecording.DropDownItems.AddRange(new ToolStripItem[] {
+                _miRecording,
+                _miRecordingGif,
+            });
+            var miNewCapture = new ToolStripMenuItem(SR.T("Menu.NewCapture", "New Capture"));
+            miNewCapture.DropDownItems.AddRange(new ToolStripItem[] {
+                _miCapture,
+                _miOCR,
+                _miLivePreview,
+            });
             var miFile = new ToolStripMenuItem(SR.T("Menu.File", "File"));   // いまは LivePreview 既存機能なし。将来 Save/Copy Frame 等をここに
             miFile.Enabled = false;
             var miEdit = new ToolStripMenuItem(SR.T("Menu.Edit", "Edit"));   // 予備（将来の編集系コマンド用）
@@ -1890,18 +1853,15 @@ namespace Kiritori.Views.LiveCapture
                 // 上段は SnapWindow では 「Image Capture / OCR / Live Preview / Close Window」だが
                 // LivePreview ではまず Close のみを同位置に配置（後で統合可能）
                 _miClose,
+                new ToolStripSeparator(),
                 _miPauseResume,
-                _miRecording,
-                _miRecordingGif,
-                _miFpsRoot,
+                miRecording,
                 _miPolicyRoot,
                 new ToolStripSeparator(),
-                _miCapture,
-                _miOCR,
-                _miLivePreview,
+                miNewCapture,
                 new ToolStripSeparator(),
-                miFile,
-                miEdit,
+                // miFile,
+                // miEdit,
                 miView,
                 miWindow,
                 new ToolStripSeparator(),

@@ -337,7 +337,7 @@
     <value>Close Window</value>
   </data>
   <data name="Menu.Cut" xml:space="preserve">
-    <value>Cut(copy and close)</value>
+    <value>Cut (copy and close)</value>
   </data>
   <data name="Menu.Copy" xml:space="preserve">
     <value>Copy</value>
@@ -403,7 +403,7 @@
     <value>Toggle guide lines</value>
   </data>
   <data name="Text.CaptureOptionSetting" xml:space="preserve">
-    <value>Capture Settings(press key duaring capture)</value>
+    <value>Capture Settings (press key duaring capture)</value>
   </data>
   <data name="Text.OpenMenuOnAppStart" xml:space="preserve">
     <value>Open this menu on app start</value>
@@ -499,7 +499,7 @@
     <value>Run OCR (copy result)</value>
   </data>
   <data name="Text.OCRCapture" xml:space="preserve">
-    <value>OCR Capture(no image)</value>
+    <value>OCR Capture (no image)</value>
   </data>
   <data name="Prefs.Hotkey.DuplicateCapture" xml:space="preserve">
     <value>Duplicate with another hotkey</value>
@@ -526,7 +526,7 @@
     <value>Notify in tray on OCR</value>
   </data>
   <data name="Menu.OCR" xml:space="preserve">
-    <value>OCR(text recognition)</value>
+    <value>OCR (text recognition)</value>
   </data>
   <data name="Menu.Realign" xml:space="preserve">
     <value>Move to the initial position</value>
@@ -571,7 +571,7 @@
     <value>Show Overlay</value>
   </data>
   <data name="Menu.Recording" xml:space="preserve">
-    <value>Recording (MP4)</value>
+    <value>Recording</value>
   </data>
   <data name="Menu.Rendering" xml:space="preserve">
     <value>Rendering</value>
@@ -1016,5 +1016,11 @@
   </data>
   <data name="Setting.Display.SnapGridPx" xml:space="preserve">
     <value>Snap grid size (px)</value>
+  </data>
+  <data name="Menu.NewCapture" xml:space="preserve">
+    <value>New Capture</value>
+  </data>
+  <data name="Menu.RecordingMp4" xml:space="preserve">
+    <value>Recording (MP4)</value>
   </data>
 </root>

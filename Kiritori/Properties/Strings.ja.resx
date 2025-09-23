@@ -571,7 +571,7 @@
     <value>オーバーレイ表示</value>
   </data>
   <data name="Menu.Recording" xml:space="preserve">
-    <value>録画 (MP4形式)</value>
+    <value>録画</value>
   </data>
   <data name="Menu.Rendering" xml:space="preserve">
     <value>レンダリング</value>
@@ -1010,5 +1010,11 @@
   </data>
   <data name="Setting.Display.SnapGridPx" xml:space="preserve">
     <value>スナップグリッド間隔 (px)</value>
+  </data>
+  <data name="Menu.NewCapture" xml:space="preserve">
+    <value>新規キャプチャー</value>
+  </data>
+  <data name="Menu.RecordingMp4" xml:space="preserve">
+    <value>録画 (MP4形式)</value>
   </data>
 </root>

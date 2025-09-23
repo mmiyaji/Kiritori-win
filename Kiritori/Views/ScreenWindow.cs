@@ -30,7 +30,7 @@ namespace Kiritori
         // ====== 既存フィールド ======
         private readonly Func<int> getHostDpi;
         int x = 0, y = 0, h = 0, w = 0;
-        private Graphics g;
+        // private Graphics g;
         private Bitmap bmp;
         private Bitmap baseBmp; // キャプチャ原本
         private Boolean isOpen;
@@ -282,7 +282,7 @@ namespace Kiritori
             Log.Info("Screen capture started", "Capture");
             this.Opacity = 1.0;
             this.isOpen = true;
-            DisposeCaptureSurface();
+            DisposeCaptureSurface(); // ここで前回の bmp/baseBmp を必ず破棄する
 
             this.StartPosition = FormStartPosition.Manual;
 
@@ -291,21 +291,33 @@ namespace Kiritori
             Log.Debug($"Virtual screen (physical): {x},{y} {w}x{h}", "DPI");
 
             this.SetBounds(x, y, w, h);
-            bmp = new Bitmap(w, h);
-            using (g = Graphics.FromImage(bmp))
-            {
-                g.CopyFromScreen(new Point(x, y), new Point(0, 0), bmp.Size);
-            }
-            baseBmp = (Bitmap)bmp.Clone();
 
-            using (g = Graphics.FromImage(bmp))
-            using (var mask = MakeBackgroundMaskBrush())
-                g.FillRectangle(mask, new Rectangle(0, 0, w, h));
+            // 画面キャプチャを1枚だけ保持
+            using (var tmpBmp = new Bitmap(w, h))
+            {
+                using (var g = Graphics.FromImage(tmpBmp))
+                {
+                    g.CopyFromScreen(new Point(x, y), new Point(0, 0), tmpBmp.Size);
+                }
+
+                // 原本を保持したいなら Clone
+                baseBmp = (Bitmap)tmpBmp.Clone();
+
+                // マスク塗り
+                using (var g = Graphics.FromImage(tmpBmp))
+                using (var mask = MakeBackgroundMaskBrush())
+                    g.FillRectangle(mask, new Rectangle(0, 0, w, h));
+
+                // PictureBox に表示する用の bmp を差し替え
+                bmp = (Bitmap)tmpBmp.Clone();
+            }
 
             pictureBox1.SetBounds(0, 0, w, h);
             pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
-            pictureBox1.Image = bmp;
+            pictureBox1.Image?.Dispose();            // 既存を破棄
+            pictureBox1.Image = bmp;                 // 新しい bmp を設定
             pictureBox1.Refresh();
+
             this.TopLevel = true;
             this.Show();
         }
@@ -541,7 +553,7 @@ namespace Kiritori
                 rc.Height = side;
             }
 
-            using (g = Graphics.FromImage(bmp))
+            using (var g = Graphics.FromImage(bmp))
             {
                 // 原本から描き直し
                 g.DrawImage(baseBmp, Point.Empty);
@@ -1080,7 +1092,7 @@ namespace Kiritori
 
             bmp = null;
             baseBmp = null;
-            g = null;
+            //g = null;
         }
 
 
