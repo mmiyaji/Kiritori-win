@@ -62,6 +62,7 @@ namespace Kiritori
         private void size150ToolStripMenuItem_Click(object sender, EventArgs e) { ZoomToPercent(150); }
         private void size200ToolStripMenuItem_Click(object sender, EventArgs e) { ZoomToPercent(200); }
         private void size500ToolStripMenuItem_Click(object sender, EventArgs e) { ZoomToPercent(500); }
+        private void highlightToolStripMenuItem_Click(object sender, EventArgs e) { ToggleHoverHighlight(!this.isHighlightOnHover); }
         private void dropShadowToolStripMenuItem_Click(object sender, EventArgs e) { ToggleShadow(!this.WindowShadowEnabled); }
         private void preferencesToolStripMenuItem_Click(object sender, EventArgs e)
         {

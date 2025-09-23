@@ -162,7 +162,8 @@ namespace Kiritori
             int nowTick = Environment.TickCount;
             if (nowTick - _lastPaintTick >= 15)
             {
-                pictureBox1.Invalidate();
+                // pictureBox1.Invalidate();
+                pictureBox1.Refresh();
                 _lastPaintTick = nowTick;
             }
         }

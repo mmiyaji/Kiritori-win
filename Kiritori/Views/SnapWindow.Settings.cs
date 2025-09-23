@@ -56,6 +56,7 @@ namespace Kiritori
                 {
                     this.keepAfloatToolStripMenuItem.Checked = AlwaysOnTop;
                     this.dropShadowToolStripMenuItem.Checked = WindowShadowEnabled;
+                    this.highlightToolStripMenuItem.Checked = isHighlightOnHover;
                 }
                 catch { }
             }

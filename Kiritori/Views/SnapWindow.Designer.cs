@@ -38,6 +38,7 @@ namespace Kiritori
         private ToolStripMenuItem zoomInToolStripMenuItem;
         private ToolStripMenuItem zoomOutToolStripMenuItem;
         private ToolStripMenuItem keepAfloatToolStripMenuItem;
+        private ToolStripMenuItem highlightToolStripMenuItem;
         private ToolStripMenuItem dropShadowToolStripMenuItem;
         private ToolStripMenuItem opacityParentMenu;
         private ToolStripMenuItem opacity100toolStripMenuItem;
@@ -104,6 +105,7 @@ namespace Kiritori
             this.zoomOutToolStripMenuItem = new ToolStripMenuItem();
             this.keepAfloatToolStripMenuItem = new ToolStripMenuItem();
             this.dropShadowToolStripMenuItem = new ToolStripMenuItem();
+            this.highlightToolStripMenuItem = new ToolStripMenuItem();
             this.minimizeToolStripMenuItem = new ToolStripMenuItem();
             this.opacityParentMenu = new ToolStripMenuItem();
             this.opacity100toolStripMenuItem = new ToolStripMenuItem();
@@ -204,6 +206,7 @@ namespace Kiritori
             // windowParentMenu
             // 
             this.windowParentMenu.DropDownItems.AddRange(new ToolStripItem[] {
+                this.highlightToolStripMenuItem,
                 this.keepAfloatToolStripMenuItem,
                 this.dropShadowToolStripMenuItem,
                 new ToolStripSeparator(),
@@ -426,6 +429,15 @@ namespace Kiritori
             this.keepAfloatToolStripMenuItem.Text = "Keep on top";
             this.keepAfloatToolStripMenuItem.Tag = "loc:Menu.AlwaysOnTop";
             this.keepAfloatToolStripMenuItem.Click += new System.EventHandler(this.keepAfloatToolStripMenuItem_Click);
+            // 
+            // highlightToolStripMenuItem
+            // 
+            this.highlightToolStripMenuItem.Name = "highlightToolStripMenuItem";
+            this.highlightToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.F)));
+            this.highlightToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
+            this.highlightToolStripMenuItem.Text = "Highlight on Hover";
+            this.highlightToolStripMenuItem.Tag = "loc:Text.HighlightOnHover";
+            this.highlightToolStripMenuItem.Click += new System.EventHandler(this.highlightToolStripMenuItem_Click);
             // 
             // dropShadowToolStripMenuItem
             // 

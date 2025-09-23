@@ -816,8 +816,14 @@ namespace Kiritori
             lblGifMax.Tag = "loc:Setting.Display.GifMaxDurationSec";
 
             numGifMax = new NumericUpDown {
-                Minimum = 0, Maximum = 3600, Increment = 1, Dock = DockStyle.Left, Width = 120
+                Minimum = 0,
+                Maximum = 3600,
+                Increment = 1,
+                Anchor = AnchorStyles.Left,
+                Dock = DockStyle.Fill,
             };
+            this.numGifMax.AutoSize = true;
+            this.numGifMax.MaximumSize = new Size(120, 0);            
             txtSaveFolder.DataBindings.Add(
                 new Binding("Text",
                     Properties.Settings.Default,
@@ -915,8 +921,14 @@ namespace Kiritori
             lblGifFps = NewRightLabel("GIF max FPS");
             lblGifFps.Tag = "loc:Setting.Display.GifMaxFps";
             numGifFps = new NumericUpDown {
-                Minimum = 1, Maximum = 30, Increment = 1, Dock = DockStyle.Left, Width = 120
+                Minimum = 1,
+                Maximum = 30,
+                Increment = 1,
+                Anchor = AnchorStyles.Left,
+                Dock = DockStyle.Fill,
             };
+            this.numGifFps.AutoSize = true;
+            this.numGifFps.MaximumSize = new Size(120, 0);
 
             // --- 最適化ON/OFF ---
             lblGifOptimize = NewRightLabel("Optimize for size");
@@ -931,8 +943,14 @@ namespace Kiritori
             lblGifWidth = NewRightLabel("GIF max Width");
             lblGifWidth.Tag = "loc:Setting.Display.GifMaxWidth";
             numGifWidth = new NumericUpDown {
-                Minimum = 1, Maximum = 1920, Increment = 1, Dock = DockStyle.Left, Width = 120
+                Minimum = 1,
+                Maximum = 1920,
+                Increment = 1,
+                Anchor = AnchorStyles.Left,
+                Dock = DockStyle.Fill,
             };
+            this.numGifWidth.AutoSize = true;
+            this.numGifWidth.MaximumSize = new Size(120, 0);
 
             // numGifFps.DataBindings.Add(new Binding(
             //     "Value", Properties.Settings.Default, nameof(Properties.Settings.Default.GifMaxFps),

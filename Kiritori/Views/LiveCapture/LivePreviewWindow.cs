@@ -41,7 +41,7 @@ namespace Kiritori.Views.LiveCapture
             //_miFileRoot, _miEditRoot, _miViewRoot, _miWindowRoot, _miZoomRoot,
             _miOriginal, _miZoomIn, _miZoomOut, _miZoomPct,
             _miOpacity, _miPauseResume, _miRealign, _miTopMost, _miClose,
-            _miPref, _miExit, _miTitlebar, _miShowStats,
+            _miPref, _miExit, _miTitlebar, _miShowStats, _miHighlight,
             _miPolicyRoot, _miPolicyAlways, _miPolicyHash,
             _miRecording, _miPrivacy, _miRecordingGif;
 
@@ -367,6 +367,11 @@ namespace Kiritori.Views.LiveCapture
                 case (int)HOTS.FLOAT:
                     if (_miTopMost != null) _miTopMost.Checked = !_miTopMost.Checked;
                     else this.TopMost = !this.TopMost;
+                    return true;
+               // Ctrl + F : ホバー時の強調 ON/OFF相当）
+                case (int)HOTS.HOVER:
+                    if (_miHighlight != null) _miHighlight.Checked = !_miHighlight.Checked;
+                    else _hoverEnabled = !_hoverEnabled;
                     return true;
 
                 // Ctrl + D : ドロップシャドウ（タブレス影）ON/OFF
@@ -1652,6 +1657,18 @@ namespace Kiritori.Views.LiveCapture
 
             _miExit = new ToolStripMenuItem(SR.T("Menu.Exit", "Exit Kiritori"));
             _miExit.Click += (s, e) => Application.Exit();
+
+            _miHighlight = new ToolStripMenuItem(SR.T("Text.HighlightOnHover", "Highlight on Hover"))
+            {
+                Checked = _hoverEnabled,
+                CheckOnClick = true
+            };
+            _miHighlight.CheckedChanged += (s, e) =>
+            {
+                _hoverEnabled = _miHighlight.Checked;
+                ShowOverlay(this._hoverEnabled ? "HOVER HIGHLIGHT: ON" : "HOVER HIGHLIGHT: OFF");
+            };
+            _miHighlight.ShortcutKeys = (Keys)HOTS.HOVER;
 
             // DropShadow（タブなしのみ）
             _miShadow = new ToolStripMenuItem(SR.T("Menu.DropShadow", "Drop shadow (tabless)"))
