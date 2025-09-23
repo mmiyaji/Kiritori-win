@@ -424,11 +424,11 @@
     </EmbeddedResource>
     <!-- 他言語も同様に LogicalName を設定 -->
   </ItemGroup>
-  <ItemGroup>
+  <!-- <ItemGroup>
     <Content Include="ThirdParty\ffmpeg\ffmpeg.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-  </ItemGroup>
+  </ItemGroup> -->
   <ItemGroup>
     <Content Include="ThirdPartyManifests\*.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

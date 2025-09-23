@@ -200,8 +200,8 @@ namespace Kiritori
             this.tabExtensions = new TabPage("Extensions") { AutoScroll = true, Tag = "loc:Tab.Extensions" };
             this.tabHistory = new TabPage("History") { AutoScroll = true, Tag = "loc:Tab.History" };
 
-            if (!Helpers.PackagedHelper.IsPackaged())
-            {
+            // if (!Helpers.PackagedHelper.IsPackaged())
+            // {
                 this.tabControl.TabPages.AddRange(new TabPage[]
                 {
                     this.tabInfo,
@@ -213,20 +213,20 @@ namespace Kiritori
                     this.tabHistory,
                     this.tabLogs,
                 });
-            }
-            else
-            {
-                this.tabControl.TabPages.AddRange(new TabPage[]
-                {
-                    this.tabInfo,
-                    this.tabGeneral,
-                    this.tabAppearance,
-                    this.tabShortcuts,
-                    this.tabAdvanced,
-                    this.tabHistory,
-                    this.tabLogs,
-                });
-            }
+            // }
+            // else
+            // {
+            //     this.tabControl.TabPages.AddRange(new TabPage[]
+            //     {
+            //         this.tabInfo,
+            //         this.tabGeneral,
+            //         this.tabAppearance,
+            //         this.tabShortcuts,
+            //         this.tabAdvanced,
+            //         this.tabHistory,
+            //         this.tabLogs,
+            //     });
+            // }
             this.tabControl.Selected += (s, e) =>
             {
                 // 履歴タブから離れたら idle の生成を止める

@@ -73,15 +73,15 @@ namespace Kiritori
             // SatelliteBootstrapper.EnsureSatellitesExtracted();
             Kiritori.Helpers.SatelliteBootstrapper.Init();
 
-            if (Helpers.PackagedHelper.IsPackaged())
-            {
+            // if (Helpers.PackagedHelper.IsPackaged())
+            // {
                 InstallSatellitesFromAppFolder();
-            }
-            else
-            {
-                EarlyExtensionsInit();
-                RegisterAssemblyResolvers();
-            }
+            // }
+            // else
+            // {
+            //     EarlyExtensionsInit();
+            //     RegisterAssemblyResolvers();
+            // }
 
             try
             {

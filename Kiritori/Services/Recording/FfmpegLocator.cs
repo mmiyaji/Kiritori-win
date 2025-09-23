@@ -22,7 +22,9 @@ namespace Kiritori.Services.Recording
             if (IsGood(ext)) return ext;
 
             // 2-1) 自動導入（未導入なら）
-            if (autoInstall && !ExtensionsManager.IsInstalled(id) && !Helpers.PackagedHelper.IsPackaged())
+            if (autoInstall && !ExtensionsManager.IsInstalled(id)
+            //  && !Helpers.PackagedHelper.IsPackaged()
+            )
             {
                 try
                 {

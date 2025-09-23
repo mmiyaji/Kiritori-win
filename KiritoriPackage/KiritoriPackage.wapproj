@@ -174,11 +174,11 @@
     <ProjectReference Include="..\Kiritori\Kiritori.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\Kiritori\ThirdParty\ffmpeg\ffmpeg.exe">
+    <!-- <Content Include="..\Kiritori\ThirdParty\ffmpeg\ffmpeg.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <IncludeInPackage>true</IncludeInPackage>
       <PackagePath>ThirdParty\ffmpeg\ffmpeg.exe</PackagePath>
-    </Content>
+    </Content> -->
     <Content Include="..\Kiritori\ThirdParty\ffmpeg\LICENSE.txt">
       <Link>ThirdParty\ffmpeg\LICENSE.txt</Link>
       <PackagePath>ThirdParty\ffmpeg\LICENSE.txt</PackagePath>

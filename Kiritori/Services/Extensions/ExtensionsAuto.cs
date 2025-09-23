@@ -16,8 +16,8 @@ namespace Kiritori.Services.Extensions
             if (string.IsNullOrWhiteSpace(id)) return false;
             if (ExtensionsManager.IsInstalled(id)) return true;
 
-            if (Helpers.PackagedHelper.IsPackaged())
-                throw new NotSupportedException(SR.T("Extensions.InstallDialog.NotSupported", "Extension installation is not supported in packaged mode."));
+            // if (Helpers.PackagedHelper.IsPackaged())
+            //     throw new NotSupportedException(SR.T("Extensions.InstallDialog.NotSupported", "Extension installation is not supported in packaged mode."));
 
             var manifest = ExtensionsManager.LoadRepoManifests()
                                             .FirstOrDefault(m => string.Equals(m.Id, id, StringComparison.OrdinalIgnoreCase));
