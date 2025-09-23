@@ -5,7 +5,7 @@
   "kind": "satellite",
   "download": {
     "url": "https://github.com/mmiyaji/Kiritori-win/releases/download/v1.5.6/lang-ja-1.5.6.zip",
-    "sha256": "F24C66E78F253F9DFFCAD0340B1343922E22B96A5E3CD7F649B96B5E50CC5278",
+    "sha256": "B66D828338B6BA846EE39A8F83D30D759AE24AB1B9F02D742B80C1C3E93F0693",
     "size": 10498
   },
   "install": {
