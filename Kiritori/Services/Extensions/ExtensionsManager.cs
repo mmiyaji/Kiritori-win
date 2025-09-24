@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace Kiritori.Services.Extensions
 {
@@ -150,13 +151,14 @@ namespace Kiritori.Services.Extensions
             ExtensionState.SaveState(State);
         }
 
-        public static void MarkInstalled(string id, string version)
+        public static void MarkInstalled(string id, string version, string location)
         {
             ExtensionState.Item it;
             if (!State.Items.TryGetValue(id, out it)) it = new ExtensionState.Item();
             it.Installed = true;
-            it.Version = version;
+            it.Version   = version;
             if (!it.Enabled) it.Enabled = true;
+            if (!string.IsNullOrWhiteSpace(location)) it.Location = location;
             State.Items[id] = it;
             ExtensionState.SaveState(State);
         }
@@ -218,7 +220,7 @@ namespace Kiritori.Services.Extensions
                 if (!File.Exists(p)) throw new FileNotFoundException("Missing file in extension package.", p);
             }
 
-            MarkInstalled(m.Id, m.Version);
+            MarkInstalled(m.Id, m.Version, target);
             InvalidateRepoCache();
             Log.Info($"Extension installed: {m.Id} {m.Version}", "Extensions");
             return target;
@@ -266,13 +268,24 @@ namespace Kiritori.Services.Extensions
         }
         public static string GetInstallDir(string id)
         {
+            if (State.Items.TryGetValue(id, out var it))
+            {
+                if (!string.IsNullOrWhiteSpace(it.Location))
+                {
+                    // Location がファイルでもディレクトリでも対応
+                    if (Directory.Exists(it.Location)) return it.Location;
+                    if (File.Exists(it.Location))      return Path.GetDirectoryName(it.Location);
+                }
+            }
+
             var ver = InstalledVersion(id);
             if (string.IsNullOrEmpty(ver)) return null;
 
-            // 通常ツールは bin/<id>/<ver> を規約に
+            // 後方互換：従来の bin/<id>/<ver>
             return Path.Combine(ExtensionsPaths.Root, "bin", id, ver);
         }
-public static void RepairStateIfMissing()
+
+        public static void RepairStateIfMissing()
         {
             try
             {
@@ -339,7 +352,7 @@ public static void RepairStateIfMissing()
                             try
                             {
                                 hasAny = Directory.Exists(vdir) &&
-                                         Directory.GetFileSystemEntries(vdir).Length > 0;
+                                        Directory.GetFileSystemEntries(vdir).Length > 0;
                             }
                             catch { }
 
@@ -382,24 +395,39 @@ public static void RepairStateIfMissing()
                 var exeDir = GetExeDirSafe();
 
                 // 3-a) exe の横の ja\Kiritori.resources.dll → lang_ja
-                var exeJaDir = Path.Combine(exeDir, "ja");
-                var exeJaDll = Path.Combine(exeJaDir, "Kiritori.resources.dll");
-                if (File.Exists(exeJaDll))
+                try
                 {
-                    if (!st.Items.ContainsKey("lang_ja"))
+                    foreach (var culDir in Directory.EnumerateDirectories(exeDir))
                     {
-                        st.Items["lang_ja"] = new ExtensionState.Item
+                        var cul = Path.GetFileName(culDir);
+                        Log.Debug($"Checking exe-side i18n: {culDir}", "Extensions");
+                        if (string.IsNullOrEmpty(cul)) continue;
+
+                        var resDll = Path.Combine(culDir, "Kiritori.resources.dll");
+                        if (!File.Exists(resDll)) continue;
+
+                        // 見つかったカルチャ名で登録（例: lang_ja, lang_ja-JP）
+                        AddLangEntryIfMissing(st, cul);
+
+                        // 可能であれば、親カルチャ（ja-JP → ja）や 2 文字コードも “エイリアス”的に登録
+                        // UI/判定コードが lang_ja を期待しているケースの後方互換に効く
+                        try
                         {
-                            Installed = true,
-                            Enabled = true,
-                            Version = "embedded"
-                        };
-                        Log.Debug("Repaired state: lang_ja embedded (exe side)", "Extensions");
+                            var ci = new System.Globalization.CultureInfo(cul);
+                            var two = ci.TwoLetterISOLanguageName;      // "ja"
+                            var parent = ci.Parent?.Name;               // "ja" (for ja-JP), "" for invariant
+
+                            if (!string.IsNullOrEmpty(parent) && !parent.Equals(cul, StringComparison.OrdinalIgnoreCase))
+                                AddLangEntryIfMissing(st, parent);
+
+                            if (!string.IsNullOrEmpty(two) && !two.Equals(cul, StringComparison.OrdinalIgnoreCase))
+                                AddLangEntryIfMissing(st, two);
+                        }
+                        catch { /* 不正なフォルダ名は無視 */ }
                     }
                 }
+                catch { /* 列挙失敗は無視 */ }
 
-                // 3-b) exe の横の ThirdParty\ffmpeg\ffmpeg.exe
-                //      さらに保険で exe\ffmpeg\ffmpeg.exe も見る
                 var ffmpegExeCandidates = new[]
                 {
                     Path.Combine(exeDir, "ThirdParty", "ffmpeg", "ffmpeg.exe"),
@@ -420,17 +448,30 @@ public static void RepairStateIfMissing()
 
                 if (ffmpegFound != null)
                 {
-                    // すでに bin スキャンで入っている場合は上書きしない
+                    var verNum = TryGetFfmpegVersion(ffmpegFound) ?? GetFileVersionOrFallback(ffmpegFound, "external");
+                    var display = string.IsNullOrWhiteSpace(verNum) ? "external" : (verNum + " (external)");
+                    var folder  = Path.GetDirectoryName(ffmpegFound);
+
                     if (!st.Items.ContainsKey("ffmpeg"))
                     {
-                        var ver = GetFileVersionOrFallback(ffmpegFound, "external");
                         st.Items["ffmpeg"] = new ExtensionState.Item
                         {
                             Installed = true,
-                            Enabled = true,
-                            Version = ver
+                            Enabled   = true,
+                            Version   = display,   // 例: "7.3 (external)"
+                            Location  = folder     // 例: "C:\tools\ffmpeg\bin"
                         };
-                        Log.Debug($"Repaired state: ffmpeg {ver} ({ffmpegFound})", "Extensions");
+                        Log.Debug($"Repaired state: ffmpeg {display} ({ffmpegFound})", "Extensions");
+                    }
+                    else
+                    {
+                        var cur = st.Items["ffmpeg"];
+                        // 表示がダミーなら更新
+                        if (string.IsNullOrWhiteSpace(cur.Version) || cur.Version == "external" || cur.Version == "1.0.0.0" || cur.Version == "0.0.0.0")
+                            cur.Version = display;
+                        if (string.IsNullOrWhiteSpace(cur.Location))
+                            cur.Location = folder;
+                        st.Items["ffmpeg"] = cur;
                     }
                 }
 
@@ -461,6 +502,66 @@ public static void RepairStateIfMissing()
         }
 
         // ====== ここから private ヘルパー ======
+        private static bool IsBadVersion(string v)
+        {
+            if (string.IsNullOrWhiteSpace(v)) return true;
+            v = v.Trim();
+            return v == "external" || v == "1.0.0.0" || v == "0.0.0.0" || v.Equals("unknown", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string TryGetFfmpegVersion(string exePath)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = exePath,
+                    Arguments = "-version",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    WorkingDirectory = Path.GetDirectoryName(exePath)
+                };
+
+                using (var p = Process.Start(psi))
+                {
+                    if (p == null) return null;
+                    // 1行目だけで十分（"ffmpeg version 7.3 ..."）
+                    string first = p.StandardOutput.ReadLine();
+                    // 念のため残りを非同期で読ませてすぐタイムアウト待ち
+                    p.WaitForExit(1500);
+
+                    if (string.IsNullOrEmpty(first)) return null;
+
+                    // "ffmpeg version <token>" を取る
+                    var m = Regex.Match(first, @"ffmpeg\s+version\s+([^\s]+)", RegexOptions.IgnoreCase);
+                    if (!m.Success) return null;
+
+                    var token = m.Groups[1].Value; // 例: 7.3, 7.1-full_build-..., N-113490-g...
+                    // できれば数値だけに正規化（7.3 / 7.1.2 など）。無ければ token を返す
+                    var n = Regex.Match(token, @"\d+(\.\d+){0,2}");
+                    return n.Success ? n.Value : token;
+                }
+            }
+            catch { return null; }
+        }
+
+        private static void AddLangEntryIfMissing(ExtensionState st, string cultureName)
+        {
+            if (string.IsNullOrWhiteSpace(cultureName)) return;
+
+            var key = "lang_" + cultureName; // 例: lang_ja / lang_ja-JP
+            if (st.Items.ContainsKey(key)) return;
+
+            st.Items[key] = new ExtensionState.Item
+            {
+                Installed = true,
+                Enabled = true,
+                Version = "embedded"
+            };
+            Log.Debug($"Repaired state: {key} embedded (exe side)", "Extensions");
+        }
 
         private static string GetExeDirSafe()
         {
@@ -608,7 +709,7 @@ public static void RepairStateIfMissing()
                 if (!File.Exists(p)) throw new FileNotFoundException("Missing file in extension package.", p);
             }
 
-            MarkInstalled(m.Id, m.Version);
+            MarkInstalled(m.Id, m.Version, target);
             Log.Info($"Extension installed: {m.Id} {m.Version}", "Extensions");
             return target;
         }
@@ -688,7 +789,7 @@ public static void RepairStateIfMissing()
                 if (!File.Exists(p)) throw new FileNotFoundException("Missing file in extension package.", p);
             }
 
-            MarkInstalled(m.Id, m.Version);
+            MarkInstalled(m.Id, m.Version, target);
             Log.Info($"Extension installed: {m.Id} {m.Version}", "Extensions");
             return target;
         }

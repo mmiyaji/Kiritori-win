@@ -20,6 +20,7 @@ namespace Kiritori.Services.Extensions
             [DataMember] public bool Enabled { get; set; }
             [DataMember] public bool Installed { get; set; }
             [DataMember] public string Version { get; set; }
+            [DataMember] public string Location  { get; set; }
         }
 
         [DataMember(Name = "Items")]

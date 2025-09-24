@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10" xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10" xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities" xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10" xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10" IgnorableNamespaces="uap rescap desktop com">
-  <Identity Name="mmiyaji.kiritori" Publisher="CN=663C5D03-791A-4B2C-8509-629FA1CA125A" Version="1.6.0.0" />
+  <Identity Name="mmiyaji.kiritori" Publisher="CN=663C5D03-791A-4B2C-8509-629FA1CA125A" Version="1.6.1.0" />
   <Properties>
     <DisplayName>kiritori</DisplayName>
     <PublisherDisplayName>mmiyaji</PublisherDisplayName>
