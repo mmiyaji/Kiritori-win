@@ -20,6 +20,7 @@ using System.Windows.Forms;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Windows.ApplicationModel;
 
 namespace Kiritori
 {
@@ -195,7 +196,7 @@ namespace Kiritori
                     catch { /* 失敗時は false のまま */ }
 
                     chkRunAtStartup.Checked = enabled;
-                    chkRunAtStartup.Enabled = false;
+                    chkRunAtStartup.Enabled = true;
 
                     // toolTip1.SetToolTip(labelStartupInfo, "Managed by Windows Settings > Apps > Startup");
                     // labelStartupInfo.Text = "Startup is managed by Windows.";
@@ -329,11 +330,9 @@ namespace Kiritori
             if (_initStartupToggle || _handlingStartupToggle) return;
             _handlingStartupToggle = true;
 
-            // 変更前の状態を保持（ロールバック用）
             var before = Properties.Settings.Default.RunAtStartup;
-            var want = chkRunAtStartup.Checked;
+            var want   = chkRunAtStartup.Checked;
 
-            // UI操作中は触らせない
             chkRunAtStartup.Enabled = false;
             var oldCursor = Cursor.Current;
             Cursor.Current = Cursors.WaitCursor;
@@ -344,33 +343,65 @@ namespace Kiritori
 
                 if (PackagedHelper.IsPackaged())
                 {
+                    // --- MSIX: StartupTask の状態を見て分岐 ---
+                    var task = await StartupTask.GetAsync("KiritoriStartup"); // TaskIdと一致させること
+                    Log.Debug($"StartupTask pre: {task.State}", "StartupToggle");
+
                     if (want)
                     {
-                        ok = await StartupManager.EnableAsync();           // ユーザー同意UIが出る場合あり（UIスレッドでOK）
+                        switch (task.State)
+                        {
+                            case StartupTaskState.Disabled:
+                            {
+                                var ns = await task.RequestEnableAsync();   // Windowsの確認ダイアログが出る
+                                Log.Debug($"Enable requested -> {ns}", "StartupToggle");
+                                ok = (ns == StartupTaskState.Enabled);
+                                break;
+                            }
+                            case StartupTaskState.DisabledByUser:
+                            {
+                                // アプリからは有効化不可。設定を開いてもらう。
+                                Cursor.Current = oldCursor; // メッセージ出すので一旦戻す
+                                MessageBox.Show(this,
+                                    SR.T("Text.StartupDisabledByUserGuide", "Windows の設定でオフにされています。設定を開くので、Kiritori をオンにしてください。"),
+                                    "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                OpenSettingsStartupApps();
+                                ok = false;   // UIはロールバック
+                                break;
+                            }
+                            case StartupTaskState.Enabled:
+                                ok = true;    // すでに有効
+                                break;
+                            case StartupTaskState.DisabledByPolicy:
+                                ok = false;   // ポリシーで禁止
+                                break;
+                        }
                     }
                     else
                     {
-                        await StartupManager.DisableAsync();
-                        ok = !(await StartupManager.IsEnabledAsync());      // 実際に無効になったか確認
+                        // オフにするのはアプリから可能
+                        task.Disable();
+                        var cur = await StartupTask.GetAsync(task.TaskId);
+                        ok = (cur.State != StartupTaskState.Enabled);
                     }
                 }
                 else
                 {
-                    // .lnk 作成/削除は STA 必須。専用 STA スレッドで実行して待機（UIはブロックしない）
+                    // --- 非MSIX: .lnk 方式（STAで作成/削除） ---
                     await RunStaAsync(() => StartupManager.SetEnabled(want));
-                    ok = true; // 例外が出なければ成功とみなす。必要なら .lnk の存在確認で厳密化
+                    // 厳密化：実在チェックで判定
+                    ok = await StartupManager.IsEnabledAsync();
                 }
 
                 using (SuppressDirtyScope())
                 {
                     if (ok)
                     {
-                        // システム側が成功したときだけ設定値を確定
                         Properties.Settings.Default.RunAtStartup = want;
                     }
                     else
                     {
-                        // ロールバック（イベント再発火を抑止）
+                        // 実状態へロールバック
                         _initStartupToggle = true;
                         chkRunAtStartup.Checked = before;
                         _initStartupToggle = false;
@@ -379,7 +410,6 @@ namespace Kiritori
             }
             catch (Exception ex)
             {
-                // 失敗時は元に戻す（イベント再発火を抑止）
                 _initStartupToggle = true;
                 chkRunAtStartup.Checked = before;
                 _initStartupToggle = false;
@@ -394,6 +424,7 @@ namespace Kiritori
                 _handlingStartupToggle = false;
             }
         }
+
 
         private void btnSaveSettings_Click(object sender, EventArgs e)
         {

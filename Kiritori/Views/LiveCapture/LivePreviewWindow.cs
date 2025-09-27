@@ -1576,6 +1576,7 @@ namespace Kiritori.Views.LiveCapture
             };
             _miRecording.CheckedChanged += (s, e) =>
             {
+                Log.Debug("Recording menu checked changed: " + _miRecording.Checked, "LivePreview");
                 if (_miRecording.Checked)
                 {
                     try

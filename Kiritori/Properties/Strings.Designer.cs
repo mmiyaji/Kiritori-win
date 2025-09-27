@@ -2581,6 +2581,15 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   Kiritori has been disabled in Windows settings. The Settings app will open—please enable Kiritori there. に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Text_StartupDisabledByUserGuide {
+            get {
+                return ResourceManager.GetString("Text.StartupDisabledByUserGuide", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Startup is managed by Windows に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Text_StartupManaged {

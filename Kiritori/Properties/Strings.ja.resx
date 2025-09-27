@@ -1017,4 +1017,7 @@
   <data name="Menu.RecordingMp4" xml:space="preserve">
     <value>録画 (MP4形式)</value>
   </data>
+  <data name="Text.StartupDisabledByUserGuide" xml:space="preserve">
+    <value>Windows の設定でオフにされています。設定を開くので、Kiritori をオンにしてください。</value>
+  </data>
 </root>

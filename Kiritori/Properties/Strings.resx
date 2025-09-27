@@ -1023,4 +1023,7 @@
   <data name="Menu.RecordingMp4" xml:space="preserve">
     <value>Recording (MP4)</value>
   </data>
+  <data name="Text.StartupDisabledByUserGuide" xml:space="preserve">
+    <value>Kiritori has been disabled in Windows settings. The Settings app will open—please enable Kiritori there.</value>
+  </data>
 </root>

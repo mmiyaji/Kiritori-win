@@ -7,7 +7,8 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms; // Application.ProductName / ExecutablePath
 using System.Runtime.InteropServices.WindowsRuntime; // AsTask()
-using Windows.ApplicationModel; // StartupTask / StartupTaskState
+using Windows.ApplicationModel;
+using Kiritori.Services.Logging; // StartupTask / StartupTaskState
 
 namespace Kiritori.Startup
 {
@@ -23,6 +24,7 @@ namespace Kiritori.Startup
 
             // IAsyncOperation<StartupTask> → AsTask()
             var task = await StartupTask.GetAsync(TaskId).AsTask().ConfigureAwait(false);
+            Log.Debug($"StartupTask pre: {task.State}", "StartupToggle");
             var state = task.State;
 
             // Disabled=0, EnabledByUser=1, Enabled=2, DisabledByUser=3, EnabledByPolicy=4
@@ -35,6 +37,7 @@ namespace Kiritori.Startup
             if (!PackagedHelper.IsPackaged()) return false;
 
             var task = await StartupTask.GetAsync(TaskId).AsTask().ConfigureAwait(false);
+            Log.Debug($"StartupTask pre: {task.State}", "StartupToggle");
             var state = task.State;
 
             if (state == StartupTaskState.Disabled || state == StartupTaskState.DisabledByUser)
