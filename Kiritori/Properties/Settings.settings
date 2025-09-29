@@ -126,7 +126,7 @@
       <Value Profile="(Default)" />
     </Setting>
     <Setting Name="HotkeyCaptureFixed" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Ctrl + Shift + 7</Value>
+      <Value Profile="(Default)">Ctrl+Shift+7</Value>
     </Setting>
     <Setting Name="FixedCropWidth" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">640</Value>

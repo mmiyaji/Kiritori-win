@@ -517,7 +517,7 @@ namespace Kiritori.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Ctrl + Shift + 7")]
+        [global::System.Configuration.DefaultSettingValueAttribute("Ctrl+Shift+7")]
         public string HotkeyCaptureFixed {
             get {
                 return ((string)(this["HotkeyCaptureFixed"]));

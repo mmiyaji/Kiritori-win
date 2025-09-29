@@ -75,8 +75,20 @@ namespace Kiritori.Services.Recording
                 _cts = new CancellationTokenSource();
 
                 // ffmpeg パス／引数の既定化
-                var exe = string.IsNullOrWhiteSpace(ffmpegPath) ? (Options.FfmpegPath ?? "ffmpeg") : ffmpegPath;
+                var exe = ResolveFfmpegPath(
+                    string.IsNullOrWhiteSpace(ffmpegPath) ? Options.FfmpegPath : ffmpegPath);
                 var args = string.IsNullOrWhiteSpace(arguments) ? BuildArgs(Options) : arguments;
+
+                // 事前バリデーション（PATH 依存を避ける）
+                if (!Path.IsPathRooted(exe) || !File.Exists(exe))
+                {
+                    Log.Debug($"ffmpeg not found: '{exe}'", "REC");
+                    _state = 0;
+                    throw new FileNotFoundException("ffmpeg.exe not found.", exe);
+                }
+
+                // 出力先フォルダの存在を保証（MSIX なら ApplicationData.TemporaryFolder を使っておくのが安全）
+                try { Directory.CreateDirectory(Path.GetDirectoryName(Options.OutputPath)); } catch { /* ignore */ }
 
                 var psi = new ProcessStartInfo
                 {
@@ -86,8 +98,11 @@ namespace Kiritori.Services.Recording
                     CreateNoWindow = true,
                     RedirectStandardInput = true,
                     RedirectStandardError = true,
-                    RedirectStandardOutput = false
+                    RedirectStandardOutput = false,
+                    WorkingDirectory = Path.GetDirectoryName(exe) // ★ 重要
                 };
+                // 依存DLL探索のため PATH に ffmpeg のフォルダを先頭追加（念のため）
+                psi.EnvironmentVariables["PATH"] = Path.GetDirectoryName(exe) + ";" + psi.EnvironmentVariables["PATH"];
 
                 var proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
                 _onExited = new EventHandler(OnProcessExited);
@@ -124,8 +139,10 @@ namespace Kiritori.Services.Recording
                     _state = 2; // Running
                     Log.Debug($"REC Start: {exe} {args}", "REC");
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Log.Debug($"proc.Start Exception: {ex.Message} exe='{exe}'", "REC");
+
                     try { proc.Exited -= _onExited; } catch { /* ignore */ }
                     SafeKillAndDispose(proc);
                     _onExited = null;
@@ -135,6 +152,33 @@ namespace Kiritori.Services.Recording
                     throw;
                 }
             }
+        }
+        private static string ResolveFfmpegPath(string hint)
+        {
+            // 1) 明示指定を最優先
+            if (!string.IsNullOrWhiteSpace(hint) && File.Exists(hint))
+                return hint;
+
+            // 2) 拡張フォルダを優先
+            var baseDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Kiritori", "bin", "ffmpeg");
+            if (Directory.Exists(baseDir))
+            {
+                var vers = Directory.GetDirectories(baseDir); // 例: 8.0.3 など
+                Array.Sort(vers, StringComparer.OrdinalIgnoreCase);
+                Array.Reverse(vers); // 新しい順
+                foreach (var d in vers)
+                {
+                    var exe = Path.Combine(d, "ffmpeg.exe");
+                    if (File.Exists(exe))
+                        return exe;
+                }
+            }
+
+            // 3) 環境にインストール済みの ffmpeg を探す (PATH)
+            //    → File.Exists できないが、ProcessStartInfo に渡せば OS が解決する
+            return "ffmpeg";
         }
 
         // -----------------------------------------
