@@ -1209,13 +1209,15 @@ namespace Kiritori
         private void UpdateVersionLabel()
         {
             var asm = Assembly.GetExecutingAssembly();
-            var ver = asm.GetName().Version;
+            var infoVer = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+                        ?? Application.ProductVersion;
+            var buildDate = GetAssemblyWriteTime(asm);
 
             this.labelVersion.Text = string.Format(
                 CultureInfo.InvariantCulture,
-                "Version {0} Build Date: {1:dd MMM, yyyy}",
-                ver,
-                DateTime.Now
+                "Version {0}  Build Date: {1:dd MMM, yyyy}",
+                infoVer,
+                buildDate
             );
         }
 

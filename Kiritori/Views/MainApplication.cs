@@ -634,17 +634,12 @@ namespace Kiritori
                 }
             });
         }
-        // 履歴が変わったときに呼ぶ（軽量）
+        // 履歴が変わったときに呼ぶ（毎回即時保存：再起動時に履歴が失われるのを防ぐ）
         private void MarkHistoryDirty()
         {
             _historyDirty = true;
-
-            // タイマーは使わず、回数でだけ間引く（3回ごとに即時保存）
             _historyDirtyCount++;
-            if (_historyDirtyCount >= 3)
-            {
-                SaveHistoryIfDirty();
-            }
+            SaveHistoryIfDirty();
         }
 
         // 「必要な時だけ」保存する軽量フラッシュ
