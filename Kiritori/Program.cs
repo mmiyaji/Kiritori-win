@@ -59,6 +59,7 @@ namespace Kiritori
         [STAThread]
         static void Main(string[] args)
         {
+            HealUserConfig();
             var logopt = LoggerSettingsLoader.LoadFromSettings();
 #if DEBUG
             if (!logopt.WriteToDebug) logopt.WriteToDebug = true;
@@ -89,7 +90,7 @@ namespace Kiritori
                 Thread.CurrentThread.CurrentUICulture = new CultureInfo(culture);
                 Log.Debug("Set UI Culture: " + culture, "Startup");
             }
-            catch { }
+            catch (Exception ex) { Log.Warn("Failed to set UI culture, falling back to default: " + ex.Message, "Startup"); }
             // ===== DPI Awareness を可能な限り高く設定 =====
             bool dpiSet = false;
             try
@@ -327,38 +328,6 @@ namespace Kiritori
             return files.Length > 0
                 ? new AppStartupOptions { Mode = AppStartupMode.Viewer, ImagePaths = files }
                 : new AppStartupOptions { Mode = AppStartupMode.Normal };
-        }
-        static void CopyImageToClipboardSafe(string path)
-        {
-            try
-            {
-                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                using (var img = Image.FromStream(fs)) // ここでの img はストリームに依存
-                using (var bmp = new Bitmap(img))      // 独立したコピーを作る（ファイルロック回避）
-                {
-                    // クリップボード競合に備えて軽くリトライ（任意）
-                    const int maxTry = 3;
-                    for (int i = 0; i < maxTry; i++)
-                    {
-                        try
-                        {
-                            Clipboard.SetImage(bmp);
-                            // （任意）トレイバルーン or トーストで「コピーしました」通知してもOK
-                            break;
-                        }
-                        catch (ExternalException) // クリップボードが他プロセスにロック等
-                        {
-                            Thread.Sleep(60);
-                            if (i == maxTry - 1) throw;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // 失敗時はログだけ（必要ならバルーンでエラー表示）
-                Log.Debug("[CopyImageToClipboardSafe] " + ex, "Startup");
-            }
         }
         static void HealUserConfig()
         {
