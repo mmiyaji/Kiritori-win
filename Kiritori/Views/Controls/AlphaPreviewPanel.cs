@@ -9,6 +9,8 @@ namespace Kiritori.Views.Controls
     {
         private Color _rgbColor = Color.Red;
         private int _alphaPercent = 60;
+        private Bitmap _checkerCache;
+        private Size _checkerCacheSize;
 
         [Bindable(true)]
         public Color RgbColor
@@ -42,20 +44,37 @@ namespace Kiritori.Views.Controls
         {
             base.OnPaint(e);
             var g = e.Graphics;
-            int sz = 6;
-            using (var brushDark = new SolidBrush(Color.LightGray))
-            using (var brushLight = new SolidBrush(Color.White))
+
+            // チェッカーボードをサイズが変わった時だけ再生成
+            var sz = ClientSize;
+            if (_checkerCache == null || _checkerCacheSize != sz)
             {
-                for (int y = 0; y < Height; y += sz)
-                    for (int x = 0; x < Width; x += sz)
-                        g.FillRectangle((((x / sz) + (y / sz)) % 2 == 0) ? brushDark : brushLight, x, y, sz, sz);
+                _checkerCache?.Dispose();
+                _checkerCache = new Bitmap(sz.Width > 0 ? sz.Width : 1, sz.Height > 0 ? sz.Height : 1);
+                _checkerCacheSize = sz;
+                const int cell = 6;
+                using (var gBmp = Graphics.FromImage(_checkerCache))
+                using (var brushDark = new SolidBrush(Color.LightGray))
+                using (var brushLight = new SolidBrush(Color.White))
+                {
+                    for (int y = 0; y < sz.Height; y += cell)
+                        for (int x = 0; x < sz.Width; x += cell)
+                            gBmp.FillRectangle((((x / cell) + (y / cell)) % 2 == 0) ? brushDark : brushLight, x, y, cell, cell);
+                }
             }
+            g.DrawImageUnscaled(_checkerCache, 0, 0);
 
             int alpha = (int)Math.Round(_alphaPercent * 2.55);
             using (var overlay = new SolidBrush(Color.FromArgb(alpha, _rgbColor)))
             {
                 g.FillRectangle(overlay, ClientRectangle);
             }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) { _checkerCache?.Dispose(); _checkerCache = null; }
+            base.Dispose(disposing);
         }
     }
 
