@@ -360,6 +360,15 @@ namespace Kiritori
                 _settingsHandler = null;
             }
 
+            _overlayTimer?.Stop();
+            _overlayTimer?.Dispose();
+
+            _zoomAnimTimer?.Stop();
+            _zoomAnimTimer?.Dispose();
+
+            _overlayFont?.Dispose();
+            _overlayFont = null;
+
             if (this.Icon != null) { this.Icon.Dispose(); this.Icon = null; }
             base.OnFormClosed(e);
         }

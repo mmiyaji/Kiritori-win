@@ -1448,6 +1448,8 @@ namespace Kiritori.Views.LiveCapture
             // ---- Misc UI resources ----
             if (_iconBadge != null) { try { _iconBadge.Dispose(); } catch { } _iconBadge = null; }
 
+            if (_overlayFont != null) { try { _overlayFont.Dispose(); } catch { } _overlayFont = null; }
+
             var cm = _ctx; _ctx = null;
             if (cm != null)
             {
