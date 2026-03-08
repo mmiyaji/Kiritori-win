@@ -101,8 +101,8 @@
   </PropertyGroup>
   <!-- >>> added: Version defaults & build-year (overridable from msbuild /p:...) -->
   <PropertyGroup>
-    <!-- /p:Version を受け取らなければ 1.5.0 を既定に -->
-    <Version Condition="'$(Version)'==''">1.5.0</Version>
+    <!-- /p:Version を受け取らなければ 1.7.0 を既定に -->
+    <Version Condition="'$(Version)'==''">1.7.0</Version>
     <AssemblyVersion Condition="'$(AssemblyVersion)'==''">$(Version).0</AssemblyVersion>
     <FileVersion Condition="'$(FileVersion)'==''">$(Version).0</FileVersion>
     <InformationalVersion Condition="'$(InformationalVersion)'==''">$(Version)</InformationalVersion>

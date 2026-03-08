@@ -21,9 +21,15 @@ namespace Kiritori.Services.History
         private readonly ConcurrentDictionary<string, byte> _inflight = new ConcurrentDictionary<string, byte>();
         private readonly Dictionary<string, Bitmap> _lruMap = new Dictionary<string, Bitmap>();
         private readonly LinkedList<string> _lruOrder = new LinkedList<string>();
+        private readonly Dictionary<string, LinkedListNode<string>> _lruNodes = new Dictionary<string, LinkedListNode<string>>();
         private readonly object _lruLock = new object();
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
         private readonly Task _worker;
+
+        private static readonly ThreadLocal<SHA1> _sha1 = new ThreadLocal<SHA1>(() => SHA1.Create());
+        private static readonly char[] HexChars = "0123456789abcdef".ToCharArray();
+        private static ImageCodecInfo _jpegEncoder;
+        private int _workCount;
 
         public event Action<string> ThumbReady; // key
 
@@ -44,6 +50,7 @@ namespace Kiritori.Services.History
                 foreach (var b in _lruMap.Values) try { b.Dispose(); } catch { }
                 _lruMap.Clear();
                 _lruOrder.Clear();
+                _lruNodes.Clear();
             }
             _cts.Dispose();
         }
@@ -91,12 +98,14 @@ namespace Kiritori.Services.History
 
         private string PathOf(string key)
         {
-            using (var sha1 = SHA1.Create())
+            var hash = _sha1.Value.ComputeHash(Encoding.UTF8.GetBytes(key));
+            var c = new char[hash.Length * 2];
+            for (int i = 0; i < hash.Length; i++)
             {
-                var hash = sha1.ComputeHash(Encoding.UTF8.GetBytes(key));
-                var name = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
-                return System.IO.Path.Combine(_dir, name + ".jpg");
+                c[i * 2]     = HexChars[hash[i] >> 4];
+                c[i * 2 + 1] = HexChars[hash[i] & 0xF];
             }
+            return System.IO.Path.Combine(_dir, new string(c) + ".jpg");
         }
 
         private static Bitmap LoadBitmapNoLock(string path)
@@ -157,7 +166,8 @@ namespace Kiritori.Services.History
                 catch { }
                 finally { byte _; _inflight.TryRemove(key, out _); }
 
-                try { CleanupIfOver(200L * 1024 * 1024); } catch { }
+                if (++_workCount % 20 == 0)
+                    try { CleanupIfOver(200L * 1024 * 1024); } catch { }
             }
         }
 
@@ -170,10 +180,18 @@ namespace Kiritori.Services.History
             return null;
         }
 
+        private static ImageCodecInfo GetJpegEncoder()
+        {
+            if (_jpegEncoder != null) return _jpegEncoder;
+            foreach (var c in ImageCodecInfo.GetImageEncoders())
+                if (c.FormatID == ImageFormat.Jpeg.Guid) { _jpegEncoder = c; break; }
+            return _jpegEncoder;
+        }
+
         private static void SaveJpeg(string path, Bitmap bmp, long quality)
         {
             Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
-            var enc = ImageCodecInfo.GetImageEncoders().FirstOrDefault(c => c.FormatID == ImageFormat.Jpeg.Guid);
+            var enc = GetJpegEncoder();
             if (enc == null) { bmp.Save(path, ImageFormat.Jpeg); return; }
             using (var ep = new EncoderParameters(1))
             {
@@ -228,8 +246,8 @@ namespace Kiritori.Services.History
             {
                 if (_lruMap.TryGetValue(key, out bmp))
                 {
-                    var node = _lruOrder.Find(key);
-                    if (node != null) { _lruOrder.Remove(node); _lruOrder.AddLast(node); }
+                    if (_lruNodes.TryGetValue(key, out var node))
+                    { _lruOrder.Remove(node); _lruOrder.AddLast(node); }
                     return true;
                 }
             }
@@ -245,19 +263,20 @@ namespace Kiritori.Services.History
                 {
                     var old = _lruMap[key];
                     _lruMap[key] = bmp;
-                    _lruOrder.Remove(key);
-                    _lruOrder.AddLast(key);
+                    if (_lruNodes.TryGetValue(key, out var node))
+                    { _lruOrder.Remove(node); _lruNodes[key] = _lruOrder.AddLast(key); }
                     try { old.Dispose(); } catch { }
                 }
                 else
                 {
                     _lruMap[key] = bmp;
-                    _lruOrder.AddLast(key);
+                    _lruNodes[key] = _lruOrder.AddLast(key);
                     while (_lruMap.Count > _lruCap)
                     {
                         var toEvict = _lruOrder.First?.Value;
                         if (toEvict == null) break;
                         _lruOrder.RemoveFirst();
+                        _lruNodes.Remove(toEvict);
                         var ev = _lruMap[toEvict];
                         _lruMap.Remove(toEvict);
                         try { ev.Dispose(); } catch { }

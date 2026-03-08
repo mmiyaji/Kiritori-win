@@ -18,6 +18,7 @@ namespace Kiritori
         private bool _extensionsBuilt;
         private bool _shortcutsBuilt;
         private bool _historyBuilt;
+        private bool _appearanceBuilt;
         private System.ComponentModel.IContainer components = null;
 
         protected override void Dispose(bool disposing)
@@ -227,50 +228,129 @@ namespace Kiritori
             //         this.tabLogs,
             //     });
             // }
+            // タブ切り替え前の処理
+            this.tabControl.Selecting += (s, e) =>
+            {
+                if (e.TabPage == null) return;
+                // 未ビルドのタブ → Loading... を表示してビルドは BeginInvoke で延期
+                bool needsBuild = (e.TabPage == this.tabAdvanced   && !_advancedBuilt)
+                               || (e.TabPage == this.tabExtensions && !_extensionsBuilt)
+                               || (e.TabPage == this.tabAppearance && !_appearanceBuilt)
+                               || (e.TabPage == this.tabShortcuts  && !_shortcutsBuilt)
+                               || (e.TabPage == this.tabHistory    && !_historyBuilt);
+                if (needsBuild)
+                {
+                    var lbl = new Label
+                    {
+                        Text = "Loading...",
+                        Dock = DockStyle.Fill,
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ForeColor = SystemColors.GrayText,
+                        Tag = "_loadingOverlay"
+                    };
+                    e.TabPage.Controls.Add(lbl);
+                    e.TabPage.Controls.SetChildIndex(lbl, 0); // 最前面
+                }
+                else
+                {
+                    // ビルド済みタブ → 再帰SuspendLayout でレイアウト連鎖を抑制
+                    SuspendLayoutDeep(e.TabPage);
+                }
+            };
             this.tabControl.Selected += (s, e) =>
             {
-                // 履歴タブから離れたら idle の生成を止める
                 if (e.TabPage != this.tabHistory) StopLazyThumbLoad();
 
-                if (e.TabPage == this.tabAdvanced && !_advancedBuilt) { _advancedBuilt = true; BuildAdvancedTab(); }
-                else if (e.TabPage == this.tabExtensions && !_extensionsBuilt) { _extensionsBuilt = true; BuildExtensionsTab(); }
-                else if (e.TabPage == this.tabShortcuts && !_shortcutsBuilt) { _shortcutsBuilt = true; BuildShortcutsTab(); }
-                else if (e.TabPage == this.tabHistory)
+                var tp = e.TabPage;
+                if (tp == null) return;
+
+                bool needsBuild = (tp == this.tabAdvanced   && !_advancedBuilt)
+                               || (tp == this.tabExtensions && !_extensionsBuilt)
+                               || (tp == this.tabAppearance && !_appearanceBuilt)
+                               || (tp == this.tabShortcuts  && !_shortcutsBuilt)
+                               || (tp == this.tabHistory    && !_historyBuilt);
+
+                if (needsBuild)
                 {
-                    if (!_historyBuilt)
+                    // Loading... が描画されてから Build を実行するよう次メッセージサイクルへ延期
+                    this.BeginInvoke((Action)(() =>
                     {
-                        _historyBuilt = true;
-                        BuildHistoryTab();
-                    }
-                    try
-                    {
-                        var snap = HistoryBridge.GetSnapshot();
-                        this.SetupHistoryTabIfNeededAndShow(snap);
-                    }
-                    catch { /* 取得できなければ無視 */ }
-                    StartLazyThumbLoad();
+                        if (tp == this.tabAdvanced   && !_advancedBuilt)   { _advancedBuilt   = true; BuildAdvancedTab(); }
+                        else if (tp == this.tabExtensions && !_extensionsBuilt) { _extensionsBuilt = true; BuildExtensionsTab(); }
+                        else if (tp == this.tabAppearance && !_appearanceBuilt) { _appearanceBuilt = true; BuildAppearanceTab(); }
+                        else if (tp == this.tabShortcuts  && !_shortcutsBuilt)  { _shortcutsBuilt  = true; BuildShortcutsTab(); }
+                        else if (tp == this.tabHistory)
+                        {
+                            if (!_historyBuilt) { _historyBuilt = true; BuildHistoryTab(); }
+                            try { var snap = HistoryBridge.GetSnapshot(); this.SetupHistoryTabIfNeededAndShow(snap); }
+                            catch { /* 取得できなければ無視 */ }
+                            StartLazyThumbLoad();
+                        }
+                        // Loading... ラベルを除去
+                        for (int i = tp.Controls.Count - 1; i >= 0; i--)
+                        {
+                            if (tp.Controls[i].Tag as string == "_loadingOverlay")
+                            { var c = tp.Controls[i]; tp.Controls.RemoveAt(i); c.Dispose(); }
+                        }
+                    }));
+                }
+                else
+                {
+                    // ビルド済みタブ：Suspend していたレイアウトを一括実行
+                    ResumeLayoutDeep(tp);
+                    tp.PerformLayout();
                 }
             };
             // フォーム表示時、既に選ばれているタブだけ即構築（安全策）
             this.Shown += (s, e) =>
             {
                 var t = this.tabControl.SelectedTab;
-                if (t == this.tabAdvanced && !_advancedBuilt) { _advancedBuilt = true; BuildAdvancedTab(); }
-                else if (t == this.tabExtensions && !_extensionsBuilt) { _extensionsBuilt = true; BuildExtensionsTab(); }
-                // if (t == this.tabGeneral    && !_generalBuilt)    { _generalBuilt = true; BuildGeneralTab(); }
-                // if (t == this.tabAppearance && !_appearanceBuilt) { _appearanceBuilt = true; BuildAppearanceTab(); }
-                else if (t == this.tabShortcuts && !_shortcutsBuilt) { _shortcutsBuilt = true; BuildShortcutsTab(); }
-                else if (t == this.tabHistory && !_historyBuilt)
+                if (t == null) return;
+                bool needsBuild = (t == this.tabAdvanced   && !_advancedBuilt)
+                               || (t == this.tabExtensions && !_extensionsBuilt)
+                               || (t == this.tabAppearance && !_appearanceBuilt)
+                               || (t == this.tabShortcuts  && !_shortcutsBuilt)
+                               || (t == this.tabHistory    && !_historyBuilt);
+                if (needsBuild)
                 {
-                    _historyBuilt = true;
-                    BuildHistoryTab();
-
-                    var snap = HistoryBridge.GetSnapshot();
-                    this.SetupHistoryTabIfNeededAndShow(snap);
-
-                    StartLazyThumbLoad();
+                    var lbl = new Label
+                    {
+                        Text = "Loading...",
+                        Dock = DockStyle.Fill,
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ForeColor = SystemColors.GrayText,
+                        Tag = "_loadingOverlay"
+                    };
+                    t.Controls.Add(lbl);
+                    t.Controls.SetChildIndex(lbl, 0);
+                    this.BeginInvoke((Action)(() =>
+                    {
+                        if (t == this.tabAdvanced   && !_advancedBuilt)   { _advancedBuilt   = true; BuildAdvancedTab(); }
+                        else if (t == this.tabExtensions && !_extensionsBuilt) { _extensionsBuilt = true; BuildExtensionsTab(); }
+                        else if (t == this.tabAppearance && !_appearanceBuilt) { _appearanceBuilt = true; BuildAppearanceTab(); }
+                        else if (t == this.tabShortcuts  && !_shortcutsBuilt)  { _shortcutsBuilt  = true; BuildShortcutsTab(); }
+                        else if (t == this.tabHistory && !_historyBuilt)
+                        {
+                            _historyBuilt = true;
+                            BuildHistoryTab();
+                            var snap = HistoryBridge.GetSnapshot();
+                            this.SetupHistoryTabIfNeededAndShow(snap);
+                            StartLazyThumbLoad();
+                        }
+                        for (int i = t.Controls.Count - 1; i >= 0; i--)
+                        {
+                            if (t.Controls[i].Tag as string == "_loadingOverlay")
+                            { var c = t.Controls[i]; t.Controls.RemoveAt(i); c.Dispose(); }
+                        }
+                    }));
                 }
-                // if (t == this.tabInfo       && !_infoBuilt)       { _infoBuilt = true; BuildInfoTab(); }
+                else
+                {
+                    SuspendLayoutDeep(t);
+                    // if (t == this.tabInfo && !_infoBuilt) { _infoBuilt = true; BuildInfoTab(); }
+                    ResumeLayoutDeep(t);
+                    t.PerformLayout();
+                }
             };
 
             // =========================================================
@@ -381,6 +461,7 @@ namespace Kiritori
             // =========================================================
             // General タブ（縦積みレイアウト）
             // =========================================================
+            this.tabGeneral.SuspendLayout();
             var scrollGeneral = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -393,12 +474,14 @@ namespace Kiritori
             stackGeneral.Dock = DockStyle.Top;
             stackGeneral.AutoSize = true;
             stackGeneral.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            stackGeneral.SuspendLayout();
             this.tabGeneral.Controls.Add(stackGeneral);
 
             // Application Settings
             this.grpAppSettings = NewGroup("Application Settings");
             this.grpAppSettings.Tag = "loc:Text.AppSetting";
             var tlpApp = NewGrid(3, 3);
+            tlpApp.SuspendLayout();
 
             this.labelLanguage = NewRightLabel("Language");
             this.labelLanguage.Tag = "loc:Text.Language";
@@ -457,6 +540,7 @@ namespace Kiritori
             tlpApp.Controls.Add(this.labelHistory, 0, 3);
             tlpApp.Controls.Add(this.textBoxHistory, 1, 3);
 
+            tlpApp.ResumeLayout(false);
             this.grpAppSettings.Controls.Add(tlpApp);
 
             // Hotkeys（上マージンで間隔）
@@ -465,6 +549,7 @@ namespace Kiritori
             this.grpHotkey.Margin = new Padding(0, 8, 0, 0);
 
             var tlpHot = NewGrid(4, 3);
+            tlpHot.SuspendLayout();
             this.labelHotkeyCapture = NewRightLabel("Image capture");
             this.labelHotkeyCapture.Tag = "loc:Text.ImageCapture";
             // this.textBoxKiritori = new TextBox
@@ -567,450 +652,18 @@ namespace Kiritori
             tlpHot.Controls.Add(this.textBoxHotkeyCaptureFixed, 1, 3);
             tlpHot.Controls.Add(PackButtons(btnResetFixed, btnExecFixed), 3, 3);
 
+            tlpHot.ResumeLayout(false);
             this.grpHotkey.Controls.Add(tlpHot);
 
             // stack へ追加
             stackGeneral.Controls.Add(this.grpAppSettings, 0, 0);
             stackGeneral.Controls.Add(this.grpHotkey, 0, 1);
+            stackGeneral.ResumeLayout(false);
+            this.tabGeneral.ResumeLayout(false);
 
             // =========================================================
-            // Appearance タブ（1画面に収まるシンプル構成）
+            // Appearance タブ（ラジーロード：選択時に BuildAppearanceTab() で構築）
             // =========================================================
-            var scrollLivePreview = new Panel
-            {
-                Dock = DockStyle.Fill,
-                AutoScroll = true,
-                AutoScrollMargin = new Size(0, 12),
-                Padding = new Padding(12)
-            };
-            this.tabAppearance.Controls.Add(scrollLivePreview);
-
-            var stackAppearance = NewStack();
-            stackAppearance.Dock = DockStyle.Top;
-            stackAppearance.AutoSize = true;
-            stackAppearance.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-            this.tabAppearance.Controls.Add(stackAppearance);
-
-            // Capture settings（プリセット＋右プレビュー）
-            this.grpCaptureSettings = NewGroup("Capture Settings");
-            this.grpCaptureSettings.Tag = "loc:Text.CaptureSetting";
-            var tlpCap = NewGrid(2, 2);
-
-            this.chkScreenGuide = new CheckBox { Text = "Show guide lines", Checked = true, AutoSize = true, Tag = "loc:Text.ShowGuide" };
-            this.chkTrayNotify = new CheckBox { Text = "Notify in tray on capture", AutoSize = true, Tag = "loc:Text.NotifyTray" };
-            this.chkTrayNotifyOCR = new CheckBox { Text = "Notify in tray on OCR capture", AutoSize = true, Tag = "loc:Text.NotifyTrayOCR" };
-            // this.chkPlaySound = new CheckBox { Text = "Play sound on capture", AutoSize = true, Enabled = false, Tag = "loc:Text.PlaySound" };
-    
-            var flowToggles = new FlowLayoutPanel
-            {
-                FlowDirection = FlowDirection.LeftToRight,
-                AutoSize = true,
-                WrapContents = true,
-            };
-            flowToggles.Controls.Add(this.chkScreenGuide);
-            flowToggles.Controls.Add(this.chkTrayNotify);
-            flowToggles.Controls.Add(this.chkTrayNotifyOCR);
-
-            tlpCap.Controls.Add(new Label { Text = "Options", AutoSize = true, TextAlign = ContentAlignment.MiddleRight, Anchor = AnchorStyles.Right, Tag = "loc:Text.Option" }, 0, 0);
-            tlpCap.Controls.Add(flowToggles, 1, 0);
-
-            this.labelBgPreset = NewRightLabel("Background");
-            this.labelBgPreset.Tag = "loc:Text.Background";
-            this.cmbBgPreset = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150 };
-            this.cmbBgPreset.Items.AddRange(new object[] {
-                "Transparent (0%)",
-                "Dark (30%)",
-                "Dark (60%)",
-                "Light (30%)",
-                "Light (60%)"
-            });
-            this.cmbBgPreset.SelectedIndex = 0;
-
-            this.previewBg = new AlphaPreviewPanel { Height = 20, Width = 50, Anchor = AnchorStyles.Left, RgbColor = Color.Black, AlphaPercent = 0 };
-
-            var flowPreset = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
-            flowPreset.Controls.Add(this.cmbBgPreset);
-            flowPreset.Controls.Add(this.previewBg);
-
-            tlpCap.Controls.Add(this.labelBgPreset, 0, 1);
-            tlpCap.Controls.Add(flowPreset, 1, 1);
-
-            this.grpCaptureSettings.Controls.Add(tlpCap);
-
-            // 背景プリセットのイベント
-            // Background preset -> Settings & Preview
-            this.cmbBgPreset.SelectedIndexChanged += (s, e) =>
-            {
-                var S = Properties.Settings.Default;
-                var sel = this.cmbBgPreset.SelectedItem?.ToString() ?? "";
-                foreach (var p in _bgPresets)
-                {
-                    if (p.Name == sel)
-                    {
-                        S.CaptureBackgroundColor = p.Color;
-                        S.CaptureBackgroundAlphaPercent = p.Alpha;
-                        // バインド済みなのでプレビュー側は自動追従
-                        break;
-                    }
-                }
-            };
-
-
-            // Window settings（プリセット＋太さ＋不透明度）
-            this.grpWindowSettings = NewGroup("Window Settings");
-            this.grpWindowSettings.Tag = "loc:Text.WindowSetting";
-            this.grpWindowSettings.Margin = new Padding(0, 8, 0, 0);
-
-            var tlpWin = NewGrid(2, 2);
-
-            var flowWinToggles = new FlowLayoutPanel
-            {
-                FlowDirection = FlowDirection.LeftToRight,
-                AutoSize = true,
-                WrapContents = true,
-            };
-            this.chkWindowShadow = new CheckBox { Text = "Window shadow", Checked = true, AutoSize = true, Tag = "loc:Text.DropShadow" };
-            this.chkAfloat = new CheckBox { Text = "Always on top", Checked = true, AutoSize = true, Tag = "loc:Text.AlwaysOnTop" };
-            this.chkHighlightOnHover = new CheckBox { Text = "Highlight on hover", Checked = true, AutoSize = true, Tag = "loc:Text.HighlightOnHover" };
-            this.chkShowOverlay = new CheckBox { Text = "Show overlay", Checked = true, AutoSize = true, Tag = "loc:Text.ShowOverlay" };
-            flowWinToggles.Controls.Add(this.chkWindowShadow);
-            flowWinToggles.Controls.Add(this.chkAfloat);
-            flowWinToggles.Controls.Add(this.chkHighlightOnHover);
-            flowWinToggles.Controls.Add(this.chkShowOverlay);
-
-            tlpWin.Controls.Add(new Label { Text = "Options", AutoSize = true, TextAlign = ContentAlignment.MiddleRight, Anchor = AnchorStyles.Right, Tag = "loc:Text.Option" }, 0, 0);
-            tlpWin.Controls.Add(flowWinToggles, 1, 0);
-
-            // 色プリセット＋右プレビュー（透過 100% 固定）
-            this.labelHoverPreset = NewRightLabel("Highlight color");
-            this.labelHoverPreset.Tag = "loc:Text.HighlightColor";
-            this.cmbHoverPreset = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150 };
-            this.cmbHoverPreset.Items.AddRange(new object[] {
-                "Red", "Cyan", "Green", "Yellow", "Magenta", "Blue", "Orange", "Black", "White"
-            });
-            this.cmbHoverPreset.SelectedItem = "Cyan";
-
-            this.previewHover = new AlphaPreviewPanel { Height = 20, Width = 50, Anchor = AnchorStyles.Left, RgbColor = Color.Cyan, AlphaPercent = 60 };
-
-            var flowHover = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
-            flowHover.Controls.Add(this.cmbHoverPreset);
-            flowHover.Controls.Add(this.previewHover);
-
-            tlpWin.Controls.Add(this.labelHoverPreset, 0, 1);
-            tlpWin.Controls.Add(flowHover, 1, 1);
-
-            // 太さ（残す）
-            this.labelHoverThickness = NewRightLabel("Highlight thickness (px)");
-            this.labelHoverThickness.Tag = "loc:Text.HighlightThickness";
-            this.numHoverThickness = new NumericUpDown
-            {
-                Minimum = 1,
-                Maximum = 10,
-                Value = 2,
-                Anchor = AnchorStyles.Left,
-                Dock = DockStyle.Fill,
-            };
-            this.numHoverThickness.AutoSize = true;
-            this.numHoverThickness.MaximumSize = new Size(120, 0);
-            tlpWin.Controls.Add(this.labelHoverThickness, 0, 2);
-            tlpWin.Controls.Add(this.numHoverThickness, 1, 2);
-
-            // Default Window Opacity（ここに統合）
-            this.labelDefaultOpacity = NewRightLabel("Default opacity");
-            this.labelDefaultOpacity.Tag = "loc:Text.WindowOpacity";
-            this.trackbarDefaultOpacity = new TrackBar
-            {
-                Minimum = 10,
-                Maximum = 100,
-                TickFrequency = 10,
-                Value = 100,
-                Width = 240,
-                Anchor = AnchorStyles.Left
-            };
-            this.trackbarDefaultOpacity.AutoSize = true;
-            this.labelDefaultOpacityVal = new Label { AutoSize = true, Text = "100%", Anchor = AnchorStyles.Left };
-
-            var flowOpacity = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
-            flowOpacity.Controls.Add(this.trackbarDefaultOpacity);
-            flowOpacity.Controls.Add(this.labelDefaultOpacityVal);
-
-            tlpWin.Controls.Add(this.labelDefaultOpacity, 0, 3);
-            tlpWin.Controls.Add(flowOpacity, 1, 3);
-
-            this.grpWindowSettings.Controls.Add(tlpWin);
-
-            // イベント：色プリセット変更
-            this.cmbHoverPreset.SelectedIndexChanged += (s, e) =>
-            {
-                Color c = Color.Cyan;
-                switch ((this.cmbHoverPreset.SelectedItem ?? "").ToString())
-                {
-                    case "Red": c = Color.Red; break;
-                    case "Cyan": c = Color.Cyan; break;
-                    case "Green": c = Color.Lime; break;
-                    case "Yellow": c = Color.Yellow; break;
-                    case "Magenta": c = Color.Magenta; break;
-                    case "Blue": c = Color.Blue; break;
-                    case "Orange": c = Color.Orange; break;
-                    case "Black": c = Color.Black; break;
-                    case "White": c = Color.White; break;
-                }
-                this.previewHover.RgbColor = c;
-                this.previewHover.AlphaPercent = 100; // 透過なし
-                this.previewHover.Invalidate();
-            };
-
-            // イベント：不透明度表示
-            this.trackbarDefaultOpacity.Scroll += (s, e) =>
-            {
-                this.labelDefaultOpacityVal.Text = this.trackbarDefaultOpacity.Value + "%";
-            };
-
-            this.grpLivePreview = NewGroup("Live Preview Settings");
-            this.grpLivePreview.Tag = "loc:Text.LivePreviewSetting";
-            this.grpLivePreview.Margin = new Padding(0, 8, 0, 0);
-
-            var tlpLive = NewGrid(2, 2);
-
-            // チェックボックス群
-            var flowLiveToggles = new FlowLayoutPanel
-            {
-                FlowDirection = FlowDirection.LeftToRight,
-                AutoSize = true,
-                WrapContents = true,
-            };
-
-            // Stats 表示
-            this.chkLiveShowStats = new CheckBox {
-                Text = "Show stats (FPS/CPU/MEM)",
-                AutoSize = true,
-                Tag = "loc:Text.ShowStats",
-                Checked = Properties.Settings.Default.LivePreviewShowStats
-            };
-            this.chkLiveShowStats.CheckedChanged += (s, e) =>
-            {
-                Properties.Settings.Default.LivePreviewShowStats = this.chkLiveShowStats.Checked;
-                try { Properties.Settings.Default.Save(); } catch { }
-            };
-            flowLiveToggles.Controls.Add(this.chkLiveShowStats);
-
-            tips = new ToolTip();
-
-            // --- 保存先フォルダ ---
-            lblSaveFolder = NewRightLabel("Live Preview Save Folder");
-            lblSaveFolder.Tag = "loc:Setting.Display.LivePreviewSaveFolder";
-
-            txtSaveFolder = new TextBox { ReadOnly = true, Dock = DockStyle.Fill };
-            btnBrowseSaveFolder = new Button { Tag = "loc:Button.Browse", AutoSize = true };
-            btnClearSaveFolder  = new Button { Tag = "loc:Button.Clear",  AutoSize = true };
-
-            var flowFolder = new FlowLayoutPanel {
-                Dock = DockStyle.Fill, AutoSize = true, WrapContents = false, FlowDirection = FlowDirection.LeftToRight
-            };
-            flowFolder.Controls.Add(txtSaveFolder);
-            flowFolder.Controls.Add(btnBrowseSaveFolder);
-            flowFolder.Controls.Add(btnClearSaveFolder);
-
-            // --- GIF 最大時間 ---
-            lblGifMax = NewRightLabel("GIF Max Duration (sec)");
-            lblGifMax.Tag = "loc:Setting.Display.GifMaxDurationSec";
-
-            numGifMax = new NumericUpDown {
-                Minimum = 0,
-                Maximum = 3600,
-                Increment = 1,
-                Anchor = AnchorStyles.Left,
-                Dock = DockStyle.Fill,
-            };
-            this.numGifMax.AutoSize = true;
-            this.numGifMax.MaximumSize = new Size(120, 0);            
-            txtSaveFolder.DataBindings.Add(
-                new Binding("Text",
-                    Properties.Settings.Default,
-                    nameof(Properties.Settings.Default.LivePreviewSaveFolder),
-                    true, DataSourceUpdateMode.OnPropertyChanged));
-
-            // numGifMax.DataBindings.Add(
-            //     new Binding("Value",
-            //         Properties.Settings.Default,
-            //         nameof(Properties.Settings.Default.GifMaxDurationSec),
-            //         true, DataSourceUpdateMode.OnPropertyChanged));
-
-            // ボタン: 参照 / クリア
-            btnBrowseSaveFolder.Click += (s, e) =>
-            {
-                using (var fbd = new FolderBrowserDialog {
-                    Description = SR.T("Dialog.SaveFolder.Description",
-                        "Choose a folder for Live Preview recordings"),
-                    ShowNewFolderButton = true
-                })
-                {
-                    var cur1 = Properties.Settings.Default.LivePreviewSaveFolder;
-                    if (!string.IsNullOrWhiteSpace(cur1) && Directory.Exists(cur1))
-                        fbd.SelectedPath = cur1;
-
-                    if (fbd.ShowDialog(this) == DialogResult.OK)
-                    {
-                        Properties.Settings.Default.LivePreviewSaveFolder = fbd.SelectedPath;
-                        try { Properties.Settings.Default.Save(); } catch { }
-                    }
-                }
-            };
-
-            btnClearSaveFolder.Click += (s, e) =>
-            {
-                Properties.Settings.Default.LivePreviewSaveFolder = string.Empty; // 未指定へ
-                try { Properties.Settings.Default.Save(); } catch { }
-            };
-
-            // // NumericUpDown の変更を即保存（バインドでも反映されますが保険で）
-            // numGifMax.ValueChanged += (s, e) => {
-            //     Properties.Settings.Default.GifMaxDurationSec = (int)numGifMax.Value;
-            //     try { Properties.Settings.Default.Save(); } catch { }
-            // };
-            var bMax = new Binding(
-                "Value",
-                Properties.Settings.Default,
-                nameof(Properties.Settings.Default.GifMaxDurationSec),
-                formattingEnabled: true,
-                DataSourceUpdateMode.OnPropertyChanged);
-
-            // UI ← 設定 の方向（decimalに変換）
-            bMax.Format += (s, e) =>
-            {
-                // 設定側が string/int/その他でも安全に decimal へ
-                e.Value = Convert.ToDecimal(CoerceInt(e.Value, 0, 3600, 0), CultureInfo.InvariantCulture);
-            };
-
-            // 設定 ← UI の方向（decimal→int）
-            bMax.Parse += (s, e) =>
-            {
-                if (e.Value is decimal dec)
-                    e.Value = (int)dec;
-            };
-
-            // numGifMax.DataBindings.Add(bMax);
-
-            // 例: numGifFps（1..30）
-            var bFps = new Binding(
-                "Value",
-                Properties.Settings.Default,
-                nameof(Properties.Settings.Default.GifMaxFps),
-                true,
-                DataSourceUpdateMode.OnPropertyChanged);
-            bFps.Format += (s, e) =>
-            {
-                e.Value = Convert.ToDecimal(CoerceInt(e.Value, 1, 30, 10), CultureInfo.InvariantCulture);
-            };
-            bFps.Parse += (s, e) =>
-            {
-                if (e.Value is decimal dec)
-                    e.Value = (int)dec;
-            };
-            // numGifFps.DataBindings.Add(bFps);
-
-            // ツールチップ
-            tips.SetToolTip(numGifMax, SR.T("Tip.GifMax",
-                                "0 = Unlimited; otherwise acts as a cap"));
-            var cur = Properties.Settings.Default.LivePreviewSaveFolder;
-            string unset = SR.T("Tip.SaveFolder.Unset",
-                                "Unspecified (uses the default location)");
-            tips.SetToolTip(txtSaveFolder, string.IsNullOrWhiteSpace(cur) ? unset : cur);
-
-            // --- GIF 最大FPS ---
-            lblGifFps = NewRightLabel("GIF max FPS");
-            lblGifFps.Tag = "loc:Setting.Display.GifMaxFps";
-            numGifFps = new NumericUpDown {
-                Minimum = 1,
-                Maximum = 30,
-                Increment = 1,
-                Anchor = AnchorStyles.Left,
-                Dock = DockStyle.Fill,
-            };
-            this.numGifFps.AutoSize = true;
-            this.numGifFps.MaximumSize = new Size(120, 0);
-
-            // --- 最適化ON/OFF ---
-            lblGifOptimize = NewRightLabel("Optimize for size");
-            lblGifOptimize.Tag = "loc:Setting.Display.GifOptimize";
-            chkGifOptimize = new CheckBox
-            {
-                Text = "Downscale / palette reduction",
-                AutoSize = true,
-                Tag = "loc:Setting.Display.GifOptimizeTip"
-            };
-            // --- GIF 最大横幅 ---
-            lblGifWidth = NewRightLabel("GIF max Width");
-            lblGifWidth.Tag = "loc:Setting.Display.GifMaxWidth";
-            numGifWidth = new NumericUpDown {
-                Minimum = 1,
-                Maximum = 1920,
-                Increment = 1,
-                Anchor = AnchorStyles.Left,
-                Dock = DockStyle.Fill,
-            };
-            this.numGifWidth.AutoSize = true;
-            this.numGifWidth.MaximumSize = new Size(120, 0);
-
-            // numGifFps.DataBindings.Add(new Binding(
-            //     "Value", Properties.Settings.Default, nameof(Properties.Settings.Default.GifMaxFps),
-            //     true, DataSourceUpdateMode.OnPropertyChanged));
-
-            chkGifOptimize.DataBindings.Add(new Binding(
-                "Checked", Properties.Settings.Default, nameof(Properties.Settings.Default.GifOptimize),
-                true, DataSourceUpdateMode.OnPropertyChanged));
-
-            // numGifWidth.DataBindings.Add(new Binding(
-            //     "Value", Properties.Settings.Default, nameof(Properties.Settings.Default.GifMaxWidth),
-            //     true, DataSourceUpdateMode.OnPropertyChanged));
-
-            // 追加（行インクリメントは既存パターンと同じ）
-            
-            int row = tlpLive.RowCount;
-            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            tlpLive.Controls.Add(lblSaveFolder, 0, row);
-            tlpLive.Controls.Add(flowFolder,   1, row);
-            tlpLive.RowCount++;
-
-            row = tlpLive.RowCount;
-            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            tlpLive.Controls.Add(lblGifFps, 0, row);
-            tlpLive.Controls.Add(numGifFps, 1, row);
-            tlpLive.RowCount++;
-
-            row = tlpLive.RowCount;
-            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            tlpLive.Controls.Add(lblGifOptimize, 0, row);
-            tlpLive.Controls.Add(chkGifOptimize, 1, row);
-            tlpLive.RowCount++;
-            
-            row = tlpLive.RowCount;
-            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            tlpLive.Controls.Add(lblGifWidth, 0, row);
-            tlpLive.Controls.Add(numGifWidth, 1, row);
-            tlpLive.RowCount++;
-
-            row = tlpLive.RowCount;
-            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            tlpLive.Controls.Add(lblGifMax, 0, row);
-            tlpLive.Controls.Add(numGifMax, 1, row);
-            tlpLive.RowCount++;
-
-            tlpLive.Controls.Add(new Label {
-                Text = "Options",
-                AutoSize = true,
-                TextAlign = ContentAlignment.MiddleRight,
-                Anchor = AnchorStyles.Right,
-                Tag = "loc:Text.Option"
-            }, 0, 0);
-            tlpLive.Controls.Add(flowLiveToggles, 1, 0);
-
-            this.grpLivePreview.Controls.Add(tlpLive);
-
-            // stack へ追加（2グループのみ）
-            stackAppearance.Controls.Add(this.grpCaptureSettings, 0, 0);
-            stackAppearance.Controls.Add(this.grpWindowSettings, 0, 1);
-            stackAppearance.Controls.Add(this.grpLivePreview, 0, 2);
 
             // =========================================================
             // Shortcuts タブ（縦積み）
@@ -1243,6 +896,422 @@ namespace Kiritori
                 Controls = { reset, exec }
             };
         }
+        private void BuildAppearanceTab()
+        {
+            this.tabAppearance.SuspendLayout();
+
+            var scrollLivePreview = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                AutoScrollMargin = new Size(0, 12),
+                Padding = new Padding(12)
+            };
+            this.tabAppearance.Controls.Add(scrollLivePreview);
+
+            var stackAppearance = NewStack();
+            stackAppearance.Dock = DockStyle.Top;
+            stackAppearance.AutoSize = true;
+            stackAppearance.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            stackAppearance.SuspendLayout();
+            this.tabAppearance.Controls.Add(stackAppearance);
+
+            // Capture settings
+            this.grpCaptureSettings = NewGroup("Capture Settings");
+            this.grpCaptureSettings.Tag = "loc:Text.CaptureSetting";
+            var tlpCap = NewGrid(2, 2);
+            tlpCap.SuspendLayout();
+
+            this.chkScreenGuide = new CheckBox { Text = "Show guide lines", Checked = true, AutoSize = true, Tag = "loc:Text.ShowGuide" };
+            this.chkTrayNotify = new CheckBox { Text = "Notify in tray on capture", AutoSize = true, Tag = "loc:Text.NotifyTray" };
+            this.chkTrayNotifyOCR = new CheckBox { Text = "Notify in tray on OCR capture", AutoSize = true, Tag = "loc:Text.NotifyTrayOCR" };
+
+            var flowToggles = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                WrapContents = true,
+            };
+            flowToggles.Controls.Add(this.chkScreenGuide);
+            flowToggles.Controls.Add(this.chkTrayNotify);
+            flowToggles.Controls.Add(this.chkTrayNotifyOCR);
+
+            tlpCap.Controls.Add(new Label { Text = "Options", AutoSize = true, TextAlign = ContentAlignment.MiddleRight, Anchor = AnchorStyles.Right, Tag = "loc:Text.Option" }, 0, 0);
+            tlpCap.Controls.Add(flowToggles, 1, 0);
+
+            this.labelBgPreset = NewRightLabel("Background");
+            this.labelBgPreset.Tag = "loc:Text.Background";
+            this.cmbBgPreset = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150 };
+            this.cmbBgPreset.Items.AddRange(new object[] {
+                "Transparent (0%)",
+                "Dark (30%)",
+                "Dark (60%)",
+                "Light (30%)",
+                "Light (60%)"
+            });
+            this.cmbBgPreset.SelectedIndex = 0;
+
+            this.previewBg = new AlphaPreviewPanel { Height = 20, Width = 50, Anchor = AnchorStyles.Left, RgbColor = Color.Black, AlphaPercent = 0 };
+
+            var flowPreset = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
+            flowPreset.Controls.Add(this.cmbBgPreset);
+            flowPreset.Controls.Add(this.previewBg);
+
+            tlpCap.Controls.Add(this.labelBgPreset, 0, 1);
+            tlpCap.Controls.Add(flowPreset, 1, 1);
+            tlpCap.ResumeLayout(false);
+
+            this.grpCaptureSettings.Controls.Add(tlpCap);
+
+            this.cmbBgPreset.SelectedIndexChanged += (s, e) =>
+            {
+                var S = Properties.Settings.Default;
+                var sel = this.cmbBgPreset.SelectedItem?.ToString() ?? "";
+                foreach (var p in _bgPresets)
+                {
+                    if (p.Name == sel)
+                    {
+                        S.CaptureBackgroundColor = p.Color;
+                        S.CaptureBackgroundAlphaPercent = p.Alpha;
+                        break;
+                    }
+                }
+            };
+
+            // Window settings
+            this.grpWindowSettings = NewGroup("Window Settings");
+            this.grpWindowSettings.Tag = "loc:Text.WindowSetting";
+            this.grpWindowSettings.Margin = new Padding(0, 8, 0, 0);
+
+            var tlpWin = NewGrid(2, 2);
+            tlpWin.SuspendLayout();
+
+            var flowWinToggles = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                WrapContents = true,
+            };
+            this.chkWindowShadow = new CheckBox { Text = "Window shadow", Checked = true, AutoSize = true, Tag = "loc:Text.DropShadow" };
+            this.chkAfloat = new CheckBox { Text = "Always on top", Checked = true, AutoSize = true, Tag = "loc:Text.AlwaysOnTop" };
+            this.chkHighlightOnHover = new CheckBox { Text = "Highlight on hover", Checked = true, AutoSize = true, Tag = "loc:Text.HighlightOnHover" };
+            this.chkShowOverlay = new CheckBox { Text = "Show overlay", Checked = true, AutoSize = true, Tag = "loc:Text.ShowOverlay" };
+            flowWinToggles.Controls.Add(this.chkWindowShadow);
+            flowWinToggles.Controls.Add(this.chkAfloat);
+            flowWinToggles.Controls.Add(this.chkHighlightOnHover);
+            flowWinToggles.Controls.Add(this.chkShowOverlay);
+
+            tlpWin.Controls.Add(new Label { Text = "Options", AutoSize = true, TextAlign = ContentAlignment.MiddleRight, Anchor = AnchorStyles.Right, Tag = "loc:Text.Option" }, 0, 0);
+            tlpWin.Controls.Add(flowWinToggles, 1, 0);
+
+            this.labelHoverPreset = NewRightLabel("Highlight color");
+            this.labelHoverPreset.Tag = "loc:Text.HighlightColor";
+            this.cmbHoverPreset = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 150 };
+            this.cmbHoverPreset.Items.AddRange(new object[] {
+                "Red", "Cyan", "Green", "Yellow", "Magenta", "Blue", "Orange", "Black", "White"
+            });
+            this.cmbHoverPreset.SelectedItem = "Cyan";
+
+            this.previewHover = new AlphaPreviewPanel { Height = 20, Width = 50, Anchor = AnchorStyles.Left, RgbColor = Color.Cyan, AlphaPercent = 60 };
+
+            var flowHover = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
+            flowHover.Controls.Add(this.cmbHoverPreset);
+            flowHover.Controls.Add(this.previewHover);
+
+            tlpWin.Controls.Add(this.labelHoverPreset, 0, 1);
+            tlpWin.Controls.Add(flowHover, 1, 1);
+
+            this.labelHoverThickness = NewRightLabel("Highlight thickness (px)");
+            this.labelHoverThickness.Tag = "loc:Text.HighlightThickness";
+            this.numHoverThickness = new NumericUpDown
+            {
+                Minimum = 1,
+                Maximum = 10,
+                Value = 2,
+                Anchor = AnchorStyles.Left,
+                Dock = DockStyle.Fill,
+            };
+            this.numHoverThickness.AutoSize = true;
+            this.numHoverThickness.MaximumSize = new Size(120, 0);
+            tlpWin.Controls.Add(this.labelHoverThickness, 0, 2);
+            tlpWin.Controls.Add(this.numHoverThickness, 1, 2);
+
+            this.labelDefaultOpacity = NewRightLabel("Default opacity");
+            this.labelDefaultOpacity.Tag = "loc:Text.WindowOpacity";
+            this.trackbarDefaultOpacity = new TrackBar
+            {
+                Minimum = 10,
+                Maximum = 100,
+                TickFrequency = 10,
+                Value = 100,
+                Width = 240,
+                Anchor = AnchorStyles.Left
+            };
+            this.trackbarDefaultOpacity.AutoSize = true;
+            this.labelDefaultOpacityVal = new Label { AutoSize = true, Text = "100%", Anchor = AnchorStyles.Left };
+
+            var flowOpacity = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, WrapContents = false };
+            flowOpacity.Controls.Add(this.trackbarDefaultOpacity);
+            flowOpacity.Controls.Add(this.labelDefaultOpacityVal);
+
+            tlpWin.Controls.Add(this.labelDefaultOpacity, 0, 3);
+            tlpWin.Controls.Add(flowOpacity, 1, 3);
+            tlpWin.ResumeLayout(false);
+
+            this.grpWindowSettings.Controls.Add(tlpWin);
+
+            this.cmbHoverPreset.SelectedIndexChanged += (s, e) =>
+            {
+                Color c = Color.Cyan;
+                switch ((this.cmbHoverPreset.SelectedItem ?? "").ToString())
+                {
+                    case "Red": c = Color.Red; break;
+                    case "Cyan": c = Color.Cyan; break;
+                    case "Green": c = Color.Lime; break;
+                    case "Yellow": c = Color.Yellow; break;
+                    case "Magenta": c = Color.Magenta; break;
+                    case "Blue": c = Color.Blue; break;
+                    case "Orange": c = Color.Orange; break;
+                    case "Black": c = Color.Black; break;
+                    case "White": c = Color.White; break;
+                }
+                this.previewHover.RgbColor = c;
+                this.previewHover.AlphaPercent = 100;
+                this.previewHover.Invalidate();
+            };
+
+            this.trackbarDefaultOpacity.Scroll += (s, e) =>
+            {
+                this.labelDefaultOpacityVal.Text = this.trackbarDefaultOpacity.Value + "%";
+            };
+
+            // Live Preview settings
+            this.grpLivePreview = NewGroup("Live Preview Settings");
+            this.grpLivePreview.Tag = "loc:Text.LivePreviewSetting";
+            this.grpLivePreview.Margin = new Padding(0, 8, 0, 0);
+
+            var tlpLive = NewGrid(2, 2);
+            tlpLive.SuspendLayout();
+
+            var flowLiveToggles = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.LeftToRight,
+                AutoSize = true,
+                WrapContents = true,
+            };
+
+            this.chkLiveShowStats = new CheckBox {
+                Text = "Show stats (FPS/CPU/MEM)",
+                AutoSize = true,
+                Tag = "loc:Text.ShowStats",
+                Checked = Properties.Settings.Default.LivePreviewShowStats
+            };
+            this.chkLiveShowStats.CheckedChanged += (s, e) =>
+            {
+                Properties.Settings.Default.LivePreviewShowStats = this.chkLiveShowStats.Checked;
+                try { Properties.Settings.Default.Save(); } catch { }
+            };
+            flowLiveToggles.Controls.Add(this.chkLiveShowStats);
+
+            tips = new ToolTip();
+
+            lblSaveFolder = NewRightLabel("Live Preview Save Folder");
+            lblSaveFolder.Tag = "loc:Setting.Display.LivePreviewSaveFolder";
+
+            txtSaveFolder = new TextBox { ReadOnly = true, Dock = DockStyle.Fill };
+            btnBrowseSaveFolder = new Button { Tag = "loc:Button.Browse", AutoSize = true };
+            btnClearSaveFolder  = new Button { Tag = "loc:Button.Clear",  AutoSize = true };
+
+            var flowFolder = new FlowLayoutPanel {
+                Dock = DockStyle.Fill, AutoSize = true, WrapContents = false, FlowDirection = FlowDirection.LeftToRight
+            };
+            flowFolder.Controls.Add(txtSaveFolder);
+            flowFolder.Controls.Add(btnBrowseSaveFolder);
+            flowFolder.Controls.Add(btnClearSaveFolder);
+
+            lblGifMax = NewRightLabel("GIF Max Duration (sec)");
+            lblGifMax.Tag = "loc:Setting.Display.GifMaxDurationSec";
+
+            numGifMax = new NumericUpDown {
+                Minimum = 0,
+                Maximum = 3600,
+                Increment = 1,
+                Anchor = AnchorStyles.Left,
+                Dock = DockStyle.Fill,
+            };
+            this.numGifMax.AutoSize = true;
+            this.numGifMax.MaximumSize = new Size(120, 0);
+            txtSaveFolder.DataBindings.Add(
+                new Binding("Text",
+                    Properties.Settings.Default,
+                    nameof(Properties.Settings.Default.LivePreviewSaveFolder),
+                    true, DataSourceUpdateMode.OnPropertyChanged));
+
+            btnBrowseSaveFolder.Click += (s, e) =>
+            {
+                using (var fbd = new FolderBrowserDialog {
+                    Description = SR.T("Dialog.SaveFolder.Description",
+                        "Choose a folder for Live Preview recordings"),
+                    ShowNewFolderButton = true
+                })
+                {
+                    var cur1 = Properties.Settings.Default.LivePreviewSaveFolder;
+                    if (!string.IsNullOrWhiteSpace(cur1) && Directory.Exists(cur1))
+                        fbd.SelectedPath = cur1;
+
+                    if (fbd.ShowDialog(this) == DialogResult.OK)
+                    {
+                        Properties.Settings.Default.LivePreviewSaveFolder = fbd.SelectedPath;
+                        try { Properties.Settings.Default.Save(); } catch { }
+                    }
+                }
+            };
+
+            btnClearSaveFolder.Click += (s, e) =>
+            {
+                Properties.Settings.Default.LivePreviewSaveFolder = string.Empty;
+                try { Properties.Settings.Default.Save(); } catch { }
+            };
+
+            var bMax = new Binding(
+                "Value",
+                Properties.Settings.Default,
+                nameof(Properties.Settings.Default.GifMaxDurationSec),
+                formattingEnabled: true,
+                DataSourceUpdateMode.OnPropertyChanged);
+            bMax.Format += (s, e) =>
+            {
+                e.Value = Convert.ToDecimal(CoerceInt(e.Value, 0, 3600, 0), CultureInfo.InvariantCulture);
+            };
+            bMax.Parse += (s, e) =>
+            {
+                if (e.Value is decimal dec)
+                    e.Value = (int)dec;
+            };
+
+            var bFps = new Binding(
+                "Value",
+                Properties.Settings.Default,
+                nameof(Properties.Settings.Default.GifMaxFps),
+                true,
+                DataSourceUpdateMode.OnPropertyChanged);
+            bFps.Format += (s, e) =>
+            {
+                e.Value = Convert.ToDecimal(CoerceInt(e.Value, 1, 30, 10), CultureInfo.InvariantCulture);
+            };
+            bFps.Parse += (s, e) =>
+            {
+                if (e.Value is decimal dec)
+                    e.Value = (int)dec;
+            };
+
+            tips.SetToolTip(numGifMax, SR.T("Tip.GifMax", "0 = Unlimited; otherwise acts as a cap"));
+            var cur = Properties.Settings.Default.LivePreviewSaveFolder;
+            string unset = SR.T("Tip.SaveFolder.Unset", "Unspecified (uses the default location)");
+            tips.SetToolTip(txtSaveFolder, string.IsNullOrWhiteSpace(cur) ? unset : cur);
+
+            lblGifFps = NewRightLabel("GIF max FPS");
+            lblGifFps.Tag = "loc:Setting.Display.GifMaxFps";
+            numGifFps = new NumericUpDown {
+                Minimum = 1,
+                Maximum = 30,
+                Increment = 1,
+                Anchor = AnchorStyles.Left,
+                Dock = DockStyle.Fill,
+            };
+            this.numGifFps.AutoSize = true;
+            this.numGifFps.MaximumSize = new Size(120, 0);
+
+            lblGifOptimize = NewRightLabel("Optimize for size");
+            lblGifOptimize.Tag = "loc:Setting.Display.GifOptimize";
+            chkGifOptimize = new CheckBox
+            {
+                Text = "Downscale / palette reduction",
+                AutoSize = true,
+                Tag = "loc:Setting.Display.GifOptimizeTip"
+            };
+
+            lblGifWidth = NewRightLabel("GIF max Width");
+            lblGifWidth.Tag = "loc:Setting.Display.GifMaxWidth";
+            numGifWidth = new NumericUpDown {
+                Minimum = 1,
+                Maximum = 1920,
+                Increment = 1,
+                Anchor = AnchorStyles.Left,
+                Dock = DockStyle.Fill,
+            };
+            this.numGifWidth.AutoSize = true;
+            this.numGifWidth.MaximumSize = new Size(120, 0);
+
+            chkGifOptimize.DataBindings.Add(new Binding(
+                "Checked", Properties.Settings.Default, nameof(Properties.Settings.Default.GifOptimize),
+                true, DataSourceUpdateMode.OnPropertyChanged));
+
+            int row = tlpLive.RowCount;
+            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tlpLive.Controls.Add(lblSaveFolder, 0, row);
+            tlpLive.Controls.Add(flowFolder,   1, row);
+            tlpLive.RowCount++;
+
+            row = tlpLive.RowCount;
+            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tlpLive.Controls.Add(lblGifFps, 0, row);
+            tlpLive.Controls.Add(numGifFps, 1, row);
+            tlpLive.RowCount++;
+
+            row = tlpLive.RowCount;
+            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tlpLive.Controls.Add(lblGifOptimize, 0, row);
+            tlpLive.Controls.Add(chkGifOptimize, 1, row);
+            tlpLive.RowCount++;
+
+            row = tlpLive.RowCount;
+            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tlpLive.Controls.Add(lblGifWidth, 0, row);
+            tlpLive.Controls.Add(numGifWidth, 1, row);
+            tlpLive.RowCount++;
+
+            row = tlpLive.RowCount;
+            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tlpLive.Controls.Add(lblGifMax, 0, row);
+            tlpLive.Controls.Add(numGifMax, 1, row);
+            tlpLive.RowCount++;
+
+            tlpLive.Controls.Add(new Label {
+                Text = "Options",
+                AutoSize = true,
+                TextAlign = ContentAlignment.MiddleRight,
+                Anchor = AnchorStyles.Right,
+                Tag = "loc:Text.Option"
+            }, 0, 0);
+            tlpLive.Controls.Add(flowLiveToggles, 1, 0);
+            tlpLive.ResumeLayout(false);
+
+            this.grpLivePreview.Controls.Add(tlpLive);
+
+            stackAppearance.Controls.Add(this.grpCaptureSettings, 0, 0);
+            stackAppearance.Controls.Add(this.grpWindowSettings, 0, 1);
+            stackAppearance.Controls.Add(this.grpLivePreview, 0, 2);
+            stackAppearance.ResumeLayout(false);
+
+            this.tabAppearance.ResumeLayout(false);
+
+            // ラジーロード後に配線・設定反映
+            var appS = Properties.Settings.Default;
+            BindIntNumeric(numHoverThickness, appS, nameof(appS.HoverHighlightThickness), 1, 10, 2);
+            BindIntNumeric(numGifMax,         appS, nameof(appS.GifMaxDurationSec),       0, 3600, 0);
+            BindIntNumeric(numGifFps,         appS, nameof(appS.GifMaxFps),               1, 30, 10);
+            BindIntNumeric(numGifWidth,       appS, nameof(appS.GifMaxWidth),             1, 1920, 960);
+            PopulatePresetCombos();
+            WireUpAppearanceBindings();
+            SelectPresetComboFromSettings();
+            HookRuntimeEvents();
+            // フォーム全体のレイアウトを一括停止してから Localizer を適用（各 Text 変更ごとのレイアウトパスを防ぐ）
+            this.SuspendLayout();
+            Localizer.Apply(this);
+            this.ResumeLayout(false);
+        }
+
         private static TableLayoutPanel NewGrid(int rows, int cols)
         {
             var tlp = new TableLayoutPanel
@@ -1300,6 +1369,23 @@ namespace Kiritori
                 TextAlign = ContentAlignment.MiddleRight,
                 Anchor = AnchorStyles.Right
             };
+        }
+
+        // 子コントロールも含めて再帰的にレイアウトを停止する
+        // （AutoSize ネスト構造での OnVisibleChanged 連鎖レイアウトを防ぐ）
+        private static void SuspendLayoutDeep(Control c)
+        {
+            c.SuspendLayout();
+            foreach (Control child in c.Controls)
+                SuspendLayoutDeep(child);
+        }
+
+        // 子から順に Resume し、最後に親で ResumeLayout(true) して一括レイアウト実行
+        private static void ResumeLayoutDeep(Control c)
+        {
+            foreach (Control child in c.Controls)
+                ResumeLayoutDeep(child);
+            c.ResumeLayout(false);
         }
 
         private void AddShortcutRow(
@@ -1445,19 +1531,11 @@ namespace Kiritori
         private void WireUpDataBindings()
         {
             var S = Properties.Settings.Default;
-            this.trackbarDefaultOpacity.DataBindings.Clear();
-            this.labelDefaultOpacityVal.DataBindings.Clear();
 
-            // --- Background preview <-> Settings ---
-            // 色
-            this.previewBg.DataBindings.Add(
-                new Binding("RgbColor", S, nameof(S.CaptureBackgroundColor),
-                    true, DataSourceUpdateMode.OnPropertyChanged));
-            // アルファ（%）
-            this.previewBg.DataBindings.Add(
-                new Binding("AlphaPercent", S, nameof(S.CaptureBackgroundAlphaPercent),
-                    true, DataSourceUpdateMode.OnPropertyChanged));
-            // 履歴数
+            // --- Appearance controls（ラジーロード済みの場合のみ配線）---
+            WireUpAppearanceBindings();
+
+            // --- 履歴数 ---
             var b = new Binding("Value", S, nameof(S.HistoryLimit),
                 true, DataSourceUpdateMode.OnPropertyChanged);
             b.Format += (s, e) =>
@@ -1471,9 +1549,33 @@ namespace Kiritori
                     e.Value = Decimal.ToInt32(d);
             };
             Log.Debug(string.Format("Binding history limit {0}", S.HistoryLimit), "Settings");
-            // this.textBoxHistory.DataBindings.Add(b);
 
-            // --- Hover preview <-> Settings ---
+            // Run at startup は OS 処理が絡むため表示だけ同期＋既存ハンドラで処理
+            this.chkRunAtStartup.Checked = S.RunAtStartup;
+            this.chkRunAtStartup.CheckedChanged += (s, e) =>
+            {
+                if (_initStartupToggle) return;
+                S.RunAtStartup = chkRunAtStartup.Checked;
+            };
+            this.chkOpenMenuOnAppStart.DataBindings.Add(
+                new Binding("Checked", S, nameof(S.OpenPreferencesOnStartup), true, DataSourceUpdateMode.OnPropertyChanged));
+        }
+
+        private void WireUpAppearanceBindings()
+        {
+            if (this.trackbarDefaultOpacity == null) return;
+
+            var S = Properties.Settings.Default;
+            this.trackbarDefaultOpacity.DataBindings.Clear();
+            this.labelDefaultOpacityVal.DataBindings.Clear();
+
+            this.previewBg.DataBindings.Add(
+                new Binding("RgbColor", S, nameof(S.CaptureBackgroundColor),
+                    true, DataSourceUpdateMode.OnPropertyChanged));
+            this.previewBg.DataBindings.Add(
+                new Binding("AlphaPercent", S, nameof(S.CaptureBackgroundAlphaPercent),
+                    true, DataSourceUpdateMode.OnPropertyChanged));
+
             this.previewHover.DataBindings.Add(
                 new Binding("RgbColor", S, nameof(S.HoverHighlightColor),
                     true, DataSourceUpdateMode.OnPropertyChanged));
@@ -1481,7 +1583,6 @@ namespace Kiritori
                 new Binding("AlphaPercent", S, nameof(S.HoverHighlightAlphaPercent),
                     true, DataSourceUpdateMode.OnPropertyChanged));
 
-            // --- その他（例） ---
             this.chkWindowShadow.DataBindings.Add(
                 new Binding("Checked", S, nameof(S.WindowShadowEnabled), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkAfloat.DataBindings.Add(
@@ -1490,8 +1591,6 @@ namespace Kiritori
                 new Binding("Checked", S, nameof(S.HoverHighlightEnabled), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkShowOverlay.DataBindings.Add(
                 new Binding("Checked", S, nameof(S.OverlayEnabled), true, DataSourceUpdateMode.OnPropertyChanged));
-            // this.numHoverThickness.DataBindings.Add(
-            //     new Binding("Value", S, nameof(S.HoverHighlightThickness), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkScreenGuide.DataBindings.Add(
                 new Binding("Checked", S, nameof(S.ScreenGuideEnabled), true, DataSourceUpdateMode.OnPropertyChanged));
             this.chkTrayNotify.DataBindings.Add(
@@ -1506,33 +1605,19 @@ namespace Kiritori
 
             this.trackbarDefaultOpacity.DataBindings.Add(
                 new Binding("Value", S, nameof(S.WindowOpacityPercent),
-                    /* formattingEnabled */ true,
-                    DataSourceUpdateMode.OnPropertyChanged));
+                    true, DataSourceUpdateMode.OnPropertyChanged));
 
-            // 4) ラベルは表示専用（int → "NN%" に変換）
             var lblOpacityBinding = new Binding(
                 "Text", S, nameof(S.WindowOpacityPercent),
-                /* formattingEnabled */ true,
-                DataSourceUpdateMode.Never);
+                true, DataSourceUpdateMode.Never);
             lblOpacityBinding.Format += (o, e) =>
             {
-                // e.Value は int（または boxed int）を想定
                 int v;
                 if (e.Value is int iv) v = iv;
                 else int.TryParse(e.Value?.ToString(), out v);
                 e.Value = v + "%";
             };
             this.labelDefaultOpacityVal.DataBindings.Add(lblOpacityBinding);
-
-            // Run at startup は OS 処理が絡むため表示だけ同期＋既存ハンドラで処理
-            this.chkRunAtStartup.Checked = S.RunAtStartup;
-            this.chkRunAtStartup.CheckedChanged += (s, e) =>
-            {
-                if (_initStartupToggle) return;
-                S.RunAtStartup = chkRunAtStartup.Checked;
-            };
-            this.chkOpenMenuOnAppStart.DataBindings.Add(
-                new Binding("Checked", S, nameof(S.OpenPreferencesOnStartup), true, DataSourceUpdateMode.OnPropertyChanged));
         }
         private void HookRuntimeEvents()
         {

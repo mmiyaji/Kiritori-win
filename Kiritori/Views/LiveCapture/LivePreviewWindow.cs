@@ -3,6 +3,7 @@ using Kiritori.Services.History;
 using Kiritori.Services.Logging;
 using Kiritori.Services.Recording;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -189,7 +190,6 @@ namespace Kiritori.Views.LiveCapture
         private GifRecordOptions _gifOpt;
         private List<Bitmap> _gifFrames;
         private List<int>    _gifDelaysCs;
-        private int _gifLastHash;
         private Stopwatch _gifTick = new Stopwatch();
         private readonly object _gifSync = new object();
         private System.Diagnostics.Stopwatch _gifClock = new System.Diagnostics.Stopwatch();
@@ -202,6 +202,18 @@ namespace Kiritori.Views.LiveCapture
         private bool _suppressGifCheckedChanged = false; // チェックイベントの一時無効化
         private int _gifIgnoreUntilTick = 0;             // このTickまではフレーム無視
         private const int GIF_UI_GUARD_MS = 220;         // UIが消えるのを待つ時間
+        // GIFワーカースレッド（前処理を非同期化）
+        private BlockingCollection<(Bitmap bmp, int deltaCs)> _gifQueue;
+        private Thread _gifWorkerThread;
+
+        // OnPaint キャッシュリソース（毎フレーム生成コストを削減）
+        private Font _statFont;         // 9pt Segoe UI（通常HUD）
+        private Font _pausedFont;       // 12pt bold（PAUSEDテキスト）
+        private SolidBrush _statFgBrush;          // White
+        private SolidBrush _statPausedFgBrush;    // Yellow
+        private SolidBrush _statShadowBrush;      // 128,0,0,0
+        private SolidBrush _statPausedShadowBrush;// 160,0,0,0
+        private SolidBrush _statBgBrush;          // 130,0,0,0
 
         public LivePreviewWindow()
         {
@@ -212,6 +224,7 @@ namespace Kiritori.Views.LiveCapture
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint, true);
 
             this.KeyPreview = true;
+            InitPaintCache();
             LoadHoverAppearanceFromSettings();
 
             Properties.Settings.Default.PropertyChanged += (s, e) =>
@@ -973,21 +986,16 @@ namespace Kiritori.Views.LiveCapture
             base.OnPaint(e);
             var g = e.Graphics;
 
-            Bitmap frame = null;
+            // _latest をロック下で直接描画（クローン不要）
+            // 高FPS時またはGIF録画中はNearestNeighborで描画コストを下げる
             lock (_frameSync)
             {
                 if (_latest != null)
-                    frame = (Bitmap)_latest.Clone();
-            }
-
-            if (frame != null)
-            {
-                try
                 {
-                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                    g.DrawImage(frame, this.ClientRectangle);
+                    bool highLoad = (_gifQueue != null && !_gifQueue.IsAddingCompleted) || _srcFps >= 30;
+                    g.InterpolationMode = highLoad ? InterpolationMode.NearestNeighbor : InterpolationMode.HighQualityBicubic;
+                    g.DrawImage(_latest, this.ClientRectangle);
                 }
-                finally { frame.Dispose(); }
             }
 
             DrawHud(g);
@@ -995,69 +1003,37 @@ namespace Kiritori.Views.LiveCapture
 
             if (_showStats)
             {
-                // 角丸チップ用パラメータ（DPI対応）
                 int padX = DpiScale(6);
                 int padY = DpiScale(4);
-                int radius = DpiScale(0);
-                // 背景は少し透過した黒
-                int bgA = 130;
 
                 if (_paused)
                 {
-                    using (var font = new Font("Segoe UI", 12, FontStyle.Bold, GraphicsUnit.Point))
-                    using (var fg = new SolidBrush(Color.Yellow))
-                    using (var shadow = new SolidBrush(Color.FromArgb(160, 0, 0, 0)))
-                    using (var bg = new SolidBrush(Color.FromArgb(bgA, 0, 0, 0)))
-                    {
-                        string msg = "PAUSED";
-                        var loc = new Point(DpiScale(10), DpiScale(10));
-
-                        // テキストサイズから背景矩形を計算
-                        var sz = g.MeasureString(msg, font);
-                        var bgRect = new Rectangle(
-                            loc.X - padX, loc.Y - padY,
-                            (int)Math.Ceiling(sz.Width) + padX * 2,
-                            (int)Math.Ceiling(sz.Height) + padY * 2
-                        );
-
-                        g.SmoothingMode = SmoothingMode.AntiAlias;
-                        using (var path = RoundedRect(bgRect, radius))
-                            g.FillPath(bg, path);
-
-                        // 影 + 本体
-                        g.DrawString(msg, font, shadow, loc.X + 2, loc.Y + 2);
-                        g.DrawString(msg, font, fg, loc);
-                    }
+                    string msg = "PAUSED";
+                    var loc = new Point(DpiScale(10), DpiScale(10));
+                    var sz = g.MeasureString(msg, _pausedFont);
+                    var bgRect = new Rectangle(
+                        loc.X - padX, loc.Y - padY,
+                        (int)Math.Ceiling(sz.Width) + padX * 2,
+                        (int)Math.Ceiling(sz.Height) + padY * 2
+                    );
+                    g.FillRectangle(_statBgBrush, bgRect);
+                    g.DrawString(msg, _pausedFont, _statPausedShadowBrush, loc.X + 2, loc.Y + 2);
+                    g.DrawString(msg, _pausedFont, _statPausedFgBrush, loc);
                 }
                 else
                 {
-                    // string info = string.Format("FPS: {0}  CPU: {1:F1}%  MEM(Commit): {2} MB",
-                    //     _fps, _cpuUsage, _memUsage / 1024 / 1024);
                     string info = string.Format("FPS: {0} / {1}  CPU: {2:F1}%  MEM: {3} MB",
                         _dispFps, _srcFps, _cpuUsage, _memUsage / 1024 / 1024);
-                    using (var font = new Font("Segoe UI", 9, GraphicsUnit.Point))
-                    using (var fg = new SolidBrush(Color.White))
-                    using (var shadow = new SolidBrush(Color.FromArgb(128, 0, 0, 0)))
-                    using (var bg = new SolidBrush(Color.FromArgb(bgA, 0, 0, 0)))
-                    {
-                        var loc = new Point(DpiScale(10), DpiScale(10));
-
-                        // テキストサイズから背景矩形を計算
-                        var sz = g.MeasureString(info, font);
-                        var bgRect = new Rectangle(
-                            loc.X - padX, loc.Y - padY,
-                            (int)Math.Ceiling(sz.Width) + padX * 2,
-                            (int)Math.Ceiling(sz.Height) + padY * 2
-                        );
-
-                        g.SmoothingMode = SmoothingMode.AntiAlias;
-                        using (var path = RoundedRect(bgRect, radius))
-                            g.FillPath(bg, path);
-
-                        // 影 + 本体
-                        g.DrawString(info, font, shadow, loc.X + 1, loc.Y + 1);
-                        g.DrawString(info, font, fg, loc);
-                    }
+                    var loc = new Point(DpiScale(10), DpiScale(10));
+                    var sz = g.MeasureString(info, _statFont);
+                    var bgRect = new Rectangle(
+                        loc.X - padX, loc.Y - padY,
+                        (int)Math.Ceiling(sz.Width) + padX * 2,
+                        (int)Math.Ceiling(sz.Height) + padY * 2
+                    );
+                    g.FillRectangle(_statBgBrush, bgRect);
+                    g.DrawString(info, _statFont, _statShadowBrush, loc.X + 1, loc.Y + 1);
+                    g.DrawString(info, _statFont, _statFgBrush, loc);
                 }
             }
             if (!string.IsNullOrEmpty(_overlayText))
@@ -1448,6 +1424,8 @@ namespace Kiritori.Views.LiveCapture
             // ---- Misc UI resources ----
             if (_iconBadge != null) { try { _iconBadge.Dispose(); } catch { } _iconBadge = null; }
 
+            if (_overlayFont != null) { try { _overlayFont.Dispose(); } catch { } _overlayFont = null; }
+
             var cm = _ctx; _ctx = null;
             if (cm != null)
             {
@@ -1458,6 +1436,14 @@ namespace Kiritori.Views.LiveCapture
             {
                 try { gt.Stop(); } catch { }
             }
+
+            // GIFワーカー終了
+            var gq = _gifQueue; _gifQueue = null;
+            if (gq != null) { try { gq.CompleteAdding(); } catch { } try { gq.Dispose(); } catch { } }
+            var gwt = _gifWorkerThread; _gifWorkerThread = null;
+            if (gwt != null && gwt.IsAlive) { try { gwt.Join(3000); } catch { } }
+
+            DisposePaintCache();
 
             base.OnFormClosed(e);
         }
@@ -2292,55 +2278,20 @@ namespace Kiritori.Views.LiveCapture
             {
                 _rec.UpdateLatestFrame(bmp); // 到着ベースで差し替え、送出はワーカーが一定間隔で実施
             }
-            if (_gifFrames != null && bmp != null)
+            if (_gifQueue != null && !_gifQueue.IsAddingCompleted && bmp != null)
             {
                 try
                 {
-                    // 実時間をcsへ換算して pending に積む
                     int nowMs = (int)_gifClock.ElapsedMilliseconds;
                     int deltaMs = nowMs - _gifLastMs; if (deltaMs < 0) deltaMs = 0;
                     _gifLastMs = nowMs;
-                    // 実時間を 1/100 秒に（丸め推奨）
                     int deltaCs = Math.Max(1, (int)Math.Round(deltaMs / 10.0));
-                    _gifPendingDelayCs += deltaCs;
-
-                    // まだ最初のフレームが無ければ作る（※ここでは pending を消費しない：B参照）
-                    if (_gifFrames.Count == 0)
-                    {
-                        using (var prepped = PrepareGifFrame(bmp, _gifOpt))
-                        {
-                            _gifFrames.Add((Bitmap)prepped.Clone());
-                            _gifDelaysCs.Add(2); // 最小だけ入れておく（実時間はあとで積む）
-                            _gifLastHash = ComputeFastHash(prepped, _gifOpt.HashStep);
-                        }
-                        return; // pending は保持
-                    }
-
-                    // 目標FPS未満なら、画像処理せず前フレームの遅延だけ伸ばすタイミングまで待つ
-                    if (_gifPendingDelayCs < _gifMinIntervalCs) return;
-
-                    // ここで前処理＆差分判定
-                    using (var prepped = PrepareGifFrame(bmp, _gifOpt))
-                    {
-                        // まず「直前フレーム」に pending 遅延を加算してリセット
-                        int last = _gifDelaysCs.Count - 1;
-                        _gifDelaysCs[last] = ClampDelay(_gifDelaysCs[last] + _gifPendingDelayCs);
-                        _gifPendingDelayCs = 0;
-
-                        int hash = ComputeFastHash(prepped, _gifOpt.HashStep);
-
-                        if (hash != _gifLastHash)
-                        {
-                            // 変化があれば新フレーム開始（遅延は最小。以後 pending で伸びる）
-                            _gifFrames.Add((Bitmap)prepped.Clone());
-                            _gifDelaysCs.Add(2);
-                            _gifLastHash = hash;
-                        }
-                    }
+                    // 生フレームをクローンしてワーカーキューへ（前処理はワーカー側で実施）
+                    _gifQueue.TryAdd(((Bitmap)bmp.Clone(), deltaCs));
                 }
                 catch (Exception ex)
                 {
-                    Log.Warn("Failed to process GIF frame: " + ex.Message, "LivePreview");
+                    Log.Warn("Failed to enqueue GIF frame: " + ex.Message, "LivePreview");
                 }
             }
             bool forceBySize = (_lastPresentedClientSize != this.ClientSize);
@@ -3284,7 +3235,13 @@ namespace Kiritori.Views.LiveCapture
             _gifOpt = new GifRecordOptions();
             _gifFrames = new List<Bitmap>();
             _gifDelaysCs = new List<int>();
-            _gifLastHash = 0;
+            _gifPendingDelayCs = 0;
+            _gifLastMs = 0;
+            // ワーカー初期化
+            _gifQueue?.Dispose();
+            _gifQueue = new BlockingCollection<(Bitmap, int)>(boundedCapacity: 120);
+            _gifWorkerThread = new Thread(GifWorkerLoop) { IsBackground = true, Name = "GifWorker" };
+            _gifWorkerThread.Start();
 
             int setFps = 10;
             try { setFps = Math.Max(1, Properties.Settings.Default.GifMaxFps); } catch {}
@@ -3327,6 +3284,19 @@ namespace Kiritori.Views.LiveCapture
         }
         private void StopGifRecordAndSave(string path)
         {
+            // キューを締め切り、ワーカーが残フレームを処理し終わるまで待つ
+            var q = _gifQueue; _gifQueue = null;
+            if (q != null && !q.IsAddingCompleted)
+            {
+                try { q.CompleteAdding(); } catch { }
+            }
+            var wt = _gifWorkerThread; _gifWorkerThread = null;
+            if (wt != null && wt.IsAlive)
+            {
+                wt.Join(30000); // 最大30秒待機
+            }
+            q?.Dispose();
+
             List<Bitmap> frames; List<int> delays; int pendingCs;
 
             lock (_gifSync)
@@ -3378,6 +3348,90 @@ namespace Kiritori.Views.LiveCapture
                 Log.Debug("Open Explorer EX: " + ex.Message, "LivePreview");
             }
         }
+        private void GifWorkerLoop()
+        {
+            // キュー開始時点の設定をスナップショット
+            GifRecordOptions opt = _gifOpt;
+            int minIntervalCs = _gifMinIntervalCs;
+
+            int workerPendingCs = 0;
+            int workerLastHash = 0;
+            bool firstFrame = true;
+
+            try
+            {
+                foreach (var item in _gifQueue.GetConsumingEnumerable())
+                {
+                    Bitmap raw = item.bmp;
+                    int deltaCs = item.deltaCs;
+                    try
+                    {
+                        workerPendingCs += deltaCs;
+
+                        if (firstFrame)
+                        {
+                            // 最初のフレーム：即座に追加し、pending は保持（以後に積む）
+                            using (var prepped = PrepareGifFrame(raw, opt))
+                            {
+                                lock (_gifSync)
+                                {
+                                    if (_gifFrames != null)
+                                    {
+                                        _gifFrames.Add((Bitmap)prepped.Clone());
+                                        _gifDelaysCs.Add(2);
+                                        workerLastHash = ComputeFastHash(prepped, opt.HashStep);
+                                        firstFrame = false;
+                                    }
+                                }
+                            }
+                        }
+                        else if (workerPendingCs >= minIntervalCs)
+                        {
+                            using (var prepped = PrepareGifFrame(raw, opt))
+                            {
+                                lock (_gifSync)
+                                {
+                                    if (_gifFrames != null && _gifDelaysCs != null && _gifDelaysCs.Count > 0)
+                                    {
+                                        int last = _gifDelaysCs.Count - 1;
+                                        _gifDelaysCs[last] = ClampDelay(_gifDelaysCs[last] + workerPendingCs);
+                                        workerPendingCs = 0;
+
+                                        int hash = ComputeFastHash(prepped, opt.HashStep);
+                                        if (hash != workerLastHash)
+                                        {
+                                            _gifFrames.Add((Bitmap)prepped.Clone());
+                                            _gifDelaysCs.Add(2);
+                                            workerLastHash = hash;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // interval未満のフレームは前処理せずスキップ
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warn("GifWorker frame error: " + ex.Message, "LivePreview");
+                    }
+                    finally
+                    {
+                        try { raw.Dispose(); } catch { }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("GifWorker loop error: " + ex.Message, "LivePreview");
+            }
+
+            // 残り pending を _gifPendingDelayCs に書き戻す（StopGifRecordAndSave が最後に使う）
+            lock (_gifSync)
+            {
+                _gifPendingDelayCs += workerPendingCs;
+            }
+        }
+
         private static Bitmap PrepareGifFrame(Bitmap src, GifRecordOptions opt)
         {
             Bitmap work = src;
@@ -3483,6 +3537,28 @@ namespace Kiritori.Views.LiveCapture
             return dst;
         }
 
+
+        private void InitPaintCache()
+        {
+            _statFont              = new Font("Segoe UI", 9, GraphicsUnit.Point);
+            _pausedFont            = new Font("Segoe UI", 12, FontStyle.Bold, GraphicsUnit.Point);
+            _statFgBrush           = new SolidBrush(Color.White);
+            _statPausedFgBrush     = new SolidBrush(Color.Yellow);
+            _statShadowBrush       = new SolidBrush(Color.FromArgb(128, 0, 0, 0));
+            _statPausedShadowBrush = new SolidBrush(Color.FromArgb(160, 0, 0, 0));
+            _statBgBrush           = new SolidBrush(Color.FromArgb(130, 0, 0, 0));
+        }
+
+        private void DisposePaintCache()
+        {
+            _statFont?.Dispose();              _statFont = null;
+            _pausedFont?.Dispose();            _pausedFont = null;
+            _statFgBrush?.Dispose();           _statFgBrush = null;
+            _statPausedFgBrush?.Dispose();     _statPausedFgBrush = null;
+            _statShadowBrush?.Dispose();       _statShadowBrush = null;
+            _statPausedShadowBrush?.Dispose(); _statPausedShadowBrush = null;
+            _statBgBrush?.Dispose();           _statBgBrush = null;
+        }
 
         private static class NativeMethods
         {

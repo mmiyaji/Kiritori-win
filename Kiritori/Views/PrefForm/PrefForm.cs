@@ -68,6 +68,17 @@ namespace Kiritori
             public bool Installed { get; set; }
             public override string ToString() => Text;
         }
+        // タブ切り替え時の描画フリーズ対策: WS_EX_COMPOSITED で全描画をバックバッファに集約してから一括反映
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                var cp = base.CreateParams;
+                cp.ExStyle |= 0x02000000; // WS_EX_COMPOSITED
+                return cp;
+            }
+        }
+
         public PrefForm()
         {
             _initStartupToggle = true;
@@ -92,12 +103,8 @@ namespace Kiritori
 
             SanitizeNumericSettings();
             var S = Properties.Settings.Default;
-            BindIntNumeric(textBoxHistory,   S, nameof(S.HistoryLimit),            0, 100, 20);
-            BindIntNumeric(numHoverThickness,S, nameof(S.HoverHighlightThickness), 1, 10,   2);
-            BindIntNumeric(numGifMax,        S, nameof(S.GifMaxDurationSec),       0, 3600, 0);
-            BindIntNumeric(numGifFps,        S, nameof(S.GifMaxFps),               1, 30,  10);
-            BindIntNumeric(numGifWidth,      S, nameof(S.GifMaxWidth),             1, 1920, 960);
-            // BindGifSettings();
+            BindIntNumeric(textBoxHistory, S, nameof(S.HistoryLimit), 0, 100, 20);
+            // Appearance controls are lazy-loaded; BindIntNumeric for them is called in BuildAppearanceTab()
 
             SelectPresetComboFromSettings();
 
@@ -1202,13 +1209,15 @@ namespace Kiritori
         private void UpdateVersionLabel()
         {
             var asm = Assembly.GetExecutingAssembly();
-            var ver = asm.GetName().Version;
+            var infoVer = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+                        ?? Application.ProductVersion;
+            var buildDate = GetAssemblyWriteTime(asm);
 
             this.labelVersion.Text = string.Format(
                 CultureInfo.InvariantCulture,
-                "Version {0} Build Date: {1:dd MMM, yyyy}",
-                ver,
-                DateTime.Now
+                "Version {0}  Build Date: {1:dd MMM, yyyy}",
+                infoVer,
+                buildDate
             );
         }
 

@@ -116,17 +116,21 @@ namespace Kiritori.Views.LiveCapture
                         if (hdcSrc != IntPtr.Zero) NativeMethods.ReleaseDC(desktopWnd, hdcSrc);
                     }
 
-                    // フレーム通知（null は送らない）
-                    Bitmap toSend = null;
-                    lock (_bufLock)
+                    // フレーム通知（サブスクライバがいる場合のみクローン）
+                    var handler = FrameArrived;
+                    if (handler != null)
                     {
-                        if (_buffer != null)
-                            toSend = (Bitmap)_buffer.Clone();
-                    }
-                    if (toSend != null)
-                    {
-                        try { FrameArrived?.Invoke(toSend); }
-                        finally { toSend.Dispose(); }
+                        Bitmap toSend = null;
+                        lock (_bufLock)
+                        {
+                            if (_buffer != null)
+                                toSend = (Bitmap)_buffer.Clone();
+                        }
+                        if (toSend != null)
+                        {
+                            try { handler.Invoke(toSend); }
+                            finally { toSend.Dispose(); }
+                        }
                     }
 
                     if (MaxFps > 0)

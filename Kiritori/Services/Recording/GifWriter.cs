@@ -11,6 +11,7 @@ namespace Kiritori.Services.Recording
     {
         private const int PropertyTagFrameDelay = 0x5100; // LONG[frameCount], 1/100 sec
         private const int PropertyTagLoopCount = 0x5101; // SHORT, 0 = infinite
+        private static ImageCodecInfo _gifEncoder;
 
         public static void SaveAnimatedGif(IList<Bitmap> frames, IList<int> delaysCs, string outPath, bool loopForever)
         {
@@ -71,9 +72,10 @@ namespace Kiritori.Services.Recording
 
         private static ImageCodecInfo GetEncoder(ImageFormat fmt)
         {
+            if (_gifEncoder != null && _gifEncoder.FormatID == fmt.Guid) return _gifEncoder;
             ImageCodecInfo[] encs = ImageCodecInfo.GetImageEncoders();
             for (int i = 0; i < encs.Length; i++)
-                if (encs[i].FormatID == fmt.Guid) return encs[i];
+                if (encs[i].FormatID == fmt.Guid) { _gifEncoder = encs[i]; return _gifEncoder; }
             return null;
         }
     }
