@@ -310,7 +310,7 @@ namespace Kiritori
                     "  State=" + Kiritori.Services.Extensions.ExtensionsPaths.StateJson,
                     "Extensions");
             }
-            catch { /* 起動阻害は避ける */ }
+            catch (Exception ex) { Log.Warn("Extensions early init failed: " + ex.Message, "Extensions"); }
         }
 
         private static AppStartupOptions ParseArgs(string[] args)
