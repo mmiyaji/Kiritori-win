@@ -228,10 +228,10 @@ namespace Kiritori
             //         this.tabLogs,
             //     });
             // }
-            // タブ切り替え前にレイアウトを一時停止して描画フリーズを防ぐ
+            // タブ切り替え前に再帰的にレイアウトを停止（子コントロールの OnVisibleChanged 連鎖を防ぐ）
             this.tabControl.Selecting += (s, e) =>
             {
-                if (e.TabPage != null) e.TabPage.SuspendLayout();
+                if (e.TabPage != null) SuspendLayoutDeep(e.TabPage);
             };
             this.tabControl.Selected += (s, e) =>
             {
@@ -257,14 +257,18 @@ namespace Kiritori
                     catch { /* 取得できなければ無視 */ }
                     StartLazyThumbLoad();
                 }
-                // 一時停止していたレイアウトをまとめて実行（1パスのみ）
-                e.TabPage?.ResumeLayout(true);
+                // 子から順に Resume して最後に TabPage で一括レイアウト実行
+                if (e.TabPage != null)
+                {
+                    ResumeLayoutDeep(e.TabPage);
+                    e.TabPage.PerformLayout();
+                }
             };
             // フォーム表示時、既に選ばれているタブだけ即構築（安全策）
             this.Shown += (s, e) =>
             {
                 var t = this.tabControl.SelectedTab;
-                if (t != null) t.SuspendLayout();
+                if (t != null) SuspendLayoutDeep(t);
                 if (t == this.tabAdvanced && !_advancedBuilt) { _advancedBuilt = true; BuildAdvancedTab(); }
                 else if (t == this.tabExtensions && !_extensionsBuilt) { _extensionsBuilt = true; BuildExtensionsTab(); }
                 else if (t == this.tabAppearance && !_appearanceBuilt) { _appearanceBuilt = true; BuildAppearanceTab(); }
@@ -280,7 +284,7 @@ namespace Kiritori
                     StartLazyThumbLoad();
                 }
                 // if (t == this.tabInfo       && !_infoBuilt)       { _infoBuilt = true; BuildInfoTab(); }
-                t?.ResumeLayout(true);
+                if (t != null) { ResumeLayoutDeep(t); t.PerformLayout(); }
             };
 
             // =========================================================
@@ -1299,6 +1303,23 @@ namespace Kiritori
                 TextAlign = ContentAlignment.MiddleRight,
                 Anchor = AnchorStyles.Right
             };
+        }
+
+        // 子コントロールも含めて再帰的にレイアウトを停止する
+        // （AutoSize ネスト構造での OnVisibleChanged 連鎖レイアウトを防ぐ）
+        private static void SuspendLayoutDeep(Control c)
+        {
+            c.SuspendLayout();
+            foreach (Control child in c.Controls)
+                SuspendLayoutDeep(child);
+        }
+
+        // 子から順に Resume し、最後に親で ResumeLayout(true) して一括レイアウト実行
+        private static void ResumeLayoutDeep(Control c)
+        {
+            foreach (Control child in c.Controls)
+                ResumeLayoutDeep(child);
+            c.ResumeLayout(false);
         }
 
         private void AddShortcutRow(
