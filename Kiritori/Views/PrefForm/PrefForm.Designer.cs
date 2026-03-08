@@ -228,6 +228,11 @@ namespace Kiritori
             //         this.tabLogs,
             //     });
             // }
+            // タブ切り替え前にレイアウトを一時停止して描画フリーズを防ぐ
+            this.tabControl.Selecting += (s, e) =>
+            {
+                if (e.TabPage != null) e.TabPage.SuspendLayout();
+            };
             this.tabControl.Selected += (s, e) =>
             {
                 // 履歴タブから離れたら idle の生成を止める
@@ -252,11 +257,14 @@ namespace Kiritori
                     catch { /* 取得できなければ無視 */ }
                     StartLazyThumbLoad();
                 }
+                // 一時停止していたレイアウトをまとめて実行（1パスのみ）
+                e.TabPage?.ResumeLayout(true);
             };
             // フォーム表示時、既に選ばれているタブだけ即構築（安全策）
             this.Shown += (s, e) =>
             {
                 var t = this.tabControl.SelectedTab;
+                if (t != null) t.SuspendLayout();
                 if (t == this.tabAdvanced && !_advancedBuilt) { _advancedBuilt = true; BuildAdvancedTab(); }
                 else if (t == this.tabExtensions && !_extensionsBuilt) { _extensionsBuilt = true; BuildExtensionsTab(); }
                 else if (t == this.tabAppearance && !_appearanceBuilt) { _appearanceBuilt = true; BuildAppearanceTab(); }
@@ -272,6 +280,7 @@ namespace Kiritori
                     StartLazyThumbLoad();
                 }
                 // if (t == this.tabInfo       && !_infoBuilt)       { _infoBuilt = true; BuildInfoTab(); }
+                t?.ResumeLayout(true);
             };
 
             // =========================================================
@@ -382,6 +391,7 @@ namespace Kiritori
             // =========================================================
             // General タブ（縦積みレイアウト）
             // =========================================================
+            this.tabGeneral.SuspendLayout();
             var scrollGeneral = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -394,12 +404,14 @@ namespace Kiritori
             stackGeneral.Dock = DockStyle.Top;
             stackGeneral.AutoSize = true;
             stackGeneral.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            stackGeneral.SuspendLayout();
             this.tabGeneral.Controls.Add(stackGeneral);
 
             // Application Settings
             this.grpAppSettings = NewGroup("Application Settings");
             this.grpAppSettings.Tag = "loc:Text.AppSetting";
             var tlpApp = NewGrid(3, 3);
+            tlpApp.SuspendLayout();
 
             this.labelLanguage = NewRightLabel("Language");
             this.labelLanguage.Tag = "loc:Text.Language";
@@ -458,6 +470,7 @@ namespace Kiritori
             tlpApp.Controls.Add(this.labelHistory, 0, 3);
             tlpApp.Controls.Add(this.textBoxHistory, 1, 3);
 
+            tlpApp.ResumeLayout(false);
             this.grpAppSettings.Controls.Add(tlpApp);
 
             // Hotkeys（上マージンで間隔）
@@ -466,6 +479,7 @@ namespace Kiritori
             this.grpHotkey.Margin = new Padding(0, 8, 0, 0);
 
             var tlpHot = NewGrid(4, 3);
+            tlpHot.SuspendLayout();
             this.labelHotkeyCapture = NewRightLabel("Image capture");
             this.labelHotkeyCapture.Tag = "loc:Text.ImageCapture";
             // this.textBoxKiritori = new TextBox
@@ -568,11 +582,14 @@ namespace Kiritori
             tlpHot.Controls.Add(this.textBoxHotkeyCaptureFixed, 1, 3);
             tlpHot.Controls.Add(PackButtons(btnResetFixed, btnExecFixed), 3, 3);
 
+            tlpHot.ResumeLayout(false);
             this.grpHotkey.Controls.Add(tlpHot);
 
             // stack へ追加
             stackGeneral.Controls.Add(this.grpAppSettings, 0, 0);
             stackGeneral.Controls.Add(this.grpHotkey, 0, 1);
+            stackGeneral.ResumeLayout(false);
+            this.tabGeneral.ResumeLayout(false);
 
             // =========================================================
             // Appearance タブ（ラジーロード：選択時に BuildAppearanceTab() で構築）
@@ -1219,7 +1236,10 @@ namespace Kiritori
             WireUpAppearanceBindings();
             SelectPresetComboFromSettings();
             HookRuntimeEvents();
+            // フォーム全体のレイアウトを一括停止してから Localizer を適用（各 Text 変更ごとのレイアウトパスを防ぐ）
+            this.SuspendLayout();
             Localizer.Apply(this);
+            this.ResumeLayout(false);
         }
 
         private static TableLayoutPanel NewGrid(int rows, int cols)
