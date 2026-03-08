@@ -228,63 +228,129 @@ namespace Kiritori
             //         this.tabLogs,
             //     });
             // }
-            // タブ切り替え前に再帰的にレイアウトを停止（子コントロールの OnVisibleChanged 連鎖を防ぐ）
+            // タブ切り替え前の処理
             this.tabControl.Selecting += (s, e) =>
             {
-                if (e.TabPage != null) SuspendLayoutDeep(e.TabPage);
+                if (e.TabPage == null) return;
+                // 未ビルドのタブ → Loading... を表示してビルドは BeginInvoke で延期
+                bool needsBuild = (e.TabPage == this.tabAdvanced   && !_advancedBuilt)
+                               || (e.TabPage == this.tabExtensions && !_extensionsBuilt)
+                               || (e.TabPage == this.tabAppearance && !_appearanceBuilt)
+                               || (e.TabPage == this.tabShortcuts  && !_shortcutsBuilt)
+                               || (e.TabPage == this.tabHistory    && !_historyBuilt);
+                if (needsBuild)
+                {
+                    var lbl = new Label
+                    {
+                        Text = "Loading...",
+                        Dock = DockStyle.Fill,
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ForeColor = SystemColors.GrayText,
+                        Tag = "_loadingOverlay"
+                    };
+                    e.TabPage.Controls.Add(lbl);
+                    e.TabPage.Controls.SetChildIndex(lbl, 0); // 最前面
+                }
+                else
+                {
+                    // ビルド済みタブ → 再帰SuspendLayout でレイアウト連鎖を抑制
+                    SuspendLayoutDeep(e.TabPage);
+                }
             };
             this.tabControl.Selected += (s, e) =>
             {
-                // 履歴タブから離れたら idle の生成を止める
                 if (e.TabPage != this.tabHistory) StopLazyThumbLoad();
 
-                if (e.TabPage == this.tabAdvanced && !_advancedBuilt) { _advancedBuilt = true; BuildAdvancedTab(); }
-                else if (e.TabPage == this.tabExtensions && !_extensionsBuilt) { _extensionsBuilt = true; BuildExtensionsTab(); }
-                else if (e.TabPage == this.tabAppearance && !_appearanceBuilt) { _appearanceBuilt = true; BuildAppearanceTab(); }
-                else if (e.TabPage == this.tabShortcuts && !_shortcutsBuilt) { _shortcutsBuilt = true; BuildShortcutsTab(); }
-                else if (e.TabPage == this.tabHistory)
+                var tp = e.TabPage;
+                if (tp == null) return;
+
+                bool needsBuild = (tp == this.tabAdvanced   && !_advancedBuilt)
+                               || (tp == this.tabExtensions && !_extensionsBuilt)
+                               || (tp == this.tabAppearance && !_appearanceBuilt)
+                               || (tp == this.tabShortcuts  && !_shortcutsBuilt)
+                               || (tp == this.tabHistory    && !_historyBuilt);
+
+                if (needsBuild)
                 {
-                    if (!_historyBuilt)
+                    // Loading... が描画されてから Build を実行するよう次メッセージサイクルへ延期
+                    this.BeginInvoke((Action)(() =>
                     {
-                        _historyBuilt = true;
-                        BuildHistoryTab();
-                    }
-                    try
-                    {
-                        var snap = HistoryBridge.GetSnapshot();
-                        this.SetupHistoryTabIfNeededAndShow(snap);
-                    }
-                    catch { /* 取得できなければ無視 */ }
-                    StartLazyThumbLoad();
+                        if (tp == this.tabAdvanced   && !_advancedBuilt)   { _advancedBuilt   = true; BuildAdvancedTab(); }
+                        else if (tp == this.tabExtensions && !_extensionsBuilt) { _extensionsBuilt = true; BuildExtensionsTab(); }
+                        else if (tp == this.tabAppearance && !_appearanceBuilt) { _appearanceBuilt = true; BuildAppearanceTab(); }
+                        else if (tp == this.tabShortcuts  && !_shortcutsBuilt)  { _shortcutsBuilt  = true; BuildShortcutsTab(); }
+                        else if (tp == this.tabHistory)
+                        {
+                            if (!_historyBuilt) { _historyBuilt = true; BuildHistoryTab(); }
+                            try { var snap = HistoryBridge.GetSnapshot(); this.SetupHistoryTabIfNeededAndShow(snap); }
+                            catch { /* 取得できなければ無視 */ }
+                            StartLazyThumbLoad();
+                        }
+                        // Loading... ラベルを除去
+                        for (int i = tp.Controls.Count - 1; i >= 0; i--)
+                        {
+                            if (tp.Controls[i].Tag as string == "_loadingOverlay")
+                            { var c = tp.Controls[i]; tp.Controls.RemoveAt(i); c.Dispose(); }
+                        }
+                    }));
                 }
-                // 子から順に Resume して最後に TabPage で一括レイアウト実行
-                if (e.TabPage != null)
+                else
                 {
-                    ResumeLayoutDeep(e.TabPage);
-                    e.TabPage.PerformLayout();
+                    // ビルド済みタブ：Suspend していたレイアウトを一括実行
+                    ResumeLayoutDeep(tp);
+                    tp.PerformLayout();
                 }
             };
             // フォーム表示時、既に選ばれているタブだけ即構築（安全策）
             this.Shown += (s, e) =>
             {
                 var t = this.tabControl.SelectedTab;
-                if (t != null) SuspendLayoutDeep(t);
-                if (t == this.tabAdvanced && !_advancedBuilt) { _advancedBuilt = true; BuildAdvancedTab(); }
-                else if (t == this.tabExtensions && !_extensionsBuilt) { _extensionsBuilt = true; BuildExtensionsTab(); }
-                else if (t == this.tabAppearance && !_appearanceBuilt) { _appearanceBuilt = true; BuildAppearanceTab(); }
-                else if (t == this.tabShortcuts && !_shortcutsBuilt) { _shortcutsBuilt = true; BuildShortcutsTab(); }
-                else if (t == this.tabHistory && !_historyBuilt)
+                if (t == null) return;
+                bool needsBuild = (t == this.tabAdvanced   && !_advancedBuilt)
+                               || (t == this.tabExtensions && !_extensionsBuilt)
+                               || (t == this.tabAppearance && !_appearanceBuilt)
+                               || (t == this.tabShortcuts  && !_shortcutsBuilt)
+                               || (t == this.tabHistory    && !_historyBuilt);
+                if (needsBuild)
                 {
-                    _historyBuilt = true;
-                    BuildHistoryTab();
-
-                    var snap = HistoryBridge.GetSnapshot();
-                    this.SetupHistoryTabIfNeededAndShow(snap);
-
-                    StartLazyThumbLoad();
+                    var lbl = new Label
+                    {
+                        Text = "Loading...",
+                        Dock = DockStyle.Fill,
+                        TextAlign = ContentAlignment.MiddleCenter,
+                        ForeColor = SystemColors.GrayText,
+                        Tag = "_loadingOverlay"
+                    };
+                    t.Controls.Add(lbl);
+                    t.Controls.SetChildIndex(lbl, 0);
+                    this.BeginInvoke((Action)(() =>
+                    {
+                        if (t == this.tabAdvanced   && !_advancedBuilt)   { _advancedBuilt   = true; BuildAdvancedTab(); }
+                        else if (t == this.tabExtensions && !_extensionsBuilt) { _extensionsBuilt = true; BuildExtensionsTab(); }
+                        else if (t == this.tabAppearance && !_appearanceBuilt) { _appearanceBuilt = true; BuildAppearanceTab(); }
+                        else if (t == this.tabShortcuts  && !_shortcutsBuilt)  { _shortcutsBuilt  = true; BuildShortcutsTab(); }
+                        else if (t == this.tabHistory && !_historyBuilt)
+                        {
+                            _historyBuilt = true;
+                            BuildHistoryTab();
+                            var snap = HistoryBridge.GetSnapshot();
+                            this.SetupHistoryTabIfNeededAndShow(snap);
+                            StartLazyThumbLoad();
+                        }
+                        for (int i = t.Controls.Count - 1; i >= 0; i--)
+                        {
+                            if (t.Controls[i].Tag as string == "_loadingOverlay")
+                            { var c = t.Controls[i]; t.Controls.RemoveAt(i); c.Dispose(); }
+                        }
+                    }));
                 }
-                // if (t == this.tabInfo       && !_infoBuilt)       { _infoBuilt = true; BuildInfoTab(); }
-                if (t != null) { ResumeLayoutDeep(t); t.PerformLayout(); }
+                else
+                {
+                    SuspendLayoutDeep(t);
+                    // if (t == this.tabInfo && !_infoBuilt) { _infoBuilt = true; BuildInfoTab(); }
+                    ResumeLayoutDeep(t);
+                    t.PerformLayout();
+                }
             };
 
             // =========================================================
