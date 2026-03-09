@@ -19,6 +19,16 @@ namespace Kiritori.Helpers
             ApplyControls(form.Controls);
         }
 
+        public static void Apply(Control root)
+        {
+            if (root == null) return;
+
+            if (root.Tag is string tag && tag.StartsWith("loc:"))
+                root.Text = SR.T(tag.Substring(4));
+
+            ApplyControls(root.Controls);
+        }
+
         private static void ApplyControls(Control.ControlCollection controls)
         {
             foreach (Control c in controls)

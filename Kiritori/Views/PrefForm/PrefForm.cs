@@ -56,6 +56,7 @@ namespace Kiritori
         private HotkeySpec DEF_HOTKEY_FIXED = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D7 };
         private string _saveButtonDefaultText;
         private System.Windows.Forms.Timer _savedResetTimer;
+        private System.Windows.Forms.Timer _appearanceWarmupTimer;
         private SynchronizationContext _ui;
         // =========================================================
         // ==================== Constructor ========================
@@ -137,6 +138,7 @@ namespace Kiritori
             HookRuntimeEvents();
             WireAdvancedDirtyEvents();
             InitLogTab();
+            this.Shown += (_, __) => ScheduleAppearanceWarmup();
         }
         private MainApplication ResolveMain()
         {
@@ -146,6 +148,29 @@ namespace Kiritori
             var f = GetMainForm();
             _mainApp = f as MainApplication;
             return _mainApp;
+        }
+
+        private void ScheduleAppearanceWarmup()
+        {
+            if (IsDisposed || _appearanceBuilt) return;
+            if (_appearanceWarmupTimer != null) return;
+
+            _appearanceWarmupTimer = new System.Windows.Forms.Timer { Interval = 250 };
+            _appearanceWarmupTimer.Tick += (_, __) =>
+            {
+                _appearanceWarmupTimer.Stop();
+                _appearanceWarmupTimer.Dispose();
+                _appearanceWarmupTimer = null;
+
+                if (IsDisposed || _appearanceBuilt) return;
+                BeginInvoke((Action)(() =>
+                {
+                    if (IsDisposed || _appearanceBuilt) return;
+                    _appearanceBuilt = true;
+                    BuildAppearanceTab();
+                }));
+            };
+            _appearanceWarmupTimer.Start();
         }
 
 
@@ -318,6 +343,12 @@ namespace Kiritori
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            if (_appearanceWarmupTimer != null)
+            {
+                _appearanceWarmupTimer.Stop();
+                _appearanceWarmupTimer.Dispose();
+                _appearanceWarmupTimer = null;
+            }
             if (this.Icon != null)
             {
                 this.Icon.Dispose();
@@ -1614,3 +1645,5 @@ namespace Kiritori
         }
     }
 }
+
+
