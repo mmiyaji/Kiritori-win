@@ -118,6 +118,7 @@ namespace Kiritori
 
         // PictureBox に渡す「非アニメ・静止」複製（ImageAnimator回避用）
         private Bitmap _originalStill;
+        private string _imageSourcePath;
 
         // MSPaint 編集
         private string _paintEditPath;
@@ -219,19 +220,87 @@ namespace Kiritori
             this.pictureBox1.MouseLeave += (_, __) => { if (!_isResizing) this.Cursor = Cursors.Default; };
         }
 
-        public Bitmap GetMainImage() => (Bitmap)pictureBox1.Image;
-        public string GetImageSourcePath() => pictureBox1.Image?.Tag as string;
+        public Bitmap GetMainImage() => main_image;
+        public string GetImageSourcePath() => _imageSourcePath;
         public void SetLoadMethod(LoadMethod m)
         {
             CurrentLoadMethod = m;
         }
         internal Bitmap GetCurrentBitmapClone()
         {
-            var src = _originalImage ?? pictureBox1?.Image as Bitmap;
+            var src = main_image ?? _originalImage as Bitmap;
             if (src == null) return null;
             try { return new Bitmap(src); } catch { return null; }
         }
 
+
+        private void DisposeBitmap(ref Bitmap bitmap)
+        {
+            if (bitmap == null) return;
+            try { bitmap.Dispose(); } catch { }
+            bitmap = null;
+        }
+
+        private void DisposeImage(ref Image image)
+        {
+            if (image == null) return;
+            try { image.Dispose(); } catch { }
+            image = null;
+        }
+
+        private void DisposeDisplayImageIfOwned()
+        {
+            var display = pictureBox1?.Image;
+            if (display == null) return;
+            if (ReferenceEquals(display, _originalImage) || ReferenceEquals(display, _originalStill)) return;
+
+            try { display.Dispose(); } catch { }
+            if (pictureBox1 != null) pictureBox1.Image = null;
+        }
+
+        private void ResetImageState()
+        {
+            DisposeDisplayImageIfOwned();
+            if (pictureBox1 != null)
+                pictureBox1.Image = null;
+
+            DisposeBitmap(ref thumbnail_image);
+            main_image = null;
+            DisposeBitmap(ref _originalStill);
+            DisposeImage(ref _originalImage);
+            _imageSourcePath = null;
+        }
+
+        private void AssignMainImage(Bitmap bitmap, string sourcePath)
+        {
+            ResetImageState();
+
+            _originalImage = bitmap;
+            main_image = bitmap;
+            _imageSourcePath = sourcePath;
+
+            if (_originalImage != null)
+                _originalImage.Tag = sourcePath;
+        }
+
+        private void DisposeRuntimeResources()
+        {
+            try { _overlayTimer?.Stop(); } catch { }
+            try { _zoomAnimTimer?.Stop(); } catch { }
+            try { _resizeCommitTimer?.Stop(); } catch { }
+
+            ResetImageState();
+
+            foreach (var pair in _closeIconCache.Values)
+            {
+                try { pair.normal?.Dispose(); } catch { }
+                try { pair.hover?.Dispose(); } catch { }
+            }
+            _closeIconCache.Clear();
+
+            try { _overlayFont?.Dispose(); } catch { }
+            _overlayFont = null;
+        }
         #endregion
     }
 }

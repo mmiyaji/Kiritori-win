@@ -1,4 +1,4 @@
-using Kiritori.Helpers;
+﻿using Kiritori.Helpers;
 using Kiritori.Services.Notifications;
 using Kiritori.Services.Ocr;
 using Kiritori.Services.Logging;
@@ -37,27 +37,16 @@ namespace Kiritori
 
         private void ApplyBitmap(Bitmap bmp)
         {
-            if (pictureBox1.Image != null && !ReferenceEquals(pictureBox1.Image, bmp))
-            {
-                try { pictureBox1.Image.Dispose(); } catch { }
-            }
-            if (main_image != null && !ReferenceEquals(main_image, bmp))
-            {
-                try { main_image.Dispose(); } catch { }
-            }
-
             this.Size = bmp.Size;
             pictureBox1.Size = bmp.Size;
 
-            SetImageAndResetZoom(bmp);
-            pictureBox1.Image = bmp;
+            SetImageAndResetZoom(bmp, null);
 
             date = DateTime.Now;
             this.Text = date.ToString("yyyyMMdd-HHmmss") + ".png";
             this.TopMost = this.AlwaysOnTop;
             this.Opacity = this.WindowOpacityPercent;
 
-            this.main_image = bmp;
             this.setThumbnail(bmp);
             if (!SuppressHistory) ma.setHistory(this);
             ShowOverlay("KIRITORI");
@@ -166,15 +155,12 @@ namespace Kiritori
             try
             {
                 this.Size = target;
-                var old = pictureBox1.Image;
                 pictureBox1.Image = null;
 
                 if (pictureBox1.Size != target)
                     pictureBox1.Size = target;
 
-                SetImageAndResetZoom(bmp);
-                pictureBox1.Image = bmp;
-                old?.Dispose();
+                SetImageAndResetZoom(bmp, titlePath);
 
                 if (!string.IsNullOrEmpty(titlePath))
                     this.Text = titlePath;
@@ -189,7 +175,6 @@ namespace Kiritori
                 );
                 this.Location = loc;
 
-                this.main_image = bmp;
                 this.setThumbnail(bmp);
                 ApplyInitialDisplayZoomIfNeeded();
 
@@ -226,23 +211,18 @@ namespace Kiritori
 
         private void setThumbnail(Bitmap bmp)
         {
-            this.main_image = bmp;
-            if (bmp.Size.Width > THUMB_WIDTH)
+            DisposeBitmap(ref thumbnail_image);
+            if (bmp == null || bmp.Width <= THUMB_WIDTH) return;
+
+            int resizeWidth = THUMB_WIDTH;
+            int resizeHeight = (int)(bmp.Height * ((double)resizeWidth / (double)bmp.Width));
+            Bitmap resizeBmp = new Bitmap(resizeWidth, resizeHeight);
+            using (Graphics g = Graphics.FromImage(resizeBmp))
             {
-                int resizeWidth = THUMB_WIDTH;
-                int resizeHeight = (int)(bmp.Height * ((double)resizeWidth / (double)bmp.Width));
-                Bitmap resizeBmp = new Bitmap(resizeWidth, resizeHeight);
-                using (Graphics g = Graphics.FromImage(resizeBmp))
-                {
-                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                    g.DrawImage(bmp, 0, 0, resizeWidth, resizeHeight);
-                }
-                this.thumbnail_image = resizeBmp;
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.DrawImage(bmp, 0, 0, resizeWidth, resizeHeight);
             }
-            else
-            {
-                this.thumbnail_image = bmp;
-            }
+            this.thumbnail_image = resizeBmp;
         }
 
         public void AlignClientTopLeftToScreen(Point targetScreenPoint)
@@ -262,27 +242,16 @@ namespace Kiritori
         {
             if (_originalImage == null) return;
 
-            var vw = Math.Max(1, pictureBox1.ClientSize.Width);
-            var vh = Math.Max(1, pictureBox1.ClientSize.Height);
-
-            var bmp = new Bitmap(vw, vh, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
-            using (var g = Graphics.FromImage(bmp))
+            pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
+            if (!ReferenceEquals(pictureBox1.Image, _originalImage))
             {
-                g.CompositingMode = CompositingMode.SourceOver;
-                g.SmoothingMode = SmoothingMode.HighQuality;
-                g.CompositingQuality = CompositingQuality.HighQuality;
-                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-
-                // ウィンドウにフィット（縦横比は固定しない＝以前の挙動）
-                g.DrawImage(_originalImage, new Rectangle(0, 0, vw, vh));
+                DisposeDisplayImageIfOwned();
+                pictureBox1.Image = _originalImage;
             }
 
-            var old = pictureBox1.Image;
-            // pictureBox1.SizeMode = PictureBoxSizeMode.Normal; // ← もう描画済みBitmapなのでストレッチ不要
-            pictureBox1.Image = bmp;
-            old?.Dispose();
-            Log.Debug($"Refreshed from original hi-q: {bmp.Width}x{bmp.Height}", "SnapWindow");
+            pictureBox1.Size = this.ClientSize;
+            pictureBox1.Invalidate();
+            Log.Debug($"Refreshed from original hi-q: {pictureBox1.Width}x{pictureBox1.Height}", "SnapWindow");
         }
 
 

@@ -24,6 +24,18 @@ namespace Kiritori
         private bool _thumbLoadingActive;
         private Queue<HistoryEntry> _thumbQueue;
         private EventHandler _idleHandler;
+        private readonly Color _historyPageBackColor = Color.FromArgb(244, 247, 251);
+        private readonly Color _historyCardBackColor = Color.White;
+        private readonly Color _historyCardBorderColor = Color.FromArgb(218, 226, 236);
+        private readonly Color _historyCardHoverBorderColor = Color.FromArgb(135, 167, 214);
+        private readonly Color _historyCardSelectedColor = Color.FromArgb(45, 108, 223);
+        private readonly Color _historyMutedTextColor = Color.FromArgb(108, 117, 129);
+        private readonly Color _historyMetaFillColor = Color.FromArgb(237, 242, 248);
+        
+        private readonly Color _historyMetaTextColor = Color.FromArgb(69, 84, 104);
+        
+        private readonly Color _historyActionFillColor = Color.FromArgb(248, 250, 252);
+        private readonly Color _historyActionBorderColor = Color.FromArgb(201, 210, 222);
 
         // サムネ設定
         private const int THUMB_W = 192 / 2;
@@ -102,7 +114,7 @@ namespace Kiritori
             _emptyState = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = SystemColors.Window,
+                BackColor = _historyPageBackColor,
                 Visible = false  // 初期は非表示
             };
 
@@ -216,16 +228,17 @@ namespace Kiritori
             _historyToolbar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 36,
-                BackColor = SystemColors.Control
+                Height = 52,
+                Padding = new Padding(12, 10, 12, 8),
+                BackColor = _historyPageBackColor
             };
 
-            _txtSearch = new TextBox { Left = 8, Top = 6, Width = 150 };
+            _txtSearch = new TextBox { Left = 12, Top = 12, Width = 120 };
             // プレースホルダー（ハンドル生成後に設定）
             // _txtSearch.HandleCreated += (s, e) => { try { SendMessage(_txtSearch.Handle, EM_SETCUEBANNER, 1, "検索（ファイル名 / パス）"); } catch { } };
             _txtSearch.TextChanged += (s, e) => ApplyFilterAndRefresh();
 
-            _cboSort = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Left = _txtSearch.Right + 8, Top = 6, Width = 120 };
+            _cboSort = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Left = _txtSearch.Right + 10, Top = 12, Width = 112 };
             _cboSort.Items.AddRange(new object[] {
                 SR.T("History.Toolbar.SortByDate", "Captured Time"),
                 SR.T("History.Toolbar.SortByName", "File Name"),
@@ -245,7 +258,7 @@ namespace Kiritori
                 ApplySortAndRefresh();
             };
 
-            _cboOrder = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Left = _cboSort.Right + 6, Top = 6, Width = 100 };
+            _cboOrder = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Left = _cboSort.Right + 8, Top = 12, Width = 112 };
             _cboOrder.Items.AddRange(new object[] {
                 SR.T("History.Toolbar.OrderDescending", "Descending"),
                 SR.T("History.Toolbar.OrderAscending", "Ascending")
@@ -257,8 +270,9 @@ namespace Kiritori
             {
                 Text = SR.T("History.Toolbar.Clear", "Clear"),
                 Left = _cboOrder.Right + 8,
-                Top = 5,
-                Width = 70,
+                Top = 10,
+                Width = 62,
+                Height = 28,
                 AutoSize = true,
                 Tag = "History.Toolbar.Clear"
             };
@@ -279,11 +293,17 @@ namespace Kiritori
             {
                 Text = SR.T("History.Toolbar.DeleteSelected", "Delete Selected"),
                 Left = _btnClearHistory.Right + 8,
-                Top = 5,
-                Width = 110,
+                Top = 10,
+                Width = 112,
+                Height = 28,
                 AutoSize = true
             };
             _btnDelete.Click += (s, e) => DeleteSelected();
+
+            foreach (var control in new Control[] { _txtSearch, _cboSort, _cboOrder, _btnClearHistory, _btnDelete })
+            {
+                control.Font = new Font("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point);
+            }
 
             _historyToolbar.Controls.AddRange(new Control[] { _txtSearch, _cboSort, _cboOrder, _btnClearHistory, _btnDelete });
 
@@ -359,10 +379,12 @@ namespace Kiritori
                 HideSelection = false,
                 FullRowSelect = true,
                 MultiSelect = true,
-                BackColor = SystemColors.Control,
+                BackColor = _historyPageBackColor,
                 UseCompatibleStateImageBehavior = false,
-                ShowItemToolTips = true
+                ShowItemToolTips = true,
+                Padding = new Padding(12, 6, 12, 12)
             };
+            this.tabHistory.BackColor = _historyPageBackColor;
             // タイル寸法（DPI対応）
             UpdateHistoryTileMetrics();
             this.FontChanged += (s, e) => UpdateHistoryTileMetrics();
@@ -371,6 +393,7 @@ namespace Kiritori
             // OwnerDraw フック
             _lvHistory.DrawItem += LvHistory_DrawItem;
             _lvHistory.MouseMove += LvHistory_MouseMove;
+            _lvHistory.MouseUp += LvHistory_MouseUp;
             _lvHistory.MouseLeave += (s, e) => { _historyHotIndex = -1; _lvHistory.Invalidate(); };
 
             _lvHistory.GetType().GetProperty("DoubleBuffered",
@@ -426,10 +449,10 @@ namespace Kiritori
         private void UpdateHistoryTileMetrics()
         {
             float scale = this.DeviceDpi / 96f;
-            int textAreaW = (int)Math.Round(180 * scale); // ← 右の文字エリア幅（必要なら増やす）
+            int textAreaW = (int)Math.Round(132 * scale);
             int gap = (int)Math.Round(12 * scale);
-            int tileW = THUMB_W + gap + textAreaW;
-            int tileH = Math.Max(THUMB_H + (int)Math.Round(12 * scale), (int)Math.Round(96 * scale));
+            int tileW = THUMB_W + gap + textAreaW + (int)Math.Round(22 * scale);
+            int tileH = Math.Max(THUMB_H + (int)Math.Round(16 * scale), (int)Math.Round(88 * scale));
             _lvHistory.TileSize = new Size(tileW, tileH);
         }
         private void UpdateHistoryToolbarTexts()
@@ -565,107 +588,186 @@ namespace Kiritori
             }
         }
 
+        private void LvHistory_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left || _lvHistory == null) return;
+
+            var item = _lvHistory.GetItemAt(e.X, e.Y);
+            if (item == null) return;
+            var he = item.Tag as HistoryEntry;
+            if (he == null) return;
+
+            var cardRect = GetHistoryCardRect(item.Bounds);
+            if (GetHistoryOpenButtonRect(cardRect).Contains(e.Location))
+            {
+                OpenHistoryEntry(he);
+                return;
+            }
+
+            if (GetHistoryCopyButtonRect(cardRect).Contains(e.Location))
+            {
+                CopyImageEntry(he);
+            }
+        }
+
         private void LvHistory_DrawItem(object sender, DrawListViewItemEventArgs e)
         {
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
 
             Rectangle r = e.Bounds;
-            int pad = 6;
             int gap = 10;
-
             bool selected = e.Item.Selected;
-            Color bg = selected ? SystemColors.Highlight : _lvHistory.BackColor;
+            bool hot = !selected && e.ItemIndex == _historyHotIndex;
 
-            // 背景
-            using (var b = new SolidBrush(bg))
-                e.Graphics.FillRectangle(b, r);
+            using (var backBrush = new SolidBrush(_lvHistory.BackColor))
+                e.Graphics.FillRectangle(backBrush, r);
 
-            // コンテンツの内側領域（サムネ/テキスト配置用）
-            var inner = Rectangle.Inflate(r, -pad, -pad);
+            var cardRect = GetHistoryCardRect(r);
+            int radius = 12;
 
-            // ホバー時の枠（非選択時のみ）
-            if (!selected && e.ItemIndex == _historyHotIndex)
+            using (var shadowPath = CreateRoundRect(new Rectangle(cardRect.X, cardRect.Y + 1, cardRect.Width, cardRect.Height), radius))
+            using (var shadowBrush = new SolidBrush(Color.FromArgb(selected ? 22 : 14, 36, 52, 71)))
+            using (var cardPath = CreateRoundRect(cardRect, radius))
+            using (var cardBrush = new SolidBrush(selected ? _historyCardSelectedColor : _historyCardBackColor))
+            using (var borderPen = new Pen(selected ? Color.FromArgb(78, 135, 241) : (hot ? _historyCardHoverBorderColor : _historyCardBorderColor)))
             {
-                // 領域は背景の外周と同じにする
-                var hoverRect = Rectangle.Inflate(r, -1, -1);
-
-                // 点線で描く（フォーカス矩形と同じスタイル）
-                ControlPaint.DrawFocusRectangle(
-                    e.Graphics,
-                    hoverRect,
-                    SystemColors.Highlight,   // 点線色（必要ならカスタム色に変更可能）
-                    bg                        // 背景色
-                );
+                e.Graphics.FillPath(shadowBrush, shadowPath);
+                e.Graphics.FillPath(cardBrush, cardPath);
+                e.Graphics.DrawPath(borderPen, cardPath);
             }
-            var thumbRect = new Rectangle(inner.Left, inner.Top, THUMB_W, THUMB_H);
+
+            var thumbRect = new Rectangle(cardRect.Left + 10, cardRect.Top + 10, THUMB_W, THUMB_H);
             Image img = null;
             try { img = _imgThumbs.Images[e.Item.ImageKey]; } catch { }
-            if (img != null) e.Graphics.DrawImage(img, thumbRect);
-            else { using (var p = new Pen(Color.Silver)) e.Graphics.DrawRectangle(p, thumbRect); }
-
-            int textX = thumbRect.Right + gap;
-            int textW = inner.Right - textX;
-            int y = inner.Top;
-
-            Color cMain = selected ? SystemColors.HighlightText : SystemColors.ControlText;
-            Color cSub = selected ? Color.FromArgb(230, 230, 230) : Color.Gray;
-
-            var he = e.Item.Tag as HistoryEntry;
-            string name = e.Item.Text;
-            string date = (he != null) ? he.LoadedAt.ToString("yyyy/MM/dd HH:mm") : "";
-            string res = (he != null) ? (he.Resolution.Width + "×" + he.Resolution.Height) : "";
-            string folder = (he != null && !string.IsNullOrEmpty(he.Path)) ? Path.GetDirectoryName(he.Path) : "";
-            string desc = (he != null) ? he.Description : null;
-            if (!string.IsNullOrEmpty(he?.Description))
+            using (var thumbPath = CreateRoundRect(thumbRect, 6))
             {
-                desc = desc.Replace("\r", " ").Replace("\n", " ").Trim();
+                e.Graphics.SetClip(thumbPath);
+                if (img != null) e.Graphics.DrawImage(img, thumbRect);
+                else
+                {
+                    using (var fallbackBrush = new SolidBrush(Color.FromArgb(236, 240, 245)))
+                        e.Graphics.FillRectangle(fallbackBrush, thumbRect);
+                }
+                e.Graphics.ResetClip();
+
+                using (var thumbPen = new Pen(selected ? Color.FromArgb(140, 189, 255) : Color.FromArgb(220, 227, 235)))
+                    e.Graphics.DrawPath(thumbPen, thumbPath);
             }
 
-            using (var fBold = new Font("Segoe UI", 9f, FontStyle.Bold, GraphicsUnit.Point))
-            using (var f = new Font("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point))
-            using (var fDesc = new Font("Segoe UI", 8f, FontStyle.Regular, GraphicsUnit.Point))
+            int textX = thumbRect.Right + gap;
+            int textW = cardRect.Right - textX - 10;
+            int y = cardRect.Top + 11;
+
+            Color cMain = selected ? Color.White : Color.FromArgb(27, 34, 44);
+            Color cSub = selected ? Color.FromArgb(219, 229, 245) : _historyMutedTextColor;
+            Color cMetaFill = selected ? Color.FromArgb(54, 122, 239) : _historyMetaFillColor;
+            Color cMetaText = selected ? Color.White : _historyMetaTextColor;
+
+            var he = e.Item.Tag as HistoryEntry;
+            string date = (he != null) ? he.LoadedAt.ToString("yyyy/MM/dd HH:mm") : string.Empty;
+            string res = (he != null) ? (he.Resolution.Width + "×" + he.Resolution.Height) : string.Empty;
+
+            using (var fDate = new Font("Segoe UI", 9f, FontStyle.Bold, GraphicsUnit.Point))
+            using (var f = new Font("Segoe UI", 8.5f, FontStyle.Regular, GraphicsUnit.Point))
             {
-                var r1 = new Rectangle(textX, y, textW, 20);
-                TextRenderer.DrawText(e.Graphics, date, fBold, r1, cMain, TextFormatFlags.EndEllipsis);
-                y += r1.Height;
+                var rDate = new Rectangle(textX, y, textW, 20);
+                TextRenderer.DrawText(e.Graphics, date, fDate, rDate, cMain, TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+                y += rDate.Height + 4;
 
                 if (!string.IsNullOrEmpty(res))
                 {
-                    var r2 = new Rectangle(textX, y, textW, 18);
-                    TextRenderer.DrawText(e.Graphics, res, fBold, r2, cSub, TextFormatFlags.EndEllipsis);
-                    y += r2.Height;
+                    var badgeSize = TextRenderer.MeasureText(e.Graphics, res, f, new Size(textW, 18), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+                    var badgeRect = new Rectangle(textX, y, Math.Min(textW, badgeSize.Width + 16), 20);
+                    DrawBadge(e.Graphics, badgeRect, res, f, cMetaFill, cMetaText);
+                    y += badgeRect.Height + 6;
                 }
 
-                // ② 説明（OCR） 最大2行・折返し省略
-                if (!string.IsNullOrWhiteSpace(desc))
-                {
-                    var rDesc = new Rectangle(textX, y, textW, (int)Math.Ceiling(fDesc.GetHeight(e.Graphics) * 2 + 2));
-                    DrawMultilineEllipsis(e.Graphics, desc, fDesc, rDesc, selected ? SystemColors.HighlightText : Color.DimGray, 2);
-                    y += rDesc.Height;
-                }
-                // // ④ フォルダ
-                // if (!string.IsNullOrEmpty(folder))　
-                // {
-                //     var r3 = new Rectangle(textX, y, textW, 18);
-                //     TextRenderer.DrawText(e.Graphics, folder, f, r3, cSub, TextFormatFlags.EndEllipsis);
-                //     // y += r3.Height; // 高さが足りないときは下行は描けなくてもOK
-                // }
+
+            }
+
+            if (hot)
+            {
+                DrawActionButton(e.Graphics, GetHistoryOpenButtonRect(cardRect), "Open", selected);
+                DrawActionButton(e.Graphics, GetHistoryCopyButtonRect(cardRect), "Copy", selected);
             }
 
             if (e.Item.Focused)
             {
-                // e.Bounds に合わせ、クリップ対策で 1px だけ内側
-                var focusRect = Rectangle.Inflate(r, -1, -1);
-
-                // 前景色/背景色を指定（背景色に bg を渡すとドットの抜きが背景と一致）
+                var focusRect = Rectangle.Inflate(cardRect, -3, -3);
                 ControlPaint.DrawFocusRectangle(
                     e.Graphics,
                     focusRect,
                     selected ? SystemColors.HighlightText : SystemColors.ControlText,
-                    bg
+                    selected ? _historyCardSelectedColor : _historyCardBackColor
                 );
             }
+        }
+
+        private Rectangle GetHistoryCardRect(Rectangle bounds)
+        {
+            return Rectangle.Inflate(bounds, -6, -6);
+        }
+
+        private Rectangle GetHistoryOpenButtonRect(Rectangle cardRect)
+        {
+            return new Rectangle(cardRect.Right - 104, cardRect.Bottom - 28, 44, 20);
+        }
+
+        private Rectangle GetHistoryCopyButtonRect(Rectangle cardRect)
+        {
+            return new Rectangle(cardRect.Right - 54, cardRect.Bottom - 28, 44, 20);
+        }
+
+        private void DrawActionButton(Graphics g, Rectangle rect, string text, bool selected)
+        {
+            Color fill = selected ? Color.FromArgb(61, 126, 239) : _historyActionFillColor;
+            Color border = selected ? Color.FromArgb(142, 189, 255) : _historyActionBorderColor;
+            Color fore = selected ? Color.White : Color.FromArgb(57, 72, 89);
+
+            using (var path = CreateRoundRect(rect, 6))
+            using (var brush = new SolidBrush(fill))
+            using (var pen = new Pen(border))
+            using (var font = new Font("Segoe UI", 8f, FontStyle.Regular, GraphicsUnit.Point))
+            {
+                g.FillPath(brush, path);
+                g.DrawPath(pen, path);
+                TextRenderer.DrawText(g, text, font, rect, fore, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+            }
+        }
+
+        private static System.Drawing.Drawing2D.GraphicsPath CreateRoundRect(Rectangle rect, int radius)
+        {
+            var path = new System.Drawing.Drawing2D.GraphicsPath();
+            int diameter = radius * 2;
+            var arc = new Rectangle(rect.Location, new Size(diameter, diameter));
+
+            path.AddArc(arc, 180, 90);
+            arc.X = rect.Right - diameter;
+            path.AddArc(arc, 270, 90);
+            arc.Y = rect.Bottom - diameter;
+            path.AddArc(arc, 0, 90);
+            arc.X = rect.Left;
+            path.AddArc(arc, 90, 90);
+            path.CloseFigure();
+            return path;
+        }
+
+        private static void DrawBadge(Graphics g, Rectangle rect, string text, Font font, Color fill, Color fore)
+        {
+            using (var path = CreateRoundRect(rect, Math.Min(7, rect.Height / 2)))
+            using (var brush = new SolidBrush(fill))
+            {
+                g.FillPath(brush, path);
+            }
+
+            TextRenderer.DrawText(
+                g,
+                text,
+                font,
+                rect,
+                fore,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
         }
 
         private static void DrawMultilineEllipsis(Graphics g, string text, Font font, Rectangle rect, Color color, int maxLines)
@@ -1268,10 +1370,13 @@ namespace Kiritori
         {
             var sel = GetSelectedEntries();
             if (sel.Count == 0) return;
-            var he = sel[0];
-            if (string.IsNullOrEmpty(he.Path) || !File.Exists(he.Path)) return;
+            OpenHistoryEntry(sel[0]);
+        }
 
-            // MainApplication の流儀に合わせて SnapWindow を開く（履歴には重複追加しない）
+        private void OpenHistoryEntry(HistoryEntry he)
+        {
+            if (he == null || string.IsNullOrEmpty(he.Path) || !File.Exists(he.Path)) return;
+
             var sw = new SnapWindow(Application.OpenForms.OfType<MainApplication>().FirstOrDefault())
             {
                 StartPosition = FormStartPosition.CenterScreen,
@@ -1341,15 +1446,18 @@ namespace Kiritori
         {
             var sel = GetSelectedEntries();
             if (sel.Count != 1) return;
-            var he = sel[0];
-            if (string.IsNullOrEmpty(he.Path) || !File.Exists(he.Path)) return;
+            CopyImageEntry(sel[0]);
+        }
+
+        private void CopyImageEntry(HistoryEntry he)
+        {
+            if (he == null || string.IsNullOrEmpty(he.Path) || !File.Exists(he.Path)) return;
 
             try
             {
                 using (var bmp = LoadBitmapNoLock(he.Path))
                 {
                     if (bmp == null) return;
-                    // Clipboard 側で内部コピーされるが、明示的に using で破棄して OK
                     Clipboard.SetImage(bmp);
                 }
             }

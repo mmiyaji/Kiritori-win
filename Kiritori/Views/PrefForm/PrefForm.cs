@@ -56,6 +56,7 @@ namespace Kiritori
         private HotkeySpec DEF_HOTKEY_FIXED = new HotkeySpec { Mods = ModMask.Ctrl | ModMask.Shift, Key = Keys.D7 };
         private string _saveButtonDefaultText;
         private System.Windows.Forms.Timer _savedResetTimer;
+        private System.Windows.Forms.Timer _appearanceWarmupTimer;
         private SynchronizationContext _ui;
         // =========================================================
         // ==================== Constructor ========================
@@ -68,17 +69,7 @@ namespace Kiritori
             public bool Installed { get; set; }
             public override string ToString() => Text;
         }
-        // タブ切り替え時の描画フリーズ対策: WS_EX_COMPOSITED で全描画をバックバッファに集約してから一括反映
-        protected override CreateParams CreateParams
-        {
-            get
-            {
-                var cp = base.CreateParams;
-                cp.ExStyle |= 0x02000000; // WS_EX_COMPOSITED
-                return cp;
-            }
-        }
-
+        // WS_EX_COMPOSITED はタブ切り替え時の全ウィンドウ再描画を誘発しやすく、`r`n        // Appearance タブのようなコントロール数が多い画面では体感フリーズの原因になる。`r`n        protected override CreateParams CreateParams`r`n        {`r`n            get`r`n            {`r`n                return base.CreateParams;`r`n            }`r`n        }`r`n
         public PrefForm()
         {
             _initStartupToggle = true;
@@ -137,6 +128,7 @@ namespace Kiritori
             HookRuntimeEvents();
             WireAdvancedDirtyEvents();
             InitLogTab();
+            this.Shown += (_, __) => ScheduleAppearanceWarmup();
         }
         private MainApplication ResolveMain()
         {
@@ -146,6 +138,29 @@ namespace Kiritori
             var f = GetMainForm();
             _mainApp = f as MainApplication;
             return _mainApp;
+        }
+
+        private void ScheduleAppearanceWarmup()
+        {
+            if (IsDisposed || _appearanceBuilt) return;
+            if (_appearanceWarmupTimer != null) return;
+
+            _appearanceWarmupTimer = new System.Windows.Forms.Timer { Interval = 250 };
+            _appearanceWarmupTimer.Tick += (_, __) =>
+            {
+                _appearanceWarmupTimer.Stop();
+                _appearanceWarmupTimer.Dispose();
+                _appearanceWarmupTimer = null;
+
+                if (IsDisposed || _appearanceBuilt) return;
+                BeginInvoke((Action)(() =>
+                {
+                    if (IsDisposed || _appearanceBuilt) return;
+                    _appearanceBuilt = true;
+                    BuildAppearanceTab();
+                }));
+            };
+            _appearanceWarmupTimer.Start();
         }
 
 
@@ -318,6 +333,12 @@ namespace Kiritori
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            if (_appearanceWarmupTimer != null)
+            {
+                _appearanceWarmupTimer.Stop();
+                _appearanceWarmupTimer.Dispose();
+                _appearanceWarmupTimer = null;
+            }
             if (this.Icon != null)
             {
                 this.Icon.Dispose();
@@ -1614,3 +1635,6 @@ namespace Kiritori
         }
     }
 }
+
+
+

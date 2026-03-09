@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -133,13 +133,13 @@ namespace Kiritori
             }
         }
 
-        private void SetImageAndResetZoom(Image img)
+        private void SetImageAndResetZoom(Bitmap bmp, string sourcePath)
         {
-            _originalImage?.Dispose();
-            _originalImage = (Image)img.Clone();
+            AssignMainImage(bmp, sourcePath);
 
             _scale = 1f;
-            this.pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage; // ストレッチ採用
+            this.pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
+            this.pictureBox1.Image = _originalImage;
             ApplyZoom(false);
         }
         private bool _pinWindowLocationDuringZoom = true;
@@ -152,27 +152,17 @@ namespace Kiritori
             int newH = Math.Max(1, (int)Math.Round(_originalImage.Height * _scale));
 
             Size oldClient = this.ClientSize;
+            Image displaySource = interactive ? (Image)(_originalStill ?? _originalImage) : _originalImage;
 
-            Bitmap bmp = new Bitmap(newW, newH);
-            using (Graphics g = Graphics.FromImage(bmp))
+            if (!ReferenceEquals(pictureBox1.Image, displaySource))
             {
-                g.CompositingMode = CompositingMode.SourceOver;
-                g.SmoothingMode = SmoothingMode.HighSpeed;
-                g.CompositingQuality = interactive ? CompositingQuality.HighSpeed : CompositingQuality.HighQuality;
-                g.InterpolationMode = interactive ? InterpolationMode.Low : InterpolationMode.HighQualityBicubic;
-                g.PixelOffsetMode = interactive ? PixelOffsetMode.None : PixelOffsetMode.HighQuality;
-
-                g.DrawImage(_originalImage, 0, 0, newW, newH);
+                DisposeDisplayImageIfOwned();
+                pictureBox1.Image = displaySource;
             }
 
-            var oldImg = pictureBox1.Image;
-            pictureBox1.Image = bmp;
-            oldImg?.Dispose();
-
+            pictureBox1.SizeMode = interactive ? PictureBoxSizeMode.StretchImage : PictureBoxSizeMode.Zoom;
             pictureBox1.Width = newW;
             pictureBox1.Height = newH;
-
-            // 既存仕様どおりフォームも変える場合は残す：
             this.ClientSize = new Size(newW, newH);
 
             if (!redrawOnly && !_pinWindowLocationDuringZoom)
@@ -180,8 +170,10 @@ namespace Kiritori
                 int dx = (this.ClientSize.Width - oldClient.Width) / 2;
                 int dy = (this.ClientSize.Height - oldClient.Height) / 2;
                 this.Left -= dx;
-                this.Top  -= dy;
+                this.Top -= dy;
             }
+
+            pictureBox1.Invalidate();
         }
 
         private void ApplyInitialDisplayZoomIfNeeded()
