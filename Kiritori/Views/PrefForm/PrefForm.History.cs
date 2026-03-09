@@ -233,7 +233,7 @@ namespace Kiritori
                 BackColor = _historyPageBackColor
             };
 
-            _txtSearch = new TextBox { Left = 12, Top = 12, Width = 180 };
+            _txtSearch = new TextBox { Left = 12, Top = 12, Width = 120 };
             // プレースホルダー（ハンドル生成後に設定）
             // _txtSearch.HandleCreated += (s, e) => { try { SendMessage(_txtSearch.Handle, EM_SETCUEBANNER, 1, "検索（ファイル名 / パス）"); } catch { } };
             _txtSearch.TextChanged += (s, e) => ApplyFilterAndRefresh();
@@ -449,10 +449,10 @@ namespace Kiritori
         private void UpdateHistoryTileMetrics()
         {
             float scale = this.DeviceDpi / 96f;
-            int textAreaW = (int)Math.Round(156 * scale);
-            int gap = (int)Math.Round(14 * scale);
-            int tileW = THUMB_W + gap + textAreaW + (int)Math.Round(30 * scale);
-            int tileH = Math.Max(THUMB_H + (int)Math.Round(18 * scale), (int)Math.Round(92 * scale));
+            int textAreaW = (int)Math.Round(132 * scale);
+            int gap = (int)Math.Round(12 * scale);
+            int tileW = THUMB_W + gap + textAreaW + (int)Math.Round(22 * scale);
+            int tileH = Math.Max(THUMB_H + (int)Math.Round(16 * scale), (int)Math.Round(88 * scale));
             _lvHistory.TileSize = new Size(tileW, tileH);
         }
         private void UpdateHistoryToolbarTexts()
@@ -616,7 +616,7 @@ namespace Kiritori
             e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
 
             Rectangle r = e.Bounds;
-            int gap = 12;
+            int gap = 10;
             bool selected = e.Item.Selected;
             bool hot = !selected && e.ItemIndex == _historyHotIndex;
 
@@ -637,10 +637,10 @@ namespace Kiritori
                 e.Graphics.DrawPath(borderPen, cardPath);
             }
 
-            var thumbRect = new Rectangle(cardRect.Left + 12, cardRect.Top + 12, THUMB_W, THUMB_H);
+            var thumbRect = new Rectangle(cardRect.Left + 10, cardRect.Top + 10, THUMB_W, THUMB_H);
             Image img = null;
             try { img = _imgThumbs.Images[e.Item.ImageKey]; } catch { }
-            using (var thumbPath = CreateRoundRect(thumbRect, 9))
+            using (var thumbPath = CreateRoundRect(thumbRect, 6))
             {
                 e.Graphics.SetClip(thumbPath);
                 if (img != null) e.Graphics.DrawImage(img, thumbRect);
@@ -656,8 +656,8 @@ namespace Kiritori
             }
 
             int textX = thumbRect.Right + gap;
-            int textW = cardRect.Right - textX - 12;
-            int y = cardRect.Top + 14;
+            int textW = cardRect.Right - textX - 10;
+            int y = cardRect.Top + 11;
 
             Color cMain = selected ? Color.White : Color.FromArgb(27, 34, 44);
             Color cSub = selected ? Color.FromArgb(219, 229, 245) : _historyMutedTextColor;
@@ -713,17 +713,17 @@ namespace Kiritori
 
         private Rectangle GetHistoryCardRect(Rectangle bounds)
         {
-            return Rectangle.Inflate(bounds, -8, -8);
+            return Rectangle.Inflate(bounds, -6, -6);
         }
 
         private Rectangle GetHistoryOpenButtonRect(Rectangle cardRect)
         {
-            return new Rectangle(cardRect.Right - 112, cardRect.Bottom - 30, 48, 22);
+            return new Rectangle(cardRect.Right - 104, cardRect.Bottom - 28, 44, 20);
         }
 
         private Rectangle GetHistoryCopyButtonRect(Rectangle cardRect)
         {
-            return new Rectangle(cardRect.Right - 58, cardRect.Bottom - 30, 48, 22);
+            return new Rectangle(cardRect.Right - 54, cardRect.Bottom - 28, 44, 20);
         }
 
         private void DrawActionButton(Graphics g, Rectangle rect, string text, bool selected)
@@ -732,7 +732,7 @@ namespace Kiritori
             Color border = selected ? Color.FromArgb(142, 189, 255) : _historyActionBorderColor;
             Color fore = selected ? Color.White : Color.FromArgb(57, 72, 89);
 
-            using (var path = CreateRoundRect(rect, 9))
+            using (var path = CreateRoundRect(rect, 6))
             using (var brush = new SolidBrush(fill))
             using (var pen = new Pen(border))
             using (var font = new Font("Segoe UI", 8f, FontStyle.Regular, GraphicsUnit.Point))
@@ -762,7 +762,7 @@ namespace Kiritori
 
         private static void DrawBadge(Graphics g, Rectangle rect, string text, Font font, Color fill, Color fore)
         {
-            using (var path = CreateRoundRect(rect, Math.Min(10, rect.Height / 2)))
+            using (var path = CreateRoundRect(rect, Math.Min(7, rect.Height / 2)))
             using (var brush = new SolidBrush(fill))
             {
                 g.FillPath(brush, path);
