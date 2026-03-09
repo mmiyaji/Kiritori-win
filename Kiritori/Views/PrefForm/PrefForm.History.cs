@@ -238,7 +238,7 @@ namespace Kiritori
             // _txtSearch.HandleCreated += (s, e) => { try { SendMessage(_txtSearch.Handle, EM_SETCUEBANNER, 1, "検索（ファイル名 / パス）"); } catch { } };
             _txtSearch.TextChanged += (s, e) => ApplyFilterAndRefresh();
 
-            _cboSort = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Left = _txtSearch.Right + 10, Top = 12, Width = 132 };
+            _cboSort = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Left = _txtSearch.Right + 10, Top = 12, Width = 112 };
             _cboSort.Items.AddRange(new object[] {
                 SR.T("History.Toolbar.SortByDate", "Captured Time"),
                 SR.T("History.Toolbar.SortByName", "File Name"),
@@ -271,7 +271,7 @@ namespace Kiritori
                 Text = SR.T("History.Toolbar.Clear", "Clear"),
                 Left = _cboOrder.Right + 8,
                 Top = 10,
-                Width = 82,
+                Width = 62,
                 Height = 28,
                 AutoSize = true,
                 Tag = "History.Toolbar.Clear"
@@ -294,7 +294,7 @@ namespace Kiritori
                 Text = SR.T("History.Toolbar.DeleteSelected", "Delete Selected"),
                 Left = _btnClearHistory.Right + 8,
                 Top = 10,
-                Width = 126,
+                Width = 112,
                 Height = 28,
                 AutoSize = true
             };
