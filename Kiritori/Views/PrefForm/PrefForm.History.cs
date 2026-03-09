@@ -667,9 +667,6 @@ namespace Kiritori
             var he = e.Item.Tag as HistoryEntry;
             string date = (he != null) ? he.LoadedAt.ToString("yyyy/MM/dd HH:mm") : string.Empty;
             string res = (he != null) ? (he.Resolution.Width + "×" + he.Resolution.Height) : string.Empty;
-            string desc = (he != null) ? he.Description : null;
-            if (!string.IsNullOrEmpty(desc))
-                desc = desc.Replace("\r", " ").Replace("\n", " ").Trim();
 
             using (var fDate = new Font("Segoe UI", 9f, FontStyle.Bold, GraphicsUnit.Point))
             using (var f = new Font("Segoe UI", 8.5f, FontStyle.Regular, GraphicsUnit.Point))
@@ -686,11 +683,7 @@ namespace Kiritori
                     y += badgeRect.Height + 6;
                 }
 
-                if (!string.IsNullOrWhiteSpace(desc))
-                {
-                    var rDesc = new Rectangle(textX, y, textW, 18);
-                    TextRenderer.DrawText(e.Graphics, desc, f, rDesc, cSub, TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
-                }
+
             }
 
             if (hot)
