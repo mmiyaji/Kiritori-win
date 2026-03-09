@@ -69,17 +69,7 @@ namespace Kiritori
             public bool Installed { get; set; }
             public override string ToString() => Text;
         }
-        // タブ切り替え時の描画フリーズ対策: WS_EX_COMPOSITED で全描画をバックバッファに集約してから一括反映
-        protected override CreateParams CreateParams
-        {
-            get
-            {
-                var cp = base.CreateParams;
-                cp.ExStyle |= 0x02000000; // WS_EX_COMPOSITED
-                return cp;
-            }
-        }
-
+        // WS_EX_COMPOSITED はタブ切り替え時の全ウィンドウ再描画を誘発しやすく、`r`n        // Appearance タブのようなコントロール数が多い画面では体感フリーズの原因になる。`r`n        protected override CreateParams CreateParams`r`n        {`r`n            get`r`n            {`r`n                return base.CreateParams;`r`n            }`r`n        }`r`n
         public PrefForm()
         {
             _initStartupToggle = true;
@@ -1645,5 +1635,6 @@ namespace Kiritori
         }
     }
 }
+
 
 
