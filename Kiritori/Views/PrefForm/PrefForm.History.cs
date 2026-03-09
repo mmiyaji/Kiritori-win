@@ -31,7 +31,11 @@ namespace Kiritori
         private readonly Color _historyCardSelectedColor = Color.FromArgb(45, 108, 223);
         private readonly Color _historyMutedTextColor = Color.FromArgb(108, 117, 129);
         private readonly Color _historyMetaFillColor = Color.FromArgb(237, 242, 248);
+        
         private readonly Color _historyMetaTextColor = Color.FromArgb(69, 84, 104);
+        
+        private readonly Color _historyActionFillColor = Color.FromArgb(248, 250, 252);
+        private readonly Color _historyActionBorderColor = Color.FromArgb(201, 210, 222);
 
         // サムネ設定
         private const int THUMB_W = 192 / 2;
@@ -389,6 +393,7 @@ namespace Kiritori
             // OwnerDraw フック
             _lvHistory.DrawItem += LvHistory_DrawItem;
             _lvHistory.MouseMove += LvHistory_MouseMove;
+            _lvHistory.MouseUp += LvHistory_MouseUp;
             _lvHistory.MouseLeave += (s, e) => { _historyHotIndex = -1; _lvHistory.Invalidate(); };
 
             _lvHistory.GetType().GetProperty("DoubleBuffered",
@@ -444,10 +449,10 @@ namespace Kiritori
         private void UpdateHistoryTileMetrics()
         {
             float scale = this.DeviceDpi / 96f;
-            int textAreaW = (int)Math.Round(224 * scale);
-            int gap = (int)Math.Round(18 * scale);
-            int tileW = THUMB_W + gap + textAreaW + (int)Math.Round(34 * scale);
-            int tileH = Math.Max(THUMB_H + (int)Math.Round(28 * scale), (int)Math.Round(118 * scale));
+            int textAreaW = (int)Math.Round(156 * scale);
+            int gap = (int)Math.Round(14 * scale);
+            int tileW = THUMB_W + gap + textAreaW + (int)Math.Round(30 * scale);
+            int tileH = Math.Max(THUMB_H + (int)Math.Round(18 * scale), (int)Math.Round(92 * scale));
             _lvHistory.TileSize = new Size(tileW, tileH);
         }
         private void UpdateHistoryToolbarTexts()
@@ -583,25 +588,46 @@ namespace Kiritori
             }
         }
 
+        private void LvHistory_MouseUp(object sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left || _lvHistory == null) return;
+
+            var item = _lvHistory.GetItemAt(e.X, e.Y);
+            if (item == null) return;
+            var he = item.Tag as HistoryEntry;
+            if (he == null) return;
+
+            var cardRect = GetHistoryCardRect(item.Bounds);
+            if (GetHistoryOpenButtonRect(cardRect).Contains(e.Location))
+            {
+                OpenHistoryEntry(he);
+                return;
+            }
+
+            if (GetHistoryCopyButtonRect(cardRect).Contains(e.Location))
+            {
+                CopyImageEntry(he);
+            }
+        }
+
         private void LvHistory_DrawItem(object sender, DrawListViewItemEventArgs e)
         {
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             e.Graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
 
             Rectangle r = e.Bounds;
-            int pad = 10;
-            int gap = 16;
+            int gap = 12;
             bool selected = e.Item.Selected;
             bool hot = !selected && e.ItemIndex == _historyHotIndex;
 
             using (var backBrush = new SolidBrush(_lvHistory.BackColor))
                 e.Graphics.FillRectangle(backBrush, r);
 
-            var cardRect = Rectangle.Inflate(r, -pad, -pad);
-            int radius = 14;
+            var cardRect = GetHistoryCardRect(r);
+            int radius = 12;
 
-            using (var shadowPath = CreateRoundRect(new Rectangle(cardRect.X, cardRect.Y + 2, cardRect.Width, cardRect.Height), radius))
-            using (var shadowBrush = new SolidBrush(Color.FromArgb(selected ? 26 : 18, 36, 52, 71)))
+            using (var shadowPath = CreateRoundRect(new Rectangle(cardRect.X, cardRect.Y + 1, cardRect.Width, cardRect.Height), radius))
+            using (var shadowBrush = new SolidBrush(Color.FromArgb(selected ? 22 : 14, 36, 52, 71)))
             using (var cardPath = CreateRoundRect(cardRect, radius))
             using (var cardBrush = new SolidBrush(selected ? _historyCardSelectedColor : _historyCardBackColor))
             using (var borderPen = new Pen(selected ? Color.FromArgb(78, 135, 241) : (hot ? _historyCardHoverBorderColor : _historyCardBorderColor)))
@@ -611,10 +637,10 @@ namespace Kiritori
                 e.Graphics.DrawPath(borderPen, cardPath);
             }
 
-            var thumbRect = new Rectangle(cardRect.Left + 14, cardRect.Top + 14, THUMB_W, THUMB_H);
+            var thumbRect = new Rectangle(cardRect.Left + 12, cardRect.Top + 12, THUMB_W, THUMB_H);
             Image img = null;
             try { img = _imgThumbs.Images[e.Item.ImageKey]; } catch { }
-            using (var thumbPath = CreateRoundRect(thumbRect, 10))
+            using (var thumbPath = CreateRoundRect(thumbRect, 9))
             {
                 e.Graphics.SetClip(thumbPath);
                 if (img != null) e.Graphics.DrawImage(img, thumbRect);
@@ -630,7 +656,7 @@ namespace Kiritori
             }
 
             int textX = thumbRect.Right + gap;
-            int textW = cardRect.Right - textX - 16;
+            int textW = cardRect.Right - textX - 12;
             int y = cardRect.Top + 14;
 
             Color cMain = selected ? Color.White : Color.FromArgb(27, 34, 44);
@@ -639,45 +665,38 @@ namespace Kiritori
             Color cMetaText = selected ? Color.White : _historyMetaTextColor;
 
             var he = e.Item.Tag as HistoryEntry;
-            string name = e.Item.Text;
-            string date = (he != null) ? he.LoadedAt.ToString("yyyy/MM/dd HH:mm") : "";
-            string res = (he != null) ? (he.Resolution.Width + "×" + he.Resolution.Height) : "";
-            string folder = (he != null && !string.IsNullOrEmpty(he.Path)) ? Path.GetDirectoryName(he.Path) : "";
+            string date = (he != null) ? he.LoadedAt.ToString("yyyy/MM/dd HH:mm") : string.Empty;
+            string res = (he != null) ? (he.Resolution.Width + "×" + he.Resolution.Height) : string.Empty;
             string desc = (he != null) ? he.Description : null;
-            if (!string.IsNullOrEmpty(he?.Description))
+            if (!string.IsNullOrEmpty(desc))
                 desc = desc.Replace("\r", " ").Replace("\n", " ").Trim();
 
-            using (var fTitle = new Font("Segoe UI", 9f, FontStyle.Bold, GraphicsUnit.Point))
-            using (var f = new Font("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point))
-            using (var fDesc = new Font("Segoe UI", 8f, FontStyle.Regular, GraphicsUnit.Point))
+            using (var fDate = new Font("Segoe UI", 9f, FontStyle.Bold, GraphicsUnit.Point))
+            using (var f = new Font("Segoe UI", 8.5f, FontStyle.Regular, GraphicsUnit.Point))
             {
-                var rTitle = new Rectangle(textX, y, textW, 22);
-                TextRenderer.DrawText(e.Graphics, name, fTitle, rTitle, cMain, TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
-                y += rTitle.Height + 2;
-
-                var rDate = new Rectangle(textX, y, textW, 18);
-                TextRenderer.DrawText(e.Graphics, date, f, rDate, cSub, TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
-                y += rDate.Height;
+                var rDate = new Rectangle(textX, y, textW, 20);
+                TextRenderer.DrawText(e.Graphics, date, fDate, rDate, cMain, TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+                y += rDate.Height + 4;
 
                 if (!string.IsNullOrEmpty(res))
                 {
                     var badgeSize = TextRenderer.MeasureText(e.Graphics, res, f, new Size(textW, 18), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
-                    var badgeRect = new Rectangle(textX, y + 2, Math.Min(textW, badgeSize.Width + 18), 22);
+                    var badgeRect = new Rectangle(textX, y, Math.Min(textW, badgeSize.Width + 16), 20);
                     DrawBadge(e.Graphics, badgeRect, res, f, cMetaFill, cMetaText);
                     y += badgeRect.Height + 6;
                 }
 
                 if (!string.IsNullOrWhiteSpace(desc))
                 {
-                    var rDesc = new Rectangle(textX, y, textW, (int)Math.Ceiling(fDesc.GetHeight(e.Graphics) * 2 + 4));
-                    DrawMultilineEllipsis(e.Graphics, desc, fDesc, rDesc, selected ? Color.FromArgb(232, 239, 250) : Color.FromArgb(93, 101, 112), 2);
+                    var rDesc = new Rectangle(textX, y, textW, 18);
+                    TextRenderer.DrawText(e.Graphics, desc, f, rDesc, cSub, TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
                 }
+            }
 
-                if (!string.IsNullOrEmpty(folder))
-                {
-                    var rFolder = new Rectangle(textX, cardRect.Bottom - 30, textW, 16);
-                    TextRenderer.DrawText(e.Graphics, folder, fDesc, rFolder, cSub, TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
-                }
+            if (hot)
+            {
+                DrawActionButton(e.Graphics, GetHistoryOpenButtonRect(cardRect), "Open", selected);
+                DrawActionButton(e.Graphics, GetHistoryCopyButtonRect(cardRect), "Copy", selected);
             }
 
             if (e.Item.Focused)
@@ -689,6 +708,38 @@ namespace Kiritori
                     selected ? SystemColors.HighlightText : SystemColors.ControlText,
                     selected ? _historyCardSelectedColor : _historyCardBackColor
                 );
+            }
+        }
+
+        private Rectangle GetHistoryCardRect(Rectangle bounds)
+        {
+            return Rectangle.Inflate(bounds, -8, -8);
+        }
+
+        private Rectangle GetHistoryOpenButtonRect(Rectangle cardRect)
+        {
+            return new Rectangle(cardRect.Right - 112, cardRect.Bottom - 30, 48, 22);
+        }
+
+        private Rectangle GetHistoryCopyButtonRect(Rectangle cardRect)
+        {
+            return new Rectangle(cardRect.Right - 58, cardRect.Bottom - 30, 48, 22);
+        }
+
+        private void DrawActionButton(Graphics g, Rectangle rect, string text, bool selected)
+        {
+            Color fill = selected ? Color.FromArgb(61, 126, 239) : _historyActionFillColor;
+            Color border = selected ? Color.FromArgb(142, 189, 255) : _historyActionBorderColor;
+            Color fore = selected ? Color.White : Color.FromArgb(57, 72, 89);
+
+            using (var path = CreateRoundRect(rect, 9))
+            using (var brush = new SolidBrush(fill))
+            using (var pen = new Pen(border))
+            using (var font = new Font("Segoe UI", 8f, FontStyle.Regular, GraphicsUnit.Point))
+            {
+                g.FillPath(brush, path);
+                g.DrawPath(pen, path);
+                TextRenderer.DrawText(g, text, font, rect, fore, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
             }
         }
 
@@ -1326,10 +1377,13 @@ namespace Kiritori
         {
             var sel = GetSelectedEntries();
             if (sel.Count == 0) return;
-            var he = sel[0];
-            if (string.IsNullOrEmpty(he.Path) || !File.Exists(he.Path)) return;
+            OpenHistoryEntry(sel[0]);
+        }
 
-            // MainApplication の流儀に合わせて SnapWindow を開く（履歴には重複追加しない）
+        private void OpenHistoryEntry(HistoryEntry he)
+        {
+            if (he == null || string.IsNullOrEmpty(he.Path) || !File.Exists(he.Path)) return;
+
             var sw = new SnapWindow(Application.OpenForms.OfType<MainApplication>().FirstOrDefault())
             {
                 StartPosition = FormStartPosition.CenterScreen,
@@ -1399,15 +1453,18 @@ namespace Kiritori
         {
             var sel = GetSelectedEntries();
             if (sel.Count != 1) return;
-            var he = sel[0];
-            if (string.IsNullOrEmpty(he.Path) || !File.Exists(he.Path)) return;
+            CopyImageEntry(sel[0]);
+        }
+
+        private void CopyImageEntry(HistoryEntry he)
+        {
+            if (he == null || string.IsNullOrEmpty(he.Path) || !File.Exists(he.Path)) return;
 
             try
             {
                 using (var bmp = LoadBitmapNoLock(he.Path))
                 {
                     if (bmp == null) return;
-                    // Clipboard 側で内部コピーされるが、明示的に using で破棄して OK
                     Clipboard.SetImage(bmp);
                 }
             }
