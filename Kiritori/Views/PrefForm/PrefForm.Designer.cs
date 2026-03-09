@@ -251,11 +251,7 @@ namespace Kiritori
                     e.TabPage.Controls.Add(lbl);
                     e.TabPage.Controls.SetChildIndex(lbl, 0); // 最前面
                 }
-                else
-                {
-                    // ビルド済みタブ → 再帰SuspendLayout でレイアウト連鎖を抑制
-                    SuspendLayoutDeep(e.TabPage);
-                }
+
             };
             this.tabControl.Selected += (s, e) =>
             {
@@ -294,12 +290,7 @@ namespace Kiritori
                         }
                     }));
                 }
-                else
-                {
-                    // ビルド済みタブ：Suspend していたレイアウトを一括実行
-                    ResumeLayoutDeep(tp);
-                    tp.PerformLayout();
-                }
+
             };
             // フォーム表示時、既に選ばれているタブだけ即構築（安全策）
             this.Shown += (s, e) =>
@@ -344,13 +335,7 @@ namespace Kiritori
                         }
                     }));
                 }
-                else
-                {
-                    SuspendLayoutDeep(t);
-                    // if (t == this.tabInfo && !_infoBuilt) { _infoBuilt = true; BuildInfoTab(); }
-                    ResumeLayoutDeep(t);
-                    t.PerformLayout();
-                }
+
             };
 
             // =========================================================
@@ -1850,4 +1835,5 @@ namespace Kiritori
 
     }
 }
+
 
