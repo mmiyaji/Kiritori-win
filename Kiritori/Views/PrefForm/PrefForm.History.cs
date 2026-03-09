@@ -945,6 +945,108 @@ namespace Kiritori
             UpdateHistoryEmptyState();
         }
 
+        private static string NormalizeHistorySearchText(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+
+            var sb = new StringBuilder(text.Length);
+            bool previousWasSpace = false;
+
+            foreach (char raw in text.Normalize(NormalizationForm.FormKC))
+            {
+                char c = char.ToLowerInvariant(raw);
+                bool isSeparator = char.IsWhiteSpace(c) || char.IsPunctuation(c) || char.IsSymbol(c);
+                if (isSeparator)
+                {
+                    if (!previousWasSpace)
+                    {
+                        sb.Append(' ');
+                        previousWasSpace = true;
+                    }
+                }
+                else
+                {
+                    sb.Append(c);
+                    previousWasSpace = false;
+                }
+            }
+
+            return sb.ToString().Trim();
+        }
+
+        private static List<string> TokenizeHistorySearchQuery(string query)
+        {
+            var tokens = new List<string>();
+            if (string.IsNullOrWhiteSpace(query)) return tokens;
+
+            var current = new StringBuilder(query.Length);
+            bool inQuotes = false;
+
+            foreach (char c in query)
+            {
+                if (c == '"')
+                {
+                    if (inQuotes && current.Length > 0)
+                    {
+                        var phrase = NormalizeHistorySearchText(current.ToString());
+                        if (!string.IsNullOrEmpty(phrase)) tokens.Add(phrase);
+                        current.Clear();
+                    }
+                    inQuotes = !inQuotes;
+                    continue;
+                }
+
+                if (!inQuotes && char.IsWhiteSpace(c))
+                {
+                    if (current.Length == 0) continue;
+
+                    var token = NormalizeHistorySearchText(current.ToString());
+                    if (!string.IsNullOrEmpty(token)) tokens.Add(token);
+                    current.Clear();
+                    continue;
+                }
+
+                current.Append(c);
+            }
+
+            if (current.Length > 0)
+            {
+                var token = NormalizeHistorySearchText(current.ToString());
+                if (!string.IsNullOrEmpty(token)) tokens.Add(token);
+            }
+
+            return tokens;
+        }
+
+        private static string BuildHistorySearchCorpus(HistoryEntry he)
+        {
+            if (he == null) return string.Empty;
+
+            var parts = new[]
+            {
+                Path.GetFileName(he.Path ?? string.Empty) ?? string.Empty,
+                he.Path ?? string.Empty,
+                he.Description ?? string.Empty,
+                he.LoadedAt.ToString("yyyy/MM/dd HH:mm:ss"),
+                he.LoadedAt.ToString("yyyyMMdd HHmmss"),
+                he.Resolution.Width + "x" + he.Resolution.Height,
+                he.Resolution.Width + "×" + he.Resolution.Height,
+            };
+
+            return NormalizeHistorySearchText(string.Join(" ", parts));
+        }
+
+        private static bool MatchesHistorySearch(HistoryEntry he, string query)
+        {
+            var tokens = TokenizeHistorySearchQuery(query);
+            if (tokens.Count == 0) return true;
+
+            string corpus = BuildHistorySearchCorpus(he);
+            if (string.IsNullOrEmpty(corpus)) return false;
+
+            return tokens.All(token => corpus.IndexOf(token, StringComparison.Ordinal) >= 0);
+        }
+
         private void ApplyFilterAndSort()
         {
             string q = (_txtSearch != null ? _txtSearch.Text : null);
@@ -954,20 +1056,7 @@ namespace Kiritori
 
             if (!string.IsNullOrEmpty(q))
             {
-                filtered = filtered.Where(he =>
-                {
-                    // ファイル名・フルパス
-                    string name = Path.GetFileName(he?.Path ?? "") ?? "";
-                    string path = he?.Path ?? "";
-
-                    // OCR（改行をスペース化して検索性UP）
-                    string desc = (he?.Description ?? "").Replace("\r", " ").Replace("\n", " ");
-
-                    return
-                        name.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        path.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        desc.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
-                });
+                filtered = filtered.Where(he => MatchesHistorySearch(he, q));
             }
 
             IEnumerable<HistoryEntry> sorted;
