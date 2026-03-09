@@ -1,4 +1,4 @@
-using CommunityToolkit.WinUI.Notifications;
+﻿using CommunityToolkit.WinUI.Notifications;
 using Kiritori.Helpers;
 using Kiritori.Services.History;
 using Kiritori.Services.Logging;
@@ -132,11 +132,9 @@ namespace Kiritori
                                 var updated = new Bitmap(img);
                                 this.BeginInvoke((Action)(() =>
                                 {
-                                    var old = pictureBox1.Image;
-                                    pictureBox1.Image = updated;
-                                    if (string.IsNullOrEmpty(preferredSrcPath))
-                                        pictureBox1.Image.Tag = _paintEditPath;
-                                    old?.Dispose();
+                                    var updatedSourcePath = string.IsNullOrEmpty(preferredSrcPath) ? _paintEditPath : preferredSrcPath;
+                                    SetImageAndResetZoom(updated, updatedSourcePath);
+                                    setThumbnail(updated);
                                 }));
                             }
                         }
