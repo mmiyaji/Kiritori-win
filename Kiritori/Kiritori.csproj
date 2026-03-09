@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -205,6 +205,9 @@
     <Compile Include="Views\PrefForm\PrefForm.Designer.cs">
       <DependentUpon>PrefForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Views\PrefForm\PrefForm.PostCapture.cs">
+      <DependentUpon>PrefForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Views\PrefForm\PrefForm.Extensions.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -260,8 +263,12 @@
     </Compile>
     <Compile Include="Services\Notifications\NotificationService.cs" />
     <Compile Include="Properties\Settings.cs" />
+    <Compile Include="Properties\Settings.PostCapture.cs" />
     <Compile Include="Views\SnapWindow.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Views\SnapWindow.PostCapture.cs">
+      <DependentUpon>SnapWindow.cs</DependentUpon>
     </Compile>
     <Compile Include="Views\SnapWindow.Designer.cs">
       <DependentUpon>SnapWindow.cs</DependentUpon>

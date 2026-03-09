@@ -1,4 +1,4 @@
-﻿using Kiritori.Helpers;
+using Kiritori.Helpers;
 using Kiritori.Services.Notifications;
 using Kiritori.Services.Ocr;
 using Kiritori.Services.Logging;
@@ -50,6 +50,7 @@ namespace Kiritori
             this.setThumbnail(bmp);
             if (!SuppressHistory) ma.setHistory(this);
             ShowOverlay("KIRITORI");
+            SchedulePostCaptureActionIfNeeded();
         }
 
         public void openImage() => this.ma.openImage();

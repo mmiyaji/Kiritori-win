@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -73,6 +73,14 @@ namespace Kiritori.Helpers
         ocr,
         live,
         fix
+    }
+    public enum CapturePostActionPreset
+    {
+        None = 0,
+        CopyImage = 1,
+        RunOcr = 2,
+        CopyImageAndClose = 3,
+        RunOcrAndClose = 4
     }
     public enum RenderPolicy
     {

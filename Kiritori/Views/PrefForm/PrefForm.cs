@@ -1,4 +1,4 @@
-﻿using Kiritori.Helpers;
+using Kiritori.Helpers;
 using Kiritori.Startup;
 using Kiritori.Views.Controls;
 using Kiritori.Services.Settings;
@@ -123,6 +123,8 @@ namespace Kiritori
 
             // Language コンボの初期化と保存値の復元（SelectedIndexChanged が走ってもガードできるように）
             InitLanguageCombo();
+            EnsureCapturePostActionUi();
+            RestoreCapturePostActionPresetSelection();
 
             _loadingUi = false;
             HookRuntimeEvents();
