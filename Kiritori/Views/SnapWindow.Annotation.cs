@@ -690,6 +690,8 @@ namespace Kiritori
         }
         private void PictureBox1_MouseMoveAnnotations(object sender, MouseEventArgs e)
         {
+            if (!_annotationMode) return;
+
             if (_annotationTool == AnnotationTool.Move && !_annotationDragging)
             {
                 pictureBox1_MouseMove(sender, e);
@@ -760,6 +762,8 @@ namespace Kiritori
         }
         private void PictureBox1_MouseUpAnnotations(object sender, MouseEventArgs e)
         {
+            if (!_annotationMode) return;
+
             if (_annotationTool == AnnotationTool.Move && !_annotationDragging)
             {
                 pictureBox1_MouseUp(sender, e);
