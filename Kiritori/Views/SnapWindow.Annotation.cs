@@ -163,7 +163,7 @@ namespace Kiritori
             _annotationPalette = new Panel
             {
                 Visible = false,
-                Size = new Size(610, 44),
+                Size = new Size(504, 44),
                 BackColor = Color.FromArgb(232, 26, 29, 34),
                 Padding = new Padding(8)
             };
@@ -171,22 +171,22 @@ namespace Kiritori
             _annotationPaletteLabel = new Label
             {
                 AutoSize = false,
-                Text = "≡ Edit",
+                Text = "≡",
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold, GraphicsUnit.Point),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Size = new Size(52, 28),
+                TextAlign = ContentAlignment.MiddleCenter,
+                Size = new Size(28, 28),
                 Location = new Point(10, 8),
                 Cursor = Cursors.SizeAll
             };
 
-            _annotationClearButton = CreatePaletteButton("Clear", 68, 72, (s, e) => ClearAnnotations());
-            _annotationToolButton = CreatePaletteButton("Tool", 146, 96, (s, e) => ShowAnnotationMenu(_annotationToolMenu, _annotationToolButton));
+            _annotationClearButton = CreatePaletteButton(string.Empty, 44, 34, (s, e) => ClearAnnotations());
+            _annotationToolButton = CreatePaletteButton("Tool", 84, 96, (s, e) => ShowAnnotationMenu(_annotationToolMenu, _annotationToolButton));
             SetDoubleBuffered(_annotationPalette);
-            _annotationColorButton = CreatePaletteButton("Color", 248, 92, (s, e) => ShowAnnotationMenu(_annotationColorMenu, _annotationColorButton));
-            _annotationStyleButton = CreatePaletteButton("Style", 346, 104, (s, e) => ShowAnnotationMenu(_annotationStyleMenu, _annotationStyleButton));
-            _annotationUndoButton = CreatePaletteButton("Undo", 456, 68, (s, e) => UndoLastAnnotation());
-            _annotationDoneButton = CreatePaletteButton("Done", 530, 72, (s, e) => ExitAnnotationMode());
+            _annotationColorButton = CreatePaletteButton("Color", 186, 92, (s, e) => ShowAnnotationMenu(_annotationColorMenu, _annotationColorButton));
+            _annotationStyleButton = CreatePaletteButton("Style", 284, 104, (s, e) => ShowAnnotationMenu(_annotationStyleMenu, _annotationStyleButton));
+            _annotationUndoButton = CreatePaletteButton(string.Empty, 394, 34, (s, e) => UndoLastAnnotation());
+            _annotationDoneButton = CreatePaletteButton(string.Empty, 434, 34, (s, e) => ExitAnnotationMode());
 
             CreateAnnotationPaletteMenus();
             HookPaletteDrag(_annotationPaletteLabel);
@@ -310,7 +310,7 @@ namespace Kiritori
                 TabStop = false,
                 TextImageRelation = TextImageRelation.ImageBeforeText,
                 ImageAlign = ContentAlignment.MiddleLeft,
-                TextAlign = ContentAlignment.MiddleLeft,
+                TextAlign = ContentAlignment.MiddleCenter,
                 Padding = new Padding(6, 0, 8, 0)
             };
             button.FlatAppearance.BorderSize = 0;
