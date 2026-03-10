@@ -11,6 +11,7 @@ namespace Kiritori
     {
         private enum AnnotationTool
         {
+            Move,
             Rectangle,
             Arrow,
         }
@@ -181,13 +182,13 @@ namespace Kiritori
 
             _annotationClearButton = CreatePaletteButton("Clear", 56, 52, (s, e) => ClearAnnotations());
             _annotationToolButton = CreatePaletteButton("Tool", 114, 88, (s, e) => ShowAnnotationMenu(_annotationToolMenu, _annotationToolButton));
+            SetDoubleBuffered(_annotationPalette);
             _annotationColorButton = CreatePaletteButton("Color", 208, 72, (s, e) => ShowAnnotationMenu(_annotationColorMenu, _annotationColorButton));
             _annotationStyleButton = CreatePaletteButton("Style", 286, 84, (s, e) => ShowAnnotationMenu(_annotationStyleMenu, _annotationStyleButton));
             _annotationUndoButton = CreatePaletteButton("Undo", 376, 52, (s, e) => UndoLastAnnotation());
             _annotationDoneButton = CreatePaletteButton("Done", 434, 52, (s, e) => ExitAnnotationMode());
 
             CreateAnnotationPaletteMenus();
-            HookPaletteDrag(_annotationPalette);
             HookPaletteDrag(_annotationPaletteLabel);
 
             _annotationPalette.Controls.Add(_annotationPaletteLabel);
@@ -208,6 +209,7 @@ namespace Kiritori
             if (_annotationToolMenu != null) return;
 
             _annotationToolMenu = new ContextMenuStrip();
+            _annotationToolMenu.Items.Add(CreateAnnotationMenuItem("Move", (s, e) => SetAnnotationTool(AnnotationTool.Move)));
             _annotationToolMenu.Items.Add(CreateAnnotationMenuItem("Rectangle", (s, e) => SetAnnotationTool(AnnotationTool.Rectangle)));
             _annotationToolMenu.Items.Add(CreateAnnotationMenuItem("Arrow", (s, e) => SetAnnotationTool(AnnotationTool.Arrow)));
 
@@ -254,6 +256,13 @@ namespace Kiritori
             menu.Show(anchor, new Point(0, anchor.Height));
         }
 
+        private void SetDoubleBuffered(Control control)
+        {
+            if (control == null) return;
+            var property = typeof(Control).GetProperty("DoubleBuffered", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            if (property != null) property.SetValue(control, true, null);
+        }
+
         private void HookPaletteDrag(Control control)
         {
             if (control == null) return;
@@ -275,7 +284,9 @@ namespace Kiritori
             if (!_annotationPaletteDragging) return;
             var current = Cursor.Position;
             var offset = new Size(current.X - _annotationPaletteDragOrigin.X, current.Y - _annotationPaletteDragOrigin.Y);
-            _annotationPaletteLocation = new Point(_annotationPaletteOrigin.X + offset.Width, _annotationPaletteOrigin.Y + offset.Height);
+            var next = new Point(_annotationPaletteOrigin.X + offset.Width, _annotationPaletteOrigin.Y + offset.Height);
+            if (next == _annotationPaletteLocation) return;
+            _annotationPaletteLocation = next;
             RepositionAnnotationPalette();
         }
 
@@ -310,9 +321,10 @@ namespace Kiritori
             var maxY = Math.Max(8, ClientSize.Height - _annotationPalette.Height - 8);
             var x = Math.Max(8, Math.Min(maxX, _annotationPaletteLocation.X));
             var y = Math.Max(8, Math.Min(maxY, _annotationPaletteLocation.Y));
-            _annotationPaletteLocation = new Point(x, y);
-            _annotationPalette.Location = _annotationPaletteLocation;
-            _annotationPalette.BringToFront();
+            var clamped = new Point(x, y);
+            _annotationPaletteLocation = clamped;
+            if (_annotationPalette.Location != clamped)
+                _annotationPalette.Location = clamped;
         }
         private void ResetAnnotations()
         {
@@ -359,7 +371,7 @@ namespace Kiritori
             if (_annotationPalette != null) _annotationPalette.Visible = true;
             RepositionAnnotationPalette();
             UpdateAnnotationMenuState();
-            Cursor = Cursors.Cross;
+            Cursor = _annotationTool == AnnotationTool.Move ? Cursors.SizeAll : Cursors.Cross;
             ShowOverlay("EDIT MODE");
             pictureBox1?.Invalidate();
         }
@@ -518,7 +530,7 @@ namespace Kiritori
 
             if (_annotationPalette == null) return;
 
-            UpdatePaletteButtonState(_annotationToolButton, true, "Tool: " + (_annotationTool == AnnotationTool.Rectangle ? "Rect" : "Arrow"));
+            UpdatePaletteButtonState(_annotationToolButton, true, "Tool: " + GetToolLabel());
             UpdatePaletteButtonState(_annotationColorButton, true, "Color: " + GetColorLabel(_annotationStrokeColor));
             UpdatePaletteButtonState(_annotationStyleButton, true, "Style: " + GetStyleLabel());
             UpdatePaletteButtonState(_annotationClearButton, false, "Clear");
@@ -536,6 +548,19 @@ namespace Kiritori
             button.ForeColor = Color.White;
         }
 
+        private string GetToolLabel()
+        {
+            switch (_annotationTool)
+            {
+                case AnnotationTool.Move:
+                    return "Move";
+                case AnnotationTool.Arrow:
+                    return "Arrow";
+                default:
+                    return "Rect";
+            }
+        }
+
         private string GetColorLabel(Color color)
         {
             if (color == Color.FromArgb(255, 255, 138, 61)) return "Orange";
@@ -547,6 +572,8 @@ namespace Kiritori
 
         private string GetStyleLabel()
         {
+            if (_annotationTool == AnnotationTool.Move)
+                return "Window";
             if (_annotationTool == AnnotationTool.Rectangle)
                 return _annotationRectangleStyle == AnnotationRectangleStyle.Outline ? "Outline" : "Filled";
 
@@ -570,6 +597,11 @@ namespace Kiritori
         private void PictureBox1_MouseDownAnnotations(object sender, MouseEventArgs e)
         {
             if (!_annotationMode || e.Button != MouseButtons.Left) return;
+            if (_annotationTool == AnnotationTool.Move)
+            {
+                pictureBox1_MouseDown(sender, e);
+                return;
+            }
             if (!_closeBtnRect.IsEmpty && _closeBtnRect.Contains(e.Location)) return;
 
             Point imagePoint;
@@ -606,6 +638,12 @@ namespace Kiritori
 
         private void PictureBox1_MouseMoveAnnotations(object sender, MouseEventArgs e)
         {
+            if (_annotationTool == AnnotationTool.Move)
+            {
+                pictureBox1_MouseMove(sender, e);
+                return;
+            }
+
             Point imagePoint;
             if (_annotationDragging)
             {
@@ -672,6 +710,12 @@ namespace Kiritori
 
         private void PictureBox1_MouseUpAnnotations(object sender, MouseEventArgs e)
         {
+            if (_annotationTool == AnnotationTool.Move)
+            {
+                pictureBox1_MouseUp(sender, e);
+                return;
+            }
+
             if (!_annotationDragging || e.Button != MouseButtons.Left) return;
 
             _annotationDragging = false;
@@ -921,7 +965,7 @@ namespace Kiritori
                     Cursor = Cursors.Hand;
                     break;
                 default:
-                    Cursor = Cursors.Cross;
+                    Cursor = _annotationTool == AnnotationTool.Move ? Cursors.SizeAll : Cursors.Cross;
                     break;
             }
         }
