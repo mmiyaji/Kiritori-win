@@ -1,4 +1,4 @@
-using Kiritori.Services.Logging;
+﻿using Kiritori.Services.Logging;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -13,6 +13,13 @@ namespace Kiritori
         {
             Rectangle,
             Arrow,
+        }
+
+        private enum AnnotationArrowStyle
+        {
+            Single,
+            Double,
+            Line,
         }
 
         private enum AnnotationShapeKind
@@ -56,6 +63,7 @@ namespace Kiritori
             public Color StrokeColor;
             public int StrokeWidth;
             public Color FillColor;
+            public AnnotationArrowStyle ArrowStyle;
 
             public Rectangle Bounds
             {
@@ -85,9 +93,19 @@ namespace Kiritori
         private Label _annotationPaletteLabel;
         private Button _annotationRectButton;
         private Button _annotationArrowButton;
+        private Button _annotationColorOrangeButton;
+        private Button _annotationColorBlueButton;
+        private Button _annotationColorGreenButton;
+        private Button _annotationColorPinkButton;
+        private Button _annotationArrowSingleButton;
+        private Button _annotationArrowDoubleButton;
+        private Button _annotationArrowLineButton;
         private Button _annotationUndoButton;
         private Button _annotationClearButton;
         private Button _annotationDoneButton;
+        private Color _annotationStrokeColor = Color.FromArgb(255, 255, 138, 61);
+        private Color _annotationFillColor = Color.FromArgb(48, 255, 138, 61);
+        private AnnotationArrowStyle _annotationArrowStyle = AnnotationArrowStyle.Single;
 
         private void InitializeAnnotationFeature()
         {
@@ -134,7 +152,7 @@ namespace Kiritori
             _annotationPalette = new Panel
             {
                 Visible = false,
-                Size = new Size(352, 46),
+                Size = new Size(352, 84),
                 BackColor = Color.FromArgb(232, 26, 29, 34),
                 Padding = new Padding(8)
             };
@@ -155,6 +173,13 @@ namespace Kiritori
             _annotationUndoButton = CreatePaletteButton("Undo", 168, 52, (s, e) => UndoLastAnnotation());
             _annotationClearButton = CreatePaletteButton("Clear", 224, 52, (s, e) => ClearAnnotations());
             _annotationDoneButton = CreatePaletteButton("Done", 280, 52, (s, e) => ExitAnnotationMode());
+            _annotationColorOrangeButton = CreateColorButton(10, 46, Color.FromArgb(255, 138, 61), Color.FromArgb(48, 255, 138, 61));
+            _annotationColorBlueButton = CreateColorButton(42, 46, Color.FromArgb(88, 166, 255), Color.FromArgb(48, 88, 166, 255));
+            _annotationColorGreenButton = CreateColorButton(74, 46, Color.FromArgb(78, 201, 140), Color.FromArgb(48, 78, 201, 140));
+            _annotationColorPinkButton = CreateColorButton(106, 46, Color.FromArgb(255, 105, 180), Color.FromArgb(48, 255, 105, 180));
+            _annotationArrowSingleButton = CreatePaletteButton("->", 152, 46, (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Single));
+            _annotationArrowDoubleButton = CreatePaletteButton("<->", 204, 46, (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Double));
+            _annotationArrowLineButton = CreatePaletteButton("Line", 262, 46, (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Line));
 
             _annotationPalette.Controls.Add(_annotationPaletteLabel);
             _annotationPalette.Controls.Add(_annotationRectButton);
@@ -162,6 +187,13 @@ namespace Kiritori
             _annotationPalette.Controls.Add(_annotationUndoButton);
             _annotationPalette.Controls.Add(_annotationClearButton);
             _annotationPalette.Controls.Add(_annotationDoneButton);
+            _annotationPalette.Controls.Add(_annotationColorOrangeButton);
+            _annotationPalette.Controls.Add(_annotationColorBlueButton);
+            _annotationPalette.Controls.Add(_annotationColorGreenButton);
+            _annotationPalette.Controls.Add(_annotationColorPinkButton);
+            _annotationPalette.Controls.Add(_annotationArrowSingleButton);
+            _annotationPalette.Controls.Add(_annotationArrowDoubleButton);
+            _annotationPalette.Controls.Add(_annotationArrowLineButton);
 
             Controls.Add(_annotationPalette);
             _annotationPalette.BringToFront();
@@ -186,6 +218,28 @@ namespace Kiritori
             return button;
         }
 
+        private Button CreateColorButton(int x, int y, Color strokeColor, Color fillColor)
+        {
+            var button = new Button
+            {
+                Size = new Size(24, 24),
+                Location = new Point(x, y),
+                FlatStyle = FlatStyle.Flat,
+                BackColor = strokeColor,
+                ForeColor = Color.White,
+                TabStop = false,
+                Text = string.Empty,
+                Tag = Tuple.Create(strokeColor, fillColor)
+            };
+            button.FlatAppearance.BorderSize = 1;
+            button.FlatAppearance.BorderColor = Color.FromArgb(90, 255, 255, 255);
+            button.Click += (s, e) =>
+            {
+                var pair = (Tuple<Color, Color>)button.Tag;
+                SetAnnotationColor(pair.Item1, pair.Item2);
+            };
+            return button;
+        }
         private void RepositionAnnotationPalette()
         {
             if (_annotationPalette == null) return;
@@ -268,6 +322,41 @@ namespace Kiritori
             pictureBox1?.Invalidate();
         }
 
+        private void SetAnnotationColor(Color strokeColor, Color fillColor)
+        {
+            _annotationStrokeColor = strokeColor;
+            _annotationFillColor = fillColor;
+
+            if (_annotationPreview != null)
+            {
+                _annotationPreview.StrokeColor = strokeColor;
+                _annotationPreview.FillColor = fillColor;
+            }
+
+            if (TryGetSelectedShape(out var selected))
+            {
+                selected.StrokeColor = strokeColor;
+                selected.FillColor = fillColor;
+            }
+
+            UpdateAnnotationMenuState();
+            pictureBox1?.Invalidate();
+        }
+
+        private void SetAnnotationArrowStyle(AnnotationArrowStyle style)
+        {
+            _annotationArrowStyle = style;
+
+            if (_annotationPreview != null && _annotationPreview.Kind == AnnotationShapeKind.Arrow)
+                _annotationPreview.ArrowStyle = style;
+
+            if (TryGetSelectedShape(out var selected) && selected.Kind == AnnotationShapeKind.Arrow)
+                selected.ArrowStyle = style;
+
+            UpdateAnnotationMenuState();
+            pictureBox1?.Invalidate();
+        }
+
         private void UndoLastAnnotation()
         {
             if (_annotations.Count == 0) return;
@@ -323,6 +412,13 @@ namespace Kiritori
 
             UpdatePaletteButtonState(_annotationRectButton, _annotationTool == AnnotationTool.Rectangle);
             UpdatePaletteButtonState(_annotationArrowButton, _annotationTool == AnnotationTool.Arrow);
+            UpdatePaletteButtonState(_annotationArrowSingleButton, _annotationArrowStyle == AnnotationArrowStyle.Single);
+            UpdatePaletteButtonState(_annotationArrowDoubleButton, _annotationArrowStyle == AnnotationArrowStyle.Double);
+            UpdatePaletteButtonState(_annotationArrowLineButton, _annotationArrowStyle == AnnotationArrowStyle.Line);
+            UpdateColorButtonState(_annotationColorOrangeButton, _annotationStrokeColor == Color.FromArgb(255, 255, 138, 61));
+            UpdateColorButtonState(_annotationColorBlueButton, _annotationStrokeColor == Color.FromArgb(88, 166, 255));
+            UpdateColorButtonState(_annotationColorGreenButton, _annotationStrokeColor == Color.FromArgb(78, 201, 140));
+            UpdateColorButtonState(_annotationColorPinkButton, _annotationStrokeColor == Color.FromArgb(255, 105, 180));
             if (_annotationUndoButton != null) _annotationUndoButton.Enabled = hasAnnotations;
             if (_annotationClearButton != null) _annotationClearButton.Enabled = hasAnnotations;
         }
@@ -332,6 +428,12 @@ namespace Kiritori
             if (button == null) return;
             button.BackColor = selected ? Color.FromArgb(255, 138, 61) : Color.FromArgb(44, 49, 57);
             button.ForeColor = Color.White;
+        }
+
+        private void UpdateColorButtonState(Button button, bool selected)
+        {
+            if (button == null) return;
+            button.FlatAppearance.BorderColor = selected ? Color.White : Color.FromArgb(90, 255, 255, 255);
         }
 
         private void PictureBox1_MouseDownAnnotations(object sender, MouseEventArgs e)
@@ -778,12 +880,30 @@ namespace Kiritori
 
         private Pen CreateShapePen(AnnotationShape shape)
         {
-            return new Pen(shape.StrokeColor, Math.Max(2f, shape.StrokeWidth))
+            var pen = new Pen(shape.StrokeColor, Math.Max(2f, shape.StrokeWidth))
             {
                 LineJoin = LineJoin.Round,
                 StartCap = LineCap.Round,
-                EndCap = shape.Kind == AnnotationShapeKind.Arrow ? LineCap.ArrowAnchor : LineCap.Round
+                EndCap = LineCap.Round
             };
+
+            if (shape.Kind == AnnotationShapeKind.Arrow)
+            {
+                switch (shape.ArrowStyle)
+                {
+                    case AnnotationArrowStyle.Single:
+                        pen.CustomEndCap = new AdjustableArrowCap(4, 6, true);
+                        break;
+                    case AnnotationArrowStyle.Double:
+                        pen.CustomStartCap = new AdjustableArrowCap(4, 6, true);
+                        pen.CustomEndCap = new AdjustableArrowCap(4, 6, true);
+                        break;
+                    case AnnotationArrowStyle.Line:
+                        break;
+                }
+            }
+
+            return pen;
         }
 
         private AnnotationShape CreateAnnotationShape(AnnotationTool tool, Point start, Point end)
@@ -793,8 +913,9 @@ namespace Kiritori
                 Kind = tool == AnnotationTool.Arrow ? AnnotationShapeKind.Arrow : AnnotationShapeKind.Rectangle,
                 Start = start,
                 End = end,
-                StrokeColor = Color.FromArgb(255, 255, 138, 61),
-                FillColor = Color.FromArgb(48, 255, 138, 61),
+                StrokeColor = _annotationStrokeColor,
+                FillColor = _annotationFillColor,
+                ArrowStyle = _annotationArrowStyle,
                 StrokeWidth = Math.Max(2, DeviceDpi / 48)
             };
         }
