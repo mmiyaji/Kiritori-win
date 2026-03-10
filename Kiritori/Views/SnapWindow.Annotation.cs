@@ -214,10 +214,10 @@ namespace Kiritori
             _annotationToolMenu.Items.Add(CreateAnnotationMenuItem("➜ Arrow", (s, e) => SetAnnotationTool(AnnotationTool.Arrow)));
 
             _annotationColorMenu = new ContextMenuStrip();
-            _annotationColorMenu.Items.Add(CreateAnnotationColorMenuItem("● Orange", Color.FromArgb(255, 138, 61), Color.FromArgb(48, 255, 138, 61)));
-            _annotationColorMenu.Items.Add(CreateAnnotationColorMenuItem("● Blue", Color.FromArgb(88, 166, 255), Color.FromArgb(48, 88, 166, 255)));
-            _annotationColorMenu.Items.Add(CreateAnnotationColorMenuItem("● Green", Color.FromArgb(78, 201, 140), Color.FromArgb(48, 78, 201, 140)));
-            _annotationColorMenu.Items.Add(CreateAnnotationColorMenuItem("● Pink", Color.FromArgb(255, 105, 180), Color.FromArgb(48, 255, 105, 180)));
+            _annotationColorMenu.Items.Add(CreateAnnotationColorMenuItem("Orange", Color.FromArgb(255, 138, 61), Color.FromArgb(48, 255, 138, 61)));
+            _annotationColorMenu.Items.Add(CreateAnnotationColorMenuItem("Blue", Color.FromArgb(88, 166, 255), Color.FromArgb(48, 88, 166, 255)));
+            _annotationColorMenu.Items.Add(CreateAnnotationColorMenuItem("Green", Color.FromArgb(78, 201, 140), Color.FromArgb(48, 78, 201, 140)));
+            _annotationColorMenu.Items.Add(CreateAnnotationColorMenuItem("Pink", Color.FromArgb(255, 105, 180), Color.FromArgb(48, 255, 105, 180)));
 
             _annotationStyleMenu = new ContextMenuStrip();
             _annotationStyleMenu.Items.Add(CreateAnnotationMenuItem("▣ Rect: Filled", (s, e) => SetAnnotationRectangleStyle(AnnotationRectangleStyle.Filled)));
