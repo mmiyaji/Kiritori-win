@@ -823,6 +823,11 @@ namespace Kiritori
             if (!_annotationMode || e.Button != MouseButtons.Left) return;
             if (!_closeBtnRect.IsEmpty && _closeBtnRect.Contains(e.Location)) return;
 
+            HandleAnnotationMouseDown(sender, e);
+        }
+
+        private void HandleAnnotationMouseDown(object sender, MouseEventArgs e)
+        {
             Point imagePoint;
             if (!TryClientToImagePoint(e.Location, out imagePoint))
             {
@@ -847,70 +852,35 @@ namespace Kiritori
 
             BeginAnnotationCreate(imagePoint);
         }
+
         private void PictureBox1_MouseMoveAnnotations(object sender, MouseEventArgs e)
         {
             if (!_annotationMode) return;
 
-            if (_annotationTool == AnnotationTool.Move && !_annotationDragging)
-            {
-                pictureBox1_MouseMove(sender, e);
-            }
+            HandleAnnotationMouseMove(sender, e);
+        }
 
-            Point imagePoint;
+        private void HandleAnnotationMouseMove(object sender, MouseEventArgs e)
+        {
+            ForwardStandardMoveIfNeeded(sender, e);
             if (_annotationDragging)
             {
-                if (!TryClientToImagePoint(e.Location, out imagePoint)) return;
-
-                switch (_annotationInteraction)
-                {
-                    case AnnotationInteraction.Create:
-                        if (_annotationPreview != null)
-                            _annotationPreview.End = imagePoint;
-                        break;
-                    case AnnotationInteraction.MoveRectangle:
-                        MoveSelectedRectangle(imagePoint);
-                        break;
-                    case AnnotationInteraction.ResizeRectangle:
-                        ResizeSelectedRectangle(imagePoint);
-                        break;
-                    case AnnotationInteraction.MoveArrow:
-                        MoveSelectedArrow(imagePoint);
-                        break;
-                    case AnnotationInteraction.EditArrowStart:
-                        EditSelectedArrowEndpoint(imagePoint, true);
-                        break;
-                    case AnnotationInteraction.EditArrowEnd:
-                        EditSelectedArrowEndpoint(imagePoint, false);
-                        break;
-                }
-
-                pictureBox1.Invalidate();
+                UpdateAnnotationDrag(e.Location);
                 return;
             }
 
-            if (!TryClientToImagePoint(e.Location, out imagePoint))
-            {
-                ClearHoveredAnnotation();
-                UpdateAnnotationCursor(AnnotationHandle.None);
-                return;
-            }
-
-            int hitIndex;
-            AnnotationHandle hitHandle;
-            if (TryHitAnnotation(imagePoint, out hitIndex, out hitHandle))
-            {
-                UpdateHoveredAnnotation(hitIndex);
-                UpdateAnnotationCursor(hitHandle);
-                return;
-            }
-
-            ClearHoveredAnnotation();
-            UpdateAnnotationCursor(AnnotationHandle.None);
+            UpdateAnnotationHoverState(e.Location);
         }
+
         private void PictureBox1_MouseUpAnnotations(object sender, MouseEventArgs e)
         {
             if (!_annotationMode) return;
 
+            HandleAnnotationMouseUp(sender, e);
+        }
+
+        private void HandleAnnotationMouseUp(object sender, MouseEventArgs e)
+        {
             if (_annotationTool == AnnotationTool.Move && !_annotationDragging)
             {
                 pictureBox1_MouseUp(sender, e);
@@ -919,29 +889,7 @@ namespace Kiritori
 
             if (!_annotationDragging || e.Button != MouseButtons.Left) return;
 
-            _annotationDragging = false;
-            pictureBox1.Capture = false;
-
-            Point imagePoint;
-            TryClientToImagePoint(e.Location, out imagePoint);
-
-            if (_annotationInteraction == AnnotationInteraction.Create)
-            {
-                CompleteAnnotationCreate();
-            }
-            else if (_selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _annotations.Count)
-            {
-                if (!IsAnnotationShapeUsable(_annotations[_selectedAnnotationIndex]))
-                {
-                    _annotations.RemoveAt(_selectedAnnotationIndex);
-                    _selectedAnnotationIndex = -1;
-                }
-            }
-
-            _annotationInteraction = AnnotationInteraction.None;
-            _annotationHandle = AnnotationHandle.None;
-            UpdateAnnotationCursor(AnnotationHandle.None);
-            pictureBox1.Invalidate();
+            FinishAnnotationDrag(e.Location);
         }
 
         private void BeginAnnotationEdit(int hitIndex, AnnotationHandle hitHandle, Point imagePoint)
@@ -999,6 +947,102 @@ namespace Kiritori
             if (_hoverAnnotationIndex == -1) return;
             _hoverAnnotationIndex = -1;
             pictureBox1?.Invalidate();
+        }
+
+        private void ForwardStandardMoveIfNeeded(object sender, MouseEventArgs e)
+        {
+            if (_annotationTool == AnnotationTool.Move && !_annotationDragging)
+                pictureBox1_MouseMove(sender, e);
+        }
+
+        private void UpdateAnnotationDrag(Point clientPoint)
+        {
+            Point imagePoint;
+            if (!TryClientToImagePoint(clientPoint, out imagePoint)) return;
+
+            ApplyAnnotationDrag(imagePoint);
+            pictureBox1.Invalidate();
+        }
+
+        private void ApplyAnnotationDrag(Point imagePoint)
+        {
+            switch (_annotationInteraction)
+            {
+                case AnnotationInteraction.Create:
+                    if (_annotationPreview != null)
+                        _annotationPreview.End = imagePoint;
+                    break;
+                case AnnotationInteraction.MoveRectangle:
+                    MoveSelectedRectangle(imagePoint);
+                    break;
+                case AnnotationInteraction.ResizeRectangle:
+                    ResizeSelectedRectangle(imagePoint);
+                    break;
+                case AnnotationInteraction.MoveArrow:
+                    MoveSelectedArrow(imagePoint);
+                    break;
+                case AnnotationInteraction.EditArrowStart:
+                    EditSelectedArrowEndpoint(imagePoint, true);
+                    break;
+                case AnnotationInteraction.EditArrowEnd:
+                    EditSelectedArrowEndpoint(imagePoint, false);
+                    break;
+            }
+        }
+
+        private void UpdateAnnotationHoverState(Point clientPoint)
+        {
+            Point imagePoint;
+            if (!TryClientToImagePoint(clientPoint, out imagePoint))
+            {
+                ClearHoveredAnnotation();
+                UpdateAnnotationCursor(AnnotationHandle.None);
+                return;
+            }
+
+            int hitIndex;
+            AnnotationHandle hitHandle;
+            if (TryHitAnnotation(imagePoint, out hitIndex, out hitHandle))
+            {
+                UpdateHoveredAnnotation(hitIndex);
+                UpdateAnnotationCursor(hitHandle);
+                return;
+            }
+
+            ClearHoveredAnnotation();
+            UpdateAnnotationCursor(AnnotationHandle.None);
+        }
+
+        private void FinishAnnotationDrag(Point clientPoint)
+        {
+            _annotationDragging = false;
+            pictureBox1.Capture = false;
+
+            Point imagePoint;
+            TryClientToImagePoint(clientPoint, out imagePoint);
+
+            if (_annotationInteraction == AnnotationInteraction.Create)
+            {
+                CompleteAnnotationCreate();
+            }
+            else
+            {
+                RemoveInvalidSelectedAnnotation();
+            }
+
+            _annotationInteraction = AnnotationInteraction.None;
+            _annotationHandle = AnnotationHandle.None;
+            UpdateAnnotationCursor(AnnotationHandle.None);
+            pictureBox1.Invalidate();
+        }
+
+        private void RemoveInvalidSelectedAnnotation()
+        {
+            if (_selectedAnnotationIndex < 0 || _selectedAnnotationIndex >= _annotations.Count) return;
+            if (IsAnnotationShapeUsable(_annotations[_selectedAnnotationIndex])) return;
+
+            _annotations.RemoveAt(_selectedAnnotationIndex);
+            _selectedAnnotationIndex = -1;
         }
         private void MoveSelectedRectangle(Point imagePoint)
         {
