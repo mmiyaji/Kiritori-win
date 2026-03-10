@@ -12,6 +12,22 @@ namespace Kiritori
     {
         private const int AnnotationArrowHandleRadius = 10;
         private const int AnnotationRectangleHandleRadius = 10;
+        private static readonly Point AnnotationPaletteDefaultLocation = new Point(14, 14);
+        private static readonly Size AnnotationPaletteSize = new Size(504, 44);
+        private static readonly Padding AnnotationPalettePadding = new Padding(8);
+        private static readonly Size AnnotationPaletteDragHandleSize = new Size(28, 28);
+        private static readonly Point AnnotationPaletteDragHandleLocation = new Point(10, 8);
+        private static readonly Size AnnotationPaletteButtonSize = new Size(34, 28);
+        private const int AnnotationPaletteButtonY = 8;
+        private const int AnnotationPaletteClearButtonX = 44;
+        private const int AnnotationPaletteToolButtonX = 84;
+        private const int AnnotationPaletteToolButtonWidth = 96;
+        private const int AnnotationPaletteColorButtonX = 186;
+        private const int AnnotationPaletteColorButtonWidth = 92;
+        private const int AnnotationPaletteStyleButtonX = 284;
+        private const int AnnotationPaletteStyleButtonWidth = 104;
+        private const int AnnotationPaletteUndoButtonX = 394;
+        private const int AnnotationPaletteDoneButtonX = 434;
 
         private enum AnnotationTool
         {
@@ -116,7 +132,7 @@ namespace Kiritori
         private bool _annotationPaletteDragging;
         private Point _annotationPaletteDragOrigin;
         private Point _annotationPaletteOrigin;
-        private Point _annotationPaletteLocation = new Point(14, 14);
+        private Point _annotationPaletteLocation = AnnotationPaletteDefaultLocation;
         private Color _annotationStrokeColor = Color.FromArgb(255, 255, 138, 61);
         private Color _annotationFillColor = Color.FromArgb(48, 255, 138, 61);
         private AnnotationArrowStyle _annotationArrowStyle = AnnotationArrowStyle.Single;
@@ -170,9 +186,9 @@ namespace Kiritori
             _annotationPalette = new Panel
             {
                 Visible = false,
-                Size = new Size(504, 44),
+                Size = AnnotationPaletteSize,
                 BackColor = Color.FromArgb(232, 26, 29, 34),
-                Padding = new Padding(8)
+                Padding = AnnotationPalettePadding
             };
 
             _annotationPaletteLabel = new Label
@@ -182,18 +198,18 @@ namespace Kiritori
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold, GraphicsUnit.Point),
                 TextAlign = ContentAlignment.MiddleCenter,
-                Size = new Size(28, 28),
-                Location = new Point(10, 8),
+                Size = AnnotationPaletteDragHandleSize,
+                Location = AnnotationPaletteDragHandleLocation,
                 Cursor = Cursors.SizeAll
             };
 
-            _annotationClearButton = CreatePaletteButton(string.Empty, 44, 34, (s, e) => ClearAnnotations());
-            _annotationToolButton = CreatePaletteButton("Tool", 84, 96, (s, e) => ShowAnnotationMenu(_annotationToolMenu, _annotationToolButton));
+            _annotationClearButton = CreatePaletteButton(string.Empty, AnnotationPaletteClearButtonX, AnnotationPaletteButtonSize.Width, (s, e) => ClearAnnotations());
+            _annotationToolButton = CreatePaletteButton("Tool", AnnotationPaletteToolButtonX, AnnotationPaletteToolButtonWidth, (s, e) => ShowAnnotationMenu(_annotationToolMenu, _annotationToolButton));
             SetDoubleBuffered(_annotationPalette);
-            _annotationColorButton = CreatePaletteButton("Color", 186, 92, (s, e) => ShowAnnotationMenu(_annotationColorMenu, _annotationColorButton));
-            _annotationStyleButton = CreatePaletteButton("Style", 284, 104, (s, e) => ShowAnnotationMenu(_annotationStyleMenu, _annotationStyleButton));
-            _annotationUndoButton = CreatePaletteButton(string.Empty, 394, 34, (s, e) => UndoLastAnnotation());
-            _annotationDoneButton = CreatePaletteButton(string.Empty, 434, 34, (s, e) => ExitAnnotationMode());
+            _annotationColorButton = CreatePaletteButton("Color", AnnotationPaletteColorButtonX, AnnotationPaletteColorButtonWidth, (s, e) => ShowAnnotationMenu(_annotationColorMenu, _annotationColorButton));
+            _annotationStyleButton = CreatePaletteButton("Style", AnnotationPaletteStyleButtonX, AnnotationPaletteStyleButtonWidth, (s, e) => ShowAnnotationMenu(_annotationStyleMenu, _annotationStyleButton));
+            _annotationUndoButton = CreatePaletteButton(string.Empty, AnnotationPaletteUndoButtonX, AnnotationPaletteButtonSize.Width, (s, e) => UndoLastAnnotation());
+            _annotationDoneButton = CreatePaletteButton(string.Empty, AnnotationPaletteDoneButtonX, AnnotationPaletteButtonSize.Width, (s, e) => ExitAnnotationMode());
 
             CreateAnnotationPaletteMenus();
             HookPaletteDrag(_annotationPaletteLabel);
@@ -308,8 +324,8 @@ namespace Kiritori
             var button = new Button
             {
                 Text = text,
-                Size = new Size(width, 28),
-                Location = new Point(x, 8),
+                Size = new Size(width, AnnotationPaletteButtonSize.Height),
+                Location = new Point(x, AnnotationPaletteButtonY),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(44, 49, 57),
                 ForeColor = Color.White,
