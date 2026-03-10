@@ -484,8 +484,7 @@ namespace Kiritori
         {
             _annotationTool = tool;
             _annotationPreview = null;
-            UpdateAnnotationMenuState();
-            pictureBox1?.Invalidate();
+            RefreshAnnotationUi();
         }
 
         private void SetAnnotationColor(Color strokeColor, Color fillColor)
@@ -513,8 +512,7 @@ namespace Kiritori
                     : fillColor;
             }
 
-            UpdateAnnotationMenuState();
-            pictureBox1?.Invalidate();
+            RefreshAnnotationUi();
         }
 
         private void SetAnnotationArrowStyle(AnnotationArrowStyle style)
@@ -527,8 +525,7 @@ namespace Kiritori
             if (_annotationPreview != null && _annotationPreview.Kind == AnnotationShapeKind.Arrow)
                 _annotationPreview.ArrowStyle = style;
 
-            UpdateAnnotationMenuState();
-            pictureBox1?.Invalidate();
+            RefreshAnnotationUi();
         }
 
         private void SetAnnotationRectangleStyle(AnnotationRectangleStyle style)
@@ -550,17 +547,15 @@ namespace Kiritori
                 _annotationPreview.FillColor = style == AnnotationRectangleStyle.Outline ? Color.Transparent : CreateFillColorFromStroke(_annotationPreview.StrokeColor);
             }
 
-            UpdateAnnotationMenuState();
-            pictureBox1?.Invalidate();
+            RefreshAnnotationUi();
         }
         private void UndoLastAnnotation()
         {
             if (_annotations.Count == 0) return;
             _annotations.RemoveAt(_annotations.Count - 1);
             if (_selectedAnnotationIndex >= _annotations.Count) _selectedAnnotationIndex = _annotations.Count - 1;
-            UpdateAnnotationMenuState();
+            RefreshAnnotationUi();
             ShowOverlay("ANNOTATION UNDONE");
-            pictureBox1?.Invalidate();
         }
 
         private void ClearAnnotations()
@@ -569,9 +564,8 @@ namespace Kiritori
             _annotations.Clear();
             _selectedAnnotationIndex = -1;
             _annotationPreview = null;
-            UpdateAnnotationMenuState();
+            RefreshAnnotationUi();
             ShowOverlay("ANNOTATIONS CLEARED");
-            pictureBox1?.Invalidate();
         }
 
         private void DetachStandardMouseHandlers()
@@ -601,6 +595,12 @@ namespace Kiritori
                 _annotationArrowStyle = shape.ArrowStyle;
             else
                 _annotationRectangleStyle = shape.RectangleStyle;
+        }
+
+        private void RefreshAnnotationUi()
+        {
+            UpdateAnnotationMenuState();
+            pictureBox1?.Invalidate();
         }
 
         private void UpdateAnnotationMenuState()
@@ -639,19 +639,6 @@ namespace Kiritori
 
             if (oldImage != null && !ReferenceEquals(oldImage, icon))
                 oldImage.Dispose();
-        }
-
-        private string GetToolLabel()
-        {
-            switch (_annotationTool)
-            {
-                case AnnotationTool.Move:
-                    return "Move";
-                case AnnotationTool.Arrow:
-                    return "Arrow";
-                default:
-                    return "Rect";
-            }
         }
 
         private string GetToolButtonLabel()
@@ -699,26 +686,6 @@ namespace Kiritori
             if (color == Color.FromArgb(78, 201, 140)) return "Green";
             if (color == Color.FromArgb(255, 105, 180)) return "Pink";
             return "Custom";
-        }
-
-        private string GetStyleLabel()
-        {
-            if (_annotationTool == AnnotationTool.Move)
-                return "Window";
-            if (_annotationTool == AnnotationTool.Rectangle)
-                return _annotationRectangleStyle == AnnotationRectangleStyle.Outline ? "Outline" : "Filled";
-
-            switch (_annotationArrowStyle)
-            {
-                case AnnotationArrowStyle.Double:
-                    return "Double";
-                case AnnotationArrowStyle.Line:
-                    return "Line";
-                case AnnotationArrowStyle.Tapered:
-                    return "Tapered";
-                default:
-                    return "Single";
-            }
         }
 
         private Color CreateFillColorFromStroke(Color strokeColor)
