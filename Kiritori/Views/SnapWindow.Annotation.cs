@@ -764,11 +764,7 @@ namespace Kiritori
 
             if (!TryClientToImagePoint(e.Location, out imagePoint))
             {
-                if (_hoverAnnotationIndex != -1)
-                {
-                    _hoverAnnotationIndex = -1;
-                    pictureBox1.Invalidate();
-                }
+                ClearHoveredAnnotation();
                 UpdateAnnotationCursor(AnnotationHandle.None);
                 return;
             }
@@ -777,20 +773,12 @@ namespace Kiritori
             AnnotationHandle hitHandle;
             if (TryHitAnnotation(imagePoint, out hitIndex, out hitHandle))
             {
-                if (_hoverAnnotationIndex != hitIndex)
-                {
-                    _hoverAnnotationIndex = hitIndex;
-                    pictureBox1.Invalidate();
-                }
+                UpdateHoveredAnnotation(hitIndex);
                 UpdateAnnotationCursor(hitHandle);
                 return;
             }
 
-            if (_hoverAnnotationIndex != -1)
-            {
-                _hoverAnnotationIndex = -1;
-                pictureBox1.Invalidate();
-            }
+            ClearHoveredAnnotation();
             UpdateAnnotationCursor(AnnotationHandle.None);
         }
         private void PictureBox1_MouseUpAnnotations(object sender, MouseEventArgs e)
@@ -871,6 +859,20 @@ namespace Kiritori
             }
 
             _annotationPreview = null;
+        }
+
+        private void UpdateHoveredAnnotation(int annotationIndex)
+        {
+            if (_hoverAnnotationIndex == annotationIndex) return;
+            _hoverAnnotationIndex = annotationIndex;
+            pictureBox1?.Invalidate();
+        }
+
+        private void ClearHoveredAnnotation()
+        {
+            if (_hoverAnnotationIndex == -1) return;
+            _hoverAnnotationIndex = -1;
+            pictureBox1?.Invalidate();
         }
         private void MoveSelectedRectangle(Point imagePoint)
         {
