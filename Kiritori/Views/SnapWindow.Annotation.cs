@@ -307,11 +307,69 @@ namespace Kiritori
                 BackColor = Color.FromArgb(44, 49, 57),
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI", 8.5f, FontStyle.Regular, GraphicsUnit.Point),
-                TabStop = false
+                TabStop = false,
+                TextImageRelation = TextImageRelation.ImageBeforeText,
+                ImageAlign = ContentAlignment.MiddleLeft,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(8, 0, 8, 0)
             };
             button.FlatAppearance.BorderSize = 0;
+            button.FlatAppearance.MouseOverBackColor = Color.FromArgb(56, 62, 72);
+            button.FlatAppearance.MouseDownBackColor = Color.FromArgb(64, 71, 82);
             button.Click += click;
             return button;
+        }
+
+        private Image GetAnnotationPaletteIcon(string key)
+        {
+            return Properties.Resources.ResourceManager.GetObject(key) as Image;
+        }
+
+        private string GetToolIconKey()
+        {
+            switch (_annotationTool)
+            {
+                case AnnotationTool.Move:
+                    return "annotation_move";
+                case AnnotationTool.Arrow:
+                    return "annotation_arrow_single";
+                default:
+                    return "annotation_rect_outline";
+            }
+        }
+
+        private string GetStyleIconKey()
+        {
+            if (_annotationTool == AnnotationTool.Move) return "annotation_move";
+            if (_annotationTool == AnnotationTool.Rectangle)
+                return _annotationRectangleStyle == AnnotationRectangleStyle.Outline ? "annotation_rect_outline" : "annotation_rect_filled";
+
+            switch (_annotationArrowStyle)
+            {
+                case AnnotationArrowStyle.Double:
+                    return "annotation_arrow_double";
+                case AnnotationArrowStyle.Line:
+                    return "annotation_arrow_line";
+                case AnnotationArrowStyle.Tapered:
+                    return "annotation_arrow_tapered";
+                default:
+                    return "annotation_arrow_single";
+            }
+        }
+
+        private Image CreateAnnotationColorSwatch(Color color)
+        {
+            var bmp = new Bitmap(16, 16);
+            using (var g = Graphics.FromImage(bmp))
+            using (var brush = new SolidBrush(color))
+            using (var pen = new Pen(Color.White, 1.2f))
+            {
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.Clear(Color.Transparent);
+                g.FillEllipse(brush, 2, 2, 12, 12);
+                g.DrawEllipse(pen, 2, 2, 12, 12);
+            }
+            return bmp;
         }
 
         private void RepositionAnnotationPalette()
@@ -539,22 +597,28 @@ namespace Kiritori
 
             if (_annotationPalette == null) return;
 
-            UpdatePaletteButtonState(_annotationToolButton, true, GetToolButtonLabel());
-            UpdatePaletteButtonState(_annotationColorButton, true, GetColorButtonLabel(_annotationStrokeColor));
-            UpdatePaletteButtonState(_annotationStyleButton, true, GetStyleButtonLabel());
-            UpdatePaletteButtonState(_annotationClearButton, false, "✕ Clear");
-            UpdatePaletteButtonState(_annotationUndoButton, false, "↶ Undo");
-            UpdatePaletteButtonState(_annotationDoneButton, false, "✓ Done");
+            UpdatePaletteButtonState(_annotationToolButton, true, GetToolButtonLabel(), GetAnnotationPaletteIcon(GetToolIconKey()));
+            UpdatePaletteButtonState(_annotationColorButton, true, GetColorButtonLabel(_annotationStrokeColor), CreateAnnotationColorSwatch(_annotationStrokeColor));
+            UpdatePaletteButtonState(_annotationStyleButton, true, GetStyleButtonLabel(), GetAnnotationPaletteIcon(GetStyleIconKey()));
+            UpdatePaletteButtonState(_annotationClearButton, false, "Clear", GetAnnotationPaletteIcon("annotation_clear"));
+            UpdatePaletteButtonState(_annotationUndoButton, false, "Undo", GetAnnotationPaletteIcon("annotation_undo"));
+            UpdatePaletteButtonState(_annotationDoneButton, false, "Done", GetAnnotationPaletteIcon("annotation_done"));
             if (_annotationUndoButton != null) _annotationUndoButton.Enabled = hasAnnotations;
             if (_annotationClearButton != null) _annotationClearButton.Enabled = hasAnnotations;
         }
 
-        private void UpdatePaletteButtonState(Button button, bool emphasize, string text)
+        private void UpdatePaletteButtonState(Button button, bool emphasize, string text, Image icon)
         {
             if (button == null) return;
+
+            var oldImage = button.Image;
             button.Text = text;
             button.BackColor = emphasize ? Color.FromArgb(56, 62, 72) : Color.FromArgb(44, 49, 57);
             button.ForeColor = Color.White;
+            button.Image = icon;
+
+            if (oldImage != null && !ReferenceEquals(oldImage, icon))
+                oldImage.Dispose();
         }
 
         private string GetToolLabel()
@@ -575,36 +639,36 @@ namespace Kiritori
             switch (_annotationTool)
             {
                 case AnnotationTool.Move:
-                    return "✥ Move";
+                    return "Move";
                 case AnnotationTool.Arrow:
-                    return "➜ Arrow";
+                    return "Arrow";
                 default:
-                    return "▭ Rect";
+                    return "Rect";
             }
         }
 
         private string GetColorButtonLabel(Color color)
         {
-            return "● " + GetColorLabel(color);
+            return GetColorLabel(color);
         }
 
         private string GetStyleButtonLabel()
         {
             if (_annotationTool == AnnotationTool.Move)
-                return "✥ Window";
+                return "Window";
             if (_annotationTool == AnnotationTool.Rectangle)
-                return _annotationRectangleStyle == AnnotationRectangleStyle.Outline ? "▭ Outline" : "▣ Filled";
+                return _annotationRectangleStyle == AnnotationRectangleStyle.Outline ? "Outline" : "Filled";
 
             switch (_annotationArrowStyle)
             {
                 case AnnotationArrowStyle.Double:
-                    return "⟷ Double";
+                    return "Double";
                 case AnnotationArrowStyle.Line:
-                    return "╱ Line";
+                    return "Line";
                 case AnnotationArrowStyle.Tapered:
-                    return "➤ Tapered";
+                    return "Tapered";
                 default:
-                    return "➜ Single";
+                    return "Single";
             }
         }
 
@@ -1313,5 +1377,3 @@ namespace Kiritori
         }
     }
 }
-
-
