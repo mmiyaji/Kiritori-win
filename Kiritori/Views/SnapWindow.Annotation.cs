@@ -1299,11 +1299,12 @@ namespace Kiritori
             var uy = dy / length;
             var nx = -uy;
             var ny = ux;
-            var headLength = Math.Min(length * 0.34d, Math.Max(30d, shape.StrokeWidth * 9.5d));
-            var headWidth = Math.Max(26d, shape.StrokeWidth * 6.4d);
-            var bodyRearWidth = Math.Max(2d, shape.StrokeWidth * 0.2d);
-            var bodyFrontWidth = Math.Max(10d, shape.StrokeWidth * 2.2d);
-            var notchDepth = Math.Min(headLength * 0.42d, Math.Max(12d, shape.StrokeWidth * 3.4d));
+            var headLength = Math.Max(length * 0.22d, shape.StrokeWidth * 10.5d);
+            headLength = Math.Min(headLength, length * 0.4d);
+            var headWidth = Math.Max(length * 0.085d, shape.StrokeWidth * 7.2d);
+            var bodyRearWidth = Math.Max(1d, length * 0.004d);
+            var bodyFrontWidth = Math.Max(length * 0.03d, shape.StrokeWidth * 3.0d);
+            var notchDepth = Math.Min(headLength * 0.38d, Math.Max(length * 0.045d, shape.StrokeWidth * 3.4d));
             var bodyEndX = end.X - (ux * headLength);
             var bodyEndY = end.Y - (uy * headLength);
             var notchX = bodyEndX - (ux * notchDepth);
