@@ -597,15 +597,15 @@ namespace Kiritori
         private void PictureBox1_MouseDownAnnotations(object sender, MouseEventArgs e)
         {
             if (!_annotationMode || e.Button != MouseButtons.Left) return;
-            if (_annotationTool == AnnotationTool.Move)
-            {
-                pictureBox1_MouseDown(sender, e);
-                return;
-            }
             if (!_closeBtnRect.IsEmpty && _closeBtnRect.Contains(e.Location)) return;
 
             Point imagePoint;
-            if (!TryClientToImagePoint(e.Location, out imagePoint)) return;
+            if (!TryClientToImagePoint(e.Location, out imagePoint))
+            {
+                if (_annotationTool == AnnotationTool.Move)
+                    pictureBox1_MouseDown(sender, e);
+                return;
+            }
 
             int hitIndex;
             AnnotationHandle hitHandle;
@@ -626,6 +626,12 @@ namespace Kiritori
                 return;
             }
 
+            if (_annotationTool == AnnotationTool.Move)
+            {
+                pictureBox1_MouseDown(sender, e);
+                return;
+            }
+
             _selectedAnnotationIndex = -1;
             _annotationDragging = true;
             _annotationInteraction = AnnotationInteraction.Create;
@@ -635,13 +641,11 @@ namespace Kiritori
             pictureBox1.Capture = true;
             pictureBox1.Invalidate();
         }
-
         private void PictureBox1_MouseMoveAnnotations(object sender, MouseEventArgs e)
         {
-            if (_annotationTool == AnnotationTool.Move)
+            if (_annotationTool == AnnotationTool.Move && !_annotationDragging)
             {
                 pictureBox1_MouseMove(sender, e);
-                return;
             }
 
             Point imagePoint;
@@ -707,10 +711,9 @@ namespace Kiritori
             }
             UpdateAnnotationCursor(AnnotationHandle.None);
         }
-
         private void PictureBox1_MouseUpAnnotations(object sender, MouseEventArgs e)
         {
-            if (_annotationTool == AnnotationTool.Move)
+            if (_annotationTool == AnnotationTool.Move && !_annotationDragging)
             {
                 pictureBox1_MouseUp(sender, e);
                 return;
@@ -752,7 +755,6 @@ namespace Kiritori
             UpdateAnnotationCursor(AnnotationHandle.None);
             pictureBox1.Invalidate();
         }
-
         private void MoveSelectedRectangle(Point imagePoint)
         {
             if (!TryGetSelectedRectangle(out var shape)) return;
