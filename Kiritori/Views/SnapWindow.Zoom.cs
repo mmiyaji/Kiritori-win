@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -136,6 +136,7 @@ namespace Kiritori
         private void SetImageAndResetZoom(Bitmap bmp, string sourcePath)
         {
             AssignMainImage(bmp, sourcePath);
+            ResetAnnotations();
 
             _scale = 1f;
             this.pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;

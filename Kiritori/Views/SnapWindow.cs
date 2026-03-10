@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -193,6 +193,7 @@ namespace Kiritori
             ApplyUiFromFields();
             HookSettingsChanged();
             InitializeResizePreviewPipeline();
+            InitializeAnnotationFeature();
 
             this.pictureBox1.Paint += PictureBox1_Paint;
 
@@ -230,7 +231,7 @@ namespace Kiritori
         {
             var src = main_image ?? _originalImage as Bitmap;
             if (src == null) return null;
-            try { return new Bitmap(src); } catch { return null; }
+            try { return CloneCurrentBitmapWithAnnotations(src); } catch { return new Bitmap(src); }
         }
 
 
