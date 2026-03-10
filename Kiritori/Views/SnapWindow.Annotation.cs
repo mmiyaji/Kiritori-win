@@ -509,63 +509,67 @@ namespace Kiritori
 
         private void SetAnnotationColor(Color strokeColor, Color fillColor)
         {
-            if (TryGetSelectedShape(out var selected))
-            {
-                selected.StrokeColor = strokeColor;
-                selected.FillColor = selected.Kind == AnnotationShapeKind.Rectangle && selected.RectangleStyle == AnnotationRectangleStyle.Outline
-                    ? Color.Transparent
-                    : fillColor;
-            }
-            else
-            {
-                _annotationStrokeColor = strokeColor;
-                _annotationFillColor = _annotationRectangleStyle == AnnotationRectangleStyle.Outline
-                    ? Color.Transparent
-                    : fillColor;
-            }
+            ApplyToSelectedShapeOrDefaults(
+                selected =>
+                {
+                    selected.StrokeColor = strokeColor;
+                    selected.FillColor = ResolveShapeFillColor(selected, fillColor);
+                },
+                () =>
+                {
+                    _annotationStrokeColor = strokeColor;
+                    _annotationFillColor = ResolveDefaultFillColor(fillColor);
+                });
 
-            if (_annotationPreview != null)
+            ApplyToPreviewShape(preview =>
             {
-                _annotationPreview.StrokeColor = strokeColor;
-                _annotationPreview.FillColor = _annotationPreview.Kind == AnnotationShapeKind.Rectangle && _annotationPreview.RectangleStyle == AnnotationRectangleStyle.Outline
-                    ? Color.Transparent
-                    : fillColor;
-            }
+                preview.StrokeColor = strokeColor;
+                preview.FillColor = ResolveShapeFillColor(preview, fillColor);
+            });
 
             RefreshAnnotationUi();
         }
 
         private void SetAnnotationArrowStyle(AnnotationArrowStyle style)
         {
-            if (TryGetSelectedShape(out var selected) && selected.Kind == AnnotationShapeKind.Arrow)
-                selected.ArrowStyle = style;
-            else
-                _annotationArrowStyle = style;
+            ApplyToSelectedShapeOrDefaults(
+                selected =>
+                {
+                    if (selected.Kind == AnnotationShapeKind.Arrow)
+                        selected.ArrowStyle = style;
+                },
+                () => _annotationArrowStyle = style);
 
-            if (_annotationPreview != null && _annotationPreview.Kind == AnnotationShapeKind.Arrow)
-                _annotationPreview.ArrowStyle = style;
+            ApplyToPreviewShape(preview =>
+            {
+                if (preview.Kind == AnnotationShapeKind.Arrow)
+                    preview.ArrowStyle = style;
+            });
 
             RefreshAnnotationUi();
         }
 
         private void SetAnnotationRectangleStyle(AnnotationRectangleStyle style)
         {
-            if (TryGetSelectedShape(out var selected) && selected.Kind == AnnotationShapeKind.Rectangle)
-            {
-                selected.RectangleStyle = style;
-                selected.FillColor = style == AnnotationRectangleStyle.Outline ? Color.Transparent : CreateFillColorFromStroke(selected.StrokeColor);
-            }
-            else
-            {
-                _annotationRectangleStyle = style;
-                _annotationFillColor = style == AnnotationRectangleStyle.Outline ? Color.Transparent : CreateFillColorFromStroke(_annotationStrokeColor);
-            }
+            ApplyToSelectedShapeOrDefaults(
+                selected =>
+                {
+                    if (selected.Kind != AnnotationShapeKind.Rectangle) return;
+                    selected.RectangleStyle = style;
+                    selected.FillColor = ResolveRectangleFillColor(style, selected.StrokeColor);
+                },
+                () =>
+                {
+                    _annotationRectangleStyle = style;
+                    _annotationFillColor = ResolveRectangleFillColor(style, _annotationStrokeColor);
+                });
 
-            if (_annotationPreview != null && _annotationPreview.Kind == AnnotationShapeKind.Rectangle)
+            ApplyToPreviewShape(preview =>
             {
-                _annotationPreview.RectangleStyle = style;
-                _annotationPreview.FillColor = style == AnnotationRectangleStyle.Outline ? Color.Transparent : CreateFillColorFromStroke(_annotationPreview.StrokeColor);
-            }
+                if (preview.Kind != AnnotationShapeKind.Rectangle) return;
+                preview.RectangleStyle = style;
+                preview.FillColor = ResolveRectangleFillColor(style, preview.StrokeColor);
+            });
 
             RefreshAnnotationUi();
         }
@@ -615,6 +619,44 @@ namespace Kiritori
                 _annotationArrowStyle = shape.ArrowStyle;
             else
                 _annotationRectangleStyle = shape.RectangleStyle;
+        }
+
+        private void ApplyToSelectedShapeOrDefaults(Action<AnnotationShape> applyToSelected, Action applyToDefaults)
+        {
+            if (TryGetSelectedShape(out var selected))
+            {
+                applyToSelected(selected);
+                return;
+            }
+
+            applyToDefaults();
+        }
+
+        private void ApplyToPreviewShape(Action<AnnotationShape> applyToPreview)
+        {
+            if (_annotationPreview == null) return;
+            applyToPreview(_annotationPreview);
+        }
+
+        private Color ResolveShapeFillColor(AnnotationShape shape, Color requestedFillColor)
+        {
+            return shape.Kind == AnnotationShapeKind.Rectangle && shape.RectangleStyle == AnnotationRectangleStyle.Outline
+                ? Color.Transparent
+                : requestedFillColor;
+        }
+
+        private Color ResolveDefaultFillColor(Color requestedFillColor)
+        {
+            return _annotationRectangleStyle == AnnotationRectangleStyle.Outline
+                ? Color.Transparent
+                : requestedFillColor;
+        }
+
+        private Color ResolveRectangleFillColor(AnnotationRectangleStyle style, Color strokeColor)
+        {
+            return style == AnnotationRectangleStyle.Outline
+                ? Color.Transparent
+                : CreateFillColorFromStroke(strokeColor);
         }
 
         private void RefreshAnnotationUi()
