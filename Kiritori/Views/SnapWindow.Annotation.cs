@@ -385,12 +385,21 @@ namespace Kiritori
             _selectedAnnotationIndex = -1;
             if (pictureBox1 != null) pictureBox1.Capture = false;
             _annotationPreview = null;
+            ResetStandardDragState();
             RestoreStandardMouseHandlers();
             if (_annotationPalette != null) _annotationPalette.Visible = false;
             UpdateAnnotationMenuState();
             Cursor = Cursors.Default;
             if (!silent) ShowOverlay("EDIT OFF");
             pictureBox1?.Invalidate();
+        }
+
+        private void ResetStandardDragState()
+        {
+            _isDragging = false;
+            _isResizing = false;
+            _imgAspect = null;
+            this.Opacity = this.WindowOpacityPercent;
         }
 
         private void SetAnnotationTool(AnnotationTool tool)
