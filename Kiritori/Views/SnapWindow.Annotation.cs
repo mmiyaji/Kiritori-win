@@ -27,6 +27,9 @@ namespace Kiritori
             Create,
             MoveRectangle,
             ResizeRectangle,
+            MoveArrow,
+            EditArrowStart,
+            EditArrowEnd,
         }
 
         private enum AnnotationHandle
@@ -41,6 +44,8 @@ namespace Kiritori
             Bottom,
             BottomLeft,
             Left,
+            ArrowStart,
+            ArrowEnd,
         }
 
         private sealed class AnnotationShape
@@ -71,6 +76,8 @@ namespace Kiritori
         private int _selectedAnnotationIndex = -1;
         private Point _annotationDragOriginImage;
         private Rectangle _annotationEditOriginBounds = Rectangle.Empty;
+        private Point _annotationEditOriginStart;
+        private Point _annotationEditOriginEnd;
         private ToolStripMenuItem _annotationModeMenuItem;
         private ToolStripMenuItem _annotationClearMenuItem;
         private ToolStripMenuItem _annotationUndoMenuItem;
@@ -336,14 +343,16 @@ namespace Kiritori
 
             int hitIndex;
             AnnotationHandle hitHandle;
-            if (TryHitRectangleAnnotation(imagePoint, out hitIndex, out hitHandle))
+            if (TryHitAnnotation(imagePoint, out hitIndex, out hitHandle))
             {
                 _selectedAnnotationIndex = hitIndex;
                 _annotationDragging = true;
                 _annotationDragOriginImage = imagePoint;
                 _annotationEditOriginBounds = _annotations[hitIndex].Bounds;
+                _annotationEditOriginStart = _annotations[hitIndex].Start;
+                _annotationEditOriginEnd = _annotations[hitIndex].End;
                 _annotationHandle = hitHandle;
-                _annotationInteraction = hitHandle == AnnotationHandle.Move ? AnnotationInteraction.MoveRectangle : AnnotationInteraction.ResizeRectangle;
+                _annotationInteraction = GetInteractionForHit(_annotations[hitIndex], hitHandle);
                 pictureBox1.Capture = true;
                 UpdateAnnotationCursor(hitHandle);
                 pictureBox1.Invalidate();
@@ -379,6 +388,15 @@ namespace Kiritori
                     case AnnotationInteraction.ResizeRectangle:
                         ResizeSelectedRectangle(imagePoint);
                         break;
+                    case AnnotationInteraction.MoveArrow:
+                        MoveSelectedArrow(imagePoint);
+                        break;
+                    case AnnotationInteraction.EditArrowStart:
+                        EditSelectedArrowEndpoint(imagePoint, true);
+                        break;
+                    case AnnotationInteraction.EditArrowEnd:
+                        EditSelectedArrowEndpoint(imagePoint, false);
+                        break;
                 }
 
                 pictureBox1.Invalidate();
@@ -393,7 +411,7 @@ namespace Kiritori
 
             int hitIndex;
             AnnotationHandle hitHandle;
-            if (TryHitRectangleAnnotation(imagePoint, out hitIndex, out hitHandle))
+            if (TryHitAnnotation(imagePoint, out hitIndex, out hitHandle))
             {
                 _selectedAnnotationIndex = hitIndex;
                 UpdateAnnotationCursor(hitHandle);
@@ -498,22 +516,59 @@ namespace Kiritori
             shape.End = new Point(resized.Right, resized.Bottom);
         }
 
+        private AnnotationInteraction GetInteractionForHit(AnnotationShape shape, AnnotationHandle handle)
+        {
+            if (shape.Kind == AnnotationShapeKind.Arrow)
+            {
+                if (handle == AnnotationHandle.ArrowStart) return AnnotationInteraction.EditArrowStart;
+                if (handle == AnnotationHandle.ArrowEnd) return AnnotationInteraction.EditArrowEnd;
+                return AnnotationInteraction.MoveArrow;
+            }
+
+            return handle == AnnotationHandle.Move ? AnnotationInteraction.MoveRectangle : AnnotationInteraction.ResizeRectangle;
+        }
+
+        private void MoveSelectedArrow(Point imagePoint)
+        {
+            if (!TryGetSelectedShape(out var shape) || shape.Kind != AnnotationShapeKind.Arrow) return;
+            var dx = imagePoint.X - _annotationDragOriginImage.X;
+            var dy = imagePoint.Y - _annotationDragOriginImage.Y;
+            shape.Start = new Point(_annotationEditOriginStart.X + dx, _annotationEditOriginStart.Y + dy);
+            shape.End = new Point(_annotationEditOriginEnd.X + dx, _annotationEditOriginEnd.Y + dy);
+        }
+
+        private void EditSelectedArrowEndpoint(Point imagePoint, bool editStart)
+        {
+            if (!TryGetSelectedShape(out var shape) || shape.Kind != AnnotationShapeKind.Arrow) return;
+            if (editStart)
+                shape.Start = imagePoint;
+            else
+                shape.End = imagePoint;
+        }
+
         private bool TryGetSelectedRectangle(out AnnotationShape shape)
+        {
+            shape = null;
+            if (!TryGetSelectedShape(out shape)) return false;
+            return shape.Kind == AnnotationShapeKind.Rectangle;
+        }
+
+        private bool TryGetSelectedShape(out AnnotationShape shape)
         {
             shape = null;
             if (_selectedAnnotationIndex < 0 || _selectedAnnotationIndex >= _annotations.Count) return false;
             shape = _annotations[_selectedAnnotationIndex];
-            return shape.Kind == AnnotationShapeKind.Rectangle;
+            return true;
         }
 
-        private bool TryHitRectangleAnnotation(Point imagePoint, out int index, out AnnotationHandle handle)
+        private bool TryHitAnnotation(Point imagePoint, out int index, out AnnotationHandle handle)
         {
             for (int i = _annotations.Count - 1; i >= 0; i--)
             {
                 var shape = _annotations[i];
-                if (shape.Kind != AnnotationShapeKind.Rectangle) continue;
-
-                handle = HitTestRectangleHandle(shape.Bounds, imagePoint);
+                handle = shape.Kind == AnnotationShapeKind.Rectangle
+                    ? HitTestRectangleHandle(shape.Bounds, imagePoint)
+                    : HitTestArrowHandle(shape, imagePoint);
                 if (handle != AnnotationHandle.None)
                 {
                     index = i;
@@ -524,6 +579,33 @@ namespace Kiritori
             index = -1;
             handle = AnnotationHandle.None;
             return false;
+        }
+
+        private AnnotationHandle HitTestArrowHandle(AnnotationShape shape, Point imagePoint)
+        {
+            const int radius = 10;
+            var startRect = new Rectangle(shape.Start.X - radius, shape.Start.Y - radius, radius * 2, radius * 2);
+            if (startRect.Contains(imagePoint)) return AnnotationHandle.ArrowStart;
+
+            var endRect = new Rectangle(shape.End.X - radius, shape.End.Y - radius, radius * 2, radius * 2);
+            if (endRect.Contains(imagePoint)) return AnnotationHandle.ArrowEnd;
+
+            return DistancePointToSegmentSquared(imagePoint, shape.Start, shape.End) <= 100 ? AnnotationHandle.Move : AnnotationHandle.None;
+        }
+
+        private static int DistancePointToSegmentSquared(Point p, Point a, Point b)
+        {
+            var dx = b.X - a.X;
+            var dy = b.Y - a.Y;
+            if (dx == 0 && dy == 0) return DistanceSquared(p, a);
+
+            var t = ((p.X - a.X) * dx + (p.Y - a.Y) * dy) / (double)((dx * dx) + (dy * dy));
+            t = Math.Max(0d, Math.Min(1d, t));
+            var projX = a.X + (t * dx);
+            var projY = a.Y + (t * dy);
+            var px = p.X - projX;
+            var py = p.Y - projY;
+            return (int)Math.Round((px * px) + (py * py));
         }
 
         private AnnotationHandle HitTestRectangleHandle(Rectangle rect, Point imagePoint)
@@ -585,6 +667,10 @@ namespace Kiritori
                 case AnnotationHandle.Move:
                     Cursor = Cursors.SizeAll;
                     break;
+                case AnnotationHandle.ArrowStart:
+                case AnnotationHandle.ArrowEnd:
+                    Cursor = Cursors.Hand;
+                    break;
                 default:
                     Cursor = Cursors.Cross;
                     break;
@@ -624,24 +710,40 @@ namespace Kiritori
         {
             if (_selectedAnnotationIndex < 0 || _selectedAnnotationIndex >= _annotations.Count) return;
             var shape = _annotations[_selectedAnnotationIndex];
-            if (shape.Kind != AnnotationShapeKind.Rectangle) return;
-
-            var rect = ImageRectToClientRect(displayRect, sourceSize, shape.Bounds);
-            if (rect.Width <= 0 || rect.Height <= 0) return;
 
             using (var dashPen = new Pen(Color.FromArgb(255, 255, 255, 255), 1f))
             using (var handleBrush = new SolidBrush(Color.White))
             using (var handlePen = new Pen(Color.FromArgb(255, 255, 138, 61), 1f))
             {
                 dashPen.DashStyle = DashStyle.Dash;
-                g.DrawRectangle(dashPen, rect);
 
-                foreach (var pair in GetRectangleHandleRects(rect, 4))
+                if (shape.Kind == AnnotationShapeKind.Rectangle)
                 {
-                    g.FillRectangle(handleBrush, pair.Value);
-                    g.DrawRectangle(handlePen, pair.Value);
+                    var rect = ImageRectToClientRect(displayRect, sourceSize, shape.Bounds);
+                    if (rect.Width <= 0 || rect.Height <= 0) return;
+                    g.DrawRectangle(dashPen, rect);
+
+                    foreach (var pair in GetRectangleHandleRects(rect, 4))
+                    {
+                        g.FillRectangle(handleBrush, pair.Value);
+                        g.DrawRectangle(handlePen, pair.Value);
+                    }
+                    return;
                 }
+
+                var start = ImagePointToClientPoint(displayRect, sourceSize, shape.Start);
+                var end = ImagePointToClientPoint(displayRect, sourceSize, shape.End);
+                g.DrawLine(dashPen, start, end);
+                DrawArrowHandle(g, handleBrush, handlePen, start);
+                DrawArrowHandle(g, handleBrush, handlePen, end);
             }
+        }
+
+        private void DrawArrowHandle(Graphics g, Brush fill, Pen border, Point point)
+        {
+            var rect = new Rectangle(point.X - 4, point.Y - 4, 8, 8);
+            g.FillEllipse(fill, rect);
+            g.DrawEllipse(border, rect);
         }
 
         private void DrawAnnotationShape(Graphics g, AnnotationShape shape, Rectangle? displayRect, Size sourceSize)
