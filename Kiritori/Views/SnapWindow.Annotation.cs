@@ -1020,23 +1020,35 @@ namespace Kiritori
 
         private void UpdateAnnotationHoverState(Point clientPoint)
         {
-            Point imagePoint;
-            if (!TryClientToImagePoint(clientPoint, out imagePoint))
-            {
-                ClearHoveredAnnotation();
-                UpdateAnnotationCursor(AnnotationHandle.None);
-                return;
-            }
-
             int hitIndex;
             AnnotationHandle hitHandle;
-            if (TryHitAnnotation(imagePoint, out hitIndex, out hitHandle))
+            if (!TryResolveAnnotationHover(clientPoint, out hitIndex, out hitHandle))
             {
-                UpdateHoveredAnnotation(hitIndex);
-                UpdateAnnotationCursor(hitHandle);
+                ClearAnnotationHoverState();
                 return;
             }
 
+            ApplyAnnotationHoverState(hitIndex, hitHandle);
+        }
+
+        private bool TryResolveAnnotationHover(Point clientPoint, out int hitIndex, out AnnotationHandle hitHandle)
+        {
+            hitIndex = -1;
+            hitHandle = AnnotationHandle.None;
+
+            Point imagePoint;
+            if (!TryClientToImagePoint(clientPoint, out imagePoint)) return false;
+            return TryHitAnnotation(imagePoint, out hitIndex, out hitHandle);
+        }
+
+        private void ApplyAnnotationHoverState(int hitIndex, AnnotationHandle hitHandle)
+        {
+            UpdateHoveredAnnotation(hitIndex);
+            UpdateAnnotationCursor(hitHandle);
+        }
+
+        private void ClearAnnotationHoverState()
+        {
             ClearHoveredAnnotation();
             UpdateAnnotationCursor(AnnotationHandle.None);
         }
