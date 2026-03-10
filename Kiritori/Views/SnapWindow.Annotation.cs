@@ -1,4 +1,4 @@
-﻿using Kiritori.Helpers;
+using Kiritori.Helpers;
 using Kiritori.Services.Logging;
 using System;
 using System.Collections.Generic;
@@ -973,18 +973,39 @@ namespace Kiritori
 
         private void ApplyAnnotationDrag(Point imagePoint)
         {
+            if (TryApplyAnnotationCreateDrag(imagePoint)) return;
+            if (TryApplyRectangleDrag(imagePoint)) return;
+
+            ApplyArrowDrag(imagePoint);
+        }
+
+        private bool TryApplyAnnotationCreateDrag(Point imagePoint)
+        {
+            if (_annotationInteraction != AnnotationInteraction.Create) return false;
+            if (_annotationPreview != null)
+                _annotationPreview.End = imagePoint;
+            return true;
+        }
+
+        private bool TryApplyRectangleDrag(Point imagePoint)
+        {
             switch (_annotationInteraction)
             {
-                case AnnotationInteraction.Create:
-                    if (_annotationPreview != null)
-                        _annotationPreview.End = imagePoint;
-                    break;
                 case AnnotationInteraction.MoveRectangle:
                     MoveSelectedRectangle(imagePoint);
-                    break;
+                    return true;
                 case AnnotationInteraction.ResizeRectangle:
                     ResizeSelectedRectangle(imagePoint);
-                    break;
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private void ApplyArrowDrag(Point imagePoint)
+        {
+            switch (_annotationInteraction)
+            {
                 case AnnotationInteraction.MoveArrow:
                     MoveSelectedArrow(imagePoint);
                     break;
