@@ -1135,59 +1135,27 @@ namespace Kiritori
         {
             if (!_annotationMode) return;
             if (_annotationDragging) return;
-            if (_hoverAnnotationIndex < 0 || _hoverAnnotationIndex >= _annotations.Count) return;
-            if (_hoverAnnotationIndex == _selectedAnnotationIndex) return;
-
-            var shape = _annotations[_hoverAnnotationIndex];
+            var shape = GetHoveredAnnotation();
+            if (shape == null) return;
             using (var pen = new Pen(Color.FromArgb(210, 255, 255, 255), 1.5f))
             {
                 pen.DashStyle = DashStyle.Dot;
-
-                if (shape.Kind == AnnotationShapeKind.Rectangle)
-                {
-                    var rect = ImageRectToClientRect(displayRect, sourceSize, shape.Bounds);
-                    if (rect.Width <= 0 || rect.Height <= 0) return;
-                    g.DrawRectangle(pen, rect);
-                    return;
-                }
-
-                var start = ImagePointToClientPoint(displayRect, sourceSize, shape.Start);
-                var end = ImagePointToClientPoint(displayRect, sourceSize, shape.End);
-                g.DrawLine(pen, start, end);
+                DrawHoverShapeOverlay(g, pen, shape, displayRect, sourceSize);
             }
         }
 
         private void DrawSelectionOverlay(Graphics g, Rectangle displayRect, Size sourceSize)
         {
             if (!_annotationMode) return;
-            if (_selectedAnnotationIndex < 0 || _selectedAnnotationIndex >= _annotations.Count) return;
-            var shape = _annotations[_selectedAnnotationIndex];
+            var shape = GetSelectedAnnotation();
+            if (shape == null) return;
 
             using (var dashPen = new Pen(Color.FromArgb(255, 255, 255, 255), 1f))
             using (var handleBrush = new SolidBrush(Color.White))
             using (var handlePen = new Pen(Color.FromArgb(255, 255, 138, 61), 1f))
             {
                 dashPen.DashStyle = DashStyle.Dash;
-
-                if (shape.Kind == AnnotationShapeKind.Rectangle)
-                {
-                    var rect = ImageRectToClientRect(displayRect, sourceSize, shape.Bounds);
-                    if (rect.Width <= 0 || rect.Height <= 0) return;
-                    g.DrawRectangle(dashPen, rect);
-
-                    foreach (var pair in GetRectangleHandleRects(rect, 4))
-                    {
-                        g.FillRectangle(handleBrush, pair.Value);
-                        g.DrawRectangle(handlePen, pair.Value);
-                    }
-                    return;
-                }
-
-                var start = ImagePointToClientPoint(displayRect, sourceSize, shape.Start);
-                var end = ImagePointToClientPoint(displayRect, sourceSize, shape.End);
-                g.DrawLine(dashPen, start, end);
-                DrawArrowHandle(g, handleBrush, handlePen, start);
-                DrawArrowHandle(g, handleBrush, handlePen, end);
+                DrawSelectionShapeOverlay(g, dashPen, handleBrush, handlePen, shape, displayRect, sourceSize);
             }
         }
 
@@ -1204,26 +1172,84 @@ namespace Kiritori
 
             if (shape.Kind == AnnotationShapeKind.Rectangle)
             {
-                using (var pen = CreateShapePen(shape))
-                using (var brush = new SolidBrush(shape.FillColor))
+                DrawRectangleAnnotationShape(g, shape, displayRect, sourceSize);
+                return;
+            }
+
+            DrawArrowAnnotationShape(g, shape, displayRect, sourceSize);
+        }
+
+        private AnnotationShape GetHoveredAnnotation()
+        {
+            if (_hoverAnnotationIndex < 0 || _hoverAnnotationIndex >= _annotations.Count) return null;
+            if (_hoverAnnotationIndex == _selectedAnnotationIndex) return null;
+            return _annotations[_hoverAnnotationIndex];
+        }
+
+        private AnnotationShape GetSelectedAnnotation()
+        {
+            if (_selectedAnnotationIndex < 0 || _selectedAnnotationIndex >= _annotations.Count) return null;
+            return _annotations[_selectedAnnotationIndex];
+        }
+
+        private void DrawHoverShapeOverlay(Graphics g, Pen pen, AnnotationShape shape, Rectangle displayRect, Size sourceSize)
+        {
+            if (shape.Kind == AnnotationShapeKind.Rectangle)
+            {
+                var rect = GetShapeRect(shape, displayRect, sourceSize);
+                if (!IsDrawableRect(rect)) return;
+                g.DrawRectangle(pen, rect);
+                return;
+            }
+
+            Point start;
+            Point end;
+            GetShapeLine(shape, displayRect, sourceSize, out start, out end);
+            g.DrawLine(pen, start, end);
+        }
+
+        private void DrawSelectionShapeOverlay(Graphics g, Pen dashPen, Brush handleBrush, Pen handlePen, AnnotationShape shape, Rectangle displayRect, Size sourceSize)
+        {
+            if (shape.Kind == AnnotationShapeKind.Rectangle)
+            {
+                var rect = GetShapeRect(shape, displayRect, sourceSize);
+                if (!IsDrawableRect(rect)) return;
+                g.DrawRectangle(dashPen, rect);
+
+                foreach (var pair in GetRectangleHandleRects(rect, 4))
                 {
-                    var rect = displayRect.HasValue
-                        ? ImageRectToClientRect(displayRect.Value, sourceSize, shape.Bounds)
-                        : shape.Bounds;
-                    if (rect.Width <= 0 || rect.Height <= 0) return;
-                    if (shape.RectangleStyle != AnnotationRectangleStyle.Outline)
-                        g.FillRectangle(brush, rect);
-                    g.DrawRectangle(pen, rect);
+                    g.FillRectangle(handleBrush, pair.Value);
+                    g.DrawRectangle(handlePen, pair.Value);
                 }
                 return;
             }
 
-            var start = displayRect.HasValue
-                ? ImagePointToClientPoint(displayRect.Value, sourceSize, shape.Start)
-                : shape.Start;
-            var end = displayRect.HasValue
-                ? ImagePointToClientPoint(displayRect.Value, sourceSize, shape.End)
-                : shape.End;
+            Point start;
+            Point end;
+            GetShapeLine(shape, displayRect, sourceSize, out start, out end);
+            g.DrawLine(dashPen, start, end);
+            DrawArrowHandle(g, handleBrush, handlePen, start);
+            DrawArrowHandle(g, handleBrush, handlePen, end);
+        }
+
+        private void DrawRectangleAnnotationShape(Graphics g, AnnotationShape shape, Rectangle? displayRect, Size sourceSize)
+        {
+            using (var pen = CreateShapePen(shape))
+            using (var brush = new SolidBrush(shape.FillColor))
+            {
+                var rect = GetShapeRect(shape, displayRect, sourceSize);
+                if (!IsDrawableRect(rect)) return;
+                if (shape.RectangleStyle != AnnotationRectangleStyle.Outline)
+                    g.FillRectangle(brush, rect);
+                g.DrawRectangle(pen, rect);
+            }
+        }
+
+        private void DrawArrowAnnotationShape(Graphics g, AnnotationShape shape, Rectangle? displayRect, Size sourceSize)
+        {
+            Point start;
+            Point end;
+            GetShapeLine(shape, displayRect, sourceSize, out start, out end);
 
             if (shape.ArrowStyle == AnnotationArrowStyle.Tapered)
             {
@@ -1235,6 +1261,28 @@ namespace Kiritori
             {
                 g.DrawLine(pen, start, end);
             }
+        }
+
+        private Rectangle GetShapeRect(AnnotationShape shape, Rectangle? displayRect, Size sourceSize)
+        {
+            return displayRect.HasValue
+                ? ImageRectToClientRect(displayRect.Value, sourceSize, shape.Bounds)
+                : shape.Bounds;
+        }
+
+        private void GetShapeLine(AnnotationShape shape, Rectangle? displayRect, Size sourceSize, out Point start, out Point end)
+        {
+            start = displayRect.HasValue
+                ? ImagePointToClientPoint(displayRect.Value, sourceSize, shape.Start)
+                : shape.Start;
+            end = displayRect.HasValue
+                ? ImagePointToClientPoint(displayRect.Value, sourceSize, shape.End)
+                : shape.End;
+        }
+
+        private bool IsDrawableRect(Rectangle rect)
+        {
+            return rect.Width > 0 && rect.Height > 0;
         }
 
         private Pen CreateShapePen(AnnotationShape shape)
