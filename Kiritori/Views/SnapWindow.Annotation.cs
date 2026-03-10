@@ -152,7 +152,7 @@ namespace Kiritori
             _annotationPalette = new Panel
             {
                 Visible = false,
-                Size = new Size(352, 84),
+                Size = new Size(404, 88),
                 BackColor = Color.FromArgb(232, 26, 29, 34),
                 Padding = new Padding(8)
             };
@@ -170,16 +170,19 @@ namespace Kiritori
 
             _annotationRectButton = CreatePaletteButton("Rect", 48, 52, (s, e) => SetAnnotationTool(AnnotationTool.Rectangle));
             _annotationArrowButton = CreatePaletteButton("Arrow", 104, 60, (s, e) => SetAnnotationTool(AnnotationTool.Arrow));
-            _annotationUndoButton = CreatePaletteButton("Undo", 168, 52, (s, e) => UndoLastAnnotation());
-            _annotationClearButton = CreatePaletteButton("Clear", 224, 52, (s, e) => ClearAnnotations());
-            _annotationDoneButton = CreatePaletteButton("Done", 280, 52, (s, e) => ExitAnnotationMode());
-            _annotationColorOrangeButton = CreateColorButton(10, 46, Color.FromArgb(255, 138, 61), Color.FromArgb(48, 255, 138, 61));
-            _annotationColorBlueButton = CreateColorButton(42, 46, Color.FromArgb(88, 166, 255), Color.FromArgb(48, 88, 166, 255));
-            _annotationColorGreenButton = CreateColorButton(74, 46, Color.FromArgb(78, 201, 140), Color.FromArgb(48, 78, 201, 140));
-            _annotationColorPinkButton = CreateColorButton(106, 46, Color.FromArgb(255, 105, 180), Color.FromArgb(48, 255, 105, 180));
-            _annotationArrowSingleButton = CreatePaletteButton("->", 152, 46, (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Single));
-            _annotationArrowDoubleButton = CreatePaletteButton("<->", 204, 46, (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Double));
-            _annotationArrowLineButton = CreatePaletteButton("Line", 262, 46, (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Line));
+            _annotationUndoButton = CreatePaletteButton("Undo", 172, 52, (s, e) => UndoLastAnnotation());
+            _annotationClearButton = CreatePaletteButton("Clear", 228, 52, (s, e) => ClearAnnotations());
+            _annotationDoneButton = CreatePaletteButton("Done", 284, 56, (s, e) => ExitAnnotationMode());
+            _annotationColorOrangeButton = CreateColorButton(56, 50, Color.FromArgb(255, 138, 61), Color.FromArgb(48, 255, 138, 61));
+            _annotationColorBlueButton = CreateColorButton(84, 50, Color.FromArgb(88, 166, 255), Color.FromArgb(48, 88, 166, 255));
+            _annotationColorGreenButton = CreateColorButton(112, 50, Color.FromArgb(78, 201, 140), Color.FromArgb(48, 78, 201, 140));
+            _annotationColorPinkButton = CreateColorButton(140, 50, Color.FromArgb(255, 105, 180), Color.FromArgb(48, 255, 105, 180));
+            _annotationArrowSingleButton = CreatePaletteButton("->", 192, 40, (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Single));
+            _annotationArrowSingleButton.Location = new Point(192, 48);
+            _annotationArrowDoubleButton = CreatePaletteButton("<->", 240, 48, (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Double));
+            _annotationArrowDoubleButton.Location = new Point(240, 48);
+            _annotationArrowLineButton = CreatePaletteButton("Line", 296, 48, (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Line));
+            _annotationArrowLineButton.Location = new Point(296, 48);
 
             _annotationPalette.Controls.Add(_annotationPaletteLabel);
             _annotationPalette.Controls.Add(_annotationRectButton);
@@ -324,19 +327,21 @@ namespace Kiritori
 
         private void SetAnnotationColor(Color strokeColor, Color fillColor)
         {
-            _annotationStrokeColor = strokeColor;
-            _annotationFillColor = fillColor;
+            if (TryGetSelectedShape(out var selected))
+            {
+                selected.StrokeColor = strokeColor;
+                selected.FillColor = fillColor;
+            }
+            else
+            {
+                _annotationStrokeColor = strokeColor;
+                _annotationFillColor = fillColor;
+            }
 
             if (_annotationPreview != null)
             {
                 _annotationPreview.StrokeColor = strokeColor;
                 _annotationPreview.FillColor = fillColor;
-            }
-
-            if (TryGetSelectedShape(out var selected))
-            {
-                selected.StrokeColor = strokeColor;
-                selected.FillColor = fillColor;
             }
 
             UpdateAnnotationMenuState();
@@ -345,13 +350,13 @@ namespace Kiritori
 
         private void SetAnnotationArrowStyle(AnnotationArrowStyle style)
         {
-            _annotationArrowStyle = style;
+            if (TryGetSelectedShape(out var selected) && selected.Kind == AnnotationShapeKind.Arrow)
+                selected.ArrowStyle = style;
+            else
+                _annotationArrowStyle = style;
 
             if (_annotationPreview != null && _annotationPreview.Kind == AnnotationShapeKind.Arrow)
                 _annotationPreview.ArrowStyle = style;
-
-            if (TryGetSelectedShape(out var selected) && selected.Kind == AnnotationShapeKind.Arrow)
-                selected.ArrowStyle = style;
 
             UpdateAnnotationMenuState();
             pictureBox1?.Invalidate();
@@ -394,6 +399,15 @@ namespace Kiritori
             pictureBox1.MouseMove += pictureBox1_MouseMove;
             pictureBox1.MouseUp += pictureBox1_MouseUp;
             _standardMouseHandlersDetached = false;
+        }
+
+        private void SyncAnnotationDefaultsFromShape(AnnotationShape shape)
+        {
+            if (shape == null) return;
+            _annotationStrokeColor = shape.StrokeColor;
+            _annotationFillColor = shape.FillColor;
+            if (shape.Kind == AnnotationShapeKind.Arrow)
+                _annotationArrowStyle = shape.ArrowStyle;
         }
 
         private void UpdateAnnotationMenuState()
@@ -449,6 +463,7 @@ namespace Kiritori
             if (TryHitAnnotation(imagePoint, out hitIndex, out hitHandle))
             {
                 _selectedAnnotationIndex = hitIndex;
+                SyncAnnotationDefaultsFromShape(_annotations[hitIndex]);
                 _annotationDragging = true;
                 _annotationDragOriginImage = imagePoint;
                 _annotationEditOriginBounds = _annotations[hitIndex].Bounds;
@@ -516,9 +531,7 @@ namespace Kiritori
             AnnotationHandle hitHandle;
             if (TryHitAnnotation(imagePoint, out hitIndex, out hitHandle))
             {
-                _selectedAnnotationIndex = hitIndex;
                 UpdateAnnotationCursor(hitHandle);
-                pictureBox1.Invalidate();
                 return;
             }
 
@@ -541,6 +554,7 @@ namespace Kiritori
                 {
                     _annotations.Add(_annotationPreview);
                     _selectedAnnotationIndex = _annotations.Count - 1;
+                    SyncAnnotationDefaultsFromShape(_annotationPreview);
                     UpdateAnnotationMenuState();
                     ShowOverlay(_annotationTool == AnnotationTool.Arrow ? "ARROW ADDED" : "RECT ADDED");
                     Log.Info("Annotation added: " + _annotationPreview.Kind, "SnapWindow");
@@ -994,3 +1008,5 @@ namespace Kiritori
         }
     }
 }
+
+
