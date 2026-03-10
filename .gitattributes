@@ -1,13 +1,13 @@
-﻿*.cs text eol=crlf working-tree-encoding=UTF-8-BOM
-*.csproj text eol=crlf working-tree-encoding=UTF-8-BOM
-*.resx text eol=crlf working-tree-encoding=UTF-8-BOM
-*.config text eol=crlf working-tree-encoding=UTF-8-BOM
-*.manifest text eol=crlf working-tree-encoding=UTF-8-BOM
-*.xml text eol=crlf working-tree-encoding=UTF-8-BOM
-*.json text eol=crlf working-tree-encoding=UTF-8-BOM
-*.cmd text eol=crlf working-tree-encoding=UTF-8-BOM
-*.bat text eol=crlf working-tree-encoding=UTF-8-BOM
-*.ps1 text eol=crlf working-tree-encoding=UTF-8-BOM
-*.txt text eol=crlf working-tree-encoding=UTF-8-BOM
+*.cs text eol=crlf
+*.csproj text eol=crlf
+*.resx text eol=crlf
+*.config text eol=crlf
+*.manifest text eol=crlf
+*.xml text eol=crlf
+*.json text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.txt text eol=crlf
 
 *.dll binary
