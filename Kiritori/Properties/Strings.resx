@@ -1023,7 +1023,18 @@
   <data name="Menu.RecordingMp4" xml:space="preserve">
     <value>Recording (MP4)</value>
   </data>
-  <data name="Text.StartupDisabledByUserGuide" xml:space="preserve">
+  <data name="Menu.CopyOriginalImage" xml:space="preserve">
+    <value>Copy Original Image</value>
+  </data>
+  <data name="Menu.EditAnnotations" xml:space="preserve">
+    <value>Edit annotations</value>
+  </data>
+  <data name="Menu.UndoLastAnnotation" xml:space="preserve">
+    <value>Undo last annotation</value>
+  </data>
+  <data name="Menu.ClearAnnotations" xml:space="preserve">
+    <value>Clear annotations</value>
+  </data>  <data name="Text.StartupDisabledByUserGuide" xml:space="preserve">
     <value>Kiritori has been disabled in Windows settings. The Settings app will open—please enable Kiritori there.</value>
   </data>
 </root>

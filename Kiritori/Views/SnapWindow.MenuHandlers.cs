@@ -79,78 +79,9 @@ namespace Kiritori
         private void opacity30toolStripMenuItem_Click(object sender, EventArgs e) { setAlpha(0.3); ShowOverlay("OPACITY 30%"); }
         private void minimizeToolStripMenuItem_Click(object sender, EventArgs e) { this.minimizeWindow(); }
         private void exitToolStripMenuItem_Click(object sender, EventArgs e) { Application.Exit(); }
-
-        // MSPaint（起動→終了で再読込）
         private void editPaintToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            try
-            {
-                if (pictureBox1.Image == null)
-                {
-                    MessageBox.Show(this, "No image to edit.", "Kiritori",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-
-                string preferredSrcPath = pictureBox1.Image?.Tag as string;
-
-                if (!string.IsNullOrEmpty(preferredSrcPath) && File.Exists(preferredSrcPath))
-                {
-                    _paintEditPath = preferredSrcPath;
-                }
-                else
-                {
-                    _paintEditPath = Path.Combine(
-                        Path.GetTempPath(),
-                        $"Kiritori_Edit_{DateTime.Now:yyyyMMdd_HHmmssfff}.png"
-                    );
-                    using (var bmp = new Bitmap(pictureBox1.Image))
-                    {
-                        bmp.Save(_paintEditPath, ImageFormat.Png);
-                    }
-                }
-
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "mspaint.exe",
-                    Arguments = $"\"{_paintEditPath}\"",
-                    UseShellExecute = true
-                };
-
-                var proc = Process.Start(psi);
-                if (proc == null) return;
-
-                proc.EnableRaisingEvents = true;
-                proc.Exited += (s, ev) =>
-                {
-                    try
-                    {
-                        if (File.Exists(_paintEditPath))
-                        {
-                            using (var fs = new FileStream(_paintEditPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                            using (var img = Image.FromStream(fs))
-                            {
-                                var updated = new Bitmap(img);
-                                this.BeginInvoke((Action)(() =>
-                                {
-                                    var updatedSourcePath = string.IsNullOrEmpty(preferredSrcPath) ? _paintEditPath : preferredSrcPath;
-                                    SetImageAndResetZoom(updated, updatedSourcePath);
-                                    setThumbnail(updated);
-                                }));
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        Log.Debug("Failed to load edited image: " + _paintEditPath, "SnapWindow");
-                    }
-                };
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(this, "Failed to open in Paint.\r\n" + ex.Message,
-                    "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            ToggleAnnotationMode();
         }
         private void PictureBox1_Paint(object sender, PaintEventArgs e)
         {
@@ -391,3 +322,4 @@ namespace Kiritori
 
     }
 }
+

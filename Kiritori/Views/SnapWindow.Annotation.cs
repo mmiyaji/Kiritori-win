@@ -143,9 +143,11 @@ namespace Kiritori
             _annotationModeMenuItem.ShortcutKeys = (Keys)HOTS.EDIT_MSPAINT;
 
             _annotationUndoMenuItem = new ToolStripMenuItem("Undo last annotation");
+            _annotationUndoMenuItem.Tag = "loc:Menu.UndoLastAnnotation";
             _annotationUndoMenuItem.Click += (s, e) => UndoLastAnnotation();
 
             _annotationClearMenuItem = new ToolStripMenuItem("Clear annotations");
+            _annotationClearMenuItem.Tag = "loc:Menu.ClearAnnotations";
             _annotationClearMenuItem.Click += (s, e) => ClearAnnotations();
 
             if (editParentMenu != null)
