@@ -1299,12 +1299,12 @@ namespace Kiritori
             var uy = dy / length;
             var nx = -uy;
             var ny = ux;
-            var headLength = Math.Max(length * 0.22d, shape.StrokeWidth * 10.5d);
-            headLength = Math.Min(headLength, length * 0.4d);
-            var headWidth = Math.Max(length * 0.085d, shape.StrokeWidth * 7.2d);
+            var headLength = Math.Max(length * 0.26d, shape.StrokeWidth * 12.0d);
+            headLength = Math.Min(headLength, length * 0.46d);
+            var headWidth = Math.Max(length * 0.11d, shape.StrokeWidth * 8.4d);
             var bodyRearWidth = Math.Max(1d, length * 0.004d);
-            var bodyFrontWidth = Math.Max(length * 0.03d, shape.StrokeWidth * 3.0d);
-            var notchDepth = Math.Min(headLength * 0.38d, Math.Max(length * 0.045d, shape.StrokeWidth * 3.4d));
+            var bodyFrontWidth = Math.Max(length * 0.024d, shape.StrokeWidth * 2.4d);
+            var notchDepth = Math.Min(headLength * 0.55d, Math.Max(length * 0.07d, shape.StrokeWidth * 4.2d));
             var bodyEndX = end.X - (ux * headLength);
             var bodyEndY = end.Y - (uy * headLength);
             var notchX = bodyEndX - (ux * notchDepth);
@@ -1315,11 +1315,11 @@ namespace Kiritori
                 new PointF(start.X, start.Y),
                 new PointF((float)(start.X - nx * bodyRearWidth), (float)(start.Y - ny * bodyRearWidth)),
                 new PointF((float)(bodyEndX - nx * bodyFrontWidth), (float)(bodyEndY - ny * bodyFrontWidth)),
-                new PointF((float)(notchX - nx * (bodyFrontWidth * 0.18d)), (float)(notchY - ny * (bodyFrontWidth * 0.18d))),
+                new PointF((float)(notchX - nx * (bodyFrontWidth * 0.08d)), (float)(notchY - ny * (bodyFrontWidth * 0.08d))),
                 new PointF((float)(bodyEndX - nx * headWidth), (float)(bodyEndY - ny * headWidth)),
                 new PointF(end.X, end.Y),
                 new PointF((float)(bodyEndX + nx * headWidth), (float)(bodyEndY + ny * headWidth)),
-                new PointF((float)(notchX + nx * (bodyFrontWidth * 0.18d)), (float)(notchY + ny * (bodyFrontWidth * 0.18d))),
+                new PointF((float)(notchX + nx * (bodyFrontWidth * 0.08d)), (float)(notchY + ny * (bodyFrontWidth * 0.08d))),
                 new PointF((float)(bodyEndX + nx * bodyFrontWidth), (float)(bodyEndY + ny * bodyFrontWidth)),
                 new PointF((float)(start.X + nx * bodyRearWidth), (float)(start.Y + ny * bodyRearWidth))
             };
