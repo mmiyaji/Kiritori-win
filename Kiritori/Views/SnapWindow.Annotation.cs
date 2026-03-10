@@ -1299,21 +1299,30 @@ namespace Kiritori
             var uy = dy / length;
             var nx = -uy;
             var ny = ux;
-            var headLength = Math.Max(16d, shape.StrokeWidth * 5d);
-            var bodyWidth = Math.Max(4d, shape.StrokeWidth * 0.8d);
-            var headWidth = Math.Max(18d, shape.StrokeWidth * 4d);
+            var headLength = Math.Min(length * 0.42d, Math.Max(28d, shape.StrokeWidth * 9d));
+            var shaftStart = Math.Max(length * 0.04d, 1d);
+            var shaftWidth = Math.Max(8d, shape.StrokeWidth * 2.2d);
+            var headWidth = Math.Max(26d, shape.StrokeWidth * 6.2d);
+            var notchDepth = Math.Min(headLength * 0.45d, Math.Max(10d, shape.StrokeWidth * 3.2d));
             var bodyEndX = end.X - (ux * headLength);
             var bodyEndY = end.Y - (uy * headLength);
+            var tailBaseX = start.X + (ux * shaftStart);
+            var tailBaseY = start.Y + (uy * shaftStart);
+            var notchX = bodyEndX - (ux * notchDepth);
+            var notchY = bodyEndY - (uy * notchDepth);
 
             var points = new[]
             {
-                new PointF((float)(start.X - nx * (bodyWidth * 0.35d)), (float)(start.Y - ny * (bodyWidth * 0.35d))),
-                new PointF((float)(bodyEndX - nx * bodyWidth), (float)(bodyEndY - ny * bodyWidth)),
+                new PointF(start.X, start.Y),
+                new PointF((float)(tailBaseX - nx * (shaftWidth * 0.28d)), (float)(tailBaseY - ny * (shaftWidth * 0.28d))),
+                new PointF((float)(bodyEndX - nx * (shaftWidth * 0.58d)), (float)(bodyEndY - ny * (shaftWidth * 0.58d))),
+                new PointF((float)(notchX - nx * (shaftWidth * 0.12d)), (float)(notchY - ny * (shaftWidth * 0.12d))),
                 new PointF((float)(bodyEndX - nx * headWidth), (float)(bodyEndY - ny * headWidth)),
                 new PointF(end.X, end.Y),
                 new PointF((float)(bodyEndX + nx * headWidth), (float)(bodyEndY + ny * headWidth)),
-                new PointF((float)(bodyEndX + nx * bodyWidth), (float)(bodyEndY + ny * bodyWidth)),
-                new PointF((float)(start.X + nx * (bodyWidth * 0.35d)), (float)(start.Y + ny * (bodyWidth * 0.35d)))
+                new PointF((float)(notchX + nx * (shaftWidth * 0.12d)), (float)(notchY + ny * (shaftWidth * 0.12d))),
+                new PointF((float)(bodyEndX + nx * (shaftWidth * 0.58d)), (float)(bodyEndY + ny * (shaftWidth * 0.58d))),
+                new PointF((float)(tailBaseX + nx * (shaftWidth * 0.28d)), (float)(tailBaseY + ny * (shaftWidth * 0.28d)))
             };
 
             using (var brush = new SolidBrush(shape.StrokeColor))
