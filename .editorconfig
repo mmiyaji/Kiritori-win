@@ -1,0 +1,15 @@
+﻿root = true
+
+[*]
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cs,csproj,resx,config,manifest,targets,props,xml,xaml,cmd,bat,ps1,json,txt}]
+charset = utf-8-bom
+
+[*.sln]
+charset = utf-8
+
+[*.dll]
+charset = unset
