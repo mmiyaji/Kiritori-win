@@ -411,10 +411,7 @@ namespace Kiritori
         {
             _annotations.Clear();
             _selectedAnnotationIndex = -1;
-            _annotationPreview = null;
-            _annotationDragging = false;
-            _annotationInteraction = AnnotationInteraction.None;
-            _annotationHandle = AnnotationHandle.None;
+            ResetTransientAnnotationState();
             ExitAnnotationMode(silent: true);
             UpdateAnnotationMenuState();
             pictureBox1?.Invalidate();
@@ -444,15 +441,12 @@ namespace Kiritori
         private void EnterAnnotationMode()
         {
             _annotationMode = true;
-            _annotationDragging = false;
-            _annotationPreview = null;
-            _annotationInteraction = AnnotationInteraction.None;
-            _annotationHandle = AnnotationHandle.None;
+            ResetTransientAnnotationState();
             DetachStandardMouseHandlers();
-            if (_annotationPalette != null) _annotationPalette.Visible = true;
+            SetAnnotationPaletteVisible(true);
             RepositionAnnotationPalette();
             UpdateAnnotationMenuState();
-            Cursor = _annotationTool == AnnotationTool.Move ? Cursors.SizeAll : Cursors.Cross;
+            UpdateAnnotationCursor();
             ShowOverlay("EDIT MODE");
             pictureBox1?.Invalidate();
         }
@@ -460,17 +454,14 @@ namespace Kiritori
         private void ExitAnnotationMode(bool silent = false)
         {
             _annotationMode = false;
-            _annotationDragging = false;
-            _annotationInteraction = AnnotationInteraction.None;
-            _annotationHandle = AnnotationHandle.None;
+            ResetTransientAnnotationState();
             _selectedAnnotationIndex = -1;
             if (pictureBox1 != null) pictureBox1.Capture = false;
-            _annotationPreview = null;
             ResetStandardDragState();
             RestoreStandardMouseHandlers();
-            if (_annotationPalette != null) _annotationPalette.Visible = false;
+            SetAnnotationPaletteVisible(false);
             UpdateAnnotationMenuState();
-            Cursor = Cursors.Default;
+            UpdateAnnotationCursor();
             if (!silent) ShowOverlay("EDIT OFF");
             pictureBox1?.Invalidate();
         }
@@ -487,7 +478,33 @@ namespace Kiritori
         {
             _annotationTool = tool;
             _annotationPreview = null;
+            UpdateAnnotationCursor();
             RefreshAnnotationUi();
+        }
+
+        private void ResetTransientAnnotationState()
+        {
+            _annotationDragging = false;
+            _annotationPreview = null;
+            _annotationInteraction = AnnotationInteraction.None;
+            _annotationHandle = AnnotationHandle.None;
+        }
+
+        private void SetAnnotationPaletteVisible(bool visible)
+        {
+            if (_annotationPalette != null)
+                _annotationPalette.Visible = visible;
+        }
+
+        private void UpdateAnnotationCursor()
+        {
+            if (!_annotationMode)
+            {
+                Cursor = Cursors.Default;
+                return;
+            }
+
+            Cursor = _annotationTool == AnnotationTool.Move ? Cursors.SizeAll : Cursors.Cross;
         }
 
         private void SetAnnotationColor(Color strokeColor, Color fillColor)
