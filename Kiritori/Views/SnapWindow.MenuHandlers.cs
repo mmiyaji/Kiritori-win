@@ -221,7 +221,7 @@ namespace Kiritori
             }
 
             // ── Hover border ───────────────────────────────────────────────────────────
-            if (isHighlightOnHover && _hoverWindow && _hoverAlphaPercent > 0 && _hoverThicknessPx > 0)
+            if (((isHighlightOnHover && _hoverWindow) || _annotationMode) && _hoverAlphaPercent > 0 && _hoverThicknessPx > 0)
             {
                 using (var pen = MakeHoverPen())
                 {
