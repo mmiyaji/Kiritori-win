@@ -1070,7 +1070,7 @@ namespace Kiritori
 
         private void MoveSelectedArrow(Point imagePoint)
         {
-            if (!TryGetSelectedShape(out var shape) || shape.Kind != AnnotationShapeKind.Arrow) return;
+            if (!TryGetSelectedArrow(out var shape)) return;
             var dx = imagePoint.X - _annotationDragOriginImage.X;
             var dy = imagePoint.Y - _annotationDragOriginImage.Y;
             shape.Start = new Point(_annotationEditOriginStart.X + dx, _annotationEditOriginStart.Y + dy);
@@ -1079,18 +1079,21 @@ namespace Kiritori
 
         private void EditSelectedArrowEndpoint(Point imagePoint, bool editStart)
         {
-            if (!TryGetSelectedShape(out var shape) || shape.Kind != AnnotationShapeKind.Arrow) return;
+            if (!TryGetSelectedArrow(out var shape)) return;
             if (editStart)
                 shape.Start = imagePoint;
             else
                 shape.End = imagePoint;
         }
 
+        private bool TryGetSelectedArrow(out AnnotationShape shape)
+        {
+            return TryGetSelectedShapeOfKind(AnnotationShapeKind.Arrow, out shape);
+        }
+
         private bool TryGetSelectedRectangle(out AnnotationShape shape)
         {
-            shape = null;
-            if (!TryGetSelectedShape(out shape)) return false;
-            return shape.Kind == AnnotationShapeKind.Rectangle;
+            return TryGetSelectedShapeOfKind(AnnotationShapeKind.Rectangle, out shape);
         }
 
         private bool TryGetSelectedShape(out AnnotationShape shape)
@@ -1099,6 +1102,13 @@ namespace Kiritori
             if (_selectedAnnotationIndex < 0 || _selectedAnnotationIndex >= _annotations.Count) return false;
             shape = _annotations[_selectedAnnotationIndex];
             return true;
+        }
+
+        private bool TryGetSelectedShapeOfKind(AnnotationShapeKind kind, out AnnotationShape shape)
+        {
+            shape = null;
+            if (!TryGetSelectedShape(out shape)) return false;
+            return shape.Kind == kind;
         }
 
         private bool TryHitAnnotation(Point imagePoint, out int index, out AnnotationHandle handle)
