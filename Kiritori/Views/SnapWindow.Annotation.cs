@@ -10,6 +10,9 @@ namespace Kiritori
 {
     public partial class SnapWindow
     {
+        private const int AnnotationArrowHandleRadius = 10;
+        private const int AnnotationRectangleHandleRadius = 10;
+
         private enum AnnotationTool
         {
             Move,
@@ -997,11 +1000,10 @@ namespace Kiritori
 
         private AnnotationHandle HitTestArrowHandle(AnnotationShape shape, Point imagePoint)
         {
-            const int radius = 10;
-            var startRect = new Rectangle(shape.Start.X - radius, shape.Start.Y - radius, radius * 2, radius * 2);
+            var startRect = GetHandleRect(shape.Start, AnnotationArrowHandleRadius);
             if (startRect.Contains(imagePoint)) return AnnotationHandle.ArrowStart;
 
-            var endRect = new Rectangle(shape.End.X - radius, shape.End.Y - radius, radius * 2, radius * 2);
+            var endRect = GetHandleRect(shape.End, AnnotationArrowHandleRadius);
             if (endRect.Contains(imagePoint)) return AnnotationHandle.ArrowEnd;
 
             return DistancePointToSegmentSquared(imagePoint, shape.Start, shape.End) <= 100 ? AnnotationHandle.Move : AnnotationHandle.None;
@@ -1024,8 +1026,7 @@ namespace Kiritori
 
         private AnnotationHandle HitTestRectangleHandle(Rectangle rect, Point imagePoint)
         {
-            const int radius = 10;
-            var handles = GetRectangleHandleRects(rect, radius);
+            var handles = GetRectangleHandleRects(rect, AnnotationRectangleHandleRadius);
             foreach (var pair in handles)
             {
                 if (pair.Value.Contains(imagePoint)) return pair.Key;
@@ -1034,22 +1035,31 @@ namespace Kiritori
             return rect.Contains(imagePoint) ? AnnotationHandle.Move : AnnotationHandle.None;
         }
 
+        private Rectangle GetHandleRect(Point center, int radius)
+        {
+            return new Rectangle(center.X - radius, center.Y - radius, radius * 2, radius * 2);
+        }
+
         private Dictionary<AnnotationHandle, Rectangle> GetRectangleHandleRects(Rectangle rect, int radius)
         {
             var size = radius * 2;
-            var centerX = rect.Left + rect.Width / 2;
-            var centerY = rect.Top + rect.Height / 2;
+            var center = GetRectangleCenter(rect);
             return new Dictionary<AnnotationHandle, Rectangle>
             {
                 { AnnotationHandle.TopLeft, new Rectangle(rect.Left - radius, rect.Top - radius, size, size) },
-                { AnnotationHandle.Top, new Rectangle(centerX - radius, rect.Top - radius, size, size) },
+                { AnnotationHandle.Top, new Rectangle(center.X - radius, rect.Top - radius, size, size) },
                 { AnnotationHandle.TopRight, new Rectangle(rect.Right - radius, rect.Top - radius, size, size) },
-                { AnnotationHandle.Right, new Rectangle(rect.Right - radius, centerY - radius, size, size) },
+                { AnnotationHandle.Right, new Rectangle(rect.Right - radius, center.Y - radius, size, size) },
                 { AnnotationHandle.BottomRight, new Rectangle(rect.Right - radius, rect.Bottom - radius, size, size) },
-                { AnnotationHandle.Bottom, new Rectangle(centerX - radius, rect.Bottom - radius, size, size) },
+                { AnnotationHandle.Bottom, new Rectangle(center.X - radius, rect.Bottom - radius, size, size) },
                 { AnnotationHandle.BottomLeft, new Rectangle(rect.Left - radius, rect.Bottom - radius, size, size) },
-                { AnnotationHandle.Left, new Rectangle(rect.Left - radius, centerY - radius, size, size) },
+                { AnnotationHandle.Left, new Rectangle(rect.Left - radius, center.Y - radius, size, size) },
             };
+        }
+
+        private Point GetRectangleCenter(Rectangle rect)
+        {
+            return new Point(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
         }
 
         private void UpdateAnnotationCursor(AnnotationHandle handle)
