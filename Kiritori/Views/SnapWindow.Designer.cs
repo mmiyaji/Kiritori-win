@@ -22,6 +22,7 @@ namespace Kiritori
         private ToolStripMenuItem closeESCToolStripMenuItem;
         private ToolStripMenuItem cutCtrlXToolStripMenuItem;
         private ToolStripMenuItem copyCtrlCToolStripMenuItem;
+        private ToolStripMenuItem copyOriginalImageToolStripMenuItem;
         private ToolStripMenuItem ocrCtrlTToolStripMenuItem;
         private ToolStripMenuItem saveImageToolStripMenuItem;
         private ToolStripMenuItem openImageToolStripMenuItem;
@@ -92,6 +93,7 @@ namespace Kiritori
             this.closeESCToolStripMenuItem = new ToolStripMenuItem();
             this.cutCtrlXToolStripMenuItem = new ToolStripMenuItem();
             this.copyCtrlCToolStripMenuItem = new ToolStripMenuItem();
+            this.copyOriginalImageToolStripMenuItem = new ToolStripMenuItem();
             this.ocrCtrlTToolStripMenuItem = new ToolStripMenuItem();
             this.saveImageToolStripMenuItem = new ToolStripMenuItem();
             this.openImageToolStripMenuItem = new ToolStripMenuItem();
@@ -184,6 +186,7 @@ namespace Kiritori
             this.editParentMenu.DropDownItems.AddRange(new ToolStripItem[] {
                 this.cutCtrlXToolStripMenuItem,
                 this.copyCtrlCToolStripMenuItem,
+                this.copyOriginalImageToolStripMenuItem,
                 this.ocrCtrlTToolStripMenuItem,
                 this.editPaintToolStripMenuItem,
             });
@@ -294,6 +297,14 @@ namespace Kiritori
             this.copyCtrlCToolStripMenuItem.Text = "Copy";
             this.copyCtrlCToolStripMenuItem.Tag = "loc:Menu.Copy";
             this.copyCtrlCToolStripMenuItem.Click += new System.EventHandler(this.copyCtrlCToolStripMenuItem_Click);
+            // 
+            // copyOriginalImageToolStripMenuItem
+            // 
+            this.copyOriginalImageToolStripMenuItem.Name = "copyOriginalImageToolStripMenuItem";
+            this.copyOriginalImageToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
+            this.copyOriginalImageToolStripMenuItem.Text = "Copy Original Image";
+            this.copyOriginalImageToolStripMenuItem.Tag = "loc:Menu.CopyOriginalImage";
+            this.copyOriginalImageToolStripMenuItem.Click += new System.EventHandler(this.copyOriginalImageToolStripMenuItem_Click);
             // 
             // ocrCtrlTToolStripMenuItem
             // 

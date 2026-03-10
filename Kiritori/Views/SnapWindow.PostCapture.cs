@@ -77,12 +77,34 @@ namespace Kiritori
                 {
                     Clipboard.SetImage(copy);
                     if (showOverlay) ShowOverlay("COPIED");
-                    Log.Info("Image copied to clipboard", "SnapWindow");
+                    Log.Info("Annotated image copied to clipboard", "SnapWindow");
                     return true;
                 }
                 catch (Exception ex)
                 {
                     Log.Debug("Clipboard copy failed: " + ex.Message, "SnapWindow");
+                    return false;
+                }
+            }
+        }
+
+        internal bool CopyOriginalImageToClipboard(bool showOverlay)
+        {
+            var source = main_image ?? _originalImage as System.Drawing.Bitmap;
+            if (source == null) return false;
+
+            using (var copy = new System.Drawing.Bitmap(source))
+            {
+                try
+                {
+                    Clipboard.SetImage(copy);
+                    if (showOverlay) ShowOverlay("ORIGINAL COPIED");
+                    Log.Info("Original image copied to clipboard", "SnapWindow");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Log.Debug("Original clipboard copy failed: " + ex.Message, "SnapWindow");
                     return false;
                 }
             }

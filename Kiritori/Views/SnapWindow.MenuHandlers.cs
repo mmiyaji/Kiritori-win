@@ -39,6 +39,9 @@ namespace Kiritori
         private void copyCtrlCToolStripMenuItem_Click(object sender, EventArgs e) {
             CopyCurrentImageToClipboard(showOverlay: true);
         }
+        private void copyOriginalImageToolStripMenuItem_Click(object sender, EventArgs e) {
+            CopyOriginalImageToClipboard(showOverlay: true);
+        }
         private void ocrCtrlTToolStripMenuItem_Click(object sender, EventArgs e) { RunOcrOnCurrentImage(); }
         private void keepAfloatToolStripMenuItem_Click(object sender, EventArgs e)
         {
