@@ -1292,44 +1292,73 @@ namespace Kiritori
         {
             var dx = end.X - start.X;
             var dy = end.Y - start.Y;
-            var length = Math.Sqrt((dx * dx) + (dy * dy));
+            var length = Math.Sqrt(dx * dx + dy * dy);
             if (length < 1d) return;
 
             var ux = dx / length;
             var uy = dy / length;
             var nx = -uy;
             var ny = ux;
-            var headLength = Math.Max(length * 0.26d, shape.StrokeWidth * 12.0d);
-            headLength = Math.Min(headLength, length * 0.46d);
-            var headWidth = Math.Max(length * 0.11d, shape.StrokeWidth * 8.4d);
-            var bodyRearWidth = Math.Max(1d, length * 0.004d);
-            var bodyFrontWidth = Math.Max(length * 0.024d, shape.StrokeWidth * 2.4d);
-            var notchDepth = Math.Min(headLength * 0.55d, Math.Max(length * 0.07d, shape.StrokeWidth * 4.2d));
-            var bodyEndX = end.X - (ux * headLength);
-            var bodyEndY = end.Y - (uy * headLength);
-            var notchX = bodyEndX - (ux * notchDepth);
-            var notchY = bodyEndY - (uy * notchDepth);
 
+            PointF P(double along, double side)
+            {
+                return new PointF(
+                    (float)(start.X + ux * along + nx * side),
+                    (float)(start.Y + uy * along + ny * side));
+            }
+
+            // -----------------------------
+            // パラメータ
+            // -----------------------------
+            var headLength = Math.Max(length * 0.22d, shape.StrokeWidth * 9.0d);
+            headLength = Math.Min(headLength, length * 0.36d);
+
+            var headStart = length - headLength;
+
+            // 胴体前端の半幅
+            var bodyHalfWidthFront = Math.Max(length * 0.026d, shape.StrokeWidth * 2.2d);
+            bodyHalfWidthFront = Math.Min(bodyHalfWidthFront, headLength * 0.22d);
+
+            // 返しの深さ（大きくしすぎない）
+            var notchDepth = Math.Max(length * 0.028d, shape.StrokeWidth * 1.8d);
+            notchDepth = Math.Min(notchDepth, headLength * 0.16d);
+
+            // 返しの張り出し
+            var barbOuter = Math.Max(length * 0.095d, shape.StrokeWidth * 5.0d);
+            barbOuter = Math.Min(barbOuter, headLength * 0.42d);
+
+            var barbAlong = headStart - notchDepth;
+
+            // -----------------------------
+            // 単純な外周だけで構成する
+            // 6点ポリゴン
+            // -----------------------------
             var points = new[]
             {
-                new PointF(start.X, start.Y),
-                new PointF((float)(start.X - nx * bodyRearWidth), (float)(start.Y - ny * bodyRearWidth)),
-                new PointF((float)(bodyEndX - nx * bodyFrontWidth), (float)(bodyEndY - ny * bodyFrontWidth)),
-                new PointF((float)(notchX - nx * (bodyFrontWidth * 0.08d)), (float)(notchY - ny * (bodyFrontWidth * 0.08d))),
-                new PointF((float)(bodyEndX - nx * headWidth), (float)(bodyEndY - ny * headWidth)),
-                new PointF(end.X, end.Y),
-                new PointF((float)(bodyEndX + nx * headWidth), (float)(bodyEndY + ny * headWidth)),
-                new PointF((float)(notchX + nx * (bodyFrontWidth * 0.08d)), (float)(notchY + ny * (bodyFrontWidth * 0.08d))),
-                new PointF((float)(bodyEndX + nx * bodyFrontWidth), (float)(bodyEndY + ny * bodyFrontWidth)),
-                new PointF((float)(start.X + nx * bodyRearWidth), (float)(start.Y + ny * bodyRearWidth))
+                P(0, 0),                         // 尾
+                P(headStart, -bodyHalfWidthFront), // 胴体上
+                P(barbAlong, -barbOuter),        // 上側の返し
+                P(length, 0),                    // 先端
+                P(barbAlong, barbOuter),         // 下側の返し
+                P(headStart, bodyHalfWidthFront) // 胴体下
             };
+
+            var oldSmoothing = g.SmoothingMode;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
             using (var brush = new SolidBrush(shape.StrokeColor))
             using (var pen = new Pen(shape.StrokeColor, 1.5f))
+            using (var path = new System.Drawing.Drawing2D.GraphicsPath(
+                System.Drawing.Drawing2D.FillMode.Winding))
             {
-                g.FillPolygon(brush, points);
-                g.DrawPolygon(pen, points);
+                pen.LineJoin = System.Drawing.Drawing2D.LineJoin.Round;
+                path.AddPolygon(points);
+
+                g.FillPath(brush, path);
+                g.DrawPath(pen, path);
             }
+
+            g.SmoothingMode = oldSmoothing;
         }
         private bool IsAnnotationShapeUsable(AnnotationShape shape)
         {

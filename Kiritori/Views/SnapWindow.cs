@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -121,7 +121,7 @@ namespace Kiritori
         private string _imageSourcePath;
 
         // MSPaint 編集
-        private string _paintEditPath;
+        //private string _paintEditPath;
         public bool SuppressHistory { get; set; } = false;
 
         // OCR
