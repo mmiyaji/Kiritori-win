@@ -163,7 +163,7 @@ namespace Kiritori
             _annotationPalette = new Panel
             {
                 Visible = false,
-                Size = new Size(494, 44),
+                Size = new Size(610, 44),
                 BackColor = Color.FromArgb(232, 26, 29, 34),
                 Padding = new Padding(8)
             };
@@ -175,18 +175,18 @@ namespace Kiritori
                 ForeColor = Color.White,
                 Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold, GraphicsUnit.Point),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Size = new Size(40, 28),
+                Size = new Size(52, 28),
                 Location = new Point(10, 8),
                 Cursor = Cursors.SizeAll
             };
 
-            _annotationClearButton = CreatePaletteButton("Clear", 56, 52, (s, e) => ClearAnnotations());
-            _annotationToolButton = CreatePaletteButton("Tool", 114, 88, (s, e) => ShowAnnotationMenu(_annotationToolMenu, _annotationToolButton));
+            _annotationClearButton = CreatePaletteButton("Clear", 68, 72, (s, e) => ClearAnnotations());
+            _annotationToolButton = CreatePaletteButton("Tool", 146, 96, (s, e) => ShowAnnotationMenu(_annotationToolMenu, _annotationToolButton));
             SetDoubleBuffered(_annotationPalette);
-            _annotationColorButton = CreatePaletteButton("Color", 208, 72, (s, e) => ShowAnnotationMenu(_annotationColorMenu, _annotationColorButton));
-            _annotationStyleButton = CreatePaletteButton("Style", 286, 84, (s, e) => ShowAnnotationMenu(_annotationStyleMenu, _annotationStyleButton));
-            _annotationUndoButton = CreatePaletteButton("Undo", 376, 52, (s, e) => UndoLastAnnotation());
-            _annotationDoneButton = CreatePaletteButton("Done", 434, 52, (s, e) => ExitAnnotationMode());
+            _annotationColorButton = CreatePaletteButton("Color", 248, 92, (s, e) => ShowAnnotationMenu(_annotationColorMenu, _annotationColorButton));
+            _annotationStyleButton = CreatePaletteButton("Style", 346, 104, (s, e) => ShowAnnotationMenu(_annotationStyleMenu, _annotationStyleButton));
+            _annotationUndoButton = CreatePaletteButton("Undo", 456, 68, (s, e) => UndoLastAnnotation());
+            _annotationDoneButton = CreatePaletteButton("Done", 530, 72, (s, e) => ExitAnnotationMode());
 
             CreateAnnotationPaletteMenus();
             HookPaletteDrag(_annotationPaletteLabel);
@@ -311,7 +311,7 @@ namespace Kiritori
                 TextImageRelation = TextImageRelation.ImageBeforeText,
                 ImageAlign = ContentAlignment.MiddleLeft,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(8, 0, 8, 0)
+                Padding = new Padding(6, 0, 8, 0)
             };
             button.FlatAppearance.BorderSize = 0;
             button.FlatAppearance.MouseOverBackColor = Color.FromArgb(56, 62, 72);
@@ -322,7 +322,8 @@ namespace Kiritori
 
         private Image GetAnnotationPaletteIcon(string key)
         {
-            return Properties.Resources.ResourceManager.GetObject(key) as Image;
+            var image = Properties.Resources.ResourceManager.GetObject(key) as Image;
+            return image == null ? null : CreatePaletteIconBitmap(image);
         }
 
         private string GetToolIconKey()
@@ -369,6 +370,21 @@ namespace Kiritori
                 g.FillEllipse(brush, 2, 2, 12, 12);
                 g.DrawEllipse(pen, 2, 2, 12, 12);
             }
+            return bmp;
+        }
+
+        private Image CreatePaletteIconBitmap(Image source)
+        {
+            var bmp = new Bitmap(16, 16);
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.Clear(Color.Transparent);
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                g.DrawImage(source, new Rectangle(0, 0, 16, 16));
+            }
+
             return bmp;
         }
 
