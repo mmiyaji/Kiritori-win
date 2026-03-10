@@ -616,9 +616,9 @@ namespace Kiritori
             UpdatePaletteButtonState(_annotationToolButton, true, GetToolButtonLabel(), GetAnnotationPaletteIcon(GetToolIconKey()));
             UpdatePaletteButtonState(_annotationColorButton, true, GetColorButtonLabel(_annotationStrokeColor), CreateAnnotationColorSwatch(_annotationStrokeColor));
             UpdatePaletteButtonState(_annotationStyleButton, true, GetStyleButtonLabel(), GetAnnotationPaletteIcon(GetStyleIconKey()));
-            UpdatePaletteButtonState(_annotationClearButton, false, "Clear", GetAnnotationPaletteIcon("annotation_clear"));
-            UpdatePaletteButtonState(_annotationUndoButton, false, "Undo", GetAnnotationPaletteIcon("annotation_undo"));
-            UpdatePaletteButtonState(_annotationDoneButton, false, "Done", GetAnnotationPaletteIcon("annotation_done"));
+            UpdatePaletteButtonState(_annotationClearButton, false, string.Empty, GetAnnotationPaletteIcon("annotation_clear"));
+            UpdatePaletteButtonState(_annotationUndoButton, false, string.Empty, GetAnnotationPaletteIcon("annotation_undo"));
+            UpdatePaletteButtonState(_annotationDoneButton, false, string.Empty, GetAnnotationPaletteIcon("annotation_done"));
             if (_annotationUndoButton != null) _annotationUndoButton.Enabled = hasAnnotations;
             if (_annotationClearButton != null) _annotationClearButton.Enabled = hasAnnotations;
         }
