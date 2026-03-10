@@ -709,18 +709,7 @@ namespace Kiritori
             AnnotationHandle hitHandle;
             if (TryHitAnnotation(imagePoint, out hitIndex, out hitHandle))
             {
-                _selectedAnnotationIndex = hitIndex;
-                SyncAnnotationDefaultsFromShape(_annotations[hitIndex]);
-                _annotationDragging = true;
-                _annotationDragOriginImage = imagePoint;
-                _annotationEditOriginBounds = _annotations[hitIndex].Bounds;
-                _annotationEditOriginStart = _annotations[hitIndex].Start;
-                _annotationEditOriginEnd = _annotations[hitIndex].End;
-                _annotationHandle = hitHandle;
-                _annotationInteraction = GetInteractionForHit(_annotations[hitIndex], hitHandle);
-                pictureBox1.Capture = true;
-                UpdateAnnotationCursor(hitHandle);
-                pictureBox1.Invalidate();
+                BeginAnnotationEdit(hitIndex, hitHandle, imagePoint);
                 return;
             }
 
@@ -730,14 +719,7 @@ namespace Kiritori
                 return;
             }
 
-            _selectedAnnotationIndex = -1;
-            _annotationDragging = true;
-            _annotationInteraction = AnnotationInteraction.Create;
-            _annotationHandle = AnnotationHandle.None;
-            _annotationStartImage = imagePoint;
-            _annotationPreview = CreateAnnotationShape(_annotationTool, imagePoint, imagePoint);
-            pictureBox1.Capture = true;
-            pictureBox1.Invalidate();
+            BeginAnnotationCreate(imagePoint);
         }
         private void PictureBox1_MouseMoveAnnotations(object sender, MouseEventArgs e)
         {
@@ -831,17 +813,7 @@ namespace Kiritori
 
             if (_annotationInteraction == AnnotationInteraction.Create)
             {
-                if (_annotationPreview != null && IsAnnotationShapeUsable(_annotationPreview))
-                {
-                    _annotations.Add(_annotationPreview);
-                    _selectedAnnotationIndex = _annotations.Count - 1;
-                    SyncAnnotationDefaultsFromShape(_annotationPreview);
-                    UpdateAnnotationMenuState();
-                    ShowOverlay(_annotationTool == AnnotationTool.Arrow ? "ARROW ADDED" : "RECT ADDED");
-                    Log.Info("Annotation added: " + _annotationPreview.Kind, "SnapWindow");
-                }
-
-                _annotationPreview = null;
+                CompleteAnnotationCreate();
             }
             else if (_selectedAnnotationIndex >= 0 && _selectedAnnotationIndex < _annotations.Count)
             {
@@ -856,6 +828,49 @@ namespace Kiritori
             _annotationHandle = AnnotationHandle.None;
             UpdateAnnotationCursor(AnnotationHandle.None);
             pictureBox1.Invalidate();
+        }
+
+        private void BeginAnnotationEdit(int hitIndex, AnnotationHandle hitHandle, Point imagePoint)
+        {
+            _selectedAnnotationIndex = hitIndex;
+            SyncAnnotationDefaultsFromShape(_annotations[hitIndex]);
+            _annotationDragging = true;
+            _annotationDragOriginImage = imagePoint;
+            _annotationEditOriginBounds = _annotations[hitIndex].Bounds;
+            _annotationEditOriginStart = _annotations[hitIndex].Start;
+            _annotationEditOriginEnd = _annotations[hitIndex].End;
+            _annotationHandle = hitHandle;
+            _annotationInteraction = GetInteractionForHit(_annotations[hitIndex], hitHandle);
+            pictureBox1.Capture = true;
+            UpdateAnnotationCursor(hitHandle);
+            pictureBox1.Invalidate();
+        }
+
+        private void BeginAnnotationCreate(Point imagePoint)
+        {
+            _selectedAnnotationIndex = -1;
+            _annotationDragging = true;
+            _annotationInteraction = AnnotationInteraction.Create;
+            _annotationHandle = AnnotationHandle.None;
+            _annotationStartImage = imagePoint;
+            _annotationPreview = CreateAnnotationShape(_annotationTool, imagePoint, imagePoint);
+            pictureBox1.Capture = true;
+            pictureBox1.Invalidate();
+        }
+
+        private void CompleteAnnotationCreate()
+        {
+            if (_annotationPreview != null && IsAnnotationShapeUsable(_annotationPreview))
+            {
+                _annotations.Add(_annotationPreview);
+                _selectedAnnotationIndex = _annotations.Count - 1;
+                SyncAnnotationDefaultsFromShape(_annotationPreview);
+                UpdateAnnotationMenuState();
+                ShowOverlay(_annotationTool == AnnotationTool.Arrow ? "ARROW ADDED" : "RECT ADDED");
+                Log.Info("Annotation added: " + _annotationPreview.Kind, "SnapWindow");
+            }
+
+            _annotationPreview = null;
         }
         private void MoveSelectedRectangle(Point imagePoint)
         {
