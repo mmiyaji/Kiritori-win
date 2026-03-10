@@ -82,6 +82,7 @@ namespace Kiritori
         private AnnotationInteraction _annotationInteraction = AnnotationInteraction.None;
         private AnnotationHandle _annotationHandle = AnnotationHandle.None;
         private int _selectedAnnotationIndex = -1;
+        private int _hoverAnnotationIndex = -1;
         private Point _annotationDragOriginImage;
         private Rectangle _annotationEditOriginBounds = Rectangle.Empty;
         private Point _annotationEditOriginStart;
@@ -523,6 +524,11 @@ namespace Kiritori
 
             if (!TryClientToImagePoint(e.Location, out imagePoint))
             {
+                if (_hoverAnnotationIndex != -1)
+                {
+                    _hoverAnnotationIndex = -1;
+                    pictureBox1.Invalidate();
+                }
                 UpdateAnnotationCursor(AnnotationHandle.None);
                 return;
             }
@@ -531,10 +537,20 @@ namespace Kiritori
             AnnotationHandle hitHandle;
             if (TryHitAnnotation(imagePoint, out hitIndex, out hitHandle))
             {
+                if (_hoverAnnotationIndex != hitIndex)
+                {
+                    _hoverAnnotationIndex = hitIndex;
+                    pictureBox1.Invalidate();
+                }
                 UpdateAnnotationCursor(hitHandle);
                 return;
             }
 
+            if (_hoverAnnotationIndex != -1)
+            {
+                _hoverAnnotationIndex = -1;
+                pictureBox1.Invalidate();
+            }
             UpdateAnnotationCursor(AnnotationHandle.None);
         }
 
@@ -802,6 +818,7 @@ namespace Kiritori
 
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             RenderAnnotationsToClient(e.Graphics, displayRect, source.Size, includePreview: true);
+            DrawHoverOverlay(e.Graphics, displayRect, source.Size);
             DrawSelectionOverlay(e.Graphics, displayRect, source.Size);
         }
 
@@ -821,6 +838,32 @@ namespace Kiritori
 
             if (includePreview && _annotationPreview != null)
                 DrawAnnotationShape(g, _annotationPreview, displayRect, sourceSize);
+        }
+
+        private void DrawHoverOverlay(Graphics g, Rectangle displayRect, Size sourceSize)
+        {
+            if (!_annotationMode) return;
+            if (_annotationDragging) return;
+            if (_hoverAnnotationIndex < 0 || _hoverAnnotationIndex >= _annotations.Count) return;
+            if (_hoverAnnotationIndex == _selectedAnnotationIndex) return;
+
+            var shape = _annotations[_hoverAnnotationIndex];
+            using (var pen = new Pen(Color.FromArgb(170, 255, 255, 255), 1f))
+            {
+                pen.DashStyle = DashStyle.Dot;
+
+                if (shape.Kind == AnnotationShapeKind.Rectangle)
+                {
+                    var rect = ImageRectToClientRect(displayRect, sourceSize, shape.Bounds);
+                    if (rect.Width <= 0 || rect.Height <= 0) return;
+                    g.DrawRectangle(pen, rect);
+                    return;
+                }
+
+                var start = ImagePointToClientPoint(displayRect, sourceSize, shape.Start);
+                var end = ImagePointToClientPoint(displayRect, sourceSize, shape.End);
+                g.DrawLine(pen, start, end);
+            }
         }
 
         private void DrawSelectionOverlay(Graphics g, Rectangle displayRect, Size sourceSize)
