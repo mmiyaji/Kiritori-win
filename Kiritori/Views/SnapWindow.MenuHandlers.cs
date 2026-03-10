@@ -1,4 +1,4 @@
-using CommunityToolkit.WinUI.Notifications;
+﻿using CommunityToolkit.WinUI.Notifications;
 using Kiritori.Helpers;
 using Kiritori.Services.History;
 using Kiritori.Services.Logging;

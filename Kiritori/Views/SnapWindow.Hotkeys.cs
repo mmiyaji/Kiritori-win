@@ -1,4 +1,4 @@
-using CommunityToolkit.WinUI.Notifications;
+﻿using CommunityToolkit.WinUI.Notifications;
 using Kiritori.Helpers;
 using Kiritori.Services.History;
 using Kiritori.Services.Notifications;
@@ -90,7 +90,7 @@ namespace Kiritori
                     openImage();
                     break;
                 case (int)HOTS.EDIT_MSPAINT:
-                    editInMSPaint(this);
+                    ToggleAnnotationMode();
                     break;
 
                 case (int)HOTS.ZOOM_ORIGIN_NUMPAD:

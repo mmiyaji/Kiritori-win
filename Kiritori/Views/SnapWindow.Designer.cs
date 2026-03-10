@@ -320,8 +320,8 @@ namespace Kiritori
             this.editPaintToolStripMenuItem.Name = "editPaintToolStripMenuItem";
             this.editPaintToolStripMenuItem.ShortcutKeys = ((Keys)((Keys.Control | Keys.E)));
             this.editPaintToolStripMenuItem.Size = new System.Drawing.Size(231, 22);
-            this.editPaintToolStripMenuItem.Text = "Edit Paint";
-            this.editPaintToolStripMenuItem.Tag = "loc:Menu.EditPaint";
+            this.editPaintToolStripMenuItem.Text = "Edit annotations";
+            this.editPaintToolStripMenuItem.Tag = "loc:Menu.EditAnnotations";
             this.editPaintToolStripMenuItem.Click += new System.EventHandler(this.editPaintToolStripMenuItem_Click);
             // 
             // saveImageToolStripMenuItem

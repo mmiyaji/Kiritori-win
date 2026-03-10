@@ -1,4 +1,5 @@
-﻿using Kiritori.Services.Logging;
+﻿using Kiritori.Helpers;
+using Kiritori.Services.Logging;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -136,8 +137,10 @@ namespace Kiritori
 
         private void CreateAnnotationMenuItems()
         {
-            _annotationModeMenuItem = new ToolStripMenuItem("Edit annotations");
-            _annotationModeMenuItem.Click += (s, e) => ToggleAnnotationMode();
+            _annotationModeMenuItem = editPaintToolStripMenuItem ?? new ToolStripMenuItem("Edit annotations");
+            _annotationModeMenuItem.Text = "Edit annotations";
+            _annotationModeMenuItem.Tag = "loc:Menu.EditAnnotations";
+            _annotationModeMenuItem.ShortcutKeys = (Keys)HOTS.EDIT_MSPAINT;
 
             _annotationUndoMenuItem = new ToolStripMenuItem("Undo last annotation");
             _annotationUndoMenuItem.Click += (s, e) => UndoLastAnnotation();
@@ -148,7 +151,6 @@ namespace Kiritori
             if (editParentMenu != null)
             {
                 editParentMenu.DropDownItems.Add(new ToolStripSeparator());
-                editParentMenu.DropDownItems.Add(_annotationModeMenuItem);
                 editParentMenu.DropDownItems.Add(_annotationUndoMenuItem);
                 editParentMenu.DropDownItems.Add(_annotationClearMenuItem);
             }
