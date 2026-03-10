@@ -848,7 +848,7 @@ namespace Kiritori
             if (_hoverAnnotationIndex == _selectedAnnotationIndex) return;
 
             var shape = _annotations[_hoverAnnotationIndex];
-            using (var pen = new Pen(Color.FromArgb(170, 255, 255, 255), 1f))
+            using (var pen = new Pen(Color.FromArgb(210, 255, 255, 255), 1.5f))
             {
                 pen.DashStyle = DashStyle.Dot;
 
