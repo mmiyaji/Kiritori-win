@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.WinUI.Notifications;
+using CommunityToolkit.WinUI.Notifications;
 using Kiritori.Helpers;
 using Kiritori.Services.History;
 using Kiritori.Services.Logging;
@@ -32,15 +32,13 @@ namespace Kiritori
             this.Close();
         }
         private void cutCtrlXToolStripMenuItem_Click(object sender, EventArgs e) {
-            Clipboard.SetImage(this.pictureBox1.Image);
-            Log.Info("Image copied to clipboard", "SnapWindow");
+            if (!CopyCurrentImageToClipboard(showOverlay: false)) return;
             Log.Info("SnapWindow closed by user (cut)", "SnapWindow");
             this.Close();
         }
         private void copyCtrlCToolStripMenuItem_Click(object sender, EventArgs e) {
-            Clipboard.SetImage(this.pictureBox1.Image);
-            ShowOverlay("COPIED");
-            Log.Info("Image copied to clipboard", "SnapWindow");}
+            CopyCurrentImageToClipboard(showOverlay: true);
+        }
         private void ocrCtrlTToolStripMenuItem_Click(object sender, EventArgs e) { RunOcrOnCurrentImage(); }
         private void keepAfloatToolStripMenuItem_Click(object sender, EventArgs e)
         {

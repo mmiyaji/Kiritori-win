@@ -73,7 +73,11 @@ namespace Kiritori
                 {
                     if (sfd.ShowDialog() == DialogResult.OK)
                     {
-                        this.pictureBox1.Image.Save(sfd.FileName);
+                        using (var imageToSave = GetCurrentBitmapClone())
+                        {
+                            if (imageToSave == null) return;
+                            imageToSave.Save(sfd.FileName);
+                        }
                         Log.Info("Image saved: " + sfd.FileName, "SnapWindow");
                         ShowOverlay("SAVED");
                     }

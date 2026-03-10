@@ -25,7 +25,20 @@ namespace Kiritori
         #region ===== キー入力（�EチE��キー�E�E=====
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            switch ((int)keyData)
+            if (_annotationMode)
+            {
+                if (keyData == Keys.Escape)
+                {
+                    ExitAnnotationMode();
+                    return true;
+                }
+
+                if (keyData == (Keys.Control | Keys.Z))
+                {
+                    UndoLastAnnotation();
+                    return true;
+                }
+            }            switch ((int)keyData)
             {
                 case (int)HOTS.MOVE_LEFT:
                     this.SetDesktopLocation(this.Location.X - MOVE_STEP, this.Location.Y);
