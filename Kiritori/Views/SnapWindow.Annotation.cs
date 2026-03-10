@@ -232,24 +232,39 @@ namespace Kiritori
             if (_annotationToolMenu != null) return;
 
             _annotationToolMenu = new ContextMenuStrip();
-            _annotationToolMenu.Items.Add(CreateAnnotationMenuItem("✥ Move window", (s, e) => SetAnnotationTool(AnnotationTool.Move)));
-            _annotationToolMenu.Items.Add(CreateAnnotationMenuItem("▭ Rectangle", (s, e) => SetAnnotationTool(AnnotationTool.Rectangle)));
-            _annotationToolMenu.Items.Add(CreateAnnotationMenuItem("➜ Arrow", (s, e) => SetAnnotationTool(AnnotationTool.Arrow)));
+            AddToolMenuItems(_annotationToolMenu);
 
             _annotationColorMenu = new ContextMenuStrip();
-            _annotationColorMenu.Items.Add(CreateAnnotationColorMenuItem("Orange", Color.FromArgb(255, 138, 61), Color.FromArgb(48, 255, 138, 61)));
-            _annotationColorMenu.Items.Add(CreateAnnotationColorMenuItem("Blue", Color.FromArgb(88, 166, 255), Color.FromArgb(48, 88, 166, 255)));
-            _annotationColorMenu.Items.Add(CreateAnnotationColorMenuItem("Green", Color.FromArgb(78, 201, 140), Color.FromArgb(48, 78, 201, 140)));
-            _annotationColorMenu.Items.Add(CreateAnnotationColorMenuItem("Pink", Color.FromArgb(255, 105, 180), Color.FromArgb(48, 255, 105, 180)));
+            AddColorMenuItems(_annotationColorMenu);
 
             _annotationStyleMenu = new ContextMenuStrip();
-            _annotationStyleMenu.Items.Add(CreateAnnotationMenuItem("▣ Rect: Filled", (s, e) => SetAnnotationRectangleStyle(AnnotationRectangleStyle.Filled)));
-            _annotationStyleMenu.Items.Add(CreateAnnotationMenuItem("▭ Rect: Outline", (s, e) => SetAnnotationRectangleStyle(AnnotationRectangleStyle.Outline)));
-            _annotationStyleMenu.Items.Add(new ToolStripSeparator());
-            _annotationStyleMenu.Items.Add(CreateAnnotationMenuItem("➜ Arrow: Single", (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Single)));
-            _annotationStyleMenu.Items.Add(CreateAnnotationMenuItem("⟷ Arrow: Double", (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Double)));
-            _annotationStyleMenu.Items.Add(CreateAnnotationMenuItem("╱ Arrow: Line", (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Line)));
-            _annotationStyleMenu.Items.Add(CreateAnnotationMenuItem("➤ Arrow: Tapered", (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Tapered)));
+            AddStyleMenuItems(_annotationStyleMenu);
+        }
+
+        private void AddToolMenuItems(ContextMenuStrip menu)
+        {
+            menu.Items.Add(CreateAnnotationMenuItem("✥ Move window", (s, e) => SetAnnotationTool(AnnotationTool.Move)));
+            menu.Items.Add(CreateAnnotationMenuItem("▭ Rectangle", (s, e) => SetAnnotationTool(AnnotationTool.Rectangle)));
+            menu.Items.Add(CreateAnnotationMenuItem("➜ Arrow", (s, e) => SetAnnotationTool(AnnotationTool.Arrow)));
+        }
+
+        private void AddColorMenuItems(ContextMenuStrip menu)
+        {
+            menu.Items.Add(CreateAnnotationColorMenuItem("Orange", Color.FromArgb(255, 138, 61), Color.FromArgb(48, 255, 138, 61)));
+            menu.Items.Add(CreateAnnotationColorMenuItem("Blue", Color.FromArgb(88, 166, 255), Color.FromArgb(48, 88, 166, 255)));
+            menu.Items.Add(CreateAnnotationColorMenuItem("Green", Color.FromArgb(78, 201, 140), Color.FromArgb(48, 78, 201, 140)));
+            menu.Items.Add(CreateAnnotationColorMenuItem("Pink", Color.FromArgb(255, 105, 180), Color.FromArgb(48, 255, 105, 180)));
+        }
+
+        private void AddStyleMenuItems(ContextMenuStrip menu)
+        {
+            menu.Items.Add(CreateAnnotationMenuItem("▣ Rect: Filled", (s, e) => SetAnnotationRectangleStyle(AnnotationRectangleStyle.Filled)));
+            menu.Items.Add(CreateAnnotationMenuItem("▭ Rect: Outline", (s, e) => SetAnnotationRectangleStyle(AnnotationRectangleStyle.Outline)));
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add(CreateAnnotationMenuItem("➜ Arrow: Single", (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Single)));
+            menu.Items.Add(CreateAnnotationMenuItem("⟷ Arrow: Double", (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Double)));
+            menu.Items.Add(CreateAnnotationMenuItem("╱ Arrow: Line", (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Line)));
+            menu.Items.Add(CreateAnnotationMenuItem("➤ Arrow: Tapered", (s, e) => SetAnnotationArrowStyle(AnnotationArrowStyle.Tapered)));
         }
 
         private ToolStripMenuItem CreateAnnotationMenuItem(string text, EventHandler click)
@@ -724,11 +739,11 @@ namespace Kiritori
             switch (_annotationTool)
             {
                 case AnnotationTool.Move:
-                    return "Move";
+                    return GetToolLabel(AnnotationTool.Move);
                 case AnnotationTool.Arrow:
-                    return "Arrow";
+                    return GetToolLabel(AnnotationTool.Arrow);
                 default:
-                    return "Rect";
+                    return GetToolLabel(AnnotationTool.Rectangle);
             }
         }
 
@@ -742,9 +757,37 @@ namespace Kiritori
             if (_annotationTool == AnnotationTool.Move)
                 return "Window";
             if (_annotationTool == AnnotationTool.Rectangle)
-                return _annotationRectangleStyle == AnnotationRectangleStyle.Outline ? "Outline" : "Filled";
+                return GetRectangleStyleLabel(_annotationRectangleStyle);
 
             switch (_annotationArrowStyle)
+            {
+                case AnnotationArrowStyle.Double:
+                    return GetArrowStyleLabel(AnnotationArrowStyle.Double);
+                case AnnotationArrowStyle.Line:
+                    return GetArrowStyleLabel(AnnotationArrowStyle.Line);
+                case AnnotationArrowStyle.Tapered:
+                    return GetArrowStyleLabel(AnnotationArrowStyle.Tapered);
+                default:
+                    return GetArrowStyleLabel(AnnotationArrowStyle.Single);
+            }
+        }
+
+        private string GetToolLabel(AnnotationTool tool)
+        {
+            switch (tool)
+            {
+                case AnnotationTool.Move:
+                    return "Move";
+                case AnnotationTool.Arrow:
+                    return "Arrow";
+                default:
+                    return "Rect";
+            }
+        }
+
+        private string GetArrowStyleLabel(AnnotationArrowStyle style)
+        {
+            switch (style)
             {
                 case AnnotationArrowStyle.Double:
                     return "Double";
@@ -755,6 +798,11 @@ namespace Kiritori
                 default:
                     return "Single";
             }
+        }
+
+        private string GetRectangleStyleLabel(AnnotationRectangleStyle style)
+        {
+            return style == AnnotationRectangleStyle.Outline ? "Outline" : "Filled";
         }
 
         private string GetColorLabel(Color color)
