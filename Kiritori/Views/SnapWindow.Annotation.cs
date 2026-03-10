@@ -249,6 +249,7 @@ namespace Kiritori
             _annotationDragging = false;
             _annotationInteraction = AnnotationInteraction.None;
             _annotationHandle = AnnotationHandle.None;
+            _selectedAnnotationIndex = -1;
             if (pictureBox1 != null) pictureBox1.Capture = false;
             _annotationPreview = null;
             RestoreStandardMouseHandlers();
@@ -708,6 +709,7 @@ namespace Kiritori
 
         private void DrawSelectionOverlay(Graphics g, Rectangle displayRect, Size sourceSize)
         {
+            if (!_annotationMode) return;
             if (_selectedAnnotationIndex < 0 || _selectedAnnotationIndex >= _annotations.Count) return;
             var shape = _annotations[_selectedAnnotationIndex];
 
