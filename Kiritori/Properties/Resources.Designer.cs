@@ -61,6 +61,106 @@ namespace Kiritori.Properties {
         }
         
         /// <summary>
+        ///   型 System.Drawing.Bitmap のローカライズされたリソースを検索します。
+        /// </summary>
+        internal static System.Drawing.Bitmap annotation_arrow_double {
+            get {
+                object obj = ResourceManager.GetObject("annotation_arrow_double", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   型 System.Drawing.Bitmap のローカライズされたリソースを検索します。
+        /// </summary>
+        internal static System.Drawing.Bitmap annotation_arrow_line {
+            get {
+                object obj = ResourceManager.GetObject("annotation_arrow_line", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   型 System.Drawing.Bitmap のローカライズされたリソースを検索します。
+        /// </summary>
+        internal static System.Drawing.Bitmap annotation_arrow_single {
+            get {
+                object obj = ResourceManager.GetObject("annotation_arrow_single", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   型 System.Drawing.Bitmap のローカライズされたリソースを検索します。
+        /// </summary>
+        internal static System.Drawing.Bitmap annotation_arrow_tapered {
+            get {
+                object obj = ResourceManager.GetObject("annotation_arrow_tapered", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   型 System.Drawing.Bitmap のローカライズされたリソースを検索します。
+        /// </summary>
+        internal static System.Drawing.Bitmap annotation_clear {
+            get {
+                object obj = ResourceManager.GetObject("annotation_clear", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   型 System.Drawing.Bitmap のローカライズされたリソースを検索します。
+        /// </summary>
+        internal static System.Drawing.Bitmap annotation_done {
+            get {
+                object obj = ResourceManager.GetObject("annotation_done", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   型 System.Drawing.Bitmap のローカライズされたリソースを検索します。
+        /// </summary>
+        internal static System.Drawing.Bitmap annotation_move {
+            get {
+                object obj = ResourceManager.GetObject("annotation_move", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   型 System.Drawing.Bitmap のローカライズされたリソースを検索します。
+        /// </summary>
+        internal static System.Drawing.Bitmap annotation_rect_filled {
+            get {
+                object obj = ResourceManager.GetObject("annotation_rect_filled", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   型 System.Drawing.Bitmap のローカライズされたリソースを検索します。
+        /// </summary>
+        internal static System.Drawing.Bitmap annotation_rect_outline {
+            get {
+                object obj = ResourceManager.GetObject("annotation_rect_outline", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   型 System.Drawing.Bitmap のローカライズされたリソースを検索します。
+        /// </summary>
+        internal static System.Drawing.Bitmap annotation_undo {
+            get {
+                object obj = ResourceManager.GetObject("annotation_undo", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
         ///   (アイコン) に類似した型 System.Drawing.Icon のローカライズされたリソースを検索します。
         /// </summary>
         internal static System.Drawing.Icon AppIcon {
