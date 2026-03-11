@@ -1287,35 +1287,12 @@ namespace Kiritori
         }
         private void DrawRectangleAnnotationShape(Graphics g, AnnotationShape shape, Rectangle? displayRect, Size sourceSize)
         {
-            using (var pen = CreateShapePen(shape))
-            using (var brush = new SolidBrush(shape.FillColor))
-            {
-                var rect = GetShapeRect(shape, displayRect, sourceSize);
-                if (!IsDrawableRect(rect)) return;
-                if (shape.RectangleStyle != AnnotationRectangleStyle.Outline)
-                    g.FillRectangle(brush, rect);
-                g.DrawRectangle(pen, rect);
-            }
+            AnnotationShapeRenderer.DrawRectangle(g, shape, displayRect, sourceSize, GetShapeRect, IsDrawableRect, CreateShapePen);
         }
-
         private void DrawArrowAnnotationShape(Graphics g, AnnotationShape shape, Rectangle? displayRect, Size sourceSize)
         {
-            Point start;
-            Point end;
-            GetShapeLine(shape, displayRect, sourceSize, out start, out end);
-
-            if (shape.ArrowStyle == AnnotationArrowStyle.Tapered)
-            {
-                DrawTaperedArrow(g, shape, start, end);
-                return;
-            }
-
-            using (var pen = CreateShapePen(shape))
-            {
-                g.DrawLine(pen, start, end);
-            }
+            AnnotationShapeRenderer.DrawArrow(g, shape, displayRect, sourceSize, GetShapeLine, DrawTaperedArrow, CreateShapePen);
         }
-
         private Rectangle GetShapeRect(AnnotationShape shape, Rectangle? displayRect, Size sourceSize)
         {
             return displayRect.HasValue
@@ -1630,10 +1607,38 @@ namespace Kiritori
                 drawArrowHandle(g, handleBrush, handlePen, start);
                 drawArrowHandle(g, handleBrush, handlePen, end);
             }
-        }
 
+            public static void DrawRectangle(Graphics g, AnnotationShape shape, Rectangle? displayRect, Size sourceSize, Func<AnnotationShape, Rectangle?, Size, Rectangle> getShapeRect, Func<Rectangle, bool> isDrawableRect, Func<AnnotationShape, Pen> createShapePen)
+            {
+                using (var pen = createShapePen(shape))
+                using (var brush = new SolidBrush(shape.FillColor))
+                {
+                    var rect = getShapeRect(shape, displayRect, sourceSize);
+                    if (!isDrawableRect(rect)) return;
+                    if (shape.RectangleStyle != AnnotationRectangleStyle.Outline)
+                        g.FillRectangle(brush, rect);
+                    g.DrawRectangle(pen, rect);
+                }
+            }
+
+            public static void DrawArrow(Graphics g, AnnotationShape shape, Rectangle? displayRect, Size sourceSize, GetShapeLineDelegate getShapeLine, DrawTaperedArrowDelegate drawTaperedArrow, Func<AnnotationShape, Pen> createShapePen)
+            {
+                getShapeLine(shape, displayRect, sourceSize, out var start, out var end);
+                if (shape.ArrowStyle == AnnotationArrowStyle.Tapered)
+                {
+                    drawTaperedArrow(g, shape, start, end);
+                    return;
+                }
+
+                using (var pen = createShapePen(shape))
+                {
+                    g.DrawLine(pen, start, end);
+                }
+            }
+        }
         private delegate void GetShapeLineDelegate(AnnotationShape shape, Rectangle? displayRect, Size sourceSize, out Point start, out Point end);
         private delegate void DrawArrowHandleDelegate(Graphics g, Brush fill, Pen border, Point point);
+        private delegate void DrawTaperedArrowDelegate(Graphics g, AnnotationShape shape, Point start, Point end);
         private static class AnnotationInteractionResolver
         {
             public static AnnotationInteraction GetInteractionForHit(AnnotationShapeKind kind, AnnotationHandle handle)
