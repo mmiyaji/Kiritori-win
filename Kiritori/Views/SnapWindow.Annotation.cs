@@ -1,4 +1,4 @@
-using Kiritori.Helpers;
+﻿using Kiritori.Helpers;
 using Kiritori.Services.Logging;
 using System;
 using System.Collections.Generic;
@@ -1632,25 +1632,7 @@ namespace Kiritori
         private bool TryGetDisplayImageRect(out Rectangle displayRect, out Bitmap source)
         {
             source = main_image ?? _originalImage as Bitmap;
-            displayRect = Rectangle.Empty;
-            if (source == null || pictureBox1 == null) return false;
-
-            var client = pictureBox1.ClientRectangle;
-            if (client.Width <= 0 || client.Height <= 0) return false;
-
-            if (pictureBox1.SizeMode == PictureBoxSizeMode.StretchImage)
-            {
-                displayRect = client;
-                return true;
-            }
-
-            float scale = Math.Min((float)client.Width / source.Width, (float)client.Height / source.Height);
-            int w = Math.Max(1, (int)Math.Round(source.Width * scale));
-            int h = Math.Max(1, (int)Math.Round(source.Height * scale));
-            int x = client.X + (client.Width - w) / 2;
-            int y = client.Y + (client.Height - h) / 2;
-            displayRect = new Rectangle(x, y, w, h);
-            return true;
+            return AnnotationDisplayGeometry.TryGetDisplayImageRect(pictureBox1, source, out displayRect);
         }
 
         private bool TryClientToImagePoint(Point clientPoint, out Point imagePoint)
@@ -1659,30 +1641,72 @@ namespace Kiritori
             Rectangle displayRect;
             Bitmap source;
             if (!TryGetDisplayImageRect(out displayRect, out source)) return false;
-            if (!displayRect.Contains(clientPoint)) return false;
-
-            double rx = (double)(clientPoint.X - displayRect.X) / Math.Max(1, displayRect.Width);
-            double ry = (double)(clientPoint.Y - displayRect.Y) / Math.Max(1, displayRect.Height);
-            int x = Math.Max(0, Math.Min(source.Width - 1, (int)Math.Round(rx * source.Width)));
-            int y = Math.Max(0, Math.Min(source.Height - 1, (int)Math.Round(ry * source.Height)));
-            imagePoint = new Point(x, y);
-            return true;
+            return AnnotationDisplayGeometry.TryClientToImagePoint(displayRect, source.Size, clientPoint, out imagePoint);
         }
 
         private Point ImagePointToClientPoint(Rectangle displayRect, Size sourceSize, Point imagePoint)
         {
-            int x = displayRect.X + (int)Math.Round((double)imagePoint.X * displayRect.Width / Math.Max(1, sourceSize.Width));
-            int y = displayRect.Y + (int)Math.Round((double)imagePoint.Y * displayRect.Height / Math.Max(1, sourceSize.Height));
-            return new Point(x, y);
+            return AnnotationDisplayGeometry.ImagePointToClientPoint(displayRect, sourceSize, imagePoint);
         }
 
         private Rectangle ImageRectToClientRect(Rectangle displayRect, Size sourceSize, Rectangle imageRect)
         {
-            int x = displayRect.X + (int)Math.Round((double)imageRect.X * displayRect.Width / Math.Max(1, sourceSize.Width));
-            int y = displayRect.Y + (int)Math.Round((double)imageRect.Y * displayRect.Height / Math.Max(1, sourceSize.Height));
-            int w = Math.Max(1, (int)Math.Round((double)imageRect.Width * displayRect.Width / Math.Max(1, sourceSize.Width)));
-            int h = Math.Max(1, (int)Math.Round((double)imageRect.Height * displayRect.Height / Math.Max(1, sourceSize.Height)));
-            return new Rectangle(x, y, w, h);
+            return AnnotationDisplayGeometry.ImageRectToClientRect(displayRect, sourceSize, imageRect);
+        }
+
+        private static class AnnotationDisplayGeometry
+        {
+            public static bool TryGetDisplayImageRect(PictureBox pictureBox, Bitmap source, out Rectangle displayRect)
+            {
+                displayRect = Rectangle.Empty;
+                if (pictureBox == null || source == null) return false;
+
+                var client = pictureBox.ClientRectangle;
+                if (client.Width <= 0 || client.Height <= 0) return false;
+
+                if (pictureBox.SizeMode == PictureBoxSizeMode.StretchImage)
+                {
+                    displayRect = client;
+                    return true;
+                }
+
+                float scale = Math.Min((float)client.Width / source.Width, (float)client.Height / source.Height);
+                int width = Math.Max(1, (int)Math.Round(source.Width * scale));
+                int height = Math.Max(1, (int)Math.Round(source.Height * scale));
+                int x = client.X + (client.Width - width) / 2;
+                int y = client.Y + (client.Height - height) / 2;
+                displayRect = new Rectangle(x, y, width, height);
+                return true;
+            }
+
+            public static bool TryClientToImagePoint(Rectangle displayRect, Size sourceSize, Point clientPoint, out Point imagePoint)
+            {
+                imagePoint = Point.Empty;
+                if (!displayRect.Contains(clientPoint)) return false;
+
+                double ratioX = (double)(clientPoint.X - displayRect.X) / Math.Max(1, displayRect.Width);
+                double ratioY = (double)(clientPoint.Y - displayRect.Y) / Math.Max(1, displayRect.Height);
+                int x = Math.Max(0, Math.Min(sourceSize.Width - 1, (int)Math.Round(ratioX * sourceSize.Width)));
+                int y = Math.Max(0, Math.Min(sourceSize.Height - 1, (int)Math.Round(ratioY * sourceSize.Height)));
+                imagePoint = new Point(x, y);
+                return true;
+            }
+
+            public static Point ImagePointToClientPoint(Rectangle displayRect, Size sourceSize, Point imagePoint)
+            {
+                int x = displayRect.X + (int)Math.Round((double)imagePoint.X * displayRect.Width / Math.Max(1, sourceSize.Width));
+                int y = displayRect.Y + (int)Math.Round((double)imagePoint.Y * displayRect.Height / Math.Max(1, sourceSize.Height));
+                return new Point(x, y);
+            }
+
+            public static Rectangle ImageRectToClientRect(Rectangle displayRect, Size sourceSize, Rectangle imageRect)
+            {
+                int x = displayRect.X + (int)Math.Round((double)imageRect.X * displayRect.Width / Math.Max(1, sourceSize.Width));
+                int y = displayRect.Y + (int)Math.Round((double)imageRect.Y * displayRect.Height / Math.Max(1, sourceSize.Height));
+                int width = Math.Max(1, (int)Math.Round((double)imageRect.Width * displayRect.Width / Math.Max(1, sourceSize.Width)));
+                int height = Math.Max(1, (int)Math.Round((double)imageRect.Height * displayRect.Height / Math.Max(1, sourceSize.Height)));
+                return new Rectangle(x, y, width, height);
+            }
         }
 
         private static class AnnotationGeometry
