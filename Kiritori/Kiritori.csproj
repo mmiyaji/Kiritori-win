@@ -267,7 +267,10 @@
     <Compile Include="Views\SnapWindow.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Views\SnapWindow.Annotation.cs">
+    <Compile Include="Views\SnapWindow\SnapWindow.Annotation.cs">
+      <DependentUpon>SnapWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\SnapWindow\SnapWindow.Annotation.Helpers.cs">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </Compile>
     <Compile Include="Views\SnapWindow.PostCapture.cs">
