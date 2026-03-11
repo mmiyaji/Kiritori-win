@@ -1120,14 +1120,7 @@ namespace Kiritori
 
         private AnnotationInteraction GetInteractionForHit(AnnotationShape shape, AnnotationHandle handle)
         {
-            if (shape.Kind == AnnotationShapeKind.Arrow)
-            {
-                if (handle == AnnotationHandle.ArrowStart) return AnnotationInteraction.EditArrowStart;
-                if (handle == AnnotationHandle.ArrowEnd) return AnnotationInteraction.EditArrowEnd;
-                return AnnotationInteraction.MoveArrow;
-            }
-
-            return handle == AnnotationHandle.Move ? AnnotationInteraction.MoveRectangle : AnnotationInteraction.ResizeRectangle;
+            return AnnotationInteractionResolver.GetInteractionForHit(shape.Kind, handle);
         }
 
         private void MoveSelectedArrow(Point imagePoint)
@@ -1692,6 +1685,48 @@ namespace Kiritori
             }
         }
 
+        private static class AnnotationInteractionResolver
+        {
+            public static AnnotationInteraction GetInteractionForHit(AnnotationShapeKind kind, AnnotationHandle handle)
+            {
+                if (kind == AnnotationShapeKind.Arrow)
+                {
+                    if (handle == AnnotationHandle.ArrowStart) return AnnotationInteraction.EditArrowStart;
+                    if (handle == AnnotationHandle.ArrowEnd) return AnnotationInteraction.EditArrowEnd;
+                    return AnnotationInteraction.MoveArrow;
+                }
+
+                return handle == AnnotationHandle.Move ? AnnotationInteraction.MoveRectangle : AnnotationInteraction.ResizeRectangle;
+            }
+
+            public static Cursor ResolveCursor(bool annotationMode, AnnotationTool tool, AnnotationHandle handle)
+            {
+                if (!annotationMode) return Cursors.Default;
+
+                switch (handle)
+                {
+                    case AnnotationHandle.TopLeft:
+                    case AnnotationHandle.BottomRight:
+                        return Cursors.SizeNWSE;
+                    case AnnotationHandle.TopRight:
+                    case AnnotationHandle.BottomLeft:
+                        return Cursors.SizeNESW;
+                    case AnnotationHandle.Top:
+                    case AnnotationHandle.Bottom:
+                        return Cursors.SizeNS;
+                    case AnnotationHandle.Left:
+                    case AnnotationHandle.Right:
+                        return Cursors.SizeWE;
+                    case AnnotationHandle.Move:
+                        return Cursors.SizeAll;
+                    case AnnotationHandle.ArrowStart:
+                    case AnnotationHandle.ArrowEnd:
+                        return Cursors.Hand;
+                    default:
+                        return tool == AnnotationTool.Move ? Cursors.SizeAll : Cursors.Cross;
+                }
+            }
+        }
         private static class AnnotationShapeMutator
         {
             public static void ApplyRectangleBounds(AnnotationShape shape, Rectangle bounds)
