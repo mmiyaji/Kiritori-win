@@ -279,6 +279,9 @@
     <Compile Include="Views\SnapWindow\SnapWindow.Annotation.Rendering.cs">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </Compile>
+    <Compile Include="Views\SnapWindow\SnapWindow.Annotation.Palette.cs">
+      <DependentUpon>SnapWindow.cs</DependentUpon>
+    </Compile>
     <Compile Include="Views\SnapWindow\SnapWindow.PostCapture.cs">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </Compile>
