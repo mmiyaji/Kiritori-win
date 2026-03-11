@@ -1232,14 +1232,11 @@ namespace Kiritori
             for (int i = _annotations.Count - 1; i >= 0; i--)
             {
                 var shape = _annotations[i];
-                handle = shape.Kind == AnnotationShapeKind.Rectangle
-                    ? HitTestRectangleHandle(shape.Bounds, imagePoint)
-                    : HitTestArrowHandle(shape, imagePoint);
-                if (handle != AnnotationHandle.None)
-                {
-                    index = i;
-                    return true;
-                }
+                handle = HitTestAnnotationShape(shape, imagePoint);
+                if (handle == AnnotationHandle.None) continue;
+
+                index = i;
+                return true;
             }
 
             index = -1;
@@ -1247,15 +1244,34 @@ namespace Kiritori
             return false;
         }
 
+        private AnnotationHandle HitTestAnnotationShape(AnnotationShape shape, Point imagePoint)
+        {
+            return shape.Kind == AnnotationShapeKind.Rectangle
+                ? HitTestRectangleHandle(shape.Bounds, imagePoint)
+                : HitTestArrowHandle(shape, imagePoint);
+        }
+
         private AnnotationHandle HitTestArrowHandle(AnnotationShape shape, Point imagePoint)
         {
-            var startRect = GetHandleRect(shape.Start, AnnotationArrowHandleRadius);
-            if (startRect.Contains(imagePoint)) return AnnotationHandle.ArrowStart;
+            if (GetArrowStartHandleRect(shape).Contains(imagePoint)) return AnnotationHandle.ArrowStart;
+            if (GetArrowEndHandleRect(shape).Contains(imagePoint)) return AnnotationHandle.ArrowEnd;
 
-            var endRect = GetHandleRect(shape.End, AnnotationArrowHandleRadius);
-            if (endRect.Contains(imagePoint)) return AnnotationHandle.ArrowEnd;
+            return IsPointNearArrowSegment(imagePoint, shape) ? AnnotationHandle.Move : AnnotationHandle.None;
+        }
 
-            return DistancePointToSegmentSquared(imagePoint, shape.Start, shape.End) <= 100 ? AnnotationHandle.Move : AnnotationHandle.None;
+        private Rectangle GetArrowStartHandleRect(AnnotationShape shape)
+        {
+            return GetHandleRect(shape.Start, AnnotationArrowHandleRadius);
+        }
+
+        private Rectangle GetArrowEndHandleRect(AnnotationShape shape)
+        {
+            return GetHandleRect(shape.End, AnnotationArrowHandleRadius);
+        }
+
+        private bool IsPointNearArrowSegment(Point imagePoint, AnnotationShape shape)
+        {
+            return DistancePointToSegmentSquared(imagePoint, shape.Start, shape.End) <= 100;
         }
 
         private static int DistancePointToSegmentSquared(Point p, Point a, Point b)
@@ -1295,15 +1311,20 @@ namespace Kiritori
             var center = GetRectangleCenter(rect);
             return new Dictionary<AnnotationHandle, Rectangle>
             {
-                { AnnotationHandle.TopLeft, new Rectangle(rect.Left - radius, rect.Top - radius, size, size) },
-                { AnnotationHandle.Top, new Rectangle(center.X - radius, rect.Top - radius, size, size) },
-                { AnnotationHandle.TopRight, new Rectangle(rect.Right - radius, rect.Top - radius, size, size) },
-                { AnnotationHandle.Right, new Rectangle(rect.Right - radius, center.Y - radius, size, size) },
-                { AnnotationHandle.BottomRight, new Rectangle(rect.Right - radius, rect.Bottom - radius, size, size) },
-                { AnnotationHandle.Bottom, new Rectangle(center.X - radius, rect.Bottom - radius, size, size) },
-                { AnnotationHandle.BottomLeft, new Rectangle(rect.Left - radius, rect.Bottom - radius, size, size) },
-                { AnnotationHandle.Left, new Rectangle(rect.Left - radius, center.Y - radius, size, size) },
+                { AnnotationHandle.TopLeft, CreateHandleRect(rect.Left, rect.Top, radius, size) },
+                { AnnotationHandle.Top, CreateHandleRect(center.X, rect.Top, radius, size) },
+                { AnnotationHandle.TopRight, CreateHandleRect(rect.Right, rect.Top, radius, size) },
+                { AnnotationHandle.Right, CreateHandleRect(rect.Right, center.Y, radius, size) },
+                { AnnotationHandle.BottomRight, CreateHandleRect(rect.Right, rect.Bottom, radius, size) },
+                { AnnotationHandle.Bottom, CreateHandleRect(center.X, rect.Bottom, radius, size) },
+                { AnnotationHandle.BottomLeft, CreateHandleRect(rect.Left, rect.Bottom, radius, size) },
+                { AnnotationHandle.Left, CreateHandleRect(rect.Left, center.Y, radius, size) },
             };
+        }
+
+        private Rectangle CreateHandleRect(int centerX, int centerY, int radius, int size)
+        {
+            return new Rectangle(centerX - radius, centerY - radius, size, size);
         }
 
         private Point GetRectangleCenter(Rectangle rect)
