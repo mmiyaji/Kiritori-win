@@ -1179,116 +1179,13 @@ namespace Kiritori
 
         private AnnotationHandle HitTestAnnotationShape(AnnotationShape shape, Point imagePoint)
         {
-            return shape.Kind == AnnotationShapeKind.Rectangle
-                ? HitTestRectangleHandle(shape.Bounds, imagePoint)
-                : HitTestArrowHandle(shape, imagePoint);
-        }
-
-        private AnnotationHandle HitTestArrowHandle(AnnotationShape shape, Point imagePoint)
-        {
-            if (GetArrowStartHandleRect(shape).Contains(imagePoint)) return AnnotationHandle.ArrowStart;
-            if (GetArrowEndHandleRect(shape).Contains(imagePoint)) return AnnotationHandle.ArrowEnd;
-
-            return IsPointNearArrowSegment(imagePoint, shape) ? AnnotationHandle.Move : AnnotationHandle.None;
-        }
-
-        private Rectangle GetArrowStartHandleRect(AnnotationShape shape)
-        {
-            return GetHandleRect(shape.Start, AnnotationArrowHandleRadius);
-        }
-
-        private Rectangle GetArrowEndHandleRect(AnnotationShape shape)
-        {
-            return GetHandleRect(shape.End, AnnotationArrowHandleRadius);
-        }
-
-        private bool IsPointNearArrowSegment(Point imagePoint, AnnotationShape shape)
-        {
-            return AnnotationGeometry.IsPointNearSegment(imagePoint, shape.Start, shape.End, 100);
-        }
-
-        private AnnotationHandle HitTestRectangleHandle(Rectangle rect, Point imagePoint)
-        {
-            var handles = GetRectangleHandleRects(rect, AnnotationRectangleHandleRadius);
-            foreach (var pair in handles)
-            {
-                if (pair.Value.Contains(imagePoint)) return pair.Key;
-            }
-
-            return rect.Contains(imagePoint) ? AnnotationHandle.Move : AnnotationHandle.None;
-        }
-
-        private Rectangle GetHandleRect(Point center, int radius)
-        {
-            return AnnotationGeometry.GetHandleRect(center, radius);
-        }
-
-        private Dictionary<AnnotationHandle, Rectangle> GetRectangleHandleRects(Rectangle rect, int radius)
-        {
-            var size = radius * 2;
-            var center = GetRectangleCenter(rect);
-            return new Dictionary<AnnotationHandle, Rectangle>
-            {
-                { AnnotationHandle.TopLeft, CreateHandleRect(rect.Left, rect.Top, radius, size) },
-                { AnnotationHandle.Top, CreateHandleRect(center.X, rect.Top, radius, size) },
-                { AnnotationHandle.TopRight, CreateHandleRect(rect.Right, rect.Top, radius, size) },
-                { AnnotationHandle.Right, CreateHandleRect(rect.Right, center.Y, radius, size) },
-                { AnnotationHandle.BottomRight, CreateHandleRect(rect.Right, rect.Bottom, radius, size) },
-                { AnnotationHandle.Bottom, CreateHandleRect(center.X, rect.Bottom, radius, size) },
-                { AnnotationHandle.BottomLeft, CreateHandleRect(rect.Left, rect.Bottom, radius, size) },
-                { AnnotationHandle.Left, CreateHandleRect(rect.Left, center.Y, radius, size) },
-            };
-        }
-
-        private Rectangle CreateHandleRect(int centerX, int centerY, int radius, int size)
-        {
-            return AnnotationGeometry.CreateHandleRect(centerX, centerY, radius, size);
-        }
-
-        private Point GetRectangleCenter(Rectangle rect)
-        {
-            return AnnotationGeometry.GetRectangleCenter(rect);
+            return AnnotationShapeHitTester.HitTest(shape, imagePoint, AnnotationArrowHandleRadius, AnnotationRectangleHandleRadius);
         }
 
         private void UpdateAnnotationCursor(AnnotationHandle handle)
         {
-            if (!_annotationMode)
-            {
-                Cursor = Cursors.Default;
-                return;
-            }
-
-            switch (handle)
-            {
-                case AnnotationHandle.TopLeft:
-                case AnnotationHandle.BottomRight:
-                    Cursor = Cursors.SizeNWSE;
-                    break;
-                case AnnotationHandle.TopRight:
-                case AnnotationHandle.BottomLeft:
-                    Cursor = Cursors.SizeNESW;
-                    break;
-                case AnnotationHandle.Top:
-                case AnnotationHandle.Bottom:
-                    Cursor = Cursors.SizeNS;
-                    break;
-                case AnnotationHandle.Left:
-                case AnnotationHandle.Right:
-                    Cursor = Cursors.SizeWE;
-                    break;
-                case AnnotationHandle.Move:
-                    Cursor = Cursors.SizeAll;
-                    break;
-                case AnnotationHandle.ArrowStart:
-                case AnnotationHandle.ArrowEnd:
-                    Cursor = Cursors.Hand;
-                    break;
-                default:
-                    Cursor = _annotationTool == AnnotationTool.Move ? Cursors.SizeAll : Cursors.Cross;
-                    break;
-            }
+            Cursor = AnnotationInteractionResolver.ResolveCursor(_annotationMode, _annotationTool, handle);
         }
-
         private void PictureBox1_PaintAnnotations(object sender, PaintEventArgs e)
         {
             Rectangle displayRect;
@@ -1382,44 +1279,12 @@ namespace Kiritori
 
         private void DrawHoverShapeOverlay(Graphics g, Pen pen, AnnotationShape shape, Rectangle displayRect, Size sourceSize)
         {
-            if (shape.Kind == AnnotationShapeKind.Rectangle)
-            {
-                var rect = GetShapeRect(shape, displayRect, sourceSize);
-                if (!IsDrawableRect(rect)) return;
-                g.DrawRectangle(pen, rect);
-                return;
-            }
-
-            Point start;
-            Point end;
-            GetShapeLine(shape, displayRect, sourceSize, out start, out end);
-            g.DrawLine(pen, start, end);
+            AnnotationShapeRenderer.DrawHoverOverlay(g, pen, shape, displayRect, sourceSize, GetShapeRect, GetShapeLine);
         }
-
         private void DrawSelectionShapeOverlay(Graphics g, Pen dashPen, Brush handleBrush, Pen handlePen, AnnotationShape shape, Rectangle displayRect, Size sourceSize)
         {
-            if (shape.Kind == AnnotationShapeKind.Rectangle)
-            {
-                var rect = GetShapeRect(shape, displayRect, sourceSize);
-                if (!IsDrawableRect(rect)) return;
-                g.DrawRectangle(dashPen, rect);
-
-                foreach (var pair in GetRectangleHandleRects(rect, 4))
-                {
-                    g.FillRectangle(handleBrush, pair.Value);
-                    g.DrawRectangle(handlePen, pair.Value);
-                }
-                return;
-            }
-
-            Point start;
-            Point end;
-            GetShapeLine(shape, displayRect, sourceSize, out start, out end);
-            g.DrawLine(dashPen, start, end);
-            DrawArrowHandle(g, handleBrush, handlePen, start);
-            DrawArrowHandle(g, handleBrush, handlePen, end);
+            AnnotationShapeRenderer.DrawSelectionOverlay(g, dashPen, handleBrush, handlePen, shape, displayRect, sourceSize, GetShapeRect, GetShapeLine, DrawArrowHandle);
         }
-
         private void DrawRectangleAnnotationShape(Graphics g, AnnotationShape shape, Rectangle? displayRect, Size sourceSize)
         {
             using (var pen = CreateShapePen(shape))
@@ -1685,6 +1550,90 @@ namespace Kiritori
             }
         }
 
+        private static class AnnotationShapeHitTester
+        {
+            public static AnnotationHandle HitTest(AnnotationShape shape, Point imagePoint, int arrowHandleRadius, int rectangleHandleRadius)
+            {
+                return shape.Kind == AnnotationShapeKind.Rectangle
+                    ? HitTestRectangle(shape.Bounds, imagePoint, rectangleHandleRadius)
+                    : HitTestArrow(shape, imagePoint, arrowHandleRadius);
+            }
+
+            public static Dictionary<AnnotationHandle, Rectangle> GetRectangleHandleRects(Rectangle rect, int radius)
+            {
+                var size = radius * 2;
+                var center = AnnotationGeometry.GetRectangleCenter(rect);
+                return new Dictionary<AnnotationHandle, Rectangle>
+                {
+                    { AnnotationHandle.TopLeft, AnnotationGeometry.CreateHandleRect(rect.Left, rect.Top, radius, size) },
+                    { AnnotationHandle.Top, AnnotationGeometry.CreateHandleRect(center.X, rect.Top, radius, size) },
+                    { AnnotationHandle.TopRight, AnnotationGeometry.CreateHandleRect(rect.Right, rect.Top, radius, size) },
+                    { AnnotationHandle.Right, AnnotationGeometry.CreateHandleRect(rect.Right, center.Y, radius, size) },
+                    { AnnotationHandle.BottomRight, AnnotationGeometry.CreateHandleRect(rect.Right, rect.Bottom, radius, size) },
+                    { AnnotationHandle.Bottom, AnnotationGeometry.CreateHandleRect(center.X, rect.Bottom, radius, size) },
+                    { AnnotationHandle.BottomLeft, AnnotationGeometry.CreateHandleRect(rect.Left, rect.Bottom, radius, size) },
+                    { AnnotationHandle.Left, AnnotationGeometry.CreateHandleRect(rect.Left, center.Y, radius, size) },
+                };
+            }
+
+            private static AnnotationHandle HitTestArrow(AnnotationShape shape, Point imagePoint, int handleRadius)
+            {
+                if (AnnotationGeometry.GetHandleRect(shape.Start, handleRadius).Contains(imagePoint)) return AnnotationHandle.ArrowStart;
+                if (AnnotationGeometry.GetHandleRect(shape.End, handleRadius).Contains(imagePoint)) return AnnotationHandle.ArrowEnd;
+                return AnnotationGeometry.IsPointNearSegment(imagePoint, shape.Start, shape.End, 100) ? AnnotationHandle.Move : AnnotationHandle.None;
+            }
+
+            private static AnnotationHandle HitTestRectangle(Rectangle rect, Point imagePoint, int handleRadius)
+            {
+                foreach (var pair in GetRectangleHandleRects(rect, handleRadius))
+                {
+                    if (pair.Value.Contains(imagePoint)) return pair.Key;
+                }
+
+                return rect.Contains(imagePoint) ? AnnotationHandle.Move : AnnotationHandle.None;
+            }
+        }
+        private static class AnnotationShapeRenderer
+        {
+            public static void DrawHoverOverlay(Graphics g, Pen pen, AnnotationShape shape, Rectangle displayRect, Size sourceSize, Func<AnnotationShape, Rectangle?, Size, Rectangle> getShapeRect, GetShapeLineDelegate getShapeLine)
+            {
+                if (shape.Kind == AnnotationShapeKind.Rectangle)
+                {
+                    var rect = getShapeRect(shape, displayRect, sourceSize);
+                    if (rect.Width <= 0 || rect.Height <= 0) return;
+                    g.DrawRectangle(pen, rect);
+                    return;
+                }
+
+                getShapeLine(shape, displayRect, sourceSize, out var start, out var end);
+                g.DrawLine(pen, start, end);
+            }
+
+            public static void DrawSelectionOverlay(Graphics g, Pen dashPen, Brush handleBrush, Pen handlePen, AnnotationShape shape, Rectangle displayRect, Size sourceSize, Func<AnnotationShape, Rectangle?, Size, Rectangle> getShapeRect, GetShapeLineDelegate getShapeLine, DrawArrowHandleDelegate drawArrowHandle)
+            {
+                if (shape.Kind == AnnotationShapeKind.Rectangle)
+                {
+                    var rect = getShapeRect(shape, displayRect, sourceSize);
+                    if (rect.Width <= 0 || rect.Height <= 0) return;
+                    g.DrawRectangle(dashPen, rect);
+
+                    foreach (var pair in AnnotationShapeHitTester.GetRectangleHandleRects(rect, 4))
+                    {
+                        g.FillRectangle(handleBrush, pair.Value);
+                        g.DrawRectangle(handlePen, pair.Value);
+                    }
+                    return;
+                }
+
+                getShapeLine(shape, displayRect, sourceSize, out var start, out var end);
+                g.DrawLine(dashPen, start, end);
+                drawArrowHandle(g, handleBrush, handlePen, start);
+                drawArrowHandle(g, handleBrush, handlePen, end);
+            }
+        }
+
+        private delegate void GetShapeLineDelegate(AnnotationShape shape, Rectangle? displayRect, Size sourceSize, out Point start, out Point end);
+        private delegate void DrawArrowHandleDelegate(Graphics g, Brush fill, Pen border, Point point);
         private static class AnnotationInteractionResolver
         {
             public static AnnotationInteraction GetInteractionForHit(AnnotationShapeKind kind, AnnotationHandle handle)
