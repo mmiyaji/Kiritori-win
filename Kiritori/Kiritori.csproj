@@ -270,7 +270,13 @@
     <Compile Include="Views\SnapWindow\SnapWindow.Annotation.cs">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </Compile>
-    <Compile Include="Views\SnapWindow\SnapWindow.Annotation.Helpers.cs">
+    <Compile Include="Views\SnapWindow\SnapWindow.Annotation.Types.cs">
+      <DependentUpon>SnapWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\SnapWindow\SnapWindow.Annotation.Geometry.cs">
+      <DependentUpon>SnapWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Views\SnapWindow\SnapWindow.Annotation.Rendering.cs">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </Compile>
     <Compile Include="Views\SnapWindow\SnapWindow.PostCapture.cs">
