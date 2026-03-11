@@ -1055,25 +1055,29 @@ namespace Kiritori
 
         private void FinishAnnotationDrag(Point clientPoint)
         {
-            _annotationDragging = false;
-            pictureBox1.Capture = false;
+            CompleteFinishedAnnotationDrag();
+            EndAnnotationDragState();
+            pictureBox1.Invalidate();
+        }
 
-            Point imagePoint;
-            TryClientToImagePoint(clientPoint, out imagePoint);
-
+        private void CompleteFinishedAnnotationDrag()
+        {
             if (_annotationInteraction == AnnotationInteraction.Create)
             {
                 CompleteAnnotationCreate();
-            }
-            else
-            {
-                RemoveInvalidSelectedAnnotation();
+                return;
             }
 
+            RemoveInvalidSelectedAnnotation();
+        }
+
+        private void EndAnnotationDragState()
+        {
+            _annotationDragging = false;
+            pictureBox1.Capture = false;
             _annotationInteraction = AnnotationInteraction.None;
             _annotationHandle = AnnotationHandle.None;
             UpdateAnnotationCursor(AnnotationHandle.None);
-            pictureBox1.Invalidate();
         }
 
         private void RemoveInvalidSelectedAnnotation()
@@ -1084,19 +1088,33 @@ namespace Kiritori
             _annotations.RemoveAt(_selectedAnnotationIndex);
             _selectedAnnotationIndex = -1;
         }
+
         private void MoveSelectedRectangle(Point imagePoint)
         {
             if (!TryGetSelectedRectangle(out var shape)) return;
-            var dx = imagePoint.X - _annotationDragOriginImage.X;
-            var dy = imagePoint.Y - _annotationDragOriginImage.Y;
-            var moved = new Rectangle(_annotationEditOriginBounds.X + dx, _annotationEditOriginBounds.Y + dy, _annotationEditOriginBounds.Width, _annotationEditOriginBounds.Height);
-            shape.Start = moved.Location;
-            shape.End = new Point(moved.Right, moved.Bottom);
+
+            ApplyRectangleBounds(shape, GetMovedRectangleBounds(imagePoint));
         }
 
         private void ResizeSelectedRectangle(Point imagePoint)
         {
             if (!TryGetSelectedRectangle(out var shape)) return;
+
+            ApplyRectangleBounds(shape, GetResizedRectangleBounds(imagePoint));
+        }
+
+        private Rectangle GetMovedRectangleBounds(Point imagePoint)
+        {
+            var dragOffset = GetAnnotationDragOffset(imagePoint);
+            return new Rectangle(
+                _annotationEditOriginBounds.X + dragOffset.X,
+                _annotationEditOriginBounds.Y + dragOffset.Y,
+                _annotationEditOriginBounds.Width,
+                _annotationEditOriginBounds.Height);
+        }
+
+        private Rectangle GetResizedRectangleBounds(Point imagePoint)
+        {
             var rect = _annotationEditOriginBounds;
             var left = rect.Left;
             var top = rect.Top;
@@ -1135,9 +1153,18 @@ namespace Kiritori
                     break;
             }
 
-            var resized = Rectangle.FromLTRB(Math.Min(left, right), Math.Min(top, bottom), Math.Max(left, right), Math.Max(top, bottom));
-            shape.Start = resized.Location;
-            shape.End = new Point(resized.Right, resized.Bottom);
+            return Rectangle.FromLTRB(Math.Min(left, right), Math.Min(top, bottom), Math.Max(left, right), Math.Max(top, bottom));
+        }
+
+        private void ApplyRectangleBounds(AnnotationShape shape, Rectangle bounds)
+        {
+            shape.Start = bounds.Location;
+            shape.End = new Point(bounds.Right, bounds.Bottom);
+        }
+
+        private Point GetAnnotationDragOffset(Point imagePoint)
+        {
+            return new Point(imagePoint.X - _annotationDragOriginImage.X, imagePoint.Y - _annotationDragOriginImage.Y);
         }
 
         private AnnotationInteraction GetInteractionForHit(AnnotationShape shape, AnnotationHandle handle)
@@ -1155,10 +1182,10 @@ namespace Kiritori
         private void MoveSelectedArrow(Point imagePoint)
         {
             if (!TryGetSelectedArrow(out var shape)) return;
-            var dx = imagePoint.X - _annotationDragOriginImage.X;
-            var dy = imagePoint.Y - _annotationDragOriginImage.Y;
-            shape.Start = new Point(_annotationEditOriginStart.X + dx, _annotationEditOriginStart.Y + dy);
-            shape.End = new Point(_annotationEditOriginEnd.X + dx, _annotationEditOriginEnd.Y + dy);
+
+            var dragOffset = GetAnnotationDragOffset(imagePoint);
+            shape.Start = OffsetPoint(_annotationEditOriginStart, dragOffset);
+            shape.End = OffsetPoint(_annotationEditOriginEnd, dragOffset);
         }
 
         private void EditSelectedArrowEndpoint(Point imagePoint, bool editStart)
@@ -1168,6 +1195,11 @@ namespace Kiritori
                 shape.Start = imagePoint;
             else
                 shape.End = imagePoint;
+        }
+
+        private Point OffsetPoint(Point point, Point offset)
+        {
+            return new Point(point.X + offset.X, point.Y + offset.Y);
         }
 
         private bool TryGetSelectedArrow(out AnnotationShape shape)
