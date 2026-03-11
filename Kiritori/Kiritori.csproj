@@ -264,7 +264,7 @@
     <Compile Include="Services\Notifications\NotificationService.cs" />
     <Compile Include="Properties\Settings.cs" />
     <Compile Include="Properties\Settings.PostCapture.cs" />
-    <Compile Include="Views\SnapWindow.cs">
+    <Compile Include="Views\SnapWindow\SnapWindow.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Views\SnapWindow\SnapWindow.Annotation.cs">
@@ -276,7 +276,7 @@
     <Compile Include="Views\SnapWindow\SnapWindow.PostCapture.cs">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </Compile>
-    <Compile Include="Views\SnapWindow.Designer.cs">
+    <Compile Include="Views\SnapWindow\SnapWindow.Designer.cs">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </Compile>
     <Compile Include="Views\MainApplication.cs">
@@ -336,7 +336,7 @@
     <EmbeddedResource Include="Views\ScreenWindow.resx">
       <DependentUpon>ScreenWindow.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Views\SnapWindow.resx">
+    <EmbeddedResource Include="Views\SnapWindow\SnapWindow.resx">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
