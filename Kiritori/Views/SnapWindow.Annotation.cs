@@ -1200,22 +1200,22 @@ namespace Kiritori
 
         private void RenderAnnotationsToImage(Graphics g, bool includePreview)
         {
-            foreach (var shape in _annotations)
-                DrawAnnotationShape(g, shape, null, Size.Empty);
-
-            if (includePreview && _annotationPreview != null)
-                DrawAnnotationShape(g, _annotationPreview, null, Size.Empty);
+            RenderAnnotationSequence(includePreview, shape => DrawAnnotationShape(g, shape, null, Size.Empty));
         }
 
         private void RenderAnnotationsToClient(Graphics g, Rectangle displayRect, Size sourceSize, bool includePreview)
         {
-            foreach (var shape in _annotations)
-                DrawAnnotationShape(g, shape, displayRect, sourceSize);
-
-            if (includePreview && _annotationPreview != null)
-                DrawAnnotationShape(g, _annotationPreview, displayRect, sourceSize);
+            RenderAnnotationSequence(includePreview, shape => DrawAnnotationShape(g, shape, displayRect, sourceSize));
         }
 
+        private void RenderAnnotationSequence(bool includePreview, Action<AnnotationShape> renderShape)
+        {
+            foreach (var shape in _annotations)
+                renderShape(shape);
+
+            if (includePreview && _annotationPreview != null)
+                renderShape(_annotationPreview);
+        }
         private void DrawHoverOverlay(Graphics g, Rectangle displayRect, Size sourceSize)
         {
             if (!_annotationMode) return;
@@ -1254,16 +1254,8 @@ namespace Kiritori
         private void DrawAnnotationShape(Graphics g, AnnotationShape shape, Rectangle? displayRect, Size sourceSize)
         {
             if (shape == null) return;
-
-            if (shape.Kind == AnnotationShapeKind.Rectangle)
-            {
-                DrawRectangleAnnotationShape(g, shape, displayRect, sourceSize);
-                return;
-            }
-
-            DrawArrowAnnotationShape(g, shape, displayRect, sourceSize);
+            AnnotationShapeRenderer.DrawShape(g, shape, displayRect, sourceSize, DrawRectangleAnnotationShape, DrawArrowAnnotationShape);
         }
-
         private AnnotationShape GetHoveredAnnotation()
         {
             if (_hoverAnnotationIndex < 0 || _hoverAnnotationIndex >= _annotations.Count) return null;
@@ -1608,6 +1600,16 @@ namespace Kiritori
                 drawArrowHandle(g, handleBrush, handlePen, end);
             }
 
+            public static void DrawShape(Graphics g, AnnotationShape shape, Rectangle? displayRect, Size sourceSize, DrawShapeDelegate drawRectangle, DrawShapeDelegate drawArrow)
+            {
+                if (shape.Kind == AnnotationShapeKind.Rectangle)
+                {
+                    drawRectangle(g, shape, displayRect, sourceSize);
+                    return;
+                }
+
+                drawArrow(g, shape, displayRect, sourceSize);
+            }
             public static void DrawRectangle(Graphics g, AnnotationShape shape, Rectangle? displayRect, Size sourceSize, Func<AnnotationShape, Rectangle?, Size, Rectangle> getShapeRect, Func<Rectangle, bool> isDrawableRect, Func<AnnotationShape, Pen> createShapePen)
             {
                 using (var pen = createShapePen(shape))
@@ -1639,6 +1641,7 @@ namespace Kiritori
         private delegate void GetShapeLineDelegate(AnnotationShape shape, Rectangle? displayRect, Size sourceSize, out Point start, out Point end);
         private delegate void DrawArrowHandleDelegate(Graphics g, Brush fill, Pen border, Point point);
         private delegate void DrawTaperedArrowDelegate(Graphics g, AnnotationShape shape, Point start, Point end);
+        private delegate void DrawShapeDelegate(Graphics g, AnnotationShape shape, Rectangle? displayRect, Size sourceSize);
         private static class AnnotationInteractionResolver
         {
             public static AnnotationInteraction GetInteractionForHit(AnnotationShapeKind kind, AnnotationHandle handle)
