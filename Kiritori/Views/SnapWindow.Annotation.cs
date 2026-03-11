@@ -1105,55 +1105,12 @@ namespace Kiritori
 
         private Rectangle GetMovedRectangleBounds(Point imagePoint)
         {
-            var dragOffset = GetAnnotationDragOffset(imagePoint);
-            return new Rectangle(
-                _annotationEditOriginBounds.X + dragOffset.X,
-                _annotationEditOriginBounds.Y + dragOffset.Y,
-                _annotationEditOriginBounds.Width,
-                _annotationEditOriginBounds.Height);
+            return AnnotationGeometry.GetMovedRectangleBounds(_annotationEditOriginBounds, GetAnnotationDragOffset(imagePoint));
         }
 
         private Rectangle GetResizedRectangleBounds(Point imagePoint)
         {
-            var rect = _annotationEditOriginBounds;
-            var left = rect.Left;
-            var top = rect.Top;
-            var right = rect.Right;
-            var bottom = rect.Bottom;
-
-            switch (_annotationHandle)
-            {
-                case AnnotationHandle.TopLeft:
-                    left = imagePoint.X;
-                    top = imagePoint.Y;
-                    break;
-                case AnnotationHandle.Top:
-                    top = imagePoint.Y;
-                    break;
-                case AnnotationHandle.TopRight:
-                    right = imagePoint.X;
-                    top = imagePoint.Y;
-                    break;
-                case AnnotationHandle.Right:
-                    right = imagePoint.X;
-                    break;
-                case AnnotationHandle.BottomRight:
-                    right = imagePoint.X;
-                    bottom = imagePoint.Y;
-                    break;
-                case AnnotationHandle.Bottom:
-                    bottom = imagePoint.Y;
-                    break;
-                case AnnotationHandle.BottomLeft:
-                    left = imagePoint.X;
-                    bottom = imagePoint.Y;
-                    break;
-                case AnnotationHandle.Left:
-                    left = imagePoint.X;
-                    break;
-            }
-
-            return Rectangle.FromLTRB(Math.Min(left, right), Math.Min(top, bottom), Math.Max(left, right), Math.Max(top, bottom));
+            return AnnotationGeometry.GetResizedRectangleBounds(_annotationEditOriginBounds, imagePoint, _annotationHandle);
         }
 
         private void ApplyRectangleBounds(AnnotationShape shape, Rectangle bounds)
@@ -1199,7 +1156,7 @@ namespace Kiritori
 
         private Point OffsetPoint(Point point, Point offset)
         {
-            return new Point(point.X + offset.X, point.Y + offset.Y);
+            return AnnotationGeometry.OffsetPoint(point, offset);
         }
 
         private bool TryGetSelectedArrow(out AnnotationShape shape)
@@ -1271,22 +1228,7 @@ namespace Kiritori
 
         private bool IsPointNearArrowSegment(Point imagePoint, AnnotationShape shape)
         {
-            return DistancePointToSegmentSquared(imagePoint, shape.Start, shape.End) <= 100;
-        }
-
-        private static int DistancePointToSegmentSquared(Point p, Point a, Point b)
-        {
-            var dx = b.X - a.X;
-            var dy = b.Y - a.Y;
-            if (dx == 0 && dy == 0) return DistanceSquared(p, a);
-
-            var t = ((p.X - a.X) * dx + (p.Y - a.Y) * dy) / (double)((dx * dx) + (dy * dy));
-            t = Math.Max(0d, Math.Min(1d, t));
-            var projX = a.X + (t * dx);
-            var projY = a.Y + (t * dy);
-            var px = p.X - projX;
-            var py = p.Y - projY;
-            return (int)Math.Round((px * px) + (py * py));
+            return AnnotationGeometry.IsPointNearSegment(imagePoint, shape.Start, shape.End, 100);
         }
 
         private AnnotationHandle HitTestRectangleHandle(Rectangle rect, Point imagePoint)
@@ -1302,7 +1244,7 @@ namespace Kiritori
 
         private Rectangle GetHandleRect(Point center, int radius)
         {
-            return new Rectangle(center.X - radius, center.Y - radius, radius * 2, radius * 2);
+            return AnnotationGeometry.GetHandleRect(center, radius);
         }
 
         private Dictionary<AnnotationHandle, Rectangle> GetRectangleHandleRects(Rectangle rect, int radius)
@@ -1324,12 +1266,12 @@ namespace Kiritori
 
         private Rectangle CreateHandleRect(int centerX, int centerY, int radius, int size)
         {
-            return new Rectangle(centerX - radius, centerY - radius, size, size);
+            return AnnotationGeometry.CreateHandleRect(centerX, centerY, radius, size);
         }
 
         private Point GetRectangleCenter(Rectangle rect)
         {
-            return new Point(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
+            return AnnotationGeometry.GetRectangleCenter(rect);
         }
 
         private void UpdateAnnotationCursor(AnnotationHandle handle)
@@ -1684,9 +1626,7 @@ namespace Kiritori
 
         private static int DistanceSquared(Point a, Point b)
         {
-            var dx = a.X - b.X;
-            var dy = a.Y - b.Y;
-            return (dx * dx) + (dy * dy);
+            return AnnotationGeometry.DistanceSquared(a, b);
         }
 
         private bool TryGetDisplayImageRect(out Rectangle displayRect, out Bitmap source)
@@ -1743,6 +1683,103 @@ namespace Kiritori
             int w = Math.Max(1, (int)Math.Round((double)imageRect.Width * displayRect.Width / Math.Max(1, sourceSize.Width)));
             int h = Math.Max(1, (int)Math.Round((double)imageRect.Height * displayRect.Height / Math.Max(1, sourceSize.Height)));
             return new Rectangle(x, y, w, h);
+        }
+
+        private static class AnnotationGeometry
+        {
+            public static Rectangle GetMovedRectangleBounds(Rectangle originBounds, Point dragOffset)
+            {
+                return new Rectangle(originBounds.X + dragOffset.X, originBounds.Y + dragOffset.Y, originBounds.Width, originBounds.Height);
+            }
+
+            public static Rectangle GetResizedRectangleBounds(Rectangle originBounds, Point imagePoint, AnnotationHandle handle)
+            {
+                var left = originBounds.Left;
+                var top = originBounds.Top;
+                var right = originBounds.Right;
+                var bottom = originBounds.Bottom;
+
+                switch (handle)
+                {
+                    case AnnotationHandle.TopLeft:
+                        left = imagePoint.X;
+                        top = imagePoint.Y;
+                        break;
+                    case AnnotationHandle.Top:
+                        top = imagePoint.Y;
+                        break;
+                    case AnnotationHandle.TopRight:
+                        right = imagePoint.X;
+                        top = imagePoint.Y;
+                        break;
+                    case AnnotationHandle.Right:
+                        right = imagePoint.X;
+                        break;
+                    case AnnotationHandle.BottomRight:
+                        right = imagePoint.X;
+                        bottom = imagePoint.Y;
+                        break;
+                    case AnnotationHandle.Bottom:
+                        bottom = imagePoint.Y;
+                        break;
+                    case AnnotationHandle.BottomLeft:
+                        left = imagePoint.X;
+                        bottom = imagePoint.Y;
+                        break;
+                    case AnnotationHandle.Left:
+                        left = imagePoint.X;
+                        break;
+                }
+
+                return Rectangle.FromLTRB(Math.Min(left, right), Math.Min(top, bottom), Math.Max(left, right), Math.Max(top, bottom));
+            }
+
+            public static Point OffsetPoint(Point point, Point offset)
+            {
+                return new Point(point.X + offset.X, point.Y + offset.Y);
+            }
+
+            public static bool IsPointNearSegment(Point point, Point start, Point end, int thresholdSquared)
+            {
+                return DistancePointToSegmentSquared(point, start, end) <= thresholdSquared;
+            }
+
+            public static Rectangle GetHandleRect(Point center, int radius)
+            {
+                return new Rectangle(center.X - radius, center.Y - radius, radius * 2, radius * 2);
+            }
+
+            public static Rectangle CreateHandleRect(int centerX, int centerY, int radius, int size)
+            {
+                return new Rectangle(centerX - radius, centerY - radius, size, size);
+            }
+
+            public static Point GetRectangleCenter(Rectangle rect)
+            {
+                return new Point(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
+            }
+
+            public static int DistanceSquared(Point a, Point b)
+            {
+                var dx = a.X - b.X;
+                var dy = a.Y - b.Y;
+                return (dx * dx) + (dy * dy);
+            }
+
+            private static int DistancePointToSegmentSquared(Point point, Point start, Point end)
+            {
+                var dx = end.X - start.X;
+                var dy = end.Y - start.Y;
+                if (dx == 0 && dy == 0) return DistanceSquared(point, start);
+
+                var t = ((point.X - start.X) * dx + (point.Y - start.Y) * dy) / (double)((dx * dx) + (dy * dy));
+                t = Math.Max(0d, Math.Min(1d, t));
+                var projX = start.X + (t * dx);
+                var projY = start.Y + (t * dy);
+                var px = point.X - projX;
+                var py = point.Y - projY;
+                return (int)Math.Round((px * px) + (py * py));
+            }
         }
     }
 }
