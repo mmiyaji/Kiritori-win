@@ -273,7 +273,7 @@
     <Compile Include="Views\SnapWindow\SnapWindow.Annotation.Helpers.cs">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </Compile>
-    <Compile Include="Views\SnapWindow.PostCapture.cs">
+    <Compile Include="Views\SnapWindow\SnapWindow.PostCapture.cs">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </Compile>
     <Compile Include="Views\SnapWindow.Designer.cs">
@@ -292,34 +292,34 @@
     <!-- <<< added -->
     <Compile Include="Startup\StartupManager.cs" />
     <Compile Include="Startup\ShellLinkWriter.cs" />
-    <Compile Include="Views\SnapWindow.DragDrop.cs">
+    <Compile Include="Views\SnapWindow\SnapWindow.DragDrop.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Views\SnapWindow.Effects.cs">
+    <Compile Include="Views\SnapWindow\SnapWindow.Effects.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Views\SnapWindow.Hotkeys.cs">
+    <Compile Include="Views\SnapWindow\SnapWindow.Hotkeys.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Views\SnapWindow.ImageLoadSave.cs">
+    <Compile Include="Views\SnapWindow\SnapWindow.ImageLoadSave.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Views\SnapWindow.Localization.cs">
+    <Compile Include="Views\SnapWindow\SnapWindow.Localization.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Views\SnapWindow.MenuHandlers.cs">
+    <Compile Include="Views\SnapWindow\SnapWindow.MenuHandlers.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Views\SnapWindow.MouseResize.cs">
+    <Compile Include="Views\SnapWindow\SnapWindow.MouseResize.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Views\SnapWindow.Ocr.cs">
+    <Compile Include="Views\SnapWindow\SnapWindow.Ocr.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Views\SnapWindow.Settings.cs">
+    <Compile Include="Views\SnapWindow\SnapWindow.Settings.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Views\SnapWindow.Zoom.cs">
+    <Compile Include="Views\SnapWindow\SnapWindow.Zoom.cs">
       <SubType>Form</SubType>
     </Compile>
     <EmbeddedResource Include="Views\MainApplication.resx">
