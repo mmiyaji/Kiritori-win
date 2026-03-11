@@ -608,7 +608,7 @@ namespace Kiritori
         {
             if (_annotations.Count == 0) return;
             _annotations.RemoveAt(_annotations.Count - 1);
-            if (_selectedAnnotationIndex >= _annotations.Count) _selectedAnnotationIndex = _annotations.Count - 1;
+            _selectedAnnotationIndex = AnnotationSelectionState.NormalizeIndex(_selectedAnnotationIndex, _annotations.Count);
             RefreshAnnotationUi();
             ShowOverlay("ANNOTATION UNDONE");
         }
@@ -1709,6 +1709,32 @@ namespace Kiritori
             }
         }
 
+        private static class AnnotationSelectionState
+        {
+            public static int NormalizeIndex(int index, int count)
+            {
+                if (count <= 0) return -1;
+                return index >= count ? count - 1 : index;
+            }
+
+            public static bool TryGetShape(IList<AnnotationShape> annotations, int index, out AnnotationShape shape)
+            {
+                shape = GetShapeOrNull(annotations, index);
+                return shape != null;
+            }
+
+            public static AnnotationShape GetHoveredShape(IList<AnnotationShape> annotations, int hoverIndex, int selectedIndex)
+            {
+                if (hoverIndex == selectedIndex) return null;
+                return GetShapeOrNull(annotations, hoverIndex);
+            }
+
+            public static AnnotationShape GetShapeOrNull(IList<AnnotationShape> annotations, int index)
+            {
+                if (annotations == null || index < 0 || index >= annotations.Count) return null;
+                return annotations[index];
+            }
+        }
         private static class AnnotationGeometry
         {
             public static Rectangle GetMovedRectangleBounds(Rectangle originBounds, Point dragOffset)
