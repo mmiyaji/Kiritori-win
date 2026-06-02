@@ -129,6 +129,8 @@ namespace Kiritori
             // pictureBox1
             // 
             this.pictureBox1.ContextMenuStrip = this.rightContextMenuStrip;
+            this.pictureBox1.BackColor = System.Drawing.Color.Black;
+            this.pictureBox1.Dock = DockStyle.Fill;
             this.pictureBox1.Location = new System.Drawing.Point(0, 0);
             this.pictureBox1.Margin = new Padding(0);
             this.pictureBox1.Name = "pictureBox1";
@@ -551,8 +553,8 @@ namespace Kiritori
             // SnapWindow
             // 
             this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);            this.AutoSize = true;
-            this.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            this.AutoScaleDimensions = new System.Drawing.SizeF(96F, 96F);
+            this.BackColor = System.Drawing.Color.Black;
             this.ClientSize = new System.Drawing.Size(284, 262);
             this.ControlBox = false;
             this.Controls.Add(this.pictureBox1);
