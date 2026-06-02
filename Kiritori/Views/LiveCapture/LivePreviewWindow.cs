@@ -1643,10 +1643,10 @@ namespace Kiritori.Views.LiveCapture
             _miPauseResume.Click += (s, e) => TogglePause();
             _miPauseResume.ShortcutKeyDisplayString = "Space";
 
-            _miSaveCurrentFrame = new ToolStripMenuItem(SR.T("Menu.SaveCurrentFrame", "Save current frame"));
+            _miSaveCurrentFrame = new ToolStripMenuItem("Save current frame");
             _miSaveCurrentFrame.Click += (s, e) => SaveCurrentFrame();
 
-            _miOpenPausedFrame = new ToolStripMenuItem(SR.T("Menu.OpenPausedFrame", "Open current frame as SnapWindow"));
+            _miOpenPausedFrame = new ToolStripMenuItem("Open current frame as SnapWindow");
             _miOpenPausedFrame.Click += (s, e) => OpenCurrentFrameAsSnapWindow();
 
             _miTitlebar = new ToolStripMenuItem(SR.T("Menu.Titlebar", "Show Title bar"));
