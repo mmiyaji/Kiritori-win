@@ -167,9 +167,10 @@ namespace Kiritori.Views.LiveCapture
         private long _hashTimeTicksTotal = 0, _drawTimeTicksTotal = 0;
         private int _hashCount = 0, _drawCount = 0, _skipCount = 0;
         private int _adaptiveSkipStreak = 0;
-        private int _adaptiveBackendFps = -1;
+        private int _effectiveBackendFps = -1;
         private const int AdaptiveThrottleAfterSkips = 8;
         private const int AdaptiveThrottledFps = 5;
+        private const int IdleThrottledFps = 1;
         private int _srcCount = 0;   // 1秒窓の“入力(到来)”フレーム数
         private int _dispCount = 0;  // 1秒窓の“描画”フレーム数
         private int _srcFps = 0;     // 表示用：直近1秒の入力FPS
@@ -550,35 +551,55 @@ namespace Kiritori.Views.LiveCapture
         {
             var gdi = _backend as GdiCaptureBackend;
             if (gdi == null) return;
-            if (_adaptiveBackendFps == fps) return;
+            if (_effectiveBackendFps == fps) return;
             gdi.MaxFps = fps;
-            _adaptiveBackendFps = fps;
+            _effectiveBackendFps = fps;
+            Log.Info($"BackendFpsChanged: BackendFps={fps}, IdleThrottle={ShouldIdleThrottle()}, Policy={_policy}, AdaptiveSkipStreak={_adaptiveSkipStreak}", "LivePreview");
+        }
+
+        private bool ShouldIdleThrottle()
+        {
+            return _paused || this.WindowState == FormWindowState.Minimized || !this.Visible;
+        }
+
+        private void ApplyEffectiveBackendFps()
+        {
+            if (ShouldIdleThrottle())
+            {
+                SetBackendFps(IdleThrottledFps);
+                return;
+            }
+
+            if (_policy == RenderPolicy.AdaptiveHashThrottle && _adaptiveSkipStreak >= AdaptiveThrottleAfterSkips)
+                SetBackendFps(AdaptiveThrottledFps);
+            else
+                SetBackendFps(_maxFps);
         }
 
         private void RestoreBackendFps()
         {
             _adaptiveSkipStreak = 0;
-            SetBackendFps(_maxFps);
+            ApplyEffectiveBackendFps();
         }
 
         private void UpdateAdaptiveThrottle(bool skipped)
         {
             if (_policy != RenderPolicy.AdaptiveHashThrottle)
             {
-                RestoreBackendFps();
+                _adaptiveSkipStreak = 0;
+                ApplyEffectiveBackendFps();
                 return;
             }
 
             if (skipped)
             {
                 if (_adaptiveSkipStreak < int.MaxValue) _adaptiveSkipStreak++;
-                if (_adaptiveSkipStreak >= AdaptiveThrottleAfterSkips)
-                    SetBackendFps(AdaptiveThrottledFps);
             }
             else
             {
-                RestoreBackendFps();
+                _adaptiveSkipStreak = 0;
             }
+            ApplyEffectiveBackendFps();
         }
 
         // ===== HUD/枠 初期化（タイマーなど） =====
@@ -993,7 +1014,7 @@ namespace Kiritori.Views.LiveCapture
 
             // Backend 準備
             var backend = new GdiCaptureBackend { MaxFps = _maxFps };
-            _adaptiveBackendFps = _maxFps;
+            _effectiveBackendFps = _maxFps;
             var rLog = this.CaptureRect;
             var rPhys = !SourceRectPhysical.IsEmpty ? SourceRectPhysical : DpiUtil.LogicalToPhysical(rLog);
             backend.CaptureRect = rLog;
@@ -1064,6 +1085,8 @@ namespace Kiritori.Views.LiveCapture
             // 表示サイズが変わったら、次の OnFrameArrived では必ず描画させる
             if (_forceDrawOnResize)
                 _lastPresentedClientSize = Size.Empty;  // フォース再描画のトリガ
+
+            ApplyEffectiveBackendFps();
         }
 
 
@@ -1378,10 +1401,7 @@ namespace Kiritori.Views.LiveCapture
                 _presentWatch.Reset();
                 _presentWatch.Start();
 
-                if (_policy == RenderPolicy.AdaptiveHashThrottle && _adaptiveSkipStreak >= AdaptiveThrottleAfterSkips)
-                    SetBackendFps(AdaptiveThrottledFps);
-                else
-                    SetBackendFps(_maxFps);
+                ApplyEffectiveBackendFps();
             }
         }
 
@@ -2324,6 +2344,7 @@ namespace Kiritori.Views.LiveCapture
             _paused = !_paused;
             _miPauseResume.Text = _paused ? SR.T("Menu.Resume", "Resume") : SR.T("Menu.Pause", "Pause");
             _iconBadge?.SetState(_paused ? LiveBadgeState.Paused : LiveBadgeState.Rendering);
+            ApplyEffectiveBackendFps();
 
             if (!_paused) Invalidate();
             Invalidate(GetHudInvalidateRect());
@@ -2644,7 +2665,7 @@ namespace Kiritori.Views.LiveCapture
             double tickToMs = 1000.0 / Stopwatch.Frequency;
             double hashAvg = (_hashCount > 0) ? (_hashTimeTicksTotal * tickToMs) / _hashCount : 0;
             double drawAvg = (_drawCount > 0) ? (_drawTimeTicksTotal * tickToMs) / _drawCount : 0;
-            Log.Info($"PerfStats: DrawFPS={_dispFps}, SrcFPS={_srcFps}, Policy={_policy}, BackendFps={_adaptiveBackendFps}, AdaptiveSkipStreak={_adaptiveSkipStreak}, Skip={_skipCount}, HashAvg={hashAvg:F3}ms, DrawAvg={drawAvg:F3}ms (hashCount={_hashCount}, drawCount={_drawCount})", "LivePreview");
+            Log.Info($"PerfStats: DrawFPS={_dispFps}, SrcFPS={_srcFps}, Policy={_policy}, BackendFps={_effectiveBackendFps}, IdleThrottle={ShouldIdleThrottle()}, AdaptiveSkipStreak={_adaptiveSkipStreak}, Skip={_skipCount}, HashAvg={hashAvg:F3}ms, DrawAvg={drawAvg:F3}ms (hashCount={_hashCount}, drawCount={_drawCount})", "LivePreview");
             _hashTimeTicksTotal = _drawTimeTicksTotal = 0;
             _hashCount = _drawCount = _skipCount = 0;
         }
