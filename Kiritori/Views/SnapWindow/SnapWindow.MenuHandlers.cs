@@ -284,22 +284,7 @@ namespace Kiritori
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            if (_settingsHandler != null)
-            {
-                try { Properties.Settings.Default.PropertyChanged -= _settingsHandler; } catch { }
-                _settingsHandler = null;
-            }
-
-            _overlayTimer?.Stop();
-            _overlayTimer?.Dispose();
-
-            _zoomAnimTimer?.Stop();
-            _zoomAnimTimer?.Dispose();
-
-            _overlayFont?.Dispose();
-            _overlayFont = null;
-
-            if (this.Icon != null) { this.Icon.Dispose(); this.Icon = null; }
+            DisposeRuntimeResources();
             base.OnFormClosed(e);
         }
         protected override void OnShown(EventArgs e)

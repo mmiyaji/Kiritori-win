@@ -5,6 +5,7 @@ using Kiritori.Services.Recording;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -214,6 +215,8 @@ namespace Kiritori.Views.LiveCapture
         private SolidBrush _statShadowBrush;      // 128,0,0,0
         private SolidBrush _statPausedShadowBrush;// 160,0,0,0
         private SolidBrush _statBgBrush;          // 130,0,0,0
+        private PropertyChangedEventHandler _appearanceSettingsChangedHandler;
+        private PropertyChangedEventHandler _renderPolicySettingsChangedHandler;
 
         public LivePreviewWindow()
         {
@@ -227,7 +230,7 @@ namespace Kiritori.Views.LiveCapture
             InitPaintCache();
             LoadHoverAppearanceFromSettings();
 
-            Properties.Settings.Default.PropertyChanged += (s, e) =>
+            _appearanceSettingsChangedHandler = (s, e) =>
             {
                 if (e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightColor) ||
                     e.PropertyName == nameof(Properties.Settings.Default.HoverHighlightAlphaPercent) ||
@@ -239,6 +242,7 @@ namespace Kiritori.Views.LiveCapture
                     Invalidate();
                 }
             };
+            Properties.Settings.Default.PropertyChanged += _appearanceSettingsChangedHandler;
             try
             {
                 var v = Properties.Settings.Default.LivePreviewMaxFps;
@@ -251,7 +255,7 @@ namespace Kiritori.Views.LiveCapture
                 _policy = (v == 0) ? RenderPolicy.AlwaysDraw : RenderPolicy.HashSkip;
             }
             catch { _policy = RenderPolicy.AlwaysDraw; }
-            Properties.Settings.Default.PropertyChanged += (s, e) =>
+            _renderPolicySettingsChangedHandler = (s, e) =>
             {
                 if (e.PropertyName == nameof(Properties.Settings.Default.LivePreviewRenderPolicy))
                 {
@@ -260,6 +264,7 @@ namespace Kiritori.Views.LiveCapture
                     Log.Debug($"RenderPolicy changed to: {_policy}", "LivePreview");
                 }
             };
+            Properties.Settings.Default.PropertyChanged += _renderPolicySettingsChangedHandler;
 
             BuildOverlay();
             WireHoverHandlers();
@@ -1382,6 +1387,18 @@ namespace Kiritori.Views.LiveCapture
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            if (_appearanceSettingsChangedHandler != null)
+            {
+                try { Properties.Settings.Default.PropertyChanged -= _appearanceSettingsChangedHandler; } catch { }
+                _appearanceSettingsChangedHandler = null;
+            }
+
+            if (_renderPolicySettingsChangedHandler != null)
+            {
+                try { Properties.Settings.Default.PropertyChanged -= _renderPolicySettingsChangedHandler; } catch { }
+                _renderPolicySettingsChangedHandler = null;
+            }
+
             // ---- Timers ----
             var ot = _overlayTimer; _overlayTimer = null;
             if (ot != null)
@@ -1402,6 +1419,20 @@ namespace Kiritori.Views.LiveCapture
             {
                 try { pt.Change(Timeout.Infinite, Timeout.Infinite); } catch { }
                 try { pt.Dispose(); } catch { }
+            }
+
+            var rt = _revealGuard; _revealGuard = null;
+            if (rt != null)
+            {
+                try { rt.Stop(); } catch { }
+                try { rt.Dispose(); } catch { }
+            }
+
+            var glt = _gifLimitTimer; _gifLimitTimer = null;
+            if (glt != null)
+            {
+                try { glt.Stop(); } catch { }
+                try { glt.Dispose(); } catch { }
             }
 
             // ---- Backend / Recording ----

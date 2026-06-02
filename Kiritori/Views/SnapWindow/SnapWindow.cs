@@ -104,7 +104,9 @@ namespace Kiritori
         private int _hoverAlphaPercent;
         private int _hoverThicknessPx;
         private PropertyChangedEventHandler _settingsHandler;
+        private Action _cultureChangedHandler;
         private bool _isApplyingSettings = false;
+        private bool _runtimeResourcesDisposed = false;
 
         // リサイズ用
         private const int GRIP_PX = 18;
@@ -176,12 +178,13 @@ namespace Kiritori
             Localizer.Apply(this);
             ApplyAllContextMenusLocalization();
 
-            SR.CultureChanged += () =>
+            _cultureChangedHandler = () =>
             {
                 if (this.IsDisposed) return;
                 Localizer.Apply(this);
                 ApplyAllContextMenusLocalization();
             };
+            SR.CultureChanged += _cultureChangedHandler;
 
             // フォーム
             this.SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
@@ -286,6 +289,21 @@ namespace Kiritori
 
         private void DisposeRuntimeResources()
         {
+            if (_runtimeResourcesDisposed) return;
+            _runtimeResourcesDisposed = true;
+
+            if (_settingsHandler != null)
+            {
+                try { Properties.Settings.Default.PropertyChanged -= _settingsHandler; } catch { }
+                _settingsHandler = null;
+            }
+
+            if (_cultureChangedHandler != null)
+            {
+                try { SR.CultureChanged -= _cultureChangedHandler; } catch { }
+                _cultureChangedHandler = null;
+            }
+
             try { _overlayTimer?.Stop(); } catch { }
             try { _zoomAnimTimer?.Stop(); } catch { }
             try { _resizeCommitTimer?.Stop(); } catch { }
@@ -301,6 +319,12 @@ namespace Kiritori
 
             try { _overlayFont?.Dispose(); } catch { }
             _overlayFont = null;
+
+            if (this.Icon != null)
+            {
+                try { this.Icon.Dispose(); } catch { }
+                this.Icon = null;
+            }
         }
         #endregion
     }

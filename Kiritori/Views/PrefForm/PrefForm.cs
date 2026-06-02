@@ -58,6 +58,7 @@ namespace Kiritori
         private System.Windows.Forms.Timer _savedResetTimer;
         private System.Windows.Forms.Timer _appearanceWarmupTimer;
         private SynchronizationContext _ui;
+        private Action _commonCultureChangedHandler;
         // =========================================================
         // ==================== Constructor ========================
         // =========================================================
@@ -113,7 +114,8 @@ namespace Kiritori
 
                 // ← 共通ハンドラに寄せる
                 this.Load += (_, __) => SafeApplyTextsAndLayout();
-                SR.CultureChanged += () => SafeApplyTextsAndLayout();
+                _commonCultureChangedHandler = () => SafeApplyTextsAndLayout();
+                SR.CultureChanged += _commonCultureChangedHandler;
 
                 // // アプリアイコンのスケーリング
                 // var src = Properties.Resources.icon_128x128;
@@ -335,6 +337,11 @@ namespace Kiritori
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            if (_commonCultureChangedHandler != null)
+            {
+                try { SR.CultureChanged -= _commonCultureChangedHandler; } catch { }
+                _commonCultureChangedHandler = null;
+            }
             if (_appearanceWarmupTimer != null)
             {
                 _appearanceWarmupTimer.Stop();
