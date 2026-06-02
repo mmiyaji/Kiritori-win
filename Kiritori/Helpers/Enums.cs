@@ -90,7 +90,8 @@ namespace Kiritori.Helpers
     {
         AlwaysDraw = 0,
         HashSkip = 1,
-        LowCopyGdi = 2
+        LowCopyGdi = 2,
+        AdaptiveHashThrottle = 3
     }
     public enum OutputKind {
         Mp4,

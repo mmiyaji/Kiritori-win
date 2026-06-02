@@ -44,7 +44,7 @@ namespace Kiritori.Views.LiveCapture
             _miOriginal, _miZoomIn, _miZoomOut, _miZoomPct,
             _miOpacity, _miPauseResume, _miSaveCurrentFrame, _miOpenPausedFrame, _miRealign, _miTopMost, _miClose,
             _miPref, _miExit, _miTitlebar, _miShowStats, _miHighlight,
-            _miPolicyRoot, _miPolicyAlways, _miPolicyHash, _miPolicyLowCopy,
+            _miPolicyRoot, _miPolicyAlways, _miPolicyHash, _miPolicyLowCopy, _miPolicyAdaptive,
             _miRecording, _miPrivacy, _miRecordingGif;
 
         private float _zoom = 1.0f;     // 表示倍率（1.0=100%）
@@ -166,6 +166,10 @@ namespace Kiritori.Views.LiveCapture
         // メトリクス（ログ用 任意）
         private long _hashTimeTicksTotal = 0, _drawTimeTicksTotal = 0;
         private int _hashCount = 0, _drawCount = 0, _skipCount = 0;
+        private int _adaptiveSkipStreak = 0;
+        private int _adaptiveBackendFps = -1;
+        private const int AdaptiveThrottleAfterSkips = 8;
+        private const int AdaptiveThrottledFps = 5;
         private int _srcCount = 0;   // 1秒窓の“入力(到来)”フレーム数
         private int _dispCount = 0;  // 1秒窓の“描画”フレーム数
         private int _srcFps = 0;     // 表示用：直近1秒の入力FPS
@@ -509,6 +513,7 @@ namespace Kiritori.Views.LiveCapture
             {
                 case 1: return RenderPolicy.HashSkip;
                 case 2: return RenderPolicy.LowCopyGdi;
+                case 3: return RenderPolicy.AdaptiveHashThrottle;
                 default: return RenderPolicy.AlwaysDraw;
             }
         }
@@ -524,8 +529,14 @@ namespace Kiritori.Views.LiveCapture
             {
                 case RenderPolicy.HashSkip: return "Hash";
                 case RenderPolicy.LowCopyGdi: return "LowCopy";
+                case RenderPolicy.AdaptiveHashThrottle: return "Adaptive";
                 default: return "Always";
             }
+        }
+
+        private bool UsesHashComparison()
+        {
+            return _policy == RenderPolicy.HashSkip || _policy == RenderPolicy.AdaptiveHashThrottle;
         }
 
         private void ApplyBackendFrameOwnershipMode()
@@ -533,6 +544,41 @@ namespace Kiritori.Views.LiveCapture
             var gdi = _backend as GdiCaptureBackend;
             if (gdi != null)
                 gdi.TransferFrameOwnership = UsesTransferFrameOwnership();
+        }
+
+        private void SetBackendFps(int fps)
+        {
+            var gdi = _backend as GdiCaptureBackend;
+            if (gdi == null) return;
+            if (_adaptiveBackendFps == fps) return;
+            gdi.MaxFps = fps;
+            _adaptiveBackendFps = fps;
+        }
+
+        private void RestoreBackendFps()
+        {
+            _adaptiveSkipStreak = 0;
+            SetBackendFps(_maxFps);
+        }
+
+        private void UpdateAdaptiveThrottle(bool skipped)
+        {
+            if (_policy != RenderPolicy.AdaptiveHashThrottle)
+            {
+                RestoreBackendFps();
+                return;
+            }
+
+            if (skipped)
+            {
+                if (_adaptiveSkipStreak < int.MaxValue) _adaptiveSkipStreak++;
+                if (_adaptiveSkipStreak >= AdaptiveThrottleAfterSkips)
+                    SetBackendFps(AdaptiveThrottledFps);
+            }
+            else
+            {
+                RestoreBackendFps();
+            }
         }
 
         // ===== HUD/枠 初期化（タイマーなど） =====
@@ -947,6 +993,7 @@ namespace Kiritori.Views.LiveCapture
 
             // Backend 準備
             var backend = new GdiCaptureBackend { MaxFps = _maxFps };
+            _adaptiveBackendFps = _maxFps;
             var rLog = this.CaptureRect;
             var rPhys = !SourceRectPhysical.IsEmpty ? SourceRectPhysical : DpiUtil.LogicalToPhysical(rLog);
             backend.CaptureRect = rLog;
@@ -1331,8 +1378,10 @@ namespace Kiritori.Views.LiveCapture
                 _presentWatch.Reset();
                 _presentWatch.Start();
 
-                if (_backend is GdiCaptureBackend gdi)
-                    gdi.MaxFps = _maxFps;
+                if (_policy == RenderPolicy.AdaptiveHashThrottle && _adaptiveSkipStreak >= AdaptiveThrottleAfterSkips)
+                    SetBackendFps(AdaptiveThrottledFps);
+                else
+                    SetBackendFps(_maxFps);
             }
         }
 
@@ -1343,6 +1392,7 @@ namespace Kiritori.Views.LiveCapture
             _fpsWindowWatch.Reset();
             _fpsWindowWatch.Start();
             _skipCount = 0;
+            _adaptiveSkipStreak = 0;
         }
 
         private static int ComputeFastHash(Bitmap bmp, int step = 8)
@@ -1838,6 +1888,7 @@ namespace Kiritori.Views.LiveCapture
             _miPolicyAlways = new ToolStripMenuItem(SR.T("Menu.AlwaysDraw", "Always draw")) { CheckOnClick = true };
             _miPolicyHash = new ToolStripMenuItem(SR.T("Menu.SkipByHash", "Skip by hash")) { CheckOnClick = true };
             _miPolicyLowCopy = new ToolStripMenuItem("Low-copy GDI (experimental)") { CheckOnClick = true };
+            _miPolicyAdaptive = new ToolStripMenuItem("Adaptive hash throttle (experimental)") { CheckOnClick = true };
             void SyncPolicyChecks()
             {
                 if (_policy == RenderPolicy.AlwaysDraw)
@@ -1845,6 +1896,7 @@ namespace Kiritori.Views.LiveCapture
                     _miPolicyAlways.Checked = true;
                     _miPolicyHash.Checked = false;
                     _miPolicyLowCopy.Checked = false;
+                    _miPolicyAdaptive.Checked = false;
                     ShowOverlay("RENDERING: ALWAYS DRAW");
                 }
                 else if (_policy == RenderPolicy.HashSkip)
@@ -1852,6 +1904,7 @@ namespace Kiritori.Views.LiveCapture
                     _miPolicyAlways.Checked = false;
                     _miPolicyHash.Checked = true;
                     _miPolicyLowCopy.Checked = false;
+                    _miPolicyAdaptive.Checked = false;
                     ShowOverlay("RENDERING: HASH-SKIP");
                 }
                 else if (_policy == RenderPolicy.LowCopyGdi)
@@ -1859,16 +1912,27 @@ namespace Kiritori.Views.LiveCapture
                     _miPolicyAlways.Checked = false;
                     _miPolicyHash.Checked = false;
                     _miPolicyLowCopy.Checked = true;
+                    _miPolicyAdaptive.Checked = false;
                     ShowOverlay("RENDERING: LOW-COPY GDI");
+                }
+                else if (_policy == RenderPolicy.AdaptiveHashThrottle)
+                {
+                    _miPolicyAlways.Checked = false;
+                    _miPolicyHash.Checked = false;
+                    _miPolicyLowCopy.Checked = false;
+                    _miPolicyAdaptive.Checked = true;
+                    ShowOverlay("RENDERING: ADAPTIVE HASH");
                 }
                 else
                 {
                     _miPolicyAlways.Checked = true;
                     _miPolicyHash.Checked = false;
                     _miPolicyLowCopy.Checked = false;
+                    _miPolicyAdaptive.Checked = false;
                     ShowOverlay("RENDERING: ALWAYS DRAW");
                 }
                 ApplyBackendFrameOwnershipMode();
+                RestoreBackendFps();
             }
             _miPolicyAlways.Click += (s, e) =>
             {
@@ -1897,11 +1961,21 @@ namespace Kiritori.Views.LiveCapture
                 ResetFpsWindow();
                 Log.Debug("RenderPolicy -> LowCopyGdi", "LivePreview");
             };
+            _miPolicyAdaptive.Click += (s, e) =>
+            {
+                _policy = RenderPolicy.AdaptiveHashThrottle;
+                Properties.Settings.Default.LivePreviewRenderPolicy = 3;
+                Properties.Settings.Default.Save();
+                SyncPolicyChecks();
+                ResetFpsWindow();
+                Log.Debug("RenderPolicy -> AdaptiveHashThrottle", "LivePreview");
+            };
             _miPolicyRoot.DropDownItems.AddRange(new ToolStripItem[] {
                 _miFpsRoot,
                 _miPolicyAlways,
                 _miPolicyHash,
                 _miPolicyLowCopy,
+                _miPolicyAdaptive,
             });
             // 既存の _ctx.Items.AddRange(...) に混ぜる場所へ
             SyncPolicyChecks();
@@ -2470,11 +2544,11 @@ namespace Kiritori.Views.LiveCapture
                 bool forceBySize = (_lastPresentedClientSize != this.ClientSize);
                 bool shouldDraw;
 
-                if (_policy == RenderPolicy.AlwaysDraw || _policy == RenderPolicy.LowCopyGdi)
+                if (!UsesHashComparison())
                 {
                     shouldDraw = true;
                 }
-                else // HashSkip
+                else // HashSkip / AdaptiveHashThrottle
                 {
                     if (forceBySize || _lastFrameSize.IsEmpty || _lastFrameSize != bmp.Size)
                     {
@@ -2493,8 +2567,11 @@ namespace Kiritori.Views.LiveCapture
                 if (!shouldDraw)
                 {
                     _skipCount++;
+                    UpdateAdaptiveThrottle(true);
                     return;
                 }
+
+                UpdateAdaptiveThrottle(false);
 
                 var swDraw = Stopwatch.StartNew();
 
@@ -2567,7 +2644,7 @@ namespace Kiritori.Views.LiveCapture
             double tickToMs = 1000.0 / Stopwatch.Frequency;
             double hashAvg = (_hashCount > 0) ? (_hashTimeTicksTotal * tickToMs) / _hashCount : 0;
             double drawAvg = (_drawCount > 0) ? (_drawTimeTicksTotal * tickToMs) / _drawCount : 0;
-            Log.Info($"PerfStats: DrawFPS={_dispFps}, SrcFPS={_srcFps}, Policy={_policy}, Skip={_skipCount}, HashAvg={hashAvg:F3}ms, DrawAvg={drawAvg:F3}ms (hashCount={_hashCount}, drawCount={_drawCount})", "LivePreview");
+            Log.Info($"PerfStats: DrawFPS={_dispFps}, SrcFPS={_srcFps}, Policy={_policy}, BackendFps={_adaptiveBackendFps}, AdaptiveSkipStreak={_adaptiveSkipStreak}, Skip={_skipCount}, HashAvg={hashAvg:F3}ms, DrawAvg={drawAvg:F3}ms (hashCount={_hashCount}, drawCount={_drawCount})", "LivePreview");
             _hashTimeTicksTotal = _drawTimeTicksTotal = 0;
             _hashCount = _drawCount = _skipCount = 0;
         }
