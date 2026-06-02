@@ -2,6 +2,7 @@
 using Kiritori.Services.Logging;
 using Kiritori.Services.Ocr;
 using System;
+using System.IO;
 using System.Windows.Forms;
 
 namespace Kiritori
@@ -64,7 +65,70 @@ namespace Kiritori
                 case CapturePostActionPreset.RunOcrAndClose:
                     await RunPostCaptureOcrAsync(closeAfterSuccess: true);
                     break;
+                case CapturePostActionPreset.SaveImage:
+                    SavePostCaptureImage(showOverlay: true);
+                    break;
+                case CapturePostActionPreset.SaveImageAndClose:
+                    if (SavePostCaptureImage(showOverlay: true) && !IsDisposed)
+                        Close();
+                    break;
+                case CapturePostActionPreset.SaveImageAndCopy:
+                    if (SavePostCaptureImage(showOverlay: true))
+                        CopyCurrentImageToClipboard(showOverlay: true);
+                    break;
+                case CapturePostActionPreset.SaveImageAndRunOcr:
+                    if (SavePostCaptureImage(showOverlay: true))
+                        await RunPostCaptureOcrAsync(closeAfterSuccess: false);
+                    break;
             }
+        }
+
+        private bool SavePostCaptureImage(bool showOverlay)
+        {
+            using (var imageToSave = GetCurrentBitmapClone())
+            {
+                if (imageToSave == null) return false;
+
+                try
+                {
+                    var path = ResolvePostCaptureSavePath();
+                    imageToSave.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+                    if (showOverlay) ShowOverlay("SAVED");
+                    Log.Info("Post-capture image saved: " + path, "SnapWindow");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Log.Debug("Post-capture save failed: " + ex.Message, "SnapWindow");
+                    if (showOverlay) ShowOverlay("SAVE FAILED");
+                    return false;
+                }
+            }
+        }
+
+        private string ResolvePostCaptureSavePath()
+        {
+            var folder = Properties.Settings.Default.CapturePostActionSaveFolder;
+            if (string.IsNullOrWhiteSpace(folder))
+            {
+                var pictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+                folder = string.IsNullOrWhiteSpace(pictures)
+                    ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Kiritori")
+                    : Path.Combine(pictures, "Kiritori");
+            }
+
+            Directory.CreateDirectory(folder);
+
+            var baseName = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+            var path = Path.Combine(folder, baseName + ".png");
+            int suffix = 1;
+            while (File.Exists(path))
+            {
+                path = Path.Combine(folder, baseName + "-" + suffix.ToString("00") + ".png");
+                suffix++;
+            }
+
+            return path;
         }
 
         internal bool CopyCurrentImageToClipboard(bool showOverlay)

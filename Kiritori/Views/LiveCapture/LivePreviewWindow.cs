@@ -42,7 +42,7 @@ namespace Kiritori.Views.LiveCapture
             _miCapture, _miOCR, _miLivePreview,
             //_miFileRoot, _miEditRoot, _miViewRoot, _miWindowRoot, _miZoomRoot,
             _miOriginal, _miZoomIn, _miZoomOut, _miZoomPct,
-            _miOpacity, _miPauseResume, _miRealign, _miTopMost, _miClose,
+            _miOpacity, _miPauseResume, _miSaveCurrentFrame, _miOpenPausedFrame, _miRealign, _miTopMost, _miClose,
             _miPref, _miExit, _miTitlebar, _miShowStats, _miHighlight,
             _miPolicyRoot, _miPolicyAlways, _miPolicyHash,
             _miRecording, _miPrivacy, _miRecordingGif;
@@ -1643,6 +1643,12 @@ namespace Kiritori.Views.LiveCapture
             _miPauseResume.Click += (s, e) => TogglePause();
             _miPauseResume.ShortcutKeyDisplayString = "Space";
 
+            _miSaveCurrentFrame = new ToolStripMenuItem(SR.T("Menu.SaveCurrentFrame", "Save current frame"));
+            _miSaveCurrentFrame.Click += (s, e) => SaveCurrentFrame();
+
+            _miOpenPausedFrame = new ToolStripMenuItem(SR.T("Menu.OpenPausedFrame", "Open current frame as SnapWindow"));
+            _miOpenPausedFrame.Click += (s, e) => OpenCurrentFrameAsSnapWindow();
+
             _miTitlebar = new ToolStripMenuItem(SR.T("Menu.Titlebar", "Show Title bar"));
             _miTitlebar.Click += (s, e) => ToggleTitlebar();
             _miTitlebar.Checked = true;
@@ -1890,6 +1896,8 @@ namespace Kiritori.Views.LiveCapture
                 _miClose,
                 new ToolStripSeparator(),
                 _miPauseResume,
+                _miSaveCurrentFrame,
+                _miOpenPausedFrame,
                 miRecording,
                 _miPolicyRoot,
                 new ToolStripSeparator(),
@@ -2192,6 +2200,80 @@ namespace Kiritori.Views.LiveCapture
             ShowOverlay(_paused ? "PAUSED" : "RESUMED");
             Log.Debug($"TogglePause: paused={_paused}", "LivePreview");
         }
+
+        private void OpenCurrentFrameAsSnapWindow()
+        {
+            if (MainApp == null)
+            {
+                ShowOverlay("NO MAIN WINDOW");
+                return;
+            }
+
+            var frame = CloneCurrentFrame();
+            if (frame == null)
+            {
+                ShowOverlay("NO FRAME");
+                return;
+            }
+
+            try
+            {
+                var sw = new Kiritori.SnapWindow(MainApp)
+                {
+                    StartPosition = FormStartPosition.Manual
+                };
+                var crop = new Rectangle(0, 0, frame.Width, frame.Height);
+                var desired = PointToScreen(Point.Empty);
+                sw.CaptureFromBitmap(frame, crop, desired, LoadMethod.Capture);
+                ShowOverlay(_paused ? "PAUSED FRAME OPENED" : "FRAME OPENED");
+                Log.Info("Opened live preview frame as SnapWindow", "LivePreview");
+            }
+            catch (Exception ex)
+            {
+                Log.Debug("OpenCurrentFrameAsSnapWindow failed: " + ex.Message, "LivePreview");
+                ShowOverlay("OPEN FRAME FAILED");
+            }
+            finally
+            {
+                frame.Dispose();
+            }
+        }
+
+        private void SaveCurrentFrame()
+        {
+            var frame = CloneCurrentFrame();
+            if (frame == null)
+            {
+                ShowOverlay("NO FRAME");
+                return;
+            }
+
+            try
+            {
+                var path = ResolveLivePreviewSavePath(".png");
+                frame.Save(path, ImageFormat.Png);
+                ShowOverlay("FRAME SAVED");
+                Log.Info("Live preview frame saved: " + path, "LivePreview");
+            }
+            catch (Exception ex)
+            {
+                Log.Debug("SaveCurrentFrame failed: " + ex.Message, "LivePreview");
+                ShowOverlay("SAVE FRAME FAILED");
+            }
+            finally
+            {
+                frame.Dispose();
+            }
+        }
+
+        private Bitmap CloneCurrentFrame()
+        {
+            lock (_frameSync)
+            {
+                return _latest != null ? (Bitmap)_latest.Clone() : null;
+            }
+        }
+
         private void ToggleTitlebar()
         {
             var desiredClient = GetDesiredClient();

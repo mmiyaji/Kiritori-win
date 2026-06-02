@@ -80,7 +80,11 @@ namespace Kiritori.Helpers
         CopyImage = 1,
         RunOcr = 2,
         CopyImageAndClose = 3,
-        RunOcrAndClose = 4
+        RunOcrAndClose = 4,
+        SaveImage = 5,
+        SaveImageAndClose = 6,
+        SaveImageAndCopy = 7,
+        SaveImageAndRunOcr = 8
     }
     public enum RenderPolicy
     {
