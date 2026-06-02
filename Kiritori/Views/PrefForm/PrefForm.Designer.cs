@@ -25,6 +25,7 @@ namespace Kiritori
         {
             if (disposing)
             {
+                DisposeHistoryTabResources();
                 DisposeLogTab();
                 if (components != null) components.Dispose();
             }
@@ -1835,5 +1836,4 @@ namespace Kiritori
 
     }
 }
-
 

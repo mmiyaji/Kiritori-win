@@ -575,7 +575,7 @@ namespace Kiritori
             // 実体PNG保存→entry作成→UI追加（ここは今のまま）
             Directory.CreateDirectory(HistoryTempDir);
             string path = Path.Combine(HistoryTempDir, DateTime.Now.ToString("yyyyMMdd_HHmmssfff") + ".png");
-            try { using (var saveCopy = new Bitmap(src)) saveCopy.Save(path, ImageFormat.Png); } catch { path = null; }
+            try { src.Save(path, ImageFormat.Png); } catch { path = null; }
 
             var entry = new HistoryEntry
             {

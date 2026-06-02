@@ -24,6 +24,8 @@ namespace Kiritori
         private bool _thumbLoadingActive;
         private Queue<HistoryEntry> _thumbQueue;
         private EventHandler _idleHandler;
+        private EventHandler _historyChangedHandler;
+        private Action _historyCultureChangedHandler;
         private readonly Color _historyPageBackColor = Color.FromArgb(244, 247, 251);
         private readonly Color _historyCardBackColor = Color.White;
         private readonly Color _historyCardBorderColor = Color.FromArgb(218, 226, 236);
@@ -416,7 +418,7 @@ namespace Kiritori
             BuildHistoryToolbar();
             BuildHistoryContextMenu();
             
-            SR.CultureChanged += () =>
+            _historyCultureChangedHandler = () =>
             {
                 try
                 {
@@ -427,6 +429,7 @@ namespace Kiritori
                 }
                 catch { /* noop */ }
             };
+            SR.CultureChanged += _historyCultureChangedHandler;
             _historyUiInitialized = true;
 
             _lvHistory.ItemActivate += (s, e) => OpenSelected();
@@ -438,11 +441,12 @@ namespace Kiritori
 
             if (!_subscribedToHistory)
             {
-                Kiritori.Services.History.HistoryBridge.HistoryChanged += (s, e) =>
+                _historyChangedHandler = (s, e) =>
                 {
                     var snap = Kiritori.Services.History.HistoryBridge.GetSnapshot();
                     RefreshAllHistory(snap);
                 };
+                Kiritori.Services.History.HistoryBridge.HistoryChanged += _historyChangedHandler;
                 _subscribedToHistory = true;
             }
         }
@@ -813,7 +817,8 @@ namespace Kiritori
         private void StopLazyThumbLoad()
         {
             if (!_thumbLoadingActive) return;
-            Application.Idle -= _idleHandler;
+            if (_idleHandler != null)
+                Application.Idle -= _idleHandler;
             _idleHandler = null;
             _thumbLoadingActive = false;
         }
@@ -859,12 +864,11 @@ namespace Kiritori
 
         private void TryRenderOneThumb(HistoryEntry he)
         {
+            Bitmap bmp = null;
             try
             {
                 // 既に作成済みなら割り当てだけ
                 if (he?.Thumb != null) { AssignThumbToItem(he, he.Thumb); return; }
-
-                Bitmap bmp = null;
 
                 if (!string.IsNullOrEmpty(he.Path) && File.Exists(he.Path))
                 {
@@ -882,13 +886,16 @@ namespace Kiritori
 
                 if (bmp != null)
                 {
-                    he.Thumb = bmp;            // キャッシュ
                     AssignThumbToItem(he, bmp);
                 }
             }
             catch
             {
                 // 壊れ画像などは黙殺（プレースホルダーのまま）
+            }
+            finally
+            {
+                if (bmp != null) bmp.Dispose();
             }
         }
 
@@ -1168,10 +1175,12 @@ namespace Kiritori
         {
             _lvHistory.BeginUpdate();
             _lvHistory.Items.Clear();
+            var liveKeys = new HashSet<string>(StringComparer.Ordinal);
 
             foreach (var he in entries)
             {
                 string key = GetStableKey(he);
+                liveKeys.Add(key);
 
                 // 画像は必ず検証してから
                 var img = GetSafeThumb(he);
@@ -1208,6 +1217,56 @@ namespace Kiritori
             }
 
             _lvHistory.EndUpdate();
+            PruneThumbImages(liveKeys);
+        }
+
+        private void PruneThumbImages(HashSet<string> liveKeys)
+        {
+            if (_imgThumbs == null) return;
+            if (liveKeys == null) liveKeys = new HashSet<string>(StringComparer.Ordinal);
+
+            for (int i = _imgThumbs.Images.Count - 1; i >= 0; i--)
+            {
+                string key = _imgThumbs.Images.Keys[i];
+                if (key == "__placeholder__" || liveKeys.Contains(key)) continue;
+                try { _imgThumbs.Images.RemoveAt(i); } catch { }
+            }
+        }
+
+        private void DisposeHistoryTabResources()
+        {
+            StopLazyThumbLoad();
+
+            if (_subscribedToHistory && _historyChangedHandler != null)
+            {
+                try { Kiritori.Services.History.HistoryBridge.HistoryChanged -= _historyChangedHandler; } catch { }
+                _historyChangedHandler = null;
+                _subscribedToHistory = false;
+            }
+
+            if (_historyCultureChangedHandler != null)
+            {
+                try { SR.CultureChanged -= _historyCultureChangedHandler; } catch { }
+                _historyCultureChangedHandler = null;
+            }
+
+            _thumbQueue?.Clear();
+            _thumbQueue = null;
+            _allHistory.Clear();
+            _viewHistory.Clear();
+
+            if (_imgThumbs != null)
+            {
+                try { _imgThumbs.Images.Clear(); } catch { }
+                try { _imgThumbs.Dispose(); } catch { }
+                _imgThumbs = null;
+            }
+
+            if (_placeholder != null)
+            {
+                try { _placeholder.Dispose(); } catch { }
+                _placeholder = null;
+            }
         }
 
         private void DeleteSelected()
