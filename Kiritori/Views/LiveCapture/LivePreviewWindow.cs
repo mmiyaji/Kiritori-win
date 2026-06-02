@@ -44,7 +44,7 @@ namespace Kiritori.Views.LiveCapture
             _miOriginal, _miZoomIn, _miZoomOut, _miZoomPct,
             _miOpacity, _miPauseResume, _miSaveCurrentFrame, _miOpenPausedFrame, _miRealign, _miTopMost, _miClose,
             _miPref, _miExit, _miTitlebar, _miShowStats, _miHighlight,
-            _miPolicyRoot, _miPolicyAlways, _miPolicyHash,
+            _miPolicyRoot, _miPolicyAlways, _miPolicyHash, _miPolicyLowCopy,
             _miRecording, _miPrivacy, _miRecordingGif;
 
         private float _zoom = 1.0f;     // 表示倍率（1.0=100%）
@@ -164,7 +164,7 @@ namespace Kiritori.Views.LiveCapture
         private Bitmap _lastPresentedFrame;
 
         // メトリクス（ログ用 任意）
-        private long _hashTimeTotal = 0, _drawTimeTotal = 0;
+        private long _hashTimeTicksTotal = 0, _drawTimeTicksTotal = 0;
         private int _hashCount = 0, _drawCount = 0, _skipCount = 0;
         private int _srcCount = 0;   // 1秒窓の“入力(到来)”フレーム数
         private int _dispCount = 0;  // 1秒窓の“描画”フレーム数
@@ -252,7 +252,7 @@ namespace Kiritori.Views.LiveCapture
             try
             {
                 int v = Properties.Settings.Default.LivePreviewRenderPolicy;
-                _policy = (v == 0) ? RenderPolicy.AlwaysDraw : RenderPolicy.HashSkip;
+                _policy = ParseRenderPolicy(v);
             }
             catch { _policy = RenderPolicy.AlwaysDraw; }
             _renderPolicySettingsChangedHandler = (s, e) =>
@@ -260,7 +260,8 @@ namespace Kiritori.Views.LiveCapture
                 if (e.PropertyName == nameof(Properties.Settings.Default.LivePreviewRenderPolicy))
                 {
                     int nv = Properties.Settings.Default.LivePreviewRenderPolicy;
-                    _policy = (nv == 0) ? RenderPolicy.AlwaysDraw : RenderPolicy.HashSkip;
+                    _policy = ParseRenderPolicy(nv);
+                    ApplyBackendFrameOwnershipMode();
                     Log.Debug($"RenderPolicy changed to: {_policy}", "LivePreview");
                 }
             };
@@ -501,6 +502,38 @@ namespace Kiritori.Views.LiveCapture
 
         // 背景消去しない（_latest を全面に描く & フリッカ抑制）
         protected override void OnPaintBackground(PaintEventArgs e) { /* no-op */ }
+
+        private static RenderPolicy ParseRenderPolicy(int value)
+        {
+            switch (value)
+            {
+                case 1: return RenderPolicy.HashSkip;
+                case 2: return RenderPolicy.LowCopyGdi;
+                default: return RenderPolicy.AlwaysDraw;
+            }
+        }
+
+        private bool UsesTransferFrameOwnership()
+        {
+            return _policy == RenderPolicy.LowCopyGdi;
+        }
+
+        private string GetRenderPolicyLabel()
+        {
+            switch (_policy)
+            {
+                case RenderPolicy.HashSkip: return "Hash";
+                case RenderPolicy.LowCopyGdi: return "LowCopy";
+                default: return "Always";
+            }
+        }
+
+        private void ApplyBackendFrameOwnershipMode()
+        {
+            var gdi = _backend as GdiCaptureBackend;
+            if (gdi != null)
+                gdi.TransferFrameOwnership = UsesTransferFrameOwnership();
+        }
 
         // ===== HUD/枠 初期化（タイマーなど） =====
         private void BuildOverlay()
@@ -918,6 +951,7 @@ namespace Kiritori.Views.LiveCapture
             var rPhys = !SourceRectPhysical.IsEmpty ? SourceRectPhysical : DpiUtil.LogicalToPhysical(rLog);
             backend.CaptureRect = rLog;
             backend.CaptureRectPhysical = rPhys;
+            backend.TransferFrameOwnership = UsesTransferFrameOwnership();
             backend.FrameArrived += OnFrameArrived;
 
             // ★ 初期は「必ず除外ON」で立ち上げる（自分写り防止）
@@ -1027,8 +1061,8 @@ namespace Kiritori.Views.LiveCapture
                 }
                 else
                 {
-                    string info = string.Format("FPS: {0} / {1}  CPU: {2:F1}%  MEM: {3} MB",
-                        _dispFps, _srcFps, _cpuUsage, _memUsage / 1024 / 1024);
+                    string info = string.Format("FPS: {0} / {1}  CPU: {2:F1}%  MEM: {3} MB  {4}",
+                        _dispFps, _srcFps, _cpuUsage, _memUsage / 1024 / 1024, GetRenderPolicyLabel());
                     var loc = new Point(DpiScale(10), DpiScale(10));
                     var sz = g.MeasureString(info, _statFont);
                     var bgRect = new Rectangle(
@@ -1803,26 +1837,38 @@ namespace Kiritori.Views.LiveCapture
             _miPolicyRoot = new ToolStripMenuItem(SR.T("Menu.Rendering", "Rendering"));
             _miPolicyAlways = new ToolStripMenuItem(SR.T("Menu.AlwaysDraw", "Always draw")) { CheckOnClick = true };
             _miPolicyHash = new ToolStripMenuItem(SR.T("Menu.SkipByHash", "Skip by hash")) { CheckOnClick = true };
+            _miPolicyLowCopy = new ToolStripMenuItem("Low-copy GDI (experimental)") { CheckOnClick = true };
             void SyncPolicyChecks()
             {
                 if (_policy == RenderPolicy.AlwaysDraw)
                 {
                     _miPolicyAlways.Checked = true;
                     _miPolicyHash.Checked = false;
+                    _miPolicyLowCopy.Checked = false;
                     ShowOverlay("RENDERING: ALWAYS DRAW");
                 }
                 else if (_policy == RenderPolicy.HashSkip)
                 {
                     _miPolicyAlways.Checked = false;
                     _miPolicyHash.Checked = true;
+                    _miPolicyLowCopy.Checked = false;
                     ShowOverlay("RENDERING: HASH-SKIP");
+                }
+                else if (_policy == RenderPolicy.LowCopyGdi)
+                {
+                    _miPolicyAlways.Checked = false;
+                    _miPolicyHash.Checked = false;
+                    _miPolicyLowCopy.Checked = true;
+                    ShowOverlay("RENDERING: LOW-COPY GDI");
                 }
                 else
                 {
                     _miPolicyAlways.Checked = true;
                     _miPolicyHash.Checked = false;
+                    _miPolicyLowCopy.Checked = false;
                     ShowOverlay("RENDERING: ALWAYS DRAW");
                 }
+                ApplyBackendFrameOwnershipMode();
             }
             _miPolicyAlways.Click += (s, e) =>
             {
@@ -1842,10 +1888,20 @@ namespace Kiritori.Views.LiveCapture
                 ResetFpsWindow();
                 Log.Debug("RenderPolicy -> HashSkip", "LivePreview");
             };
+            _miPolicyLowCopy.Click += (s, e) =>
+            {
+                _policy = RenderPolicy.LowCopyGdi;
+                Properties.Settings.Default.LivePreviewRenderPolicy = 2;
+                Properties.Settings.Default.Save();
+                SyncPolicyChecks();
+                ResetFpsWindow();
+                Log.Debug("RenderPolicy -> LowCopyGdi", "LivePreview");
+            };
             _miPolicyRoot.DropDownItems.AddRange(new ToolStripItem[] {
                 _miFpsRoot,
                 _miPolicyAlways,
                 _miPolicyHash,
+                _miPolicyLowCopy,
             });
             // 既存の _ctx.Items.AddRange(...) に混ぜる場所へ
             SyncPolicyChecks();
@@ -2367,135 +2423,152 @@ namespace Kiritori.Views.LiveCapture
         private void OnFrameArrived(Bitmap bmp)
         {
             Log.Trace($"[LivePreview] FrameArrived: paused={_paused}, maxFps={_maxFps}, policy={_policy}", "LivePreview");
+            bool ownsIncoming = UsesTransferFrameOwnership();
+            bool consumedIncoming = false;
 
-            if (_paused) return;
-            Interlocked.Increment(ref _srcCount);
+            try
+            {
+                if (_paused) return;
+                Interlocked.Increment(ref _srcCount);
 
-            if (_fpsWindowWatch.ElapsedMilliseconds >= 1000)
-            {
-                _srcFps = Interlocked.Exchange(ref _srcCount, 0);
-                _dispFps = Interlocked.Exchange(ref _dispCount, 0);
-                _fps = _dispFps;
-                _fpsWindowWatch.Restart();
-                LogPerfStats();
-                if (IsHandleCreated) BeginInvoke((Action)(() => Invalidate())); // オーバーレイ更新
-            }
-            // MaxFPS 間引き
-            if (_maxFps > 0)
-            {
-                double minIntervalMs = 1000.0 / _maxFps;
-                if (_presentWatch.ElapsedMilliseconds < minIntervalMs) return;
-            }
-            _presentWatch.Restart();
-            if (_rec != null && bmp != null)
-            {
-                _rec.UpdateLatestFrame(bmp); // 到着ベースで差し替え、送出はワーカーが一定間隔で実施
-            }
-            if (_gifQueue != null && !_gifQueue.IsAddingCompleted && bmp != null)
-            {
-                try
+                if (_fpsWindowWatch.ElapsedMilliseconds >= 1000)
                 {
-                    int nowMs = (int)_gifClock.ElapsedMilliseconds;
-                    int deltaMs = nowMs - _gifLastMs; if (deltaMs < 0) deltaMs = 0;
-                    _gifLastMs = nowMs;
-                    int deltaCs = Math.Max(1, (int)Math.Round(deltaMs / 10.0));
-                    // 生フレームをクローンしてワーカーキューへ（前処理はワーカー側で実施）
-                    _gifQueue.TryAdd(((Bitmap)bmp.Clone(), deltaCs));
+                    _srcFps = Interlocked.Exchange(ref _srcCount, 0);
+                    _dispFps = Interlocked.Exchange(ref _dispCount, 0);
+                    _fps = _dispFps;
+                    _fpsWindowWatch.Restart();
+                    LogPerfStats();
+                    if (IsHandleCreated) BeginInvoke((Action)(() => Invalidate())); // オーバーレイ更新
                 }
-                catch (Exception ex)
+                // MaxFPS 間引き
+                if (_maxFps > 0)
                 {
-                    Log.Warn("Failed to enqueue GIF frame: " + ex.Message, "LivePreview");
+                    double minIntervalMs = 1000.0 / _maxFps;
+                    if (_presentWatch.ElapsedMilliseconds < minIntervalMs) return;
                 }
-            }
-            bool forceBySize = (_lastPresentedClientSize != this.ClientSize);
-            bool shouldDraw;
-
-            if (_policy == RenderPolicy.AlwaysDraw)
-            {
-                shouldDraw = true;
-            }
-            else // HashSkip
-            {
-                if (forceBySize || _lastPresentedFrame == null || _lastPresentedFrame.Size != bmp.Size)
+                _presentWatch.Restart();
+                if (_rec != null && bmp != null)
                 {
-                    shouldDraw = true; // サイズ変化・初回・サイズ不一致は描画
+                    _rec.UpdateLatestFrame(bmp); // 到着ベースで差し替え、送出はワーカーが一定間隔で実施
                 }
-                else
+                if (_gifQueue != null && !_gifQueue.IsAddingCompleted && bmp != null)
                 {
-                    var sw = Stopwatch.StartNew();
-                    int curHash = ComputeFastHash(bmp, step: 8);
-                    sw.Stop(); _hashTimeTotal += sw.ElapsedMilliseconds; _hashCount++;
-
-                    shouldDraw = (curHash != _lastFrameHash);
-                }
-            }
-
-            if (!shouldDraw)
-            {
-                _skipCount++;
-                return;
-            }
-
-            var swDraw = Stopwatch.StartNew();
-
-            Bitmap old = null;
-            lock (_frameSync)
-            {
-                old = _latest;
-                _latest = (Bitmap)bmp.Clone();
-
-                // 基準フレーム/ハッシュを更新（HashSkip時のみ必要だが常に更新してもOK）
-                _lastPresentedFrame?.Dispose();
-                _lastPresentedFrame = (Bitmap)_latest.Clone();
-                _lastFrameHash = ComputeFastHash(_latest, step: 8);
-                _lastFrameSize = _latest.Size;
-
-                _lastPresentedClientSize = this.ClientSize; // サイズ基準を更新
-            }
-            old?.Dispose();
-            Interlocked.Increment(ref _dispCount);
-            if (IsHandleCreated)
-            {
-                BeginInvoke((Action)(() =>
-                {
-                    Invalidate();
-                    if (!_firstFrameShown)
+                    try
                     {
-                        _firstFrameShown = true;
-                        _firstFrameReady = true;
-
-                        if (_tempExcludeUntilFirstFrame)
-                        {
-                            try
-                            {
-                                Log.Info("LivePreview: Disabled temporary capture exclusion after first frame.", "LivePreview");
-                                ApplyCaptureExclusion(false);
-                                if (_backend is GdiCaptureBackend gdi)
-                                    gdi.ExcludeWindow = IntPtr.Zero;
-                            }
-                            finally
-                            {
-                                _tempExcludeUntilFirstFrame = false;
-                            }
-                        }
-
-                        // 初期フレームが出たタイミングでオーバーレイを表示するならここで
-                        // ShowOverlay("LIVE PREVIEW KIRITORI");
+                        int nowMs = (int)_gifClock.ElapsedMilliseconds;
+                        int deltaMs = nowMs - _gifLastMs; if (deltaMs < 0) deltaMs = 0;
+                        _gifLastMs = nowMs;
+                        int deltaCs = Math.Max(1, (int)Math.Round(deltaMs / 10.0));
+                        // 生フレームをクローンしてワーカーキューへ（前処理はワーカー側で実施）
+                        _gifQueue.TryAdd(((Bitmap)bmp.Clone(), deltaCs));
                     }
-                }));
-            }
+                    catch (Exception ex)
+                    {
+                        Log.Warn("Failed to enqueue GIF frame: " + ex.Message, "LivePreview");
+                    }
+                }
+                bool forceBySize = (_lastPresentedClientSize != this.ClientSize);
+                bool shouldDraw;
 
-            swDraw.Stop();
-            _drawTimeTotal += swDraw.ElapsedMilliseconds; _drawCount++;
+                if (_policy == RenderPolicy.AlwaysDraw || _policy == RenderPolicy.LowCopyGdi)
+                {
+                    shouldDraw = true;
+                }
+                else // HashSkip
+                {
+                    if (forceBySize || _lastFrameSize.IsEmpty || _lastFrameSize != bmp.Size)
+                    {
+                        shouldDraw = true; // サイズ変化・初回・サイズ不一致は描画
+                    }
+                    else
+                    {
+                        var sw = Stopwatch.StartNew();
+                        int curHash = ComputeFastHash(bmp, step: 8);
+                        sw.Stop(); _hashTimeTicksTotal += sw.ElapsedTicks; _hashCount++;
+
+                        shouldDraw = (curHash != _lastFrameHash);
+                    }
+                }
+
+                if (!shouldDraw)
+                {
+                    _skipCount++;
+                    return;
+                }
+
+                var swDraw = Stopwatch.StartNew();
+
+                Bitmap old = null;
+                lock (_frameSync)
+                {
+                    old = _latest;
+                    if (ownsIncoming)
+                    {
+                        _latest = bmp;
+                        consumedIncoming = true;
+                    }
+                    else
+                    {
+                        _latest = (Bitmap)bmp.Clone();
+                    }
+
+                    // 基準フレームはコピーせず、サイズとハッシュだけ保持する
+                    _lastFrameHash = ComputeFastHash(_latest, step: 8);
+                    _lastFrameSize = _latest.Size;
+
+                    _lastPresentedClientSize = this.ClientSize; // サイズ基準を更新
+                }
+                old?.Dispose();
+                Interlocked.Increment(ref _dispCount);
+                if (IsHandleCreated)
+                {
+                    BeginInvoke((Action)(() =>
+                    {
+                        Invalidate();
+                        if (!_firstFrameShown)
+                        {
+                            _firstFrameShown = true;
+                            _firstFrameReady = true;
+
+                            if (_tempExcludeUntilFirstFrame)
+                            {
+                                try
+                                {
+                                    Log.Info("LivePreview: Disabled temporary capture exclusion after first frame.", "LivePreview");
+                                    ApplyCaptureExclusion(false);
+                                    if (_backend is GdiCaptureBackend gdi)
+                                        gdi.ExcludeWindow = IntPtr.Zero;
+                                }
+                                finally
+                                {
+                                    _tempExcludeUntilFirstFrame = false;
+                                }
+                            }
+
+                            // 初期フレームが出たタイミングでオーバーレイを表示するならここで
+                            // ShowOverlay("LIVE PREVIEW KIRITORI");
+                        }
+                    }));
+                }
+
+                swDraw.Stop();
+                _drawTimeTicksTotal += swDraw.ElapsedTicks; _drawCount++;
+            }
+            finally
+            {
+                if (ownsIncoming && !consumedIncoming && bmp != null)
+                    bmp.Dispose();
+            }
         }
         private static int ClampDelay(int cs) => Math.Min(65535, Math.Max(2, cs));
 
         private void LogPerfStats()
         {
-            double hashAvg = (_hashCount > 0) ? (double)_hashTimeTotal / _hashCount : 0;
-            double drawAvg = (_drawCount > 0) ? (double)_drawTimeTotal / _drawCount : 0;
-            Log.Trace($"PerfStats: DrawFPS={_dispFps}, SrcFPS={_srcFps}, Policy={_policy}, Skip={_skipCount}, HashAvg={hashAvg:F3}ms, DrawAvg={drawAvg:F3}ms (hashCount={_hashCount}, drawCount={_drawCount})", "LivePreview");
-            _hashTimeTotal = _drawTimeTotal = 0;
+            double tickToMs = 1000.0 / Stopwatch.Frequency;
+            double hashAvg = (_hashCount > 0) ? (_hashTimeTicksTotal * tickToMs) / _hashCount : 0;
+            double drawAvg = (_drawCount > 0) ? (_drawTimeTicksTotal * tickToMs) / _drawCount : 0;
+            Log.Info($"PerfStats: DrawFPS={_dispFps}, SrcFPS={_srcFps}, Policy={_policy}, Skip={_skipCount}, HashAvg={hashAvg:F3}ms, DrawAvg={drawAvg:F3}ms (hashCount={_hashCount}, drawCount={_drawCount})", "LivePreview");
+            _hashTimeTicksTotal = _drawTimeTicksTotal = 0;
             _hashCount = _drawCount = _skipCount = 0;
         }
 

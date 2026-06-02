@@ -11,6 +11,7 @@ namespace Kiritori.Views.LiveCapture
         public event Action<Bitmap> FrameArrived;
         private volatile int _maxFps = 15;
         public int MaxFps { get => _maxFps; set => _maxFps = value; }
+        public bool TransferFrameOwnership { get; set; } = false;
 
         public IntPtr ExcludeWindow { get; set; } // 使わないなら未設定でOK
 
@@ -128,8 +129,15 @@ namespace Kiritori.Views.LiveCapture
                         }
                         if (toSend != null)
                         {
-                            try { handler.Invoke(toSend); }
-                            finally { toSend.Dispose(); }
+                            if (TransferFrameOwnership)
+                            {
+                                handler.Invoke(toSend);
+                            }
+                            else
+                            {
+                                try { handler.Invoke(toSend); }
+                                finally { toSend.Dispose(); }
+                            }
                         }
                     }
 

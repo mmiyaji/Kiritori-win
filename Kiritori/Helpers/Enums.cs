@@ -89,7 +89,8 @@ namespace Kiritori.Helpers
     public enum RenderPolicy
     {
         AlwaysDraw = 0,
-        HashSkip = 1
+        HashSkip = 1,
+        LowCopyGdi = 2
     }
     public enum OutputKind {
         Mp4,
