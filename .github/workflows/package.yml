@@ -1,0 +1,106 @@
+name: Package Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without the v prefix
+        required: false
+        type: string
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-latest
+
+    env:
+      CONFIGURATION: Release
+      PLATFORM: x64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $version = "${{ inputs.version }}"
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            $refName = "${{ github.ref_name }}"
+            $version = $refName.TrimStart('v')
+          }
+          if ($version -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Version must use major.minor.patch format. Actual: '$version'"
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "package_version=$version.0" >> $env:GITHUB_OUTPUT
+
+      - name: Restore packages
+        shell: pwsh
+        run: |
+          nuget restore Kiritori.sln
+          msbuild KiritoriPackage\KiritoriPackage.wapproj /t:Restore /m /p:Configuration=$env:CONFIGURATION /p:Platform=$env:PLATFORM
+
+      - name: Update manifest version
+        shell: pwsh
+        run: |
+          $path = Resolve-Path "KiritoriPackage\Package.appxmanifest"
+          [xml]$manifest = Get-Content $path
+          $manifest.Package.Identity.Version = "${{ steps.version.outputs.package_version }}"
+          $manifest.Save($path)
+
+      - name: Build application
+        shell: pwsh
+        run: >
+          msbuild Kiritori\Kiritori.csproj
+          /t:Build
+          /m
+          /p:Configuration=$env:CONFIGURATION
+          /p:Platform=$env:PLATFORM
+          /p:Version=${{ steps.version.outputs.version }}
+          /p:UserVersion=${{ steps.version.outputs.version }}
+          /p:EmbedVersionInfo=true
+
+      - name: Build MSIX package
+        shell: pwsh
+        run: >
+          msbuild KiritoriPackage\KiritoriPackage.wapproj
+          /t:Publish
+          /m
+          /p:Configuration=$env:CONFIGURATION
+          /p:Platform=$env:PLATFORM
+          /p:AppxBundle=Always
+          /p:AppxBundlePlatforms=x64
+          /p:UapAppxPackageBuildMode=StoreUpload
+          /p:AppxPackageSigningEnabled=false
+          /p:BuildProjectReferences=false
+          /p:UserVersion=${{ steps.version.outputs.version }}
+          /p:EmbedVersionInfo=true
+
+      - name: Stage artifacts
+        shell: pwsh
+        run: |
+          $artifactRoot = New-Item -ItemType Directory -Force -Path "artifacts\package"
+          Get-ChildItem -Path "KiritoriPackage" -Recurse -Include *.msix,*.msixbundle,*.msixupload,*.appx,*.appxbundle,*.appxupload |
+            Where-Object { $_.FullName -match '\\(bin|AppPackages)\\' } |
+            Copy-Item -Destination $artifactRoot -Force
+          Get-ChildItem $artifactRoot | ForEach-Object {
+            $hash = Get-FileHash -Algorithm SHA256 $_.FullName
+            "{0}  {1}" -f $hash.Hash, $_.Name
+          } | Set-Content -Encoding UTF8 (Join-Path $artifactRoot "SHA256SUMS.txt")
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kiritori-${{ steps.version.outputs.version }}-package
+          path: artifacts/package
+          if-no-files-found: error
