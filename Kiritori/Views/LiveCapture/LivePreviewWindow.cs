@@ -3428,7 +3428,9 @@ namespace Kiritori.Views.LiveCapture
         private void StartRecordingMp4(string path, int width, int height, int fps)
         {
             Log.Debug($"StartRecordingMp4 path='{path}' size={width}x{height} fps={fps}", "LivePreview");
-            _rec?.Dispose();
+            var old = Interlocked.Exchange(ref _rec, null);
+            if (old != null) StopRecorderInBackground(old, openWhenDone: false);
+
             _rec = new FfmpegPipeRecorder(
                 new FfmpegPipeOptions
                 {
@@ -3444,28 +3446,56 @@ namespace Kiritori.Views.LiveCapture
 
         private void StopRecording()
         {
-            try
-            {
-                _rec?.Dispose();
+            var rec = Interlocked.Exchange(ref _rec, null);
+            if (rec == null) return;
 
-                var outPath = _rec?.Options?.OutputPath;
+            StopRecorderInBackground(rec, openWhenDone: true);
+        }
+
+        private void StopRecorderInBackground(FfmpegPipeRecorder rec, bool openWhenDone)
+        {
+            if (rec == null) return;
+            var outPath = rec.Options?.OutputPath;
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await rec.StopAsync(rec.GracefulExitTimeoutMs).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    Log.Debug("Stop recorder EX: " + ex.Message, "LivePreview");
+                }
+                finally
+                {
+                    try { rec.Dispose(); } catch { }
+                }
+
+                if (!openWhenDone) return;
                 if (!string.IsNullOrEmpty(outPath) && File.Exists(outPath))
                 {
                     try
                     {
-                        // エクスプローラーで選択状態で開く
-                        Process.Start("explorer.exe", $"/select,\"{outPath}\"");
+                        BeginInvoke((Action)(() =>
+                        {
+                            try
+                            {
+                                Process.Start("explorer.exe", $"/select,\"{outPath}\"");
+                                ShowOverlay("REC SAVED");
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.Debug("Open Explorer EX: " + ex.Message, "LivePreview");
+                            }
+                        }));
                     }
                     catch (Exception ex)
                     {
-                        Log.Debug("Open Explorer EX: " + ex.Message, "LivePreview");
+                        Log.Debug("Notify recorder stop EX: " + ex.Message, "LivePreview");
                     }
                 }
-            }
-            finally
-            {
-                _rec = null;
-            }
+            });
         }
         private void ShowGifStartNoticeIfNeeded()
         {

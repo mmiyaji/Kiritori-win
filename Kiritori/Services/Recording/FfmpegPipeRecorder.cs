@@ -361,7 +361,7 @@ namespace Kiritori.Services.Recording
                     if (!ReferenceEquals(lastSent, toSend))
                     {
                         lastSent?.Dispose();
-                        lastSent = new Bitmap(toSend); // 繰り返し用
+                        lastSent = toSend; // new frames are owned by the worker from here.
                     }
                 }
             }
@@ -471,7 +471,22 @@ namespace Kiritori.Services.Recording
         {
             if (_disposed) return;
             _disposed = true;
-            try { StopAsync(GracefulExitTimeoutMs).GetAwaiter().GetResult(); } catch { /* ignore */ }
+            if (_state == 0) return;
+
+            try
+            {
+                if (SynchronizationContext.Current != null)
+                {
+                    Task.Run(async () =>
+                    {
+                        try { await StopAsync(GracefulExitTimeoutMs).ConfigureAwait(false); } catch { /* ignore */ }
+                    });
+                    return;
+                }
+
+                StopAsync(GracefulExitTimeoutMs).GetAwaiter().GetResult();
+            }
+            catch { /* ignore */ }
         }
     }
 }

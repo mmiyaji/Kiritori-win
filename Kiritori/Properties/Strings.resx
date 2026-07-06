@@ -888,6 +888,12 @@
   <data name="History.Dialog.DeleteConfirmMany" xml:space="preserve">
     <value>Delete the selected {0} item(s)?</value>
   </data>
+  <data name="History.Dialog.DeleteFilesWarning" xml:space="preserve">
+    <value>{0} captured file(s) will be moved to the Recycle Bin.</value>
+  </data>
+  <data name="History.Dialog.DeleteHistoryOnlyNotice" xml:space="preserve">
+    <value>{0} item(s) will only be removed from history.</value>
+  </data>
   <data name="History.Dialog.OcrTitle" xml:space="preserve">
     <value>OCR</value>
   </data>

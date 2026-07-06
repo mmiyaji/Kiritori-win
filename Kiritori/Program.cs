@@ -333,8 +333,13 @@ namespace Kiritori
         {
             try
             {
-                Kiritori.Properties.Settings.Default.Upgrade();
-                Kiritori.Properties.Settings.Default.Save();
+                var settings = Kiritori.Properties.Settings.Default;
+                if (settings.UpgradeRequired)
+                {
+                    settings.Upgrade();
+                    settings.UpgradeRequired = false;
+                    settings.Save();
+                }
             }
             catch (ConfigurationErrorsException ex)
             {
@@ -342,8 +347,10 @@ namespace Kiritori
                 if (!string.IsNullOrEmpty(bad) && File.Exists(bad))
                 {
                     try { File.Delete(bad); } catch { }
-                    Kiritori.Properties.Settings.Default.Reload();
-                    Kiritori.Properties.Settings.Default.Save();
+                    var settings = Kiritori.Properties.Settings.Default;
+                    settings.Reload();
+                    settings.UpgradeRequired = false;
+                    settings.Save();
                     Log.Debug("user.config reset: " + bad, "Startup");
                 }
             }

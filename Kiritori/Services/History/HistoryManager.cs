@@ -65,9 +65,13 @@ namespace Kiritori.Services.History
             lock (_sync)
             {
                 _entries.Insert(0, he);      // 新しいものが先頭
-                Prune_NoLock();
+                bool pruned = Prune_NoLock();
                 _dirty = true;
-                if (saveImmediately) AppendOneLine_NoLock(he);
+                if (saveImmediately)
+                {
+                    if (pruned) SaveAll_NoLock();
+                    else AppendOneLine_NoLock(he);
+                }
             }
             OnChanged();
         }
@@ -82,6 +86,7 @@ namespace Kiritori.Services.History
                 removed = _entries.Remove(he);
                 if (removed)
                 {
+                    DisposeThumb(he);
                     _dirty = true;
                     if (saveImmediately) SaveAll_NoLock();  // 単純化のため全書き直し
                 }
@@ -94,6 +99,7 @@ namespace Kiritori.Services.History
         {
             lock (_sync)
             {
+                foreach (var he in _entries) DisposeThumb(he);
                 _entries.Clear();
                 _dirty = true;
                 if (saveImmediately && File.Exists(_tsvPath))
@@ -218,13 +224,23 @@ namespace Kiritori.Services.History
             }
         }
 
-        private void Prune_NoLock()
+        private bool Prune_NoLock()
         {
-            if (_entries.Count <= _maxEntries) return;
+            if (_entries.Count <= _maxEntries) return false;
 
             // 末尾から削る（古いもの）
             int removeCount = _entries.Count - _maxEntries;
+            var removed = _entries.GetRange(_maxEntries, removeCount);
             _entries.RemoveRange(_maxEntries, removeCount);
+            foreach (var he in removed) DisposeThumb(he);
+            return true;
+        }
+
+        private static void DisposeThumb(HistoryEntry he)
+        {
+            if (he?.Thumb == null) return;
+            try { he.Thumb.Dispose(); } catch { }
+            he.Thumb = null;
         }
 
         private void OnChanged()

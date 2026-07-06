@@ -888,6 +888,12 @@
   <data name="History.Dialog.DeleteConfirmMany" xml:space="preserve">
     <value>選択された {0} 件を削除しますか？</value>
   </data>
+  <data name="History.Dialog.DeleteFilesWarning" xml:space="preserve">
+    <value>キャプチャー由来のファイル {0} 件をごみ箱へ移動します。</value>
+  </data>
+  <data name="History.Dialog.DeleteHistoryOnlyNotice" xml:space="preserve">
+    <value>{0} 件は履歴からのみ削除します。</value>
+  </data>
   <data name="History.Dialog.OcrTitle" xml:space="preserve">
     <value>OCR</value>
   </data>

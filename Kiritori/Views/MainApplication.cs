@@ -343,6 +343,8 @@ namespace Kiritori
 
                 UnregisterHotKey(this.Handle, HOTKEY_ID_CAPTURE);
                 UnregisterHotKey(this.Handle, HOTKEY_ID_OCR);
+                UnregisterHotKey(this.Handle, HOTKEY_ID_LIVE);
+                UnregisterHotKey(this.Handle, HOTKEY_ID_FIXED);
                 SaveHistoryToIndex();
             }
             catch { }

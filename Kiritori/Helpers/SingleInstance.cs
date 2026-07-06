@@ -5,15 +5,21 @@ using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace Kiritori.Helpers
 {
     internal static class SingleInstance
     {
+        private const int MaxIpcPathCount = 64;
         // SingleInstance.cs
         private static readonly string UserName = WindowsIdentity.GetCurrent()?.User?.Value ?? Environment.UserName;
         public static readonly string MutexName = $@"Local\Kiritori.SingleInstance.{UserName}";
         private static readonly string PipeName = $@"Kiritori.SingleInstance.{UserName}";
+        private static readonly HashSet<string> ImageExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".png", ".jpg", ".jpeg", ".bmp", ".gif"
+        };
 
         private static Thread _serverThread;
         private static volatile bool _running;
@@ -26,6 +32,7 @@ namespace Kiritori.Helpers
         /// </summary>
         public static bool TrySendToExisting(string[] paths, int singleAttemptMs = 500, int maxAttempts = 8)
         {
+            var sendPaths = NormalizeImagePaths(paths);
             for (int i = 0; i < maxAttempts; i++)
             {
                 try
@@ -35,8 +42,8 @@ namespace Kiritori.Helpers
                         client.Connect(singleAttemptMs); // ここで待つ
                         using (var bw = new BinaryWriter(client, Encoding.UTF8))
                         {
-                            bw.Write(paths?.Length ?? 0);
-                            if (paths != null) foreach (var p in paths) bw.Write(p ?? string.Empty);
+                            bw.Write(sendPaths.Length);
+                            foreach (var p in sendPaths) bw.Write(p ?? string.Empty);
                             bw.Flush();
                         }
                         return true; // 送れた
@@ -71,8 +78,12 @@ namespace Kiritori.Helpers
                             using (var br = new BinaryReader(server, Encoding.UTF8))
                             {
                                 int n = br.ReadInt32();
-                                var list = new string[Math.Max(0, n)];
-                                for (int i = 0; i < list.Length; i++) list[i] = br.ReadString();
+                                if (n < 0 || n > MaxIpcPathCount) throw new InvalidDataException("Invalid IPC file count.");
+
+                                var raw = new string[n];
+                                for (int i = 0; i < raw.Length; i++) raw[i] = br.ReadString();
+                                var list = NormalizeImagePaths(raw);
+                                if (list.Length == 0) continue;
 
                                 var h = _onFiles;
                                 if (h != null) h(list);
@@ -99,9 +110,40 @@ namespace Kiritori.Helpers
         public static void StopServer()
         {
             _running = false;
-            try { _serverThread?.Join(200); } catch { }
+            try
+            {
+                using (var client = new NamedPipeClientStream(".", PipeName, PipeDirection.Out, PipeOptions.None))
+                    client.Connect(100);
+            }
+            catch { }
+            try { _serverThread?.Join(500); } catch { }
         }
 
+        private static string[] NormalizeImagePaths(IEnumerable<string> paths)
+        {
+            if (paths == null) return Array.Empty<string>();
+            var result = new List<string>();
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var raw in paths)
+            {
+                if (result.Count >= MaxIpcPathCount) break;
+                if (string.IsNullOrWhiteSpace(raw)) continue;
+
+                try
+                {
+                    var path = raw.Trim('"');
+                    if (!File.Exists(path)) continue;
+                    if (!ImageExtensions.Contains(Path.GetExtension(path))) continue;
+
+                    path = Path.GetFullPath(path);
+                    if (seen.Add(path)) result.Add(path);
+                }
+                catch { }
+            }
+
+            return result.ToArray();
+        }
 
     }
 }

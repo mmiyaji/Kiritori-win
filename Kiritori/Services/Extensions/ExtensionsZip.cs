@@ -8,27 +8,29 @@ namespace Kiritori.Services.Extensions
     {
         public static void ExtractZipAllowOverwrite(string zipPath, string targetDir)
         {
-            Directory.CreateDirectory(targetDir);
+            var root = Path.GetFullPath(targetDir);
+            if (!root.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal))
+                root += Path.DirectorySeparatorChar;
+            Directory.CreateDirectory(root);
+
             using (var za = ZipFile.OpenRead(zipPath))
             {
                 foreach (var entry in za.Entries)
                 {
+                    var destPath = Path.Combine(root, entry.FullName);
+                    var full = Path.GetFullPath(destPath);
+                    if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidOperationException("Invalid zip entry path.");
+
                     // ディレクトリ判定
                     if (string.IsNullOrEmpty(entry.Name))
                     {
-                        Directory.CreateDirectory(Path.Combine(targetDir, entry.FullName));
+                        Directory.CreateDirectory(full);
                         continue;
                     }
 
-                    var destPath = Path.Combine(targetDir, entry.FullName);
-                    var dir = Path.GetDirectoryName(destPath);
+                    var dir = Path.GetDirectoryName(full);
                     if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-
-                    // パストラバーサル防止
-                    var full = Path.GetFullPath(destPath);
-                    var root = Path.GetFullPath(targetDir) + Path.DirectorySeparatorChar;
-                    if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase))
-                        throw new InvalidOperationException("Invalid zip entry path.");
 
                     // 上書き抽出（ロック時は一度削除を試す）
                     try

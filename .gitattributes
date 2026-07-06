@@ -10,4 +10,10 @@
 *.ps1 text eol=crlf
 *.txt text eol=crlf
 
+# Legacy tracked CRLF blobs. Keep them out of line-ending renormalization
+# so small edits do not become full-file diffs.
+/Kiritori/App.config -text
+/Kiritori/Program.cs -text
+/Kiritori/Properties/Settings.Designer.cs -text
+
 *.dll binary

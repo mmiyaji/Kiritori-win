@@ -9,6 +9,7 @@ using System.Configuration;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using Microsoft.VisualBasic.FileIO;
 using System.Windows.Forms;
 using System.Text;
 using System.Threading.Tasks;
@@ -506,79 +507,6 @@ namespace Kiritori
                 _btnDelete.Text = SR.T("History.Toolbar.DeleteSelected", "Delete Selected");
         }
 
-        private void PopulateHistoryItems(IEnumerable<HistoryEntry> entries)
-        {
-            if (entries == null) return;
-
-            // ListView 項目を即時構築（表示を先に速く）
-            var items = new List<ListViewItem>();
-
-            // 1) まず ListView を空にしてから追加（ちらつき抑制）
-            _lvHistory.BeginUpdate();
-            _lvHistory.Items.Clear();
-
-            // 2) 各エントリごとにプレースホルダー or 既存Thumbで即表示
-            foreach (var he in entries)
-            {
-                if (he == null) continue;
-
-                // ▼ ImageList のキーはできるだけ安定 & 衝突回避
-                //    Path が無い（クリップボード）場合や同ファイルの複数履歴も区別できるよう LoadedAt.Ticks を混ぜます
-                string keyStable = (he.Path ?? "clipboard")
-                                + "|" + he.LoadedAt.Ticks.ToString()
-                                + "|" + he.Resolution.Width + "x" + he.Resolution.Height;
-
-                var name = Path.GetFileName(he.Path) ?? "(clipboard)";
-                var tip = he.Path ?? "(clipboard)";
-                if (!string.IsNullOrEmpty(he.Description))
-                    tip += "\r\n" + he.Description;   // OCR 結果を追記
-
-                var it = new ListViewItem(name)
-                {
-                    Tag = he,
-                    ImageKey = keyStable,
-                    ToolTipText = tip
-                };
-                items.Add(it);
-                Log.Debug($"History: Add ListViewItem for '{name}' with key '{keyStable}'");
-                // ▼ ImageList 登録
-                if (!_imgThumbs.Images.ContainsKey(keyStable))
-                {
-                    if (he.Thumb != null)
-                    {
-                        // 既存のトレイ用サムネをそのまま使うとサイズが小さい/比率が合わない場合があるので、
-                        // 履歴タブ用に一度フィット変換してから入れます。
-                        try
-                        {
-                            using (var fit = RenderThumb(he.Thumb, THUMB_W, THUMB_H))
-                                SafeAddThumb(keyStable, fit);
-                        }
-                        catch
-                        {
-                            // 壊れ画像などはプレースホルダーにフォールバック
-                            SafeAddThumb(keyStable, _placeholder);
-                        }
-                    }
-                    else
-                    {
-                        // まだサムネが無い → ひとまずプレースホルダー
-                        SafeAddThumb(keyStable, _placeholder);
-                    }
-                }
-            }
-
-            // 3) 一括追加して描画更新
-            if (items.Count > 0)
-                _lvHistory.Items.AddRange(items.ToArray());
-            _lvHistory.EndUpdate();
-
-            // 4) LazyLoad の生成キューを組み立て（Thumb が無いものだけを積む）
-            var needs = new List<HistoryEntry>();
-            foreach (var he in entries)
-                if (he != null && he.Thumb == null) needs.Add(he);
-
-            _thumbQueue = new Queue<HistoryEntry>(needs);
-        }
         private int _historyHotIndex = -1;
 
         private void LvHistory_MouseMove(object sender, MouseEventArgs e)
@@ -1143,11 +1071,7 @@ namespace Kiritori
             {
                 if (img.Width <= 0 || img.Height <= 0) return;
 
-                // 必ずクローンを渡す → ImageList が独立コピーを持てる
-                using (var clone = new Bitmap(img))
-                {
-                    _imgThumbs.Images.Add(key, (Bitmap)clone.Clone());
-                }
+                _imgThumbs.Images.Add(key, new Bitmap(img));
             }
             catch
             {
@@ -1284,6 +1208,11 @@ namespace Kiritori
             var names = list
                 .Take(5)
                 .Select(he => System.IO.Path.GetFileName(he.Path) ?? "(clipboard)");
+            var captureFilesToDelete = list
+                .Where(he => he.Method == LoadMethod.Capture)
+                .Where(he => !string.IsNullOrEmpty(he.Path) && File.Exists(he.Path))
+                .ToList();
+            int historyOnlyCount = list.Count - captureFilesToDelete.Count;
 
             var title = SR.T("History.Dialog.DeleteTitle", "Delete History");
             string msg;
@@ -1300,6 +1229,16 @@ namespace Kiritori
                 msg = SR.F("History.Dialog.DeleteConfirmMany",
                         "Delete the selected {0} item(s)?", list.Count);
             }
+            if (captureFilesToDelete.Count > 0)
+            {
+                msg += "\n\n" + SR.F("History.Dialog.DeleteFilesWarning",
+                    "{0} captured file(s) will be moved to the Recycle Bin.", captureFilesToDelete.Count);
+            }
+            if (historyOnlyCount > 0)
+            {
+                msg += "\n" + SR.F("History.Dialog.DeleteHistoryOnlyNotice",
+                    "{0} item(s) will only be removed from history.", historyOnlyCount);
+            }
 
             if (MessageBox.Show(this, msg, title,
                 MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
@@ -1309,18 +1248,20 @@ namespace Kiritori
             {
                 Log.Debug("Pref->RequestDelete: " + string.Join(", ",
                     list.Select(h => (h.Path ?? "clipboard") + "|" + h.LoadedAt.Ticks + "|" + h.Resolution.Width + "x" + h.Resolution.Height)), "History");
-                // 1) 実ファイル削除（存在するものだけ）
-                foreach (var he in list)
+                // 1) Captured files are app-owned; opened/external files are history-only.
+                foreach (var he in captureFilesToDelete)
                 {
                     try
                     {
-                        if (!string.IsNullOrEmpty(he.Path) && File.Exists(he.Path))
-                            File.Delete(he.Path);
-                        Log.Debug($"History: Deleted file '{he.Path}'", "History");
+                        FileSystem.DeleteFile(
+                            he.Path,
+                            UIOption.OnlyErrorDialogs,
+                            RecycleOption.SendToRecycleBin);
+                        Log.Debug($"History: Recycled captured file '{he.Path}'", "History");
                     }
                     catch
                     {
-                        Log.Debug($"History: Failed to delete file '{he.Path}'", "History");
+                        Log.Debug($"History: Failed to recycle captured file '{he.Path}'", "History");
                     }
                 }
 

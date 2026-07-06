@@ -17,7 +17,7 @@ namespace Kiritori.Services.History
         private readonly string _dir;
         private readonly int _w, _h;
         private readonly int _lruCap;
-        private readonly ConcurrentQueue<HistoryEntry> _q = new ConcurrentQueue<HistoryEntry>();
+        private readonly BlockingCollection<HistoryEntry> _q = new BlockingCollection<HistoryEntry>(new ConcurrentQueue<HistoryEntry>());
         private readonly ConcurrentDictionary<string, byte> _inflight = new ConcurrentDictionary<string, byte>();
         private readonly Dictionary<string, Bitmap> _lruMap = new Dictionary<string, Bitmap>();
         private readonly LinkedList<string> _lruOrder = new LinkedList<string>();
@@ -43,6 +43,7 @@ namespace Kiritori.Services.History
 
         public void Dispose()
         {
+            try { _q.CompleteAdding(); } catch { }
             _cts.Cancel();
             try { _worker.Wait(1500); } catch { }
             lock (_lruLock)
@@ -52,6 +53,7 @@ namespace Kiritori.Services.History
                 _lruOrder.Clear();
                 _lruNodes.Clear();
             }
+            _q.Dispose();
             _cts.Dispose();
         }
 
@@ -68,19 +70,7 @@ namespace Kiritori.Services.History
                 g.DrawImage(bmp, rect); return;
             }
 
-            // ディスク
-            using (var fromDisk = TryLoadFromDisk(key))
-            {
-                if (fromDisk != null)
-                {
-                    var mem = AddToLru(key, new Bitmap(fromDisk));
-                    g.DrawImage(mem, rect);
-                    Touch(key);
-                    return;
-                }
-            }
-
-            // 生成依頼
+            // Disk I/O and thumbnail generation stay off the paint path.
             EnqueueIfNeeded(he);
             DrawPlaceholder(g, rect, placeholder);
         }
@@ -136,39 +126,83 @@ namespace Kiritori.Services.History
         private void EnqueueIfNeeded(HistoryEntry he)
         {
             var key = StableKey(he);
-            if (_inflight.TryAdd(key, 0)) _q.Enqueue(he);
+            if (!_inflight.TryAdd(key, 0)) return;
+
+            try
+            {
+                _q.Add(he, _cts.Token);
+            }
+            catch
+            {
+                byte ignored;
+                _inflight.TryRemove(key, out ignored);
+            }
         }
 
-        private async Task WorkerLoop()
+        private void WorkerLoop()
         {
-            while (!_cts.IsCancellationRequested)
+            try
             {
-                if (!_q.TryDequeue(out var he))
+                foreach (var he in _q.GetConsumingEnumerable(_cts.Token))
                 {
-                    await Task.Delay(50, _cts.Token).ConfigureAwait(false);
-                    continue;
-                }
-                var key = StableKey(he);
-                try
-                {
-                    var dest = PathOf(key);
-                    if (!File.Exists(dest))
+                    var key = StableKey(he);
+                    try
                     {
-                        using (var src = SourceFor(he))
+                        Bitmap existing;
+                        if (TryGetFromLru(key, out existing)) continue;
+
+                        using (var cached = TryLoadFromDisk(key))
                         {
-                            if (src != null)
-                                using (var th = RenderThumb(src, _w, _h))
-                                    SaveJpeg(dest, th, 85L);
+                            if (cached != null)
+                            {
+                                AddLoadedThumbToLru(key, cached);
+                                Touch(key);
+                                ThumbReady?.Invoke(key);
+                                continue;
+                            }
+                        }
+
+                        var dest = PathOf(key);
+                        if (!File.Exists(dest))
+                        {
+                            using (var src = SourceFor(he))
+                            {
+                                if (src != null)
+                                    using (var th = RenderThumb(src, _w, _h))
+                                        SaveJpeg(dest, th, 85L);
+                            }
+                        }
+
+                        using (var generated = TryLoadFromDisk(key))
+                        {
+                            if (generated != null)
+                            {
+                                AddLoadedThumbToLru(key, generated);
+                                Touch(key);
+                                ThumbReady?.Invoke(key);
+                            }
                         }
                     }
-                    ThumbReady?.Invoke(key);
-                }
-                catch { }
-                finally { byte _; _inflight.TryRemove(key, out _); }
+                    catch { }
+                    finally { byte ignored; _inflight.TryRemove(key, out ignored); }
 
-                if (++_workCount % 20 == 0)
-                    try { CleanupIfOver(200L * 1024 * 1024); } catch { }
+                    if (++_workCount % 20 == 0)
+                        try { CleanupIfOver(200L * 1024 * 1024); } catch { }
+                }
             }
+            catch (OperationCanceledException) { }
+        }
+
+        private void AddLoadedThumbToLru(string key, Bitmap bmp)
+        {
+            if (bmp == null) return;
+            if (_lruCap <= 0)
+            {
+                bmp.Dispose();
+                return;
+            }
+
+            AddToLru(key, new Bitmap(bmp));
         }
 
         private static Bitmap SourceFor(HistoryEntry he)
