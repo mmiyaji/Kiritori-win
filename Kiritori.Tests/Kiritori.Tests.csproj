@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <LangVersion>7.3</LangVersion>
+    <NuGetPackageRoot Condition="'$(NuGetPackageRoot)' == ''">$(USERPROFILE)\.nuget\packages\</NuGetPackageRoot>
+    <CoverageResultsDirectory>$(MSBuildProjectDirectory)\TestResults\C1Coverage</CoverageResultsDirectory>
+    <CoverageRunSettings>$(MSBuildProjectDirectory)\c1.runsettings</CoverageRunSettings>
+    <CoverageThreshold>95</CoverageThreshold>
+    <XUnitAdapterPath Condition="'$(XUnitAdapterPath)' == ''">$(NuGetPackageRoot)xunit.runner.visualstudio\3.1.5\build\net472</XUnitAdapterPath>
+    <CoverletCollectorPath Condition="'$(CoverletCollectorPath)' == ''">$(NuGetPackageRoot)coverlet.collector\6.0.2\build\netstandard2.0</CoverletCollectorPath>
+    <VSTestConsolePath Condition="'$(VSTestConsolePath)' == '' and Exists('C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\Extensions\TestPlatform\vstest.console.exe')">C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\Extensions\TestPlatform\vstest.console.exe</VSTestConsolePath>
+    <VSTestConsolePath Condition="'$(VSTestConsolePath)' == '' and Exists('C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\TestPlatform\vstest.console.exe')">C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\TestPlatform\vstest.console.exe</VSTestConsolePath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="6.0.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Compile Include="..\Kiritori\Helpers\Enums.cs" Link="ProductionSources\Enums.cs" />
+    <Compile Include="..\Kiritori\Helpers\HotkeyUtil.cs" Link="ProductionSources\HotkeyUtil.cs" />
+  </ItemGroup>
+
+  <Target Name="CleanC1CoverageResults">
+    <RemoveDir Directories="$(CoverageResultsDirectory)" />
+    <MakeDir Directories="$(CoverageResultsDirectory)" />
+  </Target>
+
+  <Target Name="RunVSTestForCoverage" DependsOnTargets="Build;CleanC1CoverageResults">
+    <Error Condition="'$(VSTestConsolePath)' == ''" Text="vstest.console.exe was not found. Pass /p:VSTestConsolePath=&quot;path\to\vstest.console.exe&quot;." />
+    <Error Condition="!Exists('$(CoverageRunSettings)')" Text="Coverage runsettings file was not found: $(CoverageRunSettings)" />
+    <Error Condition="!Exists('$(XUnitAdapterPath)')" Text="xUnit test adapter was not found: $(XUnitAdapterPath)" />
+    <Error Condition="!Exists('$(CoverletCollectorPath)')" Text="coverlet collector was not found: $(CoverletCollectorPath)" />
+    <Exec Command="&quot;$(VSTestConsolePath)&quot; &quot;$(TargetPath)&quot; /TestAdapterPath:&quot;$(XUnitAdapterPath)&quot; /TestAdapterPath:&quot;$(CoverletCollectorPath)&quot; /Settings:&quot;$(CoverageRunSettings)&quot; /ResultsDirectory:&quot;$(CoverageResultsDirectory)&quot; /Collect:&quot;XPlat Code Coverage&quot; /InIsolation" />
+  </Target>
+
+  <Target Name="CheckC1Coverage" DependsOnTargets="RunVSTestForCoverage">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$file=Get-ChildItem -LiteralPath '$(CoverageResultsDirectory)' -Filter coverage.cobertura.xml -Recurse | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if (-not $file) { throw 'coverage.cobertura.xml was not generated.' }; [xml]$coverage=Get-Content -LiteralPath $file.FullName; $rate=100.0 * [double]$coverage.coverage.'branch-rate'; Write-Host ('C1 branch coverage: {0:N2}%%' -f $rate); if ($rate -lt $(CoverageThreshold)) { throw ('C1 branch coverage {0:N2}%% is below threshold $(CoverageThreshold)%%.' -f $rate) }&quot;" />
+  </Target>
+
+  <Target Name="C1Coverage" DependsOnTargets="CheckC1Coverage" />
+</Project>
