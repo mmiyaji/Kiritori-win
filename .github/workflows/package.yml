@@ -69,6 +69,7 @@ jobs:
           /p:Version=${{ steps.version.outputs.version }}
           /p:UserVersion=${{ steps.version.outputs.version }}
           /p:EmbedVersionInfo=true
+          /p:SignManifests=false
 
       - name: Build MSIX package
         shell: pwsh
@@ -82,6 +83,7 @@ jobs:
           /p:AppxBundlePlatforms=x64
           /p:UapAppxPackageBuildMode=StoreUpload
           /p:AppxPackageSigningEnabled=false
+          /p:SignManifests=false
           /p:BuildProjectReferences=false
           /p:UserVersion=${{ steps.version.outputs.version }}
           /p:EmbedVersionInfo=true
