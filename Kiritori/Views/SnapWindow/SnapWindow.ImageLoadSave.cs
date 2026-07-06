@@ -247,16 +247,26 @@ namespace Kiritori
         {
             if (_originalImage == null) return;
 
-            pictureBox1.SizeMode = PictureBoxSizeMode.Zoom;
-            if (!ReferenceEquals(pictureBox1.Image, _originalImage))
+            pictureBox1.Size = this.ClientSize;
+            var vw = Math.Max(1, pictureBox1.ClientSize.Width);
+            var vh = Math.Max(1, pictureBox1.ClientSize.Height);
+
+            var bmp = new Bitmap(vw, vh, PixelFormat.Format32bppPArgb);
+            using (var g = Graphics.FromImage(bmp))
             {
-                DisposeDisplayImageIfOwned();
-                pictureBox1.Image = _originalImage;
+                g.CompositingMode = CompositingMode.SourceOver;
+                g.SmoothingMode = SmoothingMode.HighQuality;
+                g.CompositingQuality = CompositingQuality.HighQuality;
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                g.DrawImage(_originalImage, new Rectangle(0, 0, vw, vh));
             }
 
-            pictureBox1.Size = this.ClientSize;
+            DisposeDisplayImageIfOwned();
+            pictureBox1.SizeMode = PictureBoxSizeMode.Normal;
+            pictureBox1.Image = bmp;
             pictureBox1.Invalidate();
-            Log.Debug($"Refreshed from original hi-q: {pictureBox1.Width}x{pictureBox1.Height}", "SnapWindow");
+            Log.Debug($"Refreshed from original hi-q: {bmp.Width}x{bmp.Height}", "SnapWindow");
         }
 
 

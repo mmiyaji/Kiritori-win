@@ -85,22 +85,7 @@ namespace Kiritori
  // ====== イベント ======
         private void SnapWindow_ResizeBegin(object sender, EventArgs e)
         {
-            if (_originalImage == null) return;
-            _isResizeInteractive = true;
-            EnsureOriginalStill();                 // 非アニメ静止ビットマップを用意
-            pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage;
-            // プレビューは軽量に：一旦“1段ストレッチ表示”へ
-            if (!ReferenceEquals(pictureBox1.Image, _originalStill))
-            {
-                var prev = pictureBox1.Image;
-                pictureBox1.Image = _originalStill;
-                if (prev != null &&
-                    !ReferenceEquals(prev, _originalImage) &&
-                    !ReferenceEquals(prev, _originalStill))
-                {
-                    try { prev.Dispose(); } catch { }
-                }
-            }
+            BeginResizePreview();
         }
 
         private void SnapWindow_SizeChanged(object sender, EventArgs e)
@@ -136,13 +121,11 @@ namespace Kiritori
             if (_originalImage == null) return;
 
             // いまのウィンドウ幅・高さから最終スケールを決める
-            // ※ アスペクトは“幅基準”で確定（高さは ApplyZoom で正される）
             float targetScale = (float)this.ClientSize.Width / Math.Max(1, (float)_originalImage.Width);
             _scale = Clamp(targetScale, MIN_SCALE, MAX_SCALE);
             _zoomStep = (int)Math.Round((_scale - 1.0f) / STEP_LINEAR);
 
-            // 高品質で一度だけ再サンプル描画（ApplyZoom は pictureBox1.Image を新規Bitmapへ）
-            ApplyZoom(redrawOnly: false, interactive: false);
+            RefreshFromOriginalHiQ();
 
             // 表示は新しいBitmapに切り替わったので、静止ビットマップは再利用可（破棄は任意）
             // _originalStill は次回リサイズ用に保持してOK。メモリを気にするなら Dispose しても良い。
@@ -155,6 +138,27 @@ namespace Kiritori
             _resizeCommitTimer.Stop();
             _resizeCommitTimer.Interval = _resizeCommitDelayMs;
             _resizeCommitTimer.Start();
+        }
+
+        private void BeginResizePreview()
+        {
+            if (_originalImage == null) return;
+
+            _isResizeInteractive = true;
+            EnsureOriginalStill();
+            pictureBox1.SizeMode = PictureBoxSizeMode.StretchImage;
+
+            if (!ReferenceEquals(pictureBox1.Image, _originalStill))
+            {
+                var prev = pictureBox1.Image;
+                pictureBox1.Image = _originalStill;
+                if (prev != null &&
+                    !ReferenceEquals(prev, _originalImage) &&
+                    !ReferenceEquals(prev, _originalStill))
+                {
+                    try { prev.Dispose(); } catch { }
+                }
+            }
         }
 
         private void EnsureOriginalStill()

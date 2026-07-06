@@ -42,6 +42,7 @@ namespace Kiritori
                     ? (float)pictureBox1.Image.Width / pictureBox1.Image.Height
                     : (float)Math.Max(1, this.ClientSize.Width) / Math.Max(1, this.ClientSize.Height);
 
+                BeginResizePreview();
                 pictureBox1.Capture = true;
                 this.Cursor = GetCursorForAnchor(_anchor);
                 return;
@@ -178,6 +179,8 @@ namespace Kiritori
             if (_isResizing)
             {
                 _isResizing = false;
+                _isResizeInteractive = false;
+                _resizeCommitTimer?.Stop();
                 _anchor = ResizeAnchor.None;
                 _imgAspect = null;
                 pictureBox1.Capture = false;
@@ -195,6 +198,8 @@ namespace Kiritori
             if (_isResizing)
             {
                 _isResizing = false;
+                _isResizeInteractive = false;
+                _resizeCommitTimer?.Stop();
                 _anchor = ResizeAnchor.None;
                 _imgAspect = null;
                 pictureBox1.Cursor = Cursors.Default;
