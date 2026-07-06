@@ -1,5 +1,6 @@
 ﻿using Kiritori.Services.Logging;
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -8,7 +9,7 @@ namespace Kiritori.Views.LiveCapture
 {
     internal class GdiCaptureBackend : LiveCaptureBackend, IDisposable
     {
-        public event Action<Bitmap> FrameArrived;
+        public event Action<LiveCaptureFrameEventArgs> FrameArrived;
         private volatile int _maxFps = 15;
         public int MaxFps { get => _maxFps; set => _maxFps = value; }
         public bool TransferFrameOwnership { get; set; } = false;
@@ -58,6 +59,7 @@ namespace Kiritori.Views.LiveCapture
             {
                 while (_running)
                 {
+                    var loopStart = Stopwatch.StartNew();
                     Rectangle rLogical;
                     lock (_rectLock) rLogical = _captureRect;
 
@@ -129,20 +131,21 @@ namespace Kiritori.Views.LiveCapture
                         }
                         if (toSend != null)
                         {
-                            if (TransferFrameOwnership)
+                            bool transfersOwnership = TransferFrameOwnership;
+                            var args = new LiveCaptureFrameEventArgs(toSend, transfersOwnership);
+                            if (transfersOwnership)
                             {
-                                handler.Invoke(toSend);
+                                handler.Invoke(args);
                             }
                             else
                             {
-                                try { handler.Invoke(toSend); }
+                                try { handler.Invoke(args); }
                                 finally { toSend.Dispose(); }
                             }
                         }
                     }
 
-                    if (MaxFps > 0)
-                        Thread.Sleep(Math.Max(1, 1000 / MaxFps));
+                    SleepForFrameBudget(loopStart);
                 }
             }
             catch
@@ -150,6 +153,22 @@ namespace Kiritori.Views.LiveCapture
                 // TODO: ログ
             }
         }
+
+        private void SleepForFrameBudget(Stopwatch loopStart)
+        {
+            int fps = MaxFps;
+            if (fps <= 0)
+            {
+                Thread.Sleep(1);
+                return;
+            }
+
+            int targetMs = Math.Max(1, 1000 / fps);
+            int remainingMs = targetMs - (int)loopStart.ElapsedMilliseconds;
+            if (remainingMs > 0)
+                Thread.Sleep(remainingMs);
+        }
+
         private Rectangle ResolvePhysical()
         {
             if (!CaptureRectPhysical.IsEmpty) return CaptureRectPhysical;

@@ -17,17 +17,32 @@ namespace Kiritori
             public override string ToString() { return Label; }
         }
 
+        private static CapturePostActionOption PostActionOption(
+            CapturePostActionPreset preset,
+            string labelKey,
+            string labelFallback,
+            string summaryKey,
+            string summaryFallback)
+        {
+            return new CapturePostActionOption
+            {
+                Preset = preset,
+                Label = SR.T(labelKey, labelFallback),
+                Summary = SR.T(summaryKey, summaryFallback)
+            };
+        }
+
         private static readonly CapturePostActionOption[] _capturePostActionOptions =
         {
-            new CapturePostActionOption { Preset = CapturePostActionPreset.None, Label = "Do nothing", Summary = "Open the capture window normally after each new capture." },
-            new CapturePostActionOption { Preset = CapturePostActionPreset.CopyImage, Label = "Copy image", Summary = "Copy the captured image to the clipboard as soon as the SnapWindow appears." },
-            new CapturePostActionOption { Preset = CapturePostActionPreset.RunOcr, Label = "Run OCR", Summary = "Run OCR after capture and copy the recognized text to the clipboard." },
-            new CapturePostActionOption { Preset = CapturePostActionPreset.CopyImageAndClose, Label = "Copy image and close", Summary = "Copy the image, then close the SnapWindow automatically." },
-            new CapturePostActionOption { Preset = CapturePostActionPreset.RunOcrAndClose, Label = "Run OCR and close", Summary = "Run OCR, copy the text, then close the SnapWindow automatically." },
-            new CapturePostActionOption { Preset = CapturePostActionPreset.SaveImage, Label = "Save image", Summary = "Save the captured image automatically." },
-            new CapturePostActionOption { Preset = CapturePostActionPreset.SaveImageAndClose, Label = "Save image and close", Summary = "Save the image, then close the SnapWindow automatically." },
-            new CapturePostActionOption { Preset = CapturePostActionPreset.SaveImageAndCopy, Label = "Save image and copy", Summary = "Save the image, then copy it to the clipboard." },
-            new CapturePostActionOption { Preset = CapturePostActionPreset.SaveImageAndRunOcr, Label = "Save image and run OCR", Summary = "Save the image, then run OCR and copy the recognized text." },
+            PostActionOption(CapturePostActionPreset.None, "PostCapture.Option.None.Label", "Do nothing", "PostCapture.Option.None.Summary", "Open the capture window normally after each new capture."),
+            PostActionOption(CapturePostActionPreset.CopyImage, "PostCapture.Option.CopyImage.Label", "Copy image", "PostCapture.Option.CopyImage.Summary", "Copy the captured image to the clipboard as soon as the SnapWindow appears."),
+            PostActionOption(CapturePostActionPreset.RunOcr, "PostCapture.Option.RunOcr.Label", "Run OCR", "PostCapture.Option.RunOcr.Summary", "Run OCR after capture and copy the recognized text to the clipboard."),
+            PostActionOption(CapturePostActionPreset.CopyImageAndClose, "PostCapture.Option.CopyImageAndClose.Label", "Copy image and close", "PostCapture.Option.CopyImageAndClose.Summary", "Copy the image, then close the SnapWindow automatically."),
+            PostActionOption(CapturePostActionPreset.RunOcrAndClose, "PostCapture.Option.RunOcrAndClose.Label", "Run OCR and close", "PostCapture.Option.RunOcrAndClose.Summary", "Run OCR, copy the text, then close the SnapWindow automatically."),
+            PostActionOption(CapturePostActionPreset.SaveImage, "PostCapture.Option.SaveImage.Label", "Save image", "PostCapture.Option.SaveImage.Summary", "Save the captured image automatically."),
+            PostActionOption(CapturePostActionPreset.SaveImageAndClose, "PostCapture.Option.SaveImageAndClose.Label", "Save image and close", "PostCapture.Option.SaveImageAndClose.Summary", "Save the image, then close the SnapWindow automatically."),
+            PostActionOption(CapturePostActionPreset.SaveImageAndCopy, "PostCapture.Option.SaveImageAndCopy.Label", "Save image and copy", "PostCapture.Option.SaveImageAndCopy.Summary", "Save the image, then copy it to the clipboard."),
+            PostActionOption(CapturePostActionPreset.SaveImageAndRunOcr, "PostCapture.Option.SaveImageAndRunOcr.Label", "Save image and run OCR", "PostCapture.Option.SaveImageAndRunOcr.Summary", "Save the image, then run OCR and copy the recognized text."),
         };
 
         private GroupBox grpPostCaptureActions;
@@ -44,17 +59,17 @@ namespace Kiritori
             if (grpPostCaptureActions != null) return;
             if (grpAppSettings == null) return;
 
-            grpPostCaptureActions = NewGroup("After capture");
+            grpPostCaptureActions = NewGroup(SR.T("PostCapture.Group", "After capture"));
             grpPostCaptureActions.Margin = new Padding(0, 8, 0, 0);
 
             var grid = NewGrid(3, 2);
-            labelPostCapturePreset = NewRightLabel("Preset");
+            labelPostCapturePreset = NewRightLabel(SR.T("PostCapture.Preset", "Preset"));
             cmbPostCapturePreset = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Dock = DockStyle.Fill
             };
-            labelPostCaptureSaveFolder = NewRightLabel("Save folder");
+            labelPostCaptureSaveFolder = NewRightLabel(SR.T("PostCapture.SaveFolder", "Save folder"));
             txtPostCaptureSaveFolder = new TextBox
             {
                 ReadOnly = true,
@@ -182,7 +197,7 @@ namespace Kiritori
             if (labelPostCaptureHelp == null) return;
 
             labelPostCaptureHelp.Text = option != null
-                ? option.Summary + Environment.NewLine + "Applies to new captures only. Opened files, clipboard images, and history reopens are not affected."
+                ? option.Summary + Environment.NewLine + SR.T("PostCapture.ScopeHelp", "Applies to new captures only. Opened files, clipboard images, and history reopens are not affected.")
                 : string.Empty;
         }
 
@@ -192,7 +207,7 @@ namespace Kiritori
 
             var folder = Properties.Settings.Default.CapturePostActionSaveFolder;
             txtPostCaptureSaveFolder.Text = string.IsNullOrWhiteSpace(folder)
-                ? "Pictures\\Kiritori"
+                ? SR.T("PostCapture.DefaultSaveFolder", "Pictures\\Kiritori")
                 : folder;
         }
     }

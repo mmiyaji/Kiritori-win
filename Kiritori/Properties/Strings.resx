@@ -1034,7 +1034,77 @@
   </data>
   <data name="Menu.ClearAnnotations" xml:space="preserve">
     <value>Clear annotations</value>
-  </data>  <data name="Text.StartupDisabledByUserGuide" xml:space="preserve">
+  </data>
+  <data name="PostCapture.Group" xml:space="preserve">
+    <value>After capture</value>
+  </data>
+  <data name="PostCapture.Preset" xml:space="preserve">
+    <value>Preset</value>
+  </data>
+  <data name="PostCapture.SaveFolder" xml:space="preserve">
+    <value>Save folder</value>
+  </data>
+  <data name="PostCapture.ScopeHelp" xml:space="preserve">
+    <value>Applies to new captures only. Opened files, clipboard images, and history reopens are not affected.</value>
+  </data>
+  <data name="PostCapture.DefaultSaveFolder" xml:space="preserve">
+    <value>Pictures\Kiritori</value>
+  </data>
+  <data name="PostCapture.Option.None.Label" xml:space="preserve">
+    <value>Do nothing</value>
+  </data>
+  <data name="PostCapture.Option.None.Summary" xml:space="preserve">
+    <value>Open the capture window normally after each new capture.</value>
+  </data>
+  <data name="PostCapture.Option.CopyImage.Label" xml:space="preserve">
+    <value>Copy image</value>
+  </data>
+  <data name="PostCapture.Option.CopyImage.Summary" xml:space="preserve">
+    <value>Copy the captured image to the clipboard as soon as the SnapWindow appears.</value>
+  </data>
+  <data name="PostCapture.Option.RunOcr.Label" xml:space="preserve">
+    <value>Run OCR</value>
+  </data>
+  <data name="PostCapture.Option.RunOcr.Summary" xml:space="preserve">
+    <value>Run OCR after capture and copy the recognized text to the clipboard.</value>
+  </data>
+  <data name="PostCapture.Option.CopyImageAndClose.Label" xml:space="preserve">
+    <value>Copy image and close</value>
+  </data>
+  <data name="PostCapture.Option.CopyImageAndClose.Summary" xml:space="preserve">
+    <value>Copy the image, then close the SnapWindow automatically.</value>
+  </data>
+  <data name="PostCapture.Option.RunOcrAndClose.Label" xml:space="preserve">
+    <value>Run OCR and close</value>
+  </data>
+  <data name="PostCapture.Option.RunOcrAndClose.Summary" xml:space="preserve">
+    <value>Run OCR, copy the text, then close the SnapWindow automatically.</value>
+  </data>
+  <data name="PostCapture.Option.SaveImage.Label" xml:space="preserve">
+    <value>Save image</value>
+  </data>
+  <data name="PostCapture.Option.SaveImage.Summary" xml:space="preserve">
+    <value>Save the captured image automatically.</value>
+  </data>
+  <data name="PostCapture.Option.SaveImageAndClose.Label" xml:space="preserve">
+    <value>Save image and close</value>
+  </data>
+  <data name="PostCapture.Option.SaveImageAndClose.Summary" xml:space="preserve">
+    <value>Save the image, then close the SnapWindow automatically.</value>
+  </data>
+  <data name="PostCapture.Option.SaveImageAndCopy.Label" xml:space="preserve">
+    <value>Save image and copy</value>
+  </data>
+  <data name="PostCapture.Option.SaveImageAndCopy.Summary" xml:space="preserve">
+    <value>Save the image, then copy it to the clipboard.</value>
+  </data>
+  <data name="PostCapture.Option.SaveImageAndRunOcr.Label" xml:space="preserve">
+    <value>Save image and run OCR</value>
+  </data>
+  <data name="PostCapture.Option.SaveImageAndRunOcr.Summary" xml:space="preserve">
+    <value>Save the image, then run OCR and copy the recognized text.</value>
+  </data>
+  <data name="Text.StartupDisabledByUserGuide" xml:space="preserve">
     <value>Kiritori has been disabled in Windows settings. The Settings app will open—please enable Kiritori there.</value>
   </data>
 </root>

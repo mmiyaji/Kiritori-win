@@ -1028,7 +1028,77 @@
   </data>
   <data name="Menu.ClearAnnotations" xml:space="preserve">
     <value>注釈をすべて削除</value>
-  </data>  <data name="Text.StartupDisabledByUserGuide" xml:space="preserve">
+  </data>
+  <data name="PostCapture.Group" xml:space="preserve">
+    <value>キャプチャー後</value>
+  </data>
+  <data name="PostCapture.Preset" xml:space="preserve">
+    <value>プリセット</value>
+  </data>
+  <data name="PostCapture.SaveFolder" xml:space="preserve">
+    <value>保存先フォルダー</value>
+  </data>
+  <data name="PostCapture.ScopeHelp" xml:space="preserve">
+    <value>新規キャプチャーにのみ適用されます。開いたファイル、クリップボード画像、履歴からの再表示には影響しません。</value>
+  </data>
+  <data name="PostCapture.DefaultSaveFolder" xml:space="preserve">
+    <value>ピクチャ\Kiritori</value>
+  </data>
+  <data name="PostCapture.Option.None.Label" xml:space="preserve">
+    <value>何もしない</value>
+  </data>
+  <data name="PostCapture.Option.None.Summary" xml:space="preserve">
+    <value>新しいキャプチャー後、通常どおりキャプチャーウィンドウを開きます。</value>
+  </data>
+  <data name="PostCapture.Option.CopyImage.Label" xml:space="preserve">
+    <value>画像をコピー</value>
+  </data>
+  <data name="PostCapture.Option.CopyImage.Summary" xml:space="preserve">
+    <value>SnapWindow が表示されたら、キャプチャー画像をすぐクリップボードにコピーします。</value>
+  </data>
+  <data name="PostCapture.Option.RunOcr.Label" xml:space="preserve">
+    <value>OCR を実行</value>
+  </data>
+  <data name="PostCapture.Option.RunOcr.Summary" xml:space="preserve">
+    <value>キャプチャー後に OCR を実行し、認識したテキストをクリップボードにコピーします。</value>
+  </data>
+  <data name="PostCapture.Option.CopyImageAndClose.Label" xml:space="preserve">
+    <value>画像をコピーして閉じる</value>
+  </data>
+  <data name="PostCapture.Option.CopyImageAndClose.Summary" xml:space="preserve">
+    <value>画像をコピーしてから、SnapWindow を自動で閉じます。</value>
+  </data>
+  <data name="PostCapture.Option.RunOcrAndClose.Label" xml:space="preserve">
+    <value>OCR を実行して閉じる</value>
+  </data>
+  <data name="PostCapture.Option.RunOcrAndClose.Summary" xml:space="preserve">
+    <value>OCR を実行してテキストをコピーしてから、SnapWindow を自動で閉じます。</value>
+  </data>
+  <data name="PostCapture.Option.SaveImage.Label" xml:space="preserve">
+    <value>画像を保存</value>
+  </data>
+  <data name="PostCapture.Option.SaveImage.Summary" xml:space="preserve">
+    <value>キャプチャー画像を自動で保存します。</value>
+  </data>
+  <data name="PostCapture.Option.SaveImageAndClose.Label" xml:space="preserve">
+    <value>画像を保存して閉じる</value>
+  </data>
+  <data name="PostCapture.Option.SaveImageAndClose.Summary" xml:space="preserve">
+    <value>画像を保存してから、SnapWindow を自動で閉じます。</value>
+  </data>
+  <data name="PostCapture.Option.SaveImageAndCopy.Label" xml:space="preserve">
+    <value>画像を保存してコピー</value>
+  </data>
+  <data name="PostCapture.Option.SaveImageAndCopy.Summary" xml:space="preserve">
+    <value>画像を保存してから、クリップボードにコピーします。</value>
+  </data>
+  <data name="PostCapture.Option.SaveImageAndRunOcr.Label" xml:space="preserve">
+    <value>画像を保存して OCR</value>
+  </data>
+  <data name="PostCapture.Option.SaveImageAndRunOcr.Summary" xml:space="preserve">
+    <value>画像を保存してから OCR を実行し、認識したテキストをコピーします。</value>
+  </data>
+  <data name="Text.StartupDisabledByUserGuide" xml:space="preserve">
     <value>Windows の設定でオフにされています。設定を開くので、Kiritori をオンにしてください。</value>
   </data>
 </root>
