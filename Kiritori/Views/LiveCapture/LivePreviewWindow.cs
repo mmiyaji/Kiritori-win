@@ -291,6 +291,7 @@ namespace Kiritori.Views.LiveCapture
             // 1秒ごとにCPU/メモリ更新
             // _perfTimer = new System.Threading.Timer(UpdatePerf, null, 1000, 1000);
             _lastCpuTime = _currentProcess.TotalProcessorTime;
+            Application.ApplicationExit += LivePreviewWindow_ApplicationExit;
         }
         private static string RectStr(Rectangle r) => $"({r.X},{r.Y}) {r.Width}x{r.Height}";
         private static string RectStr(RECT r) => $"({r.Left},{r.Top}) {r.Right - r.Left}x{r.Bottom - r.Top}";
@@ -1501,8 +1502,16 @@ namespace Kiritori.Views.LiveCapture
         //     base.OnFormClosing(e);
         // }
 
+        private void LivePreviewWindow_ApplicationExit(object sender, EventArgs e)
+        {
+            try { StopRecording(); } catch { }
+            WaitForRecorderStopsOnExit(4000);
+        }
+
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            try { Application.ApplicationExit -= LivePreviewWindow_ApplicationExit; } catch { }
+
             if (_appearanceSettingsChangedHandler != null)
             {
                 try { Properties.Settings.Default.PropertyChanged -= _appearanceSettingsChangedHandler; } catch { }
@@ -1560,6 +1569,7 @@ namespace Kiritori.Views.LiveCapture
             }
 
             try { StopRecording(); } catch { }
+            WaitForRecorderStopsOnExit(4000);
 
             // ---- Bitmaps ----
             lock (_frameSync)
@@ -2133,6 +2143,12 @@ namespace Kiritori.Views.LiveCapture
                 _miRecordingGif.Checked = false;
                 _suppressGifCheckedChanged = false;
 
+                if (IsGifStopInProgress())
+                {
+                    ShowOverlay("SAVING GIF");
+                    return;
+                }
+
                 // 開始時の注意メッセージ（ここで表示、録画はまだ始めない）
                 ShowGifStartNoticeIfNeeded();
 
@@ -2149,7 +2165,11 @@ namespace Kiritori.Views.LiveCapture
 
                         try
                         {
-                            StartGifRecord();                    // ← 実際の開始（既存の初期化）
+                            if (!StartGifRecord())               // ← 実際の開始（既存の初期化）
+                            {
+                                ShowOverlay("SAVING GIF");
+                                return;
+                            }
                             _suppressGifCheckedChanged = true;   // チェックをON表示にするがイベントは抑制
                             _miRecordingGif.Checked = true;
                             _iconBadge?.SetState(LiveBadgeState.Recording);
@@ -2541,22 +2561,36 @@ namespace Kiritori.Views.LiveCapture
                 {
                     _rec.UpdateLatestFrame(bmp); // 到着ベースで差し替え、送出はワーカーが一定間隔で実施
                 }
-                if (_gifQueue != null && !_gifQueue.IsAddingCompleted && bmp != null)
+                var gifQueue = _gifQueue;
+                if (gifQueue != null && bmp != null)
                 {
                     try
                     {
-                        int nowMs = (int)_gifClock.ElapsedMilliseconds;
-                        if (Environment.TickCount < _gifIgnoreUntilTick)
+                        if (!gifQueue.IsAddingCompleted)
                         {
-                            _gifLastMs = nowMs;
-                        }
-                        else
-                        {
-                            int deltaMs = nowMs - _gifLastMs; if (deltaMs < 0) deltaMs = 0;
-                            _gifLastMs = nowMs;
-                            int deltaCs = Math.Max(1, (int)Math.Round(deltaMs / 10.0));
-                            // 生フレームをクローンしてワーカーキューへ（前処理はワーカー側で実施）
-                            _gifQueue.TryAdd(((Bitmap)bmp.Clone(), deltaCs));
+                            int nowMs = (int)_gifClock.ElapsedMilliseconds;
+                            if (Environment.TickCount < _gifIgnoreUntilTick)
+                            {
+                                _gifLastMs = nowMs;
+                            }
+                            else
+                            {
+                                int deltaMs = nowMs - _gifLastMs; if (deltaMs < 0) deltaMs = 0;
+                                _gifLastMs = nowMs;
+                                int deltaCs = Math.Max(1, (int)Math.Round(deltaMs / 10.0));
+                                // 生フレームをクローンしてワーカーキューへ（前処理はワーカー側で実施）
+                                Bitmap queuedFrame = null;
+                                try
+                                {
+                                    queuedFrame = (Bitmap)bmp.Clone();
+                                    if (gifQueue.TryAdd((queuedFrame, deltaCs)))
+                                        queuedFrame = null;
+                                }
+                                finally
+                                {
+                                    if (queuedFrame != null) queuedFrame.Dispose();
+                                }
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -2691,6 +2725,8 @@ namespace Kiritori.Views.LiveCapture
             if (IsDisposed || !IsHandleCreated) return;
             try
             {
+                _currentProcess.Refresh();
+
                 // CPU計算
                 var newCpuTime = _currentProcess.TotalProcessorTime;
                 //var elapsed = 1.0; // 秒間隔なので1秒
@@ -3383,6 +3419,8 @@ namespace Kiritori.Views.LiveCapture
             }
         }
         private FfmpegPipeRecorder _rec;
+        private readonly object _recStopSync = new object();
+        private readonly List<Task> _recStopTasks = new List<Task>();
         private static string ResolveLivePreviewBaseFolderOrNull()
         {
             string folder = null;
@@ -3457,7 +3495,8 @@ namespace Kiritori.Views.LiveCapture
             if (rec == null) return;
             var outPath = rec.Options?.OutputPath;
 
-            Task.Run(async () =>
+            Task stopTask = null;
+            stopTask = Task.Run(async () =>
             {
                 try
                 {
@@ -3496,6 +3535,38 @@ namespace Kiritori.Views.LiveCapture
                     }
                 }
             });
+
+            lock (_recStopSync)
+            {
+                _recStopTasks.Add(stopTask);
+            }
+            stopTask.ContinueWith(t =>
+            {
+                lock (_recStopSync)
+                {
+                    _recStopTasks.Remove(stopTask);
+                }
+            }, TaskScheduler.Default);
+        }
+
+        private void WaitForRecorderStopsOnExit(int timeoutMs)
+        {
+            Task[] pending;
+            lock (_recStopSync)
+            {
+                var list = new List<Task>();
+                foreach (var task in _recStopTasks)
+                {
+                    if (task != null && !task.IsCompleted) list.Add(task);
+                }
+                pending = list.ToArray();
+            }
+
+            if (pending.Length == 0) return;
+
+            try { Task.WaitAll(pending, timeoutMs); }
+            catch (AggregateException ex) { Log.Debug("Recorder stop wait EX: " + ex.Message, "LivePreview"); }
+            catch (Exception ex) { Log.Debug("Recorder stop wait EX: " + ex.Message, "LivePreview"); }
         }
         private void ShowGifStartNoticeIfNeeded()
         {
@@ -3554,19 +3625,16 @@ namespace Kiritori.Views.LiveCapture
             _gifStartNoticeShownOnce = true;
         }
 
-        private void StartGifRecord()
+        private bool IsGifStopInProgress()
         {
+            return Interlocked.CompareExchange(ref _gifStopGate, 0, 0) != 0;
+        }
+
+        private bool StartGifRecord()
+        {
+            if (IsGifStopInProgress()) return false;
+
             ShowGifStartNoticeIfNeeded();
-            _gifOpt = new GifRecordOptions();
-            _gifFrames = new List<Bitmap>();
-            _gifDelaysCs = new List<int>();
-            _gifPendingDelayCs = 0;
-            _gifLastMs = 0;
-            // ワーカー初期化
-            _gifQueue?.Dispose();
-            _gifQueue = new BlockingCollection<(Bitmap, int)>(boundedCapacity: 120);
-            _gifWorkerThread = new Thread(GifWorkerLoop) { IsBackground = true, Name = "GifWorker" };
-            _gifWorkerThread.Start();
 
             int setFps = 10;
             try { setFps = Math.Max(1, Properties.Settings.Default.GifMaxFps); } catch {}
@@ -3575,25 +3643,53 @@ namespace Kiritori.Views.LiveCapture
             int setWidth = 0;
             try { setWidth = Math.Max(0, Properties.Settings.Default.GifMaxWidth); } catch {}
 
-            _gifOpt.GifFps = setFps;
-            _gifOpt.UseOptimization = useOpt;   // ← 新規プロパティ（下で説明）
-            _gifOpt.MaxWidth = setWidth;
-
-            // 間隔（centiseconds）
-            _gifMinIntervalCs = Math.Max(2, (int)Math.Round(100.0 / _gifOpt.GifFps));
+            var opt = new GifRecordOptions
+            {
+                GifFps = setFps,
+                UseOptimization = useOpt,
+                MaxWidth = setWidth,
+            };
+            var queue = new BlockingCollection<(Bitmap, int)>(boundedCapacity: 120);
+            var worker = new Thread(GifWorkerLoop) { IsBackground = true, Name = "GifWorker" };
 
             _gifClock.Restart();
             _gifLastMs = 0;
-            _gifPendingDelayCs = 0;
-            _gifMinIntervalCs = Math.Max(2, (int)Math.Round(100.0 / Math.Max(1, _gifOpt.GifFps)));
+            int minIntervalCs = Math.Max(2, (int)Math.Round(100.0 / Math.Max(1, opt.GifFps)));
+
+            BlockingCollection<(Bitmap, int)> oldQueue;
+            lock (_gifSync)
+            {
+                if (_gifFrames != null || _gifDelaysCs != null)
+                {
+                    queue.Dispose();
+                    return false;
+                }
+
+                _gifOpt = opt;
+                _gifFrames = new List<Bitmap>();
+                _gifDelaysCs = new List<int>();
+                _gifPendingDelayCs = 0;
+                _gifTick.Reset();
+                _gifMinIntervalCs = minIntervalCs;
+
+                oldQueue = _gifQueue;
+                _gifQueue = queue;
+                _gifWorkerThread = worker;
+            }
+
+            if (oldQueue != null)
+            {
+                try { if (!oldQueue.IsAddingCompleted) oldQueue.CompleteAdding(); } catch { }
+                try { oldQueue.Dispose(); } catch { }
+            }
+
+            worker.Start();
 
             // 再入防止ゲート＆タイマー初期化
-            Interlocked.Exchange(ref _gifStopGate, 0);
             _gifLimitTimer?.Stop();
             _gifLimitTimer?.Dispose();
             _gifLimitTimer = null;
 
-            _gifLimitTimer?.Stop(); _gifLimitTimer?.Dispose(); _gifLimitTimer = null;
             int maxSec = Math.Max(0, Properties.Settings.Default.GifMaxDurationSec);
             if (maxSec > 0)
             {
@@ -3606,6 +3702,8 @@ namespace Kiritori.Views.LiveCapture
                 };
                 _gifLimitTimer.Start();
             }
+
+            return true;
         }
         private void StopGifRecordAndSave(string path)
         {

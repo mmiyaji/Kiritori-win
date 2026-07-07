@@ -159,6 +159,7 @@
     <Compile Include="Helpers\HotkeyUtil.cs" />
     <Compile Include="Helpers\LocalizedDescriptionAttribute.cs" />
     <Compile Include="Helpers\Localizer.cs" />
+    <Compile Include="Helpers\ImageFileSupport.cs" />
     <Compile Include="Helpers\SatelliteBootstrapper.cs" />
     <Compile Include="Helpers\SingleInstance.cs" />
     <Compile Include="Helpers\SR.cs" />
@@ -180,7 +181,6 @@
     <Compile Include="Services\Extensions\ExtensionsState.cs" />
     <Compile Include="Services\Extensions\ExtensionsUtil.cs" />
     <Compile Include="Services\Extensions\ExtensionsZip.cs" />
-    <Compile Include="Services\History\DiskThumbCache.cs" />
     <Compile Include="Services\History\HistoryBridge.cs" />
     <Compile Include="Services\History\HistoryManager.cs" />
     <Compile Include="Services\Logging\Log.cs" />

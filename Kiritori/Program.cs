@@ -315,13 +315,11 @@ namespace Kiritori
 
         private static AppStartupOptions ParseArgs(string[] args)
         {
-            string[] exts = { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp" /*, ".heic"*/ };
-
             var files = (args ?? Array.Empty<string>())
                 .Select(a => a?.Trim('"'))
                 .Where(a => !string.IsNullOrWhiteSpace(a))
                 .Where(File.Exists)
-                .Where(p => exts.Contains(Path.GetExtension(p).ToLowerInvariant()))
+                .Where(ImageFileSupport.IsSupportedImagePath)
                 .Distinct()
                 .ToArray();
 
