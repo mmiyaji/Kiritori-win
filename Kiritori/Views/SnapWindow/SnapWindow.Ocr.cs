@@ -26,48 +26,7 @@ namespace Kiritori
         private async void RunOcrOnCurrentImage()
         {
             Log.Info("OCR started", "SnapWindow");
-            if (_ocrBusy) return;
-
-            var src = _originalImage ?? pictureBox1?.Image as Bitmap;
-            if (src == null) { ShowOverlay("NO IMAGE FOR OCR"); return; }
-
-            Bitmap ocrCopy = null;
-            try { ocrCopy = new Bitmap(src); } catch { }
-            try { src.Dispose(); } catch { }
-
-            if (ocrCopy == null) return;
-
-            _ocrBusy = true;
-            try
-            {
-                var text = await OcrFacade.RunAsync(
-                    ocrCopy,
-                    copyToClipboard: true,
-                    preprocess: true
-                    ).ConfigureAwait(false);
-
-                if (!string.IsNullOrEmpty(text))
-                {
-                    ShowOverlay("OCR RESULT COPIED");
-                    if (Properties.Settings.Default.ShowNotificationOnOcr)
-                    {
-                        ShowOcrToast(text);
-                    }
-                }
-                else
-                {
-                    ShowOverlay("OCR NOT DETECTED");
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Debug("RunOcrOnCurrentImage error: " + ex.Message, "SnapWindow");
-                ShowOverlay("OCR FAILED");
-            }
-            finally
-            {
-                _ocrBusy = false;
-            }
+            await RunPostCaptureOcrAsync(closeAfterSuccess: false);
         }
 
         private static DateTime _lastToastAt = DateTime.MinValue;
