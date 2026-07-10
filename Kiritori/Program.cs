@@ -180,11 +180,8 @@ namespace Kiritori
             {
                 Log.Info("Running in packaged mode", "Startup");
             }
-            if (args != null && args.Length > 0)
-            {
-                Log.Info("Command line args: " + string.Join(" ", args), "Startup");
-            }
             var opt = ParseArgs(args);
+            Log.Info($"Startup mode: {opt.Mode}, image count: {opt.ImagePaths.Length}", "Startup");
             using (var mutex = new Mutex(true, SingleInstance.MutexName, out bool isNew))
             {
                 if (isNew)
