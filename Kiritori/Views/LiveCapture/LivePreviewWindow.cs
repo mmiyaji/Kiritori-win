@@ -3466,6 +3466,10 @@ namespace Kiritori.Views.LiveCapture
         private void StartRecordingMp4(string path, int width, int height, int fps)
         {
             Log.Debug($"StartRecordingMp4 path='{path}' size={width}x{height} fps={fps}", "LivePreview");
+            var ffmpegPath = FfmpegLocator.Resolve(autoInstall: true, owner: this);
+            if (string.IsNullOrWhiteSpace(ffmpegPath))
+                throw new FileNotFoundException("ffmpeg.exe not found.");
+
             var old = Interlocked.Exchange(ref _rec, null);
             if (old != null) StopRecorderInBackground(old, openWhenDone: false);
 
@@ -3477,7 +3481,7 @@ namespace Kiritori.Views.LiveCapture
                     Height = height,
                     Fps = fps,
                     Kind = OutputKind.Mp4,
-                    FfmpegPath = null,
+                    FfmpegPath = ffmpegPath,
                 });
             _rec.Start();
         }
