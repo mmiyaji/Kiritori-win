@@ -31,6 +31,7 @@
     <Compile Include="..\Kiritori\Helpers\Enums.cs" Link="ProductionSources\Enums.cs" />
     <Compile Include="..\Kiritori\Helpers\HotkeyUtil.cs" Link="ProductionSources\HotkeyUtil.cs" />
     <Compile Include="..\Kiritori\Helpers\ImageFileSupport.cs" Link="ProductionSources\ImageFileSupport.cs" />
+    <Compile Include="..\Kiritori\Helpers\PathBoundary.cs" Link="ProductionSources\PathBoundary.cs" />
   </ItemGroup>
 
   <Target Name="CleanC1CoverageResults">

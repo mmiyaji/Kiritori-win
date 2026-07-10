@@ -215,7 +215,7 @@ namespace Kiritori.Services.Extensions
             // 4) 必要ファイルが揃っているか軽く検証
             foreach (var f in m.Install.Files ?? Array.Empty<string>())
             {
-                var p = Path.Combine(target, f);
+                var p = PathBoundary.ResolveUnder(target, f);
                 if (!File.Exists(p)) throw new FileNotFoundException("Missing file in extension package.", p);
             }
 
@@ -241,7 +241,7 @@ namespace Kiritori.Services.Extensions
                 // bin\<id>\<ver>
                 if (!string.IsNullOrEmpty(ver))
                 {
-                    var dir = Path.Combine(root, "bin", id, ver);
+                    var dir = PathBoundary.ResolveUnder(root, Path.Combine("bin", id, ver));
                     SafeDeleteDirectory(dir);
 
                     // 親（bin\<id>）が空なら掃除
@@ -255,7 +255,7 @@ namespace Kiritori.Services.Extensions
                     var culture = id.Substring("lang_".Length);
                     if (!string.IsNullOrWhiteSpace(culture))
                     {
-                        var dir = Path.Combine(root, "i18n", culture);
+                        var dir = PathBoundary.ResolveUnder(root, Path.Combine("i18n", culture));
                         SafeDeleteDirectory(dir);
                     }
                 }
@@ -281,7 +281,8 @@ namespace Kiritori.Services.Extensions
             if (string.IsNullOrEmpty(ver)) return null;
 
             // 後方互換：従来の bin/<id>/<ver>
-            return Path.Combine(ExtensionsPaths.Root, "bin", id, ver);
+            try { return PathBoundary.ResolveUnder(ExtensionsPaths.Root, Path.Combine("bin", id, ver)); }
+            catch { return null; }
         }
 
         public static void RepairStateIfMissing()
@@ -591,6 +592,12 @@ namespace Kiritori.Services.Extensions
         {
             try
             {
+                if (!PathBoundary.IsStrictlyUnder(ExtensionsPaths.Root, path))
+                {
+                    Log.Warn("Refused to delete extension path outside root: " + path, "Extensions");
+                    return;
+                }
+
                 if (Directory.Exists(path))
                 {
                     Directory.Delete(path, recursive: true);
@@ -666,7 +673,7 @@ namespace Kiritori.Services.Extensions
             // 4) 必要ファイルが揃っているか検証
             foreach (var f in m.Install.Files ?? Array.Empty<string>())
             {
-                var p = Path.Combine(target, f);
+                var p = PathBoundary.ResolveUnder(target, f);
                 if (!File.Exists(p)) throw new FileNotFoundException("Missing file in extension package.", p);
             }
 
@@ -746,7 +753,7 @@ namespace Kiritori.Services.Extensions
             // 4) 必須ファイル検証
             foreach (var f in m.Install.Files ?? Array.Empty<string>())
             {
-                var p = Path.Combine(target, f);
+                var p = PathBoundary.ResolveUnder(target, f);
                 if (!File.Exists(p)) throw new FileNotFoundException("Missing file in extension package.", p);
             }
 

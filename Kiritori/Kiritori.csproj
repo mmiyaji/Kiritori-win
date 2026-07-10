@@ -249,6 +249,7 @@
     <Compile Include="Services\Ocr\OcrService.cs" />
     <Compile Include="Services\Ocr\WindowsOcrProvider.cs" />
     <Compile Include="Helpers\PackageHelper.cs" />
+    <Compile Include="Helpers\PathBoundary.cs" />
     <Compile Include="Views\LiveCapture\TitleIconBadger.cs" />
     <Compile Include="Views\LiveCapture\WindowAligner.cs" />
     <Compile Include="Properties\Strings.Designer.cs">

@@ -70,7 +70,7 @@ namespace Kiritori.Services.Extensions
             }
         }
         public static string Expand(string relative) =>
-            Path.Combine(Root, relative.Replace('/', Path.DirectorySeparatorChar));
+            PathBoundary.ResolveUnder(Root, relative.Replace('/', Path.DirectorySeparatorChar));
 
         // ユーザー領域（オンライン更新で上書きしたい場合）
         public static string ManifestsLocal =>
