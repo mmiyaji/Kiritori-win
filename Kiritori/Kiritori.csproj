@@ -446,7 +446,7 @@
     <!-- 出力先のフォルダ作成 (bin\...\i18n\ja など) -->
     <MakeDir Directories="@(_SatDlls->'$(TargetDir)i18n\%(RecursiveDir)')" />
     <!-- i18n\{cul}\Kiritori.resources.dll へコピー -->
-    <Copy SourceFiles="@(_SatDlls)" DestinationFiles="@(_SatDlls->'i18n\%(RecursiveDir)$(AssemblyName).resources.dll')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_SatDlls)" DestinationFiles="@(_SatDlls->'$(TargetDir)i18n\%(RecursiveDir)$(AssemblyName).resources.dll')" SkipUnchangedFiles="true" />
     <!-- ログ（任意） -->
     <Message Text="i18n へコピー: @(_SatDlls->'%(RecursiveDir)$(AssemblyName).resources.dll')" Importance="High" />
   </Target>

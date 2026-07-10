@@ -71,6 +71,14 @@ namespace Kiritori
             Kiritori.Services.Logging.LogViewSharedSink.EnsureRegistered();
             Log.Info($"Kiritori starting (v{Application.ProductVersion})", "Startup");
 
+            try
+            {
+                var culture = Properties.Settings.Default.UICulture;
+                Thread.CurrentThread.CurrentUICulture = new CultureInfo(culture);
+                Log.Debug("Set UI Culture: " + culture, "Startup");
+            }
+            catch (Exception ex) { Log.Warn("Failed to set UI culture, falling back to default: " + ex.Message, "Startup"); }
+
             // SatelliteBootstrapper.EnsureSatellitesExtracted();
             Kiritori.Helpers.SatelliteBootstrapper.Init();
             EarlyExtensionsInit();
@@ -84,13 +92,6 @@ namespace Kiritori
                 RegisterAssemblyResolvers();
             }
 
-            try
-            {
-                var culture = Properties.Settings.Default.UICulture;
-                Thread.CurrentThread.CurrentUICulture = new CultureInfo(culture);
-                Log.Debug("Set UI Culture: " + culture, "Startup");
-            }
-            catch (Exception ex) { Log.Warn("Failed to set UI culture, falling back to default: " + ex.Message, "Startup"); }
             // ===== DPI Awareness を可能な限り高く設定 =====
             bool dpiSet = false;
             try
