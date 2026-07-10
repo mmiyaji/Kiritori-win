@@ -29,6 +29,11 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
       - name: Resolve version
         id: version
         shell: pwsh
@@ -70,6 +75,10 @@ jobs:
           /p:UserVersion=${{ steps.version.outputs.version }}
           /p:EmbedVersionInfo=true
           /p:SignManifests=false
+
+      - name: Run tests
+        shell: pwsh
+        run: dotnet test Kiritori.Tests\Kiritori.Tests.csproj --configuration Release --no-restore
 
       - name: Build MSIX package
         shell: pwsh
