@@ -35,6 +35,7 @@ namespace Kiritori.Views.LiveCapture
         private int _hudRectBasisDpi;
         private bool _tempExcludeUntilFirstFrame = false;
         private readonly object _frameSync = new object();
+        private int _frameInvalidatePending;
         public Rectangle CaptureRect { get; set; }   // 論理px（スクリーン座標）
         public Rectangle SourceRectPhysical { get; set; } = Rectangle.Empty;
         public bool AutoTopMost { get; set; } = true;
@@ -528,7 +529,10 @@ namespace Kiritori.Views.LiveCapture
 
         private bool UsesTransferFrameOwnership()
         {
-            return _policy == RenderPolicy.LowCopyGdi;
+            // The backend already creates a dedicated Bitmap for each event.
+            // Transfer it to the presentation layer for every policy so the
+            // normal path never clones the full frame a second time.
+            return true;
         }
 
         private string GetRenderPolicyLabel()
@@ -1117,9 +1121,16 @@ namespace Kiritori.Views.LiveCapture
             {
                 if (_latest != null)
                 {
-                    bool highLoad = (_gifQueue != null && !_gifQueue.IsAddingCompleted) || _srcFps >= 30;
-                    g.InterpolationMode = highLoad ? InterpolationMode.NearestNeighbor : InterpolationMode.HighQualityBicubic;
-                    g.DrawImage(_latest, this.ClientRectangle);
+                    if (_latest.Size == this.ClientSize)
+                    {
+                        g.DrawImageUnscaled(_latest, 0, 0);
+                    }
+                    else
+                    {
+                        bool highLoad = (_gifQueue != null && !_gifQueue.IsAddingCompleted) || _srcFps >= 30;
+                        g.InterpolationMode = highLoad ? InterpolationMode.NearestNeighbor : InterpolationMode.Bilinear;
+                        g.DrawImage(_latest, this.ClientRectangle);
+                    }
                 }
             }
 
@@ -2531,10 +2542,61 @@ namespace Kiritori.Views.LiveCapture
         }
         private readonly Stopwatch _recFpsWatch = Stopwatch.StartNew();
         //private long _recLastTicks;
+        private void RequestFrameInvalidate()
+        {
+            if (!IsHandleCreated || IsDisposed || Disposing) return;
+            if (Interlocked.Exchange(ref _frameInvalidatePending, 1) != 0) return;
+
+            try
+            {
+                BeginInvoke((Action)(() =>
+                {
+                    try
+                    {
+                        if (IsDisposed || Disposing) return;
+                        Invalidate();
+                        if (!_firstFrameShown)
+                        {
+                            _firstFrameShown = true;
+                            _firstFrameReady = true;
+
+                            if (_tempExcludeUntilFirstFrame)
+                            {
+                                try
+                                {
+                                    Log.Info("LivePreview: Disabled temporary capture exclusion after first frame.", "LivePreview");
+                                    ApplyCaptureExclusion(false);
+                                    if (_backend is GdiCaptureBackend gdi)
+                                        gdi.ExcludeWindow = IntPtr.Zero;
+                                }
+                                finally
+                                {
+                                    _tempExcludeUntilFirstFrame = false;
+                                }
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        Interlocked.Exchange(ref _frameInvalidatePending, 0);
+                    }
+                }));
+            }
+            catch (ObjectDisposedException)
+            {
+                Interlocked.Exchange(ref _frameInvalidatePending, 0);
+            }
+            catch (InvalidOperationException)
+            {
+                Interlocked.Exchange(ref _frameInvalidatePending, 0);
+            }
+        }
+
         private void OnFrameArrived(LiveCaptureFrameEventArgs e)
         {
             Bitmap bmp = e?.Bitmap;
-            Log.Trace($"[LivePreview] FrameArrived: paused={_paused}, maxFps={_maxFps}, policy={_policy}", "LivePreview");
+            if (Log.IsEnabled(LogLevel.Trace))
+                Log.Trace($"[LivePreview] FrameArrived: paused={_paused}, maxFps={_maxFps}, policy={_policy}", "LivePreview");
             bool ownsIncoming = e != null && e.TransfersOwnership;
             bool consumedIncoming = false;
 
@@ -2675,36 +2737,7 @@ namespace Kiritori.Views.LiveCapture
                 }
                 old?.Dispose();
                 Interlocked.Increment(ref _dispCount);
-                if (IsHandleCreated)
-                {
-                    BeginInvoke((Action)(() =>
-                    {
-                        Invalidate();
-                        if (!_firstFrameShown)
-                        {
-                            _firstFrameShown = true;
-                            _firstFrameReady = true;
-
-                            if (_tempExcludeUntilFirstFrame)
-                            {
-                                try
-                                {
-                                    Log.Info("LivePreview: Disabled temporary capture exclusion after first frame.", "LivePreview");
-                                    ApplyCaptureExclusion(false);
-                                    if (_backend is GdiCaptureBackend gdi)
-                                        gdi.ExcludeWindow = IntPtr.Zero;
-                                }
-                                finally
-                                {
-                                    _tempExcludeUntilFirstFrame = false;
-                                }
-                            }
-
-                            // 初期フレームが出たタイミングでオーバーレイを表示するならここで
-                            // ShowOverlay("LIVE PREVIEW KIRITORI");
-                        }
-                    }));
-                }
+                RequestFrameInvalidate();
 
                 swDraw.Stop();
                 _drawTimeTicksTotal += swDraw.ElapsedTicks; _drawCount++;

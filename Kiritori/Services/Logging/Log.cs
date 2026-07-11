@@ -99,7 +99,7 @@ namespace Kiritori.Services.Logging
             _initialized = true;
         }
 
-        private static bool IsEnabled(LogLevel level)
+        public static bool IsEnabled(LogLevel level)
         {
             if (!_opt.Enabled) return false;
             return level >= _opt.MinLevel && level != LogLevel.Off;
