@@ -233,6 +233,7 @@ namespace Kiritori.Views.LiveCapture
         private SolidBrush _statBgBrush;          // 130,0,0,0
         private PropertyChangedEventHandler _appearanceSettingsChangedHandler;
         private PropertyChangedEventHandler _renderPolicySettingsChangedHandler;
+        private PropertyChangedEventHandler _captureBackendSettingsChangedHandler;
 
         public LivePreviewWindow()
         {
@@ -290,6 +291,25 @@ namespace Kiritori.Views.LiveCapture
                 }
             };
             Properties.Settings.Default.PropertyChanged += _renderPolicySettingsChangedHandler;
+            _captureBackendSettingsChangedHandler = (s, e) =>
+            {
+                if (e.PropertyName != nameof(Properties.Settings.Default.LivePreviewCaptureBackend)) return;
+                int value = Properties.Settings.Default.LivePreviewCaptureBackend;
+                var mode = Enum.IsDefined(typeof(LiveCaptureBackendMode), value)
+                    ? (LiveCaptureBackendMode)value
+                    : LiveCaptureBackendMode.Auto;
+                if (mode == _captureBackendMode) return;
+
+                if (IsHandleCreated && !IsDisposed && !Disposing)
+                {
+                    try { BeginInvoke((Action)(() => RestartCaptureBackend(mode))); }
+                    catch (ObjectDisposedException) { _captureBackendMode = mode; }
+                    catch (InvalidOperationException) { _captureBackendMode = mode; }
+                }
+                else
+                    _captureBackendMode = mode;
+            };
+            Properties.Settings.Default.PropertyChanged += _captureBackendSettingsChangedHandler;
 
             BuildOverlay();
             WireHoverHandlers();
@@ -670,8 +690,11 @@ namespace Kiritori.Views.LiveCapture
         private void RestartCaptureBackend(LiveCaptureBackendMode mode)
         {
             _captureBackendMode = mode;
-            Properties.Settings.Default.LivePreviewCaptureBackend = (int)mode;
-            try { Properties.Settings.Default.Save(); } catch { }
+            if (Properties.Settings.Default.LivePreviewCaptureBackend != (int)mode)
+            {
+                Properties.Settings.Default.LivePreviewCaptureBackend = (int)mode;
+                try { Properties.Settings.Default.Save(); } catch { }
+            }
 
             bool wantExclude = Properties.Settings.Default.LivePreviewPrivacyMode;
             ApplyCaptureExclusion(true);
@@ -1685,6 +1708,12 @@ namespace Kiritori.Views.LiveCapture
             {
                 try { Properties.Settings.Default.PropertyChanged -= _renderPolicySettingsChangedHandler; } catch { }
                 _renderPolicySettingsChangedHandler = null;
+            }
+
+            if (_captureBackendSettingsChangedHandler != null)
+            {
+                try { Properties.Settings.Default.PropertyChanged -= _captureBackendSettingsChangedHandler; } catch { }
+                _captureBackendSettingsChangedHandler = null;
             }
 
             // ---- Timers ----

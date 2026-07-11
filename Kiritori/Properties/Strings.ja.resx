@@ -781,7 +781,10 @@
     <value>ライブプレビューのプライバシーモード</value>
   </data>
   <data name="Setting.Display.LivePreviewRenderPolicy" xml:space="preserve">
-    <value>ライブプレビューの描画方式 (自動/GDI/DirectX)</value>
+    <value>ライブプレビューの描画ポリシー</value>
+  </data>
+  <data name="Setting.Display.LivePreviewCaptureBackend" xml:space="preserve">
+    <value>ライブプレビューのキャプチャ方式</value>
   </data>
   <data name="Setting.Display.LogEnabled" xml:space="preserve">
     <value>ログ記録を有効化</value>
