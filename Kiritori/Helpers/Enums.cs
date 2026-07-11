@@ -93,6 +93,12 @@ namespace Kiritori.Helpers
         LowCopyGdi = 2,
         AdaptiveHashThrottle = 3
     }
+    public enum LiveCaptureBackendMode
+    {
+        Auto = 0,
+        Gdi = 1,
+        WindowsGraphicsCapture = 2
+    }
     public enum OutputKind {
         Mp4,
         Gif

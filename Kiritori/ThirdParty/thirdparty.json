@@ -8,6 +8,24 @@
       "projectUrl": "https://ffmpeg.org/",
       "licenseUrl": "https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html",
       "licenseRes": "ThirdParty/FFmpeg/LICENSE.txt"
+    },
+    {
+      "id": "vortice-windows",
+      "name": "Vortice.Windows",
+      "version": "1.9.143",
+      "license": "MIT",
+      "projectUrl": "https://github.com/amerkoleci/Vortice.Windows",
+      "licenseUrl": "https://opensource.org/license/mit/",
+      "licenseRes": "ThirdParty/Vortice/LICENSE.txt"
+    },
+    {
+      "id": "sharpgen-runtime",
+      "name": "SharpGen.Runtime",
+      "version": "2.0.0-beta.9",
+      "license": "MIT",
+      "projectUrl": "https://github.com/SharpGenTools/SharpGenTools",
+      "licenseUrl": "https://opensource.org/license/mit/",
+      "licenseRes": "ThirdParty/SharpGen/LICENSE.txt"
     }
   ]
 }

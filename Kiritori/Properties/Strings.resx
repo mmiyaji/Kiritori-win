@@ -576,6 +576,18 @@
   <data name="Menu.Rendering" xml:space="preserve">
     <value>Rendering</value>
   </data>
+  <data name="Menu.CaptureBackend" xml:space="preserve">
+    <value>Capture backend</value>
+  </data>
+  <data name="Menu.CaptureBackend.Auto" xml:space="preserve">
+    <value>Auto (recommended)</value>
+  </data>
+  <data name="Menu.CaptureBackend.Gpu" xml:space="preserve">
+    <value>GPU (Windows Graphics Capture)</value>
+  </data>
+  <data name="Menu.CaptureBackend.Gdi" xml:space="preserve">
+    <value>GDI compatibility mode</value>
+  </data>
   <data name="Menu.AlwaysDraw" xml:space="preserve">
     <value>Always draw</value>
   </data>

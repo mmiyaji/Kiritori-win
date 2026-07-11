@@ -47,6 +47,7 @@ namespace Kiritori.Views.LiveCapture
             _miOpacity, _miPauseResume, _miSaveCurrentFrame, _miOpenPausedFrame, _miRealign, _miTopMost, _miClose,
             _miPref, _miExit, _miTitlebar, _miShowStats, _miHighlight,
             _miPolicyRoot, _miPolicyAlways, _miPolicyHash, _miPolicyLowCopy, _miPolicyAdaptive,
+            _miBackendRoot, _miBackendAuto, _miBackendGpu, _miBackendGdi,
             _miRecording, _miPrivacy, _miRecordingGif;
 
         private float _zoom = 1.0f;     // 表示倍率（1.0=100%）
@@ -171,6 +172,9 @@ namespace Kiritori.Views.LiveCapture
         private int _hashCount = 0, _drawCount = 0, _skipCount = 0;
         private int _adaptiveSkipStreak = 0;
         private int _effectiveBackendFps = -1;
+        private LiveCaptureBackendMode _captureBackendMode = LiveCaptureBackendMode.Auto;
+        private string _effectiveCaptureBackend = "GDI";
+        private int _backendFallbackPending;
         private const int AdaptiveThrottleAfterSkips = 8;
         private const int AdaptiveThrottledFps = 5;
         private const int IdleThrottledFps = 1;
@@ -267,6 +271,14 @@ namespace Kiritori.Views.LiveCapture
                 _policy = ParseRenderPolicy(v);
             }
             catch { _policy = RenderPolicy.AlwaysDraw; }
+            try
+            {
+                int v = Properties.Settings.Default.LivePreviewCaptureBackend;
+                _captureBackendMode = Enum.IsDefined(typeof(LiveCaptureBackendMode), v)
+                    ? (LiveCaptureBackendMode)v
+                    : LiveCaptureBackendMode.Auto;
+            }
+            catch { _captureBackendMode = LiveCaptureBackendMode.Auto; }
             _renderPolicySettingsChangedHandler = (s, e) =>
             {
                 if (e.PropertyName == nameof(Properties.Settings.Default.LivePreviewRenderPolicy))
@@ -560,12 +572,160 @@ namespace Kiritori.Views.LiveCapture
 
         private void SetBackendFps(int fps)
         {
-            var gdi = _backend as GdiCaptureBackend;
-            if (gdi == null) return;
+            var backend = _backend;
+            if (backend == null) return;
             if (_effectiveBackendFps == fps) return;
-            gdi.MaxFps = fps;
+            backend.MaxFps = fps;
             _effectiveBackendFps = fps;
-            Log.Info($"BackendFpsChanged: BackendFps={fps}, IdleThrottle={ShouldIdleThrottle()}, Policy={_policy}, AdaptiveSkipStreak={_adaptiveSkipStreak}", "LivePreview");
+            Log.Info($"BackendFpsChanged: Backend={_effectiveCaptureBackend}, BackendFps={fps}, IdleThrottle={ShouldIdleThrottle()}, Policy={_policy}, AdaptiveSkipStreak={_adaptiveSkipStreak}", "LivePreview");
+        }
+
+        private void StopCaptureBackend()
+        {
+            var backend = _backend;
+            _backend = null;
+            if (backend == null) return;
+            try { backend.FrameArrived -= OnFrameArrived; } catch { }
+            if (backend is WindowsGraphicsCaptureBackend gpu)
+            {
+                try { gpu.CaptureFailed -= OnGpuCaptureFailed; } catch { }
+            }
+            try { backend.Dispose(); } catch { }
+        }
+
+        private bool TryStartGpuBackend(Rectangle logical, Rectangle physical, out Exception error)
+        {
+            error = null;
+            if (!WindowsGraphicsCaptureBackend.CanCapture(physical, out string reason))
+            {
+                error = new NotSupportedException(reason);
+                return false;
+            }
+
+            var backend = new WindowsGraphicsCaptureBackend
+            {
+                MaxFps = _maxFps,
+                CaptureRect = logical,
+                CaptureRectPhysical = physical,
+            };
+            backend.FrameArrived += OnFrameArrived;
+            backend.CaptureFailed += OnGpuCaptureFailed;
+            try
+            {
+                backend.Start();
+                _backend = backend;
+                _effectiveCaptureBackend = "GPU/WGC";
+                _effectiveBackendFps = _maxFps;
+                Log.Info("LivePreview capture backend started: GPU/WGC", "LivePreview");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex;
+                try { backend.FrameArrived -= OnFrameArrived; } catch { }
+                try { backend.CaptureFailed -= OnGpuCaptureFailed; } catch { }
+                try { backend.Dispose(); } catch { }
+                return false;
+            }
+        }
+
+        private void StartGdiBackend(Rectangle logical, Rectangle physical)
+        {
+            var backend = new GdiCaptureBackend
+            {
+                MaxFps = _maxFps,
+                CaptureRect = logical,
+                CaptureRectPhysical = physical,
+                TransferFrameOwnership = UsesTransferFrameOwnership(),
+                ExcludeWindow = this.Handle,
+            };
+            backend.FrameArrived += OnFrameArrived;
+            backend.Start();
+            _backend = backend;
+            _effectiveCaptureBackend = "GDI";
+            _effectiveBackendFps = _maxFps;
+            Log.Info("LivePreview capture backend started: GDI", "LivePreview");
+        }
+
+        private void StartSelectedCaptureBackend(bool showFallbackOverlay)
+        {
+            Rectangle logical = CaptureRect;
+            Rectangle physical = !SourceRectPhysical.IsEmpty
+                ? SourceRectPhysical
+                : DpiUtil.LogicalToPhysical(logical);
+
+            bool wantsGpu = _captureBackendMode != LiveCaptureBackendMode.Gdi;
+            Exception gpuError = null;
+            if (wantsGpu && TryStartGpuBackend(logical, physical, out gpuError))
+                return;
+
+            if (wantsGpu)
+            {
+                Log.Warn("GPU capture unavailable; falling back to GDI: " + gpuError?.Message, "LivePreview");
+                if (showFallbackOverlay) ShowOverlay("GPU UNAVAILABLE - USING GDI");
+            }
+            StartGdiBackend(logical, physical);
+        }
+
+        private void RestartCaptureBackend(LiveCaptureBackendMode mode)
+        {
+            _captureBackendMode = mode;
+            Properties.Settings.Default.LivePreviewCaptureBackend = (int)mode;
+            try { Properties.Settings.Default.Save(); } catch { }
+
+            bool wantExclude = Properties.Settings.Default.LivePreviewPrivacyMode;
+            ApplyCaptureExclusion(true);
+            _tempExcludeUntilFirstFrame = !wantExclude;
+            StopCaptureBackend();
+            StartSelectedCaptureBackend(showFallbackOverlay: true);
+            ShowOverlay("CAPTURE: " + _effectiveCaptureBackend);
+            ResetFpsWindow();
+            SyncBackendMenuChecks();
+        }
+
+        private void OnGpuCaptureFailed(Exception error)
+        {
+            if (Interlocked.Exchange(ref _backendFallbackPending, 1) != 0) return;
+            try
+            {
+                if (!IsHandleCreated || IsDisposed || Disposing)
+                {
+                    Interlocked.Exchange(ref _backendFallbackPending, 0);
+                    return;
+                }
+                BeginInvoke((Action)(() =>
+                {
+                    try
+                    {
+                        if (IsDisposed || Disposing || !(_backend is WindowsGraphicsCaptureBackend)) return;
+                        Log.Warn("GPU capture stopped; switching to GDI: " + error?.Message, "LivePreview");
+                        StopCaptureBackend();
+                        Rectangle physical = !SourceRectPhysical.IsEmpty
+                            ? SourceRectPhysical
+                            : DpiUtil.LogicalToPhysical(CaptureRect);
+                        StartGdiBackend(CaptureRect, physical);
+                        ShowOverlay("GPU ERROR - USING GDI");
+                        SyncBackendMenuChecks();
+                    }
+                    finally
+                    {
+                        Interlocked.Exchange(ref _backendFallbackPending, 0);
+                    }
+                }));
+            }
+            catch
+            {
+                Interlocked.Exchange(ref _backendFallbackPending, 0);
+            }
+        }
+
+        private void SyncBackendMenuChecks()
+        {
+            if (_miBackendAuto == null) return;
+            _miBackendAuto.Checked = _captureBackendMode == LiveCaptureBackendMode.Auto;
+            _miBackendGpu.Checked = _captureBackendMode == LiveCaptureBackendMode.WindowsGraphicsCapture;
+            _miBackendGdi.Checked = _captureBackendMode == LiveCaptureBackendMode.Gdi;
+            _miBackendRoot.Text = $"{SR.T("Menu.CaptureBackend", "Capture backend")} ({_effectiveCaptureBackend})";
         }
 
         private bool ShouldIdleThrottle()
@@ -1026,28 +1186,16 @@ namespace Kiritori.Views.LiveCapture
             // プライバシーモードの初期値を先に決める
             bool wantExclude = Properties.Settings.Default.LivePreviewPrivacyMode;
 
-            // Backend 準備
-            var backend = new GdiCaptureBackend { MaxFps = _maxFps };
-            _effectiveBackendFps = _maxFps;
-            var rLog = this.CaptureRect;
-            var rPhys = !SourceRectPhysical.IsEmpty ? SourceRectPhysical : DpiUtil.LogicalToPhysical(rLog);
-            backend.CaptureRect = rLog;
-            backend.CaptureRectPhysical = rPhys;
-            backend.TransferFrameOwnership = UsesTransferFrameOwnership();
-            backend.FrameArrived += OnFrameArrived;
-
             // ★ 初期は「必ず除外ON」で立ち上げる（自分写り防止）
             // 設定がOFFでも、初回フレームまでだけはONにしておく
             ApplyCaptureExclusion(true);
-            backend.ExcludeWindow = this.Handle;
             _tempExcludeUntilFirstFrame = !wantExclude;   // 後でOFFに戻す必要があるか
-
-            _backend = backend;
-            _backend.Start();
+            StartSelectedCaptureBackend(showFallbackOverlay: true);
+            SyncBackendMenuChecks();
 
             // 初期同期キャプチャ（自分が写らない状態で実施）
             TrySyncFirstCaptureIntoLatest(CaptureRect);
-            Log.Trace("[LivePreview][BackendInit] Backend.Start() called", "LivePreview");
+            Log.Trace($"[LivePreview][BackendInit] {_effectiveCaptureBackend} backend started", "LivePreview");
 
             _iconBadge = new TitleIconBadger(this);
             _iconBadge.SetState(LiveBadgeState.Rendering);
@@ -1158,8 +1306,9 @@ namespace Kiritori.Views.LiveCapture
                 }
                 else
                 {
-                    string info = string.Format("FPS: {0} / {1}  CPU: {2:F1}%  MEM: {3} MB  {4}",
-                        _dispFps, _srcFps, _cpuUsage, _memUsage / 1024 / 1024, GetRenderPolicyLabel());
+                    string info = string.Format("FPS: {0} / {1}  CPU: {2:F1}%  MEM: {3} MB  {4}/{5}",
+                        _dispFps, _srcFps, _cpuUsage, _memUsage / 1024 / 1024,
+                        _effectiveCaptureBackend, GetRenderPolicyLabel());
                     var loc = new Point(DpiScale(10), DpiScale(10));
                     var sz = g.MeasureString(info, _statFont);
                     var bgRect = new Rectangle(
@@ -1575,12 +1724,7 @@ namespace Kiritori.Views.LiveCapture
             }
 
             // ---- Backend / Recording ----
-            var bk = _backend; _backend = null;
-            if (bk != null)
-            {
-                try { bk.FrameArrived -= OnFrameArrived; } catch { }
-                try { bk.Dispose(); } catch { }
-            }
+            StopCaptureBackend();
 
             try { StopRecording(); } catch { }
             WaitForRecorderStopsOnExit(4000);
@@ -1947,6 +2091,20 @@ namespace Kiritori.Views.LiveCapture
             };
             _miShowStats.ShortcutKeys = (Keys)HOTS.INFO;
 
+            _miBackendRoot = new ToolStripMenuItem(SR.T("Menu.CaptureBackend", "Capture backend"));
+            _miBackendAuto = new ToolStripMenuItem(SR.T("Menu.CaptureBackend.Auto", "Auto (recommended)"));
+            _miBackendGpu = new ToolStripMenuItem(SR.T("Menu.CaptureBackend.Gpu", "GPU (Windows Graphics Capture)"));
+            _miBackendGdi = new ToolStripMenuItem(SR.T("Menu.CaptureBackend.Gdi", "GDI compatibility mode"));
+            _miBackendAuto.Click += (s, e) => RestartCaptureBackend(LiveCaptureBackendMode.Auto);
+            _miBackendGpu.Click += (s, e) => RestartCaptureBackend(LiveCaptureBackendMode.WindowsGraphicsCapture);
+            _miBackendGdi.Click += (s, e) => RestartCaptureBackend(LiveCaptureBackendMode.Gdi);
+            _miBackendRoot.DropDownItems.AddRange(new ToolStripItem[] {
+                _miBackendAuto,
+                _miBackendGpu,
+                _miBackendGdi,
+            });
+            SyncBackendMenuChecks();
+
             _miPolicyRoot = new ToolStripMenuItem(SR.T("Menu.Rendering", "Rendering"));
             _miPolicyAlways = new ToolStripMenuItem(SR.T("Menu.AlwaysDraw", "Always draw")) { CheckOnClick = true };
             _miPolicyHash = new ToolStripMenuItem(SR.T("Menu.SkipByHash", "Skip by hash")) { CheckOnClick = true };
@@ -2092,6 +2250,7 @@ namespace Kiritori.Views.LiveCapture
                 _miSaveCurrentFrame,
                 _miOpenPausedFrame,
                 miRecording,
+                _miBackendRoot,
                 _miPolicyRoot,
                 new ToolStripSeparator(),
                 miNewCapture,
@@ -2559,20 +2718,20 @@ namespace Kiritori.Views.LiveCapture
                         {
                             _firstFrameShown = true;
                             _firstFrameReady = true;
+                        }
 
-                            if (_tempExcludeUntilFirstFrame)
+                        if (_tempExcludeUntilFirstFrame)
+                        {
+                            try
                             {
-                                try
-                                {
-                                    Log.Info("LivePreview: Disabled temporary capture exclusion after first frame.", "LivePreview");
-                                    ApplyCaptureExclusion(false);
-                                    if (_backend is GdiCaptureBackend gdi)
-                                        gdi.ExcludeWindow = IntPtr.Zero;
-                                }
-                                finally
-                                {
-                                    _tempExcludeUntilFirstFrame = false;
-                                }
+                                Log.Info("LivePreview: Disabled temporary capture exclusion after first frame.", "LivePreview");
+                                ApplyCaptureExclusion(false);
+                                if (_backend is GdiCaptureBackend gdi)
+                                    gdi.ExcludeWindow = IntPtr.Zero;
+                            }
+                            finally
+                            {
+                                _tempExcludeUntilFirstFrame = false;
                             }
                         }
                     }
@@ -2755,7 +2914,7 @@ namespace Kiritori.Views.LiveCapture
             double tickToMs = 1000.0 / Stopwatch.Frequency;
             double hashAvg = (_hashCount > 0) ? (_hashTimeTicksTotal * tickToMs) / _hashCount : 0;
             double drawAvg = (_drawCount > 0) ? (_drawTimeTicksTotal * tickToMs) / _drawCount : 0;
-            Log.Info($"PerfStats: DrawFPS={_dispFps}, SrcFPS={_srcFps}, Policy={_policy}, BackendFps={_effectiveBackendFps}, IdleThrottle={ShouldIdleThrottle()}, AdaptiveSkipStreak={_adaptiveSkipStreak}, Skip={_skipCount}, HashAvg={hashAvg:F3}ms, DrawAvg={drawAvg:F3}ms (hashCount={_hashCount}, drawCount={_drawCount})", "LivePreview");
+            Log.Info($"PerfStats: DrawFPS={_dispFps}, SrcFPS={_srcFps}, Backend={_effectiveCaptureBackend}, Policy={_policy}, BackendFps={_effectiveBackendFps}, IdleThrottle={ShouldIdleThrottle()}, AdaptiveSkipStreak={_adaptiveSkipStreak}, Skip={_skipCount}, HashAvg={hashAvg:F3}ms, DrawAvg={drawAvg:F3}ms (hashCount={_hashCount}, drawCount={_drawCount})", "LivePreview");
             _hashTimeTicksTotal = _drawTimeTicksTotal = 0;
             _hashCount = _drawCount = _skipCount = 0;
         }

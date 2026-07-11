@@ -576,6 +576,18 @@
   <data name="Menu.Rendering" xml:space="preserve">
     <value>レンダリング</value>
   </data>
+  <data name="Menu.CaptureBackend" xml:space="preserve">
+    <value>キャプチャ方式</value>
+  </data>
+  <data name="Menu.CaptureBackend.Auto" xml:space="preserve">
+    <value>自動（推奨）</value>
+  </data>
+  <data name="Menu.CaptureBackend.Gpu" xml:space="preserve">
+    <value>GPU（Windows Graphics Capture）</value>
+  </data>
+  <data name="Menu.CaptureBackend.Gdi" xml:space="preserve">
+    <value>GDI互換モード</value>
+  </data>
   <data name="Menu.AlwaysDraw" xml:space="preserve">
     <value>常に再描画</value>
   </data>
