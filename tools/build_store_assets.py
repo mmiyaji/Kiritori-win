@@ -38,11 +38,11 @@ SLIDES = {
             "source": SOURCE / "info-ja.png",
         },
         {
-            "file": "04-live-preview-gpu.png",
-            "title": "GPU対応\nライブプレビュー",
-            "subtitle": "自動選択で滑らかに。\n未対応時はGDIへ。",
-            "chip": "Auto · GPU · GDI",
-            "source": SOURCE / "prefs-ja.png",
+            "file": "04-live-preview.png",
+            "title": "選んだ範囲を\nリアルタイム表示",
+            "subtitle": "画面の変化を、そのまま\n別ウィンドウで追跡。",
+            "chip": "Ctrl + Shift + 6",
+            "source": SOURCE / "live-preview.png",
         },
     ],
     "en": [
@@ -68,11 +68,11 @@ SLIDES = {
             "source": SOURCE / "info-en.png",
         },
         {
-            "file": "04-live-preview-gpu.png",
-            "title": "GPU-accelerated\nLive Preview",
-            "subtitle": "Auto mode prefers GPU and\nfalls back to GDI when needed.",
-            "chip": "Auto · GPU · GDI",
-            "source": SOURCE / "prefs-en.png",
+            "file": "04-live-preview.png",
+            "title": "Watch any region\nin real time",
+            "subtitle": "Follow on-screen changes in a\nseparate always-on-top window.",
+            "chip": "Ctrl + Shift + 6",
+            "source": SOURCE / "live-preview.png",
         },
     ],
 }
@@ -174,6 +174,9 @@ def main() -> None:
     for locale, slides in SLIDES.items():
         locale_dir = OUT / locale
         locale_dir.mkdir(parents=True, exist_ok=True)
+        stale_gpu_slide = locale_dir / "04-live-preview-gpu.png"
+        if stale_gpu_slide.exists():
+            stale_gpu_slide.unlink()
         for spec in slides:
             destination = locale_dir / spec["file"]
             draw_slide(locale, spec).save(destination, optimize=True)

@@ -18,13 +18,13 @@ Reference: [Microsoft Store — App screenshots, images, and trailers for MSIX a
 1. `01-capture.png` — 必要な場所だけを切り取り、画面の最前面に固定できます。
 2. `02-pin-and-control.png` — 拡大、透過、コピー、保存などを右クリックメニューから操作できます。
 3. `03-shortcuts.png` — キャプチャ、OCR、コピーを使い慣れたショートカットですばやく実行できます。
-4. `04-live-preview-gpu.png` — GPU 対応ライブプレビュー。Auto モードは必要に応じて GDI に切り替わります。
+4. `04-live-preview.png` — 選択した範囲をリアルタイムに追跡し、別ウィンドウへ表示できます。
 
 ## English captions
 
 1. `01-capture.png` — Capture any region and keep it always on top.
 2. `02-pin-and-control.png` — Zoom, adjust opacity, copy, or save from the context menu.
 3. `03-shortcuts.png` — Capture, OCR, and copy with familiar keyboard shortcuts.
-4. `04-live-preview-gpu.png` — GPU-accelerated Live Preview with automatic GDI fallback when needed.
+4. `04-live-preview.png` — Follow changes in any selected region in a separate always-on-top window.
 
 Each caption is under the Microsoft Store 200-character limit.
