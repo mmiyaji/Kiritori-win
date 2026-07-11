@@ -155,30 +155,10 @@ namespace Kiritori.Services.Recording
         }
         private static string ResolveFfmpegPath(string hint)
         {
-            // 1) 明示指定を最優先
             if (!string.IsNullOrWhiteSpace(hint) && File.Exists(hint))
-                return hint;
+                return Path.GetFullPath(hint);
 
-            // 2) 拡張フォルダを優先
-            var baseDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Kiritori", "bin", "ffmpeg");
-            if (Directory.Exists(baseDir))
-            {
-                var vers = Directory.GetDirectories(baseDir); // 例: 8.0.3 など
-                Array.Sort(vers, StringComparer.OrdinalIgnoreCase);
-                Array.Reverse(vers); // 新しい順
-                foreach (var d in vers)
-                {
-                    var exe = Path.Combine(d, "ffmpeg.exe");
-                    if (File.Exists(exe))
-                        return exe;
-                }
-            }
-
-            // 3) 環境にインストール済みの ffmpeg を探す (PATH)
-            //    → File.Exists できないが、ProcessStartInfo に渡せば OS が解決する
-            return "ffmpeg";
+            return FfmpegLocator.Resolve(autoInstall: false);
         }
 
         // -----------------------------------------

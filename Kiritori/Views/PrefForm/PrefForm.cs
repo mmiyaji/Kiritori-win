@@ -426,8 +426,7 @@ namespace Kiritori
                 {
                     // --- 非MSIX: .lnk 方式（STAで作成/削除） ---
                     await RunStaAsync(() => StartupManager.SetEnabled(want));
-                    // 厳密化：実在チェックで判定
-                    ok = await StartupManager.IsEnabledAsync();
+                    ok = StartupManager.IsEnabled() == want;
                 }
 
                 using (SuppressDirtyScope())

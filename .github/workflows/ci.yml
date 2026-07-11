@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        shell: pwsh
+        run: nuget restore Kiritori.sln
+
+      - name: Build application
+        shell: pwsh
+        run: >
+          msbuild Kiritori\Kiritori.csproj
+          /t:Build
+          /m
+          /p:Configuration=Release
+          /p:Platform=x64
+          /p:SignManifests=false
+
+      - name: Test with coverage
+        shell: pwsh
+        run: >
+          dotnet test Kiritori.Tests\Kiritori.Tests.csproj
+          --configuration Release
+          --no-restore
+          --settings Kiritori.Tests\c1.runsettings
+          --collect "XPlat Code Coverage"
+          --results-directory Kiritori.Tests\TestResults\CI
+
+      - name: Enforce branch coverage
+        shell: pwsh
+        run: |
+          $file = Get-ChildItem -LiteralPath "Kiritori.Tests\TestResults\CI" -Filter coverage.cobertura.xml -Recurse |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+          if (-not $file) {
+            throw "coverage.cobertura.xml was not generated."
+          }
+          [xml]$coverage = Get-Content -LiteralPath $file.FullName
+          $rate = 100.0 * [double]$coverage.coverage.'branch-rate'
+          Write-Host ("C1 branch coverage: {0:N2}%" -f $rate)
+          if ($rate -lt 95) {
+            throw ("C1 branch coverage {0:N2}% is below 95%." -f $rate)
+          }

@@ -71,6 +71,14 @@ namespace Kiritori
             Kiritori.Services.Logging.LogViewSharedSink.EnsureRegistered();
             Log.Info($"Kiritori starting (v{Application.ProductVersion})", "Startup");
 
+            try
+            {
+                var culture = Properties.Settings.Default.UICulture;
+                Thread.CurrentThread.CurrentUICulture = new CultureInfo(culture);
+                Log.Debug("Set UI Culture: " + culture, "Startup");
+            }
+            catch (Exception ex) { Log.Warn("Failed to set UI culture, falling back to default: " + ex.Message, "Startup"); }
+
             // SatelliteBootstrapper.EnsureSatellitesExtracted();
             Kiritori.Helpers.SatelliteBootstrapper.Init();
             EarlyExtensionsInit();
@@ -84,13 +92,6 @@ namespace Kiritori
                 RegisterAssemblyResolvers();
             }
 
-            try
-            {
-                var culture = Properties.Settings.Default.UICulture;
-                Thread.CurrentThread.CurrentUICulture = new CultureInfo(culture);
-                Log.Debug("Set UI Culture: " + culture, "Startup");
-            }
-            catch (Exception ex) { Log.Warn("Failed to set UI culture, falling back to default: " + ex.Message, "Startup"); }
             // ===== DPI Awareness を可能な限り高く設定 =====
             bool dpiSet = false;
             try
@@ -179,11 +180,8 @@ namespace Kiritori
             {
                 Log.Info("Running in packaged mode", "Startup");
             }
-            if (args != null && args.Length > 0)
-            {
-                Log.Info("Command line args: " + string.Join(" ", args), "Startup");
-            }
             var opt = ParseArgs(args);
+            Log.Info($"Startup mode: {opt.Mode}, image count: {opt.ImagePaths.Length}", "Startup");
             using (var mutex = new Mutex(true, SingleInstance.MutexName, out bool isNew))
             {
                 if (isNew)
@@ -315,13 +313,11 @@ namespace Kiritori
 
         private static AppStartupOptions ParseArgs(string[] args)
         {
-            string[] exts = { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp" /*, ".heic"*/ };
-
             var files = (args ?? Array.Empty<string>())
                 .Select(a => a?.Trim('"'))
                 .Where(a => !string.IsNullOrWhiteSpace(a))
                 .Where(File.Exists)
-                .Where(p => exts.Contains(Path.GetExtension(p).ToLowerInvariant()))
+                .Where(ImageFileSupport.IsSupportedImagePath)
                 .Distinct()
                 .ToArray();
 

@@ -9,8 +9,8 @@
     <CoverageThreshold>95</CoverageThreshold>
     <XUnitAdapterPath Condition="'$(XUnitAdapterPath)' == ''">$(NuGetPackageRoot)xunit.runner.visualstudio\3.1.5\build\net472</XUnitAdapterPath>
     <CoverletCollectorPath Condition="'$(CoverletCollectorPath)' == ''">$(NuGetPackageRoot)coverlet.collector\6.0.2\build\netstandard2.0</CoverletCollectorPath>
-    <VSTestConsolePath Condition="'$(VSTestConsolePath)' == '' and Exists('C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\Extensions\TestPlatform\vstest.console.exe')">C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\Extensions\TestPlatform\vstest.console.exe</VSTestConsolePath>
-    <VSTestConsolePath Condition="'$(VSTestConsolePath)' == '' and Exists('C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\TestPlatform\vstest.console.exe')">C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\TestPlatform\vstest.console.exe</VSTestConsolePath>
+    <C1VSTestConsolePath Condition="'$(C1VSTestConsolePath)' == '' and Exists('C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\Extensions\TestPlatform\vstest.console.exe')">C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\Extensions\TestPlatform\vstest.console.exe</C1VSTestConsolePath>
+    <C1VSTestConsolePath Condition="'$(C1VSTestConsolePath)' == '' and Exists('C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\TestPlatform\vstest.console.exe')">C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\Extensions\TestPlatform\vstest.console.exe</C1VSTestConsolePath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,6 +30,8 @@
     <Reference Include="System.Windows.Forms" />
     <Compile Include="..\Kiritori\Helpers\Enums.cs" Link="ProductionSources\Enums.cs" />
     <Compile Include="..\Kiritori\Helpers\HotkeyUtil.cs" Link="ProductionSources\HotkeyUtil.cs" />
+    <Compile Include="..\Kiritori\Helpers\ImageFileSupport.cs" Link="ProductionSources\ImageFileSupport.cs" />
+    <Compile Include="..\Kiritori\Helpers\PathBoundary.cs" Link="ProductionSources\PathBoundary.cs" />
   </ItemGroup>
 
   <Target Name="CleanC1CoverageResults">
@@ -38,11 +40,11 @@
   </Target>
 
   <Target Name="RunVSTestForCoverage" DependsOnTargets="Build;CleanC1CoverageResults">
-    <Error Condition="'$(VSTestConsolePath)' == ''" Text="vstest.console.exe was not found. Pass /p:VSTestConsolePath=&quot;path\to\vstest.console.exe&quot;." />
+    <Error Condition="'$(C1VSTestConsolePath)' == ''" Text="vstest.console.exe was not found. Pass /p:C1VSTestConsolePath=&quot;path\to\vstest.console.exe&quot;." />
     <Error Condition="!Exists('$(CoverageRunSettings)')" Text="Coverage runsettings file was not found: $(CoverageRunSettings)" />
     <Error Condition="!Exists('$(XUnitAdapterPath)')" Text="xUnit test adapter was not found: $(XUnitAdapterPath)" />
     <Error Condition="!Exists('$(CoverletCollectorPath)')" Text="coverlet collector was not found: $(CoverletCollectorPath)" />
-    <Exec Command="&quot;$(VSTestConsolePath)&quot; &quot;$(TargetPath)&quot; /TestAdapterPath:&quot;$(XUnitAdapterPath)&quot; /TestAdapterPath:&quot;$(CoverletCollectorPath)&quot; /Settings:&quot;$(CoverageRunSettings)&quot; /ResultsDirectory:&quot;$(CoverageResultsDirectory)&quot; /Collect:&quot;XPlat Code Coverage&quot; /InIsolation" />
+    <Exec Command="&quot;$(C1VSTestConsolePath)&quot; &quot;$(TargetPath)&quot; /TestAdapterPath:&quot;$(XUnitAdapterPath)&quot; /TestAdapterPath:&quot;$(CoverletCollectorPath)&quot; /Settings:&quot;$(CoverageRunSettings)&quot; /ResultsDirectory:&quot;$(CoverageResultsDirectory)&quot; /Collect:&quot;XPlat Code Coverage&quot; /InIsolation" />
   </Target>
 
   <Target Name="CheckC1Coverage" DependsOnTargets="RunVSTestForCoverage">

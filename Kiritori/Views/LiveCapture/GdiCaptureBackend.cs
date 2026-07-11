@@ -1,4 +1,5 @@
 ﻿using Kiritori.Services.Logging;
+using Kiritori.Helpers;
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -95,7 +96,8 @@ namespace Kiritori.Views.LiveCapture
 
                             hdcDst = _g.GetHdc();
                         }
-                        Log.Trace($"[Backend] BitBlt from Phys={rPhysical}  size={rPhysical.Width}x{rPhysical.Height}", "LivePreview");
+                        if (Log.IsEnabled(LogLevel.Trace))
+                            Log.Trace($"[Backend] BitBlt from Phys={rPhysical}  size={rPhysical.Width}x{rPhysical.Height}", "LivePreview");
 
                         // コピー
                         NativeMethods.BitBlt(hdcDst, 0, 0, rPhysical.Width, rPhysical.Height,

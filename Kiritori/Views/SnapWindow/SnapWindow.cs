@@ -128,9 +128,6 @@ namespace Kiritori
 
         // OCR
         private bool _ocrBusy = false;
-        private static readonly string[] ImageExts =
-            { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp" };
-
         internal LoadMethod CurrentLoadMethod { get; private set; } = LoadMethod.Path;
 
         #endregion

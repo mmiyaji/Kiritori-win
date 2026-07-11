@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Kiritori.Services.Extensions;
 using Kiritori.Services.Logging;
@@ -21,26 +22,6 @@ namespace Kiritori.Services.Recording
             var ext = TryFromExtension(id);
             if (IsGood(ext)) return ext;
 
-            // 2-1) 自動導入（未導入なら）
-            if (autoInstall && !ExtensionsManager.IsInstalled(id)
-            //  && !Helpers.PackagedHelper.IsPackaged()
-            )
-            {
-                try
-                {
-                    // ユーザーが No を選んだら OperationCanceledException を投げる
-                    if (ExtensionsAuto.TryEnsure(id, owner, prompt: true, throwOnDecline: true))
-                    {
-                        ext = TryFromExtension(id);
-                        if (IsGood(ext)) return ext;
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    // キャンセルされたので、以降の PATH/ポータブル等のフォールバックも行わず中断
-                    throw;
-                }
-            }
             // 3) ポータブル同梱（EXE隣 or ThirdParty\ffmpeg\ffmpeg.exe）
             var exeDir = AppDomain.CurrentDomain.BaseDirectory;
             var portable1 = Path.Combine(exeDir, "ffmpeg.exe");
@@ -52,6 +33,14 @@ namespace Kiritori.Services.Recording
             // 4) PATH から探す
             var fromPath = WhichOnPath("ffmpeg.exe");
             if (IsGood(fromPath)) return fromPath;
+
+            // 5) 他の候補が無い場合だけ自動導入を提案
+            if (autoInstall && !ExtensionsManager.IsInstalled(id) &&
+                ExtensionsAuto.TryEnsure(id, owner, prompt: true, throwOnDecline: true))
+            {
+                ext = TryFromExtension(id);
+                if (IsGood(ext)) return ext;
+            }
 
             // 見つからず
             return null;
@@ -75,7 +64,7 @@ namespace Kiritori.Services.Recording
             // 簡易健全性チェック: 実行して "-version" が返るか
             try
             {
-                var p = new Process
+                using (var p = new Process
                 {
                     StartInfo = new ProcessStartInfo
                     {
@@ -87,11 +76,23 @@ namespace Kiritori.Services.Recording
                         CreateNoWindow = true,
                         WindowStyle = ProcessWindowStyle.Hidden
                     }
-                };
-                if (!p.Start()) return false;
-                p.WaitForExit(3000);
-                var outStr = (p.StandardOutput.ReadToEnd() + p.StandardError.ReadToEnd()) ?? "";
-                return outStr.IndexOf("ffmpeg", StringComparison.OrdinalIgnoreCase) >= 0;
+                })
+                {
+                    if (!p.Start()) return false;
+
+                    var stdout = p.StandardOutput.ReadToEndAsync();
+                    var stderr = p.StandardError.ReadToEndAsync();
+                    if (!p.WaitForExit(3000))
+                    {
+                        try { p.Kill(); } catch { }
+                        try { p.WaitForExit(1000); } catch { }
+                        return false;
+                    }
+
+                    if (!Task.WaitAll(new Task[] { stdout, stderr }, 1000)) return false;
+                    var outStr = (stdout.Result + stderr.Result) ?? "";
+                    return outStr.IndexOf("ffmpeg", StringComparison.OrdinalIgnoreCase) >= 0;
+                }
             }
             catch { return false; }
         }

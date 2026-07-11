@@ -453,7 +453,8 @@ namespace Kiritori
 
                 if (!s.Visible)
                 {
-                    s.ShowScreenFixedWithPrompt();
+                    if (!s.ShowScreenFixedWithPrompt())
+                        ReleaseScreenGate();
                     // int w, h;
                     // if (FixedSizeInputDialog.TryPrompt(this, out w, out h))
                     // {

@@ -78,8 +78,7 @@ namespace Kiritori
             if (string.IsNullOrWhiteSpace(path)) return false;
             if (Directory.Exists(path)) return false;
             if (!File.Exists(path)) return false;
-            var ext = Path.GetExtension(path).ToLowerInvariant();
-            return ImageExts.Contains(ext);
+            return ImageFileSupport.IsSupportedImagePath(path);
         }
 
  // ====== イベント ======

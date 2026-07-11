@@ -16,10 +16,6 @@ namespace Kiritori.Helpers
         private static readonly string UserName = WindowsIdentity.GetCurrent()?.User?.Value ?? Environment.UserName;
         public static readonly string MutexName = $@"Local\Kiritori.SingleInstance.{UserName}";
         private static readonly string PipeName = $@"Kiritori.SingleInstance.{UserName}";
-        private static readonly HashSet<string> ImageExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ".png", ".jpg", ".jpeg", ".bmp", ".gif"
-        };
 
         private static Thread _serverThread;
         private static volatile bool _running;
@@ -134,7 +130,7 @@ namespace Kiritori.Helpers
                 {
                     var path = raw.Trim('"');
                     if (!File.Exists(path)) continue;
-                    if (!ImageExtensions.Contains(Path.GetExtension(path))) continue;
+                    if (!ImageFileSupport.IsSupportedImagePath(path)) continue;
 
                     path = Path.GetFullPath(path);
                     if (seen.Add(path)) result.Add(path);

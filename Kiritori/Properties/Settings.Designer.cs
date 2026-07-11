@@ -334,6 +334,18 @@ namespace Kiritori.Properties {
                 this["LivePreviewRenderPolicy"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int LivePreviewCaptureBackend {
+            get {
+                return ((int)(this["LivePreviewCaptureBackend"]));
+            }
+            set {
+                this["LivePreviewCaptureBackend"] = value;
+            }
+        }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]

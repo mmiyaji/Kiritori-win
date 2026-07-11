@@ -123,6 +123,8 @@ namespace Kiritori
         private Label labelDefaultOpacityVal;
         private GroupBox grpLivePreview;
         private CheckBox chkLiveShowStats;
+        private Label lblLiveCaptureBackend;
+        private ComboBox cmbLiveCaptureBackend;
         private Label lblSaveFolder, lblGifMax;
         private TextBox txtSaveFolder;
         private Button btnBrowseSaveFolder, btnClearSaveFolder;
@@ -1099,6 +1101,43 @@ namespace Kiritori
             };
             flowLiveToggles.Controls.Add(this.chkLiveShowStats);
 
+            lblLiveCaptureBackend = NewRightLabel("Capture backend");
+            lblLiveCaptureBackend.Tag = "loc:Setting.Display.LivePreviewCaptureBackend";
+            cmbLiveCaptureBackend = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Anchor = AnchorStyles.Left,
+                Width = 260,
+                DisplayMember = "Value",
+                ValueMember = "Key",
+            };
+            cmbLiveCaptureBackend.Items.Add(new System.Collections.Generic.KeyValuePair<LiveCaptureBackendMode, string>(
+                LiveCaptureBackendMode.Auto,
+                SR.T("Menu.CaptureBackend.Auto", "Auto (recommended)")));
+            cmbLiveCaptureBackend.Items.Add(new System.Collections.Generic.KeyValuePair<LiveCaptureBackendMode, string>(
+                LiveCaptureBackendMode.WindowsGraphicsCapture,
+                SR.T("Menu.CaptureBackend.Gpu", "GPU (Windows Graphics Capture)")));
+            cmbLiveCaptureBackend.Items.Add(new System.Collections.Generic.KeyValuePair<LiveCaptureBackendMode, string>(
+                LiveCaptureBackendMode.Gdi,
+                SR.T("Menu.CaptureBackend.Gdi", "GDI compatibility mode")));
+            var savedBackend = (LiveCaptureBackendMode)CoerceInt(
+                Properties.Settings.Default.LivePreviewCaptureBackend,
+                (int)LiveCaptureBackendMode.Auto,
+                (int)LiveCaptureBackendMode.WindowsGraphicsCapture,
+                (int)LiveCaptureBackendMode.Auto);
+            for (int i = 0; i < cmbLiveCaptureBackend.Items.Count; i++)
+            {
+                var choice = (System.Collections.Generic.KeyValuePair<LiveCaptureBackendMode, string>)cmbLiveCaptureBackend.Items[i];
+                if (choice.Key == savedBackend) cmbLiveCaptureBackend.SelectedIndex = i;
+            }
+            if (cmbLiveCaptureBackend.SelectedIndex < 0) cmbLiveCaptureBackend.SelectedIndex = 0;
+            cmbLiveCaptureBackend.SelectedIndexChanged += (s, e) =>
+            {
+                if (!(cmbLiveCaptureBackend.SelectedItem is System.Collections.Generic.KeyValuePair<LiveCaptureBackendMode, string> choice)) return;
+                Properties.Settings.Default.LivePreviewCaptureBackend = (int)choice.Key;
+                try { Properties.Settings.Default.Save(); } catch { }
+            };
+
             tips = new ToolTip();
 
             lblSaveFolder = NewRightLabel("Live Preview Save Folder");
@@ -1234,6 +1273,12 @@ namespace Kiritori
                 true, DataSourceUpdateMode.OnPropertyChanged));
 
             int row = tlpLive.RowCount;
+            tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tlpLive.Controls.Add(lblLiveCaptureBackend, 0, row);
+            tlpLive.Controls.Add(cmbLiveCaptureBackend, 1, row);
+            tlpLive.RowCount++;
+
+            row = tlpLive.RowCount;
             tlpLive.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             tlpLive.Controls.Add(lblSaveFolder, 0, row);
             tlpLive.Controls.Add(flowFolder,   1, row);

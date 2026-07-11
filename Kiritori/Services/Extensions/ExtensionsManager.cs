@@ -11,7 +11,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
-using System.Text.RegularExpressions;
 
 namespace Kiritori.Services.Extensions
 {
@@ -216,7 +215,7 @@ namespace Kiritori.Services.Extensions
             // 4) 必要ファイルが揃っているか軽く検証
             foreach (var f in m.Install.Files ?? Array.Empty<string>())
             {
-                var p = Path.Combine(target, f);
+                var p = PathBoundary.ResolveUnder(target, f);
                 if (!File.Exists(p)) throw new FileNotFoundException("Missing file in extension package.", p);
             }
 
@@ -242,7 +241,7 @@ namespace Kiritori.Services.Extensions
                 // bin\<id>\<ver>
                 if (!string.IsNullOrEmpty(ver))
                 {
-                    var dir = Path.Combine(root, "bin", id, ver);
+                    var dir = PathBoundary.ResolveUnder(root, Path.Combine("bin", id, ver));
                     SafeDeleteDirectory(dir);
 
                     // 親（bin\<id>）が空なら掃除
@@ -256,7 +255,7 @@ namespace Kiritori.Services.Extensions
                     var culture = id.Substring("lang_".Length);
                     if (!string.IsNullOrWhiteSpace(culture))
                     {
-                        var dir = Path.Combine(root, "i18n", culture);
+                        var dir = PathBoundary.ResolveUnder(root, Path.Combine("i18n", culture));
                         SafeDeleteDirectory(dir);
                     }
                 }
@@ -282,7 +281,8 @@ namespace Kiritori.Services.Extensions
             if (string.IsNullOrEmpty(ver)) return null;
 
             // 後方互換：従来の bin/<id>/<ver>
-            return Path.Combine(ExtensionsPaths.Root, "bin", id, ver);
+            try { return PathBoundary.ResolveUnder(ExtensionsPaths.Root, Path.Combine("bin", id, ver)); }
+            catch { return null; }
         }
 
         public static void RepairStateIfMissing()
@@ -448,7 +448,7 @@ namespace Kiritori.Services.Extensions
 
                 if (ffmpegFound != null)
                 {
-                    var verNum = TryGetFfmpegVersion(ffmpegFound) ?? GetFileVersionOrFallback(ffmpegFound, "external");
+                    var verNum = GetFileVersionOrFallback(ffmpegFound, "external");
                     var display = string.IsNullOrWhiteSpace(verNum) ? "external" : (verNum + " (external)");
                     var folder  = Path.GetDirectoryName(ffmpegFound);
 
@@ -507,44 +507,6 @@ namespace Kiritori.Services.Extensions
             if (string.IsNullOrWhiteSpace(v)) return true;
             v = v.Trim();
             return v == "external" || v == "1.0.0.0" || v == "0.0.0.0" || v.Equals("unknown", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static string TryGetFfmpegVersion(string exePath)
-        {
-            try
-            {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = exePath,
-                    Arguments = "-version",
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true,
-                    WorkingDirectory = Path.GetDirectoryName(exePath)
-                };
-
-                using (var p = Process.Start(psi))
-                {
-                    if (p == null) return null;
-                    // 1行目だけで十分（"ffmpeg version 7.3 ..."）
-                    string first = p.StandardOutput.ReadLine();
-                    // 念のため残りを非同期で読ませてすぐタイムアウト待ち
-                    p.WaitForExit(1500);
-
-                    if (string.IsNullOrEmpty(first)) return null;
-
-                    // "ffmpeg version <token>" を取る
-                    var m = Regex.Match(first, @"ffmpeg\s+version\s+([^\s]+)", RegexOptions.IgnoreCase);
-                    if (!m.Success) return null;
-
-                    var token = m.Groups[1].Value; // 例: 7.3, 7.1-full_build-..., N-113490-g...
-                    // できれば数値だけに正規化（7.3 / 7.1.2 など）。無ければ token を返す
-                    var n = Regex.Match(token, @"\d+(\.\d+){0,2}");
-                    return n.Success ? n.Value : token;
-                }
-            }
-            catch { return null; }
         }
 
         private static void AddLangEntryIfMissing(ExtensionState st, string cultureName)
@@ -630,6 +592,12 @@ namespace Kiritori.Services.Extensions
         {
             try
             {
+                if (!PathBoundary.IsStrictlyUnder(ExtensionsPaths.Root, path))
+                {
+                    Log.Warn("Refused to delete extension path outside root: " + path, "Extensions");
+                    return;
+                }
+
                 if (Directory.Exists(path))
                 {
                     Directory.Delete(path, recursive: true);
@@ -705,7 +673,7 @@ namespace Kiritori.Services.Extensions
             // 4) 必要ファイルが揃っているか検証
             foreach (var f in m.Install.Files ?? Array.Empty<string>())
             {
-                var p = Path.Combine(target, f);
+                var p = PathBoundary.ResolveUnder(target, f);
                 if (!File.Exists(p)) throw new FileNotFoundException("Missing file in extension package.", p);
             }
 
@@ -785,7 +753,7 @@ namespace Kiritori.Services.Extensions
             // 4) 必須ファイル検証
             foreach (var f in m.Install.Files ?? Array.Empty<string>())
             {
-                var p = Path.Combine(target, f);
+                var p = PathBoundary.ResolveUnder(target, f);
                 if (!File.Exists(p)) throw new FileNotFoundException("Missing file in extension package.", p);
             }
 

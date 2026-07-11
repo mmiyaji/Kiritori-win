@@ -394,17 +394,18 @@ namespace Kiritori
             if (v < min) return min; if (v > max) return max; return v;
         }
 
-        public void ShowScreenFixedWithPrompt()
+        public bool ShowScreenFixedWithPrompt()
         {
             int w, h, presetIdx; bool remember;
             if (!Kiritori.Views.Capture.FixedSizePresetDialog.TryPrompt(this.ma, out w, out h, out presetIdx, out remember))
-                return;
+                return false;
 
             // ダイアログを消した直後の合成を確実に完了させる
             FlushComposition();
 
             // 既存フローでオーバーレイ表示 → 固定サイズ追随
             ShowScreenFixed(w, h);
+            return true;
         }
 
         private int FindNearestPresetIndex(Size sz)
@@ -902,6 +903,11 @@ namespace Kiritori
         {
             _fixed_mode = false;
             _fixedSizePx = Size.Empty;
+            _fixedPresetIndex = -1;
+            _ocr_mode = false;
+            _live_mode = false;
+            isPressed = false;
+            rc = Rectangle.Empty;
             this.isOpen = false;
             DisposeCaptureSurface();
             this.Hide();

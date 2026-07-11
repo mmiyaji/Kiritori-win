@@ -32,6 +32,17 @@ namespace Kiritori.Startup
                 || state == StartupTaskState.EnabledByPolicy;
         }
 
+        public static bool IsEnabled()
+        {
+            if (PackagedHelper.IsPackaged())
+            {
+                try { return IsEnabledAsync().GetAwaiter().GetResult(); }
+                catch { return false; }
+            }
+
+            return File.Exists(GetStartupShortcutPath());
+        }
+
         public static async Task<bool> EnableAsync()
         {
             if (!PackagedHelper.IsPackaged()) return false;
