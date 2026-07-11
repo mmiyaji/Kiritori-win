@@ -19,6 +19,7 @@
 - **矩形キャプチャ**（既定: `Ctrl`+`Shift`+`5` → 画面上をドラッグで範囲選択して最前面固定）
 - **OCRキャプチャ**（既定: `Ctrl`+`Shift`+`4` → 画面上をドラッグで範囲選択してテキスト抽出）
 - **ライブキャプチャ**（既定: `Ctrl`+`Shift`+`6` → 画面上をドラッグで範囲選択してリアルタイムプレビュー）
+- **GPU キャプチャ**（Windows Graphics Capture を使用。`Auto` では利用できない環境や複数モニターにまたがる範囲を自動的に GDI へフォールバック）
 - **ズーム**（拡大縮小 / マウスドラッグによる自由サイズ調整 / Shiftを押しながら縦横比率固定サイジング）
 - **不透明度の切替**（100 / 90 / 80 / 50 / 30%）
 - **クリップボード連携**（コピー / カット）
@@ -32,11 +33,25 @@
 
 ### 1) バイナリから使う（推奨）
 - **Releases** から最新の ZIP をダウンロードして展開 → `Kiritori.exe` を実行  
-- .NET Framework 4.0 以上と Windows 7 以降が対象（互換モード不要）
+- Windows 10 バージョン 1809 以降（x64）と .NET Framework 4.8 が必要です
 
 ### 2) ソースからビルド
-- `Kiritori.sln` を Visual Studio（2019/2022 など）で開く  
-- `Kiritori` プロジェクトをスタートアップに設定してビルド（Any CPU / x86 / x64 お好みで）
+
+- Visual Studio 2022 と Windows 10/11 SDK をインストールします
+- `Kiritori.sln` を開き、`Kiritori` プロジェクトを `Release | x64` でビルドします
+- コマンドラインでは `msbuild Kiritori\Kiritori.csproj /t:Build /m /p:Configuration=Release /p:Platform=x64 /p:SignManifests=false` を実行します
+- テストは `dotnet test Kiritori.Tests\Kiritori.Tests.csproj --configuration Release` で実行できます
+
+MSIX の作成方法は [Package Build ワークフロー](.github/workflows/package.yml) を参照してください。
+
+### ライブキャプチャの性能計測
+
+- 描画処理: `dotnet run --project tools\LivePreviewPerfBenchmark\LivePreviewPerfBenchmark.csproj -c Release`
+- キャプチャバックエンド: `dotnet run --project tools\LiveCaptureBackendBenchmark\LiveCaptureBackendBenchmark.csproj -c Release -- --target-fps 15`
+
+GPU モードは 1 台のモニター内に収まる範囲で使用できます。`Auto`（推奨）は GPU を優先し、未対応環境・初期化失敗・キャプチャエラー時には GDI 互換モードへ切り替えます。
+
+今回の変更内容は [v1.7.2 リリースノート](RELEASE_NOTES.md) を参照してください。
 
 ---
 
