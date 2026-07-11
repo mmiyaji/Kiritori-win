@@ -1,522 +1,117 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kiritori – 画面キャプチャ & スニッピング支援ツール</title>
-  <meta name="description" content="Kiritori は Windows 向けのキャプチャ & スニッピング支援ツールです。キーボードショートカット、領域固定、ズーム。" />
-  <link rel="icon" href="/kiritori.ico" />
-  <!-- Open Graph -->
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="Kiritori – 画面キャプチャ & スニッピング支援ツール" />
-  <meta property="og:description" content="Windows 向けのキャプチャツール。ホットキー、領域固定、ズーム。" />
-  <meta property="og:url" content="https://kiritori.ruhenheim.org/" />
-  <meta property="og:image" content="https://kiritori.ruhenheim.org/static/icon_256x256.png" />
-  <meta name="theme-color" content="#0ea5e9" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kiritori — Windows の画面キャプチャ、OCR、ライブプレビュー</title>
+  <meta name="description" content="Kiritori は、切り取った画面を最前面に固定し、OCRやライブプレビューも使える軽量なWindows向け画面キャプチャアプリです。">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Kiritori — Capture what matters">
+  <meta property="og:description" content="画面を切り取り、固定し、OCRやライブプレビューですぐ活用。">
+  <meta property="og:image" content="store-assets/v1.7.2/ja/04-live-preview.png">
+  <meta name="theme-color" content="#0f6cbd">
   <style>
-    :root {
-      --bg: #0b1020;          /* dark bg */
-      --panel: #0f172a;
-      --text: #e2e8f0;
-      --muted: #94a3b8;
-      --brand: #0ea5e9;       /* sky-500 */
-      --brand-2: #38bdf8;     /* sky-400 */
-      --ok: #22c55e;
-      --warn: #f59e0b;
-      --danger: #ef4444;
-      --border: #1f2937;
-      --shadow: 0 8px 30px rgba(2,6,23,.35);
-    }
-    @media (prefers-color-scheme: light) {
-      :root {
-        --bg: #f8fafc;
-        --panel: #ffffff;
-        --text: #0f172a;
-        --muted: #475569;
-        --border: #e2e8f0;
-        --shadow: 0 8px 30px rgba(2,6,23,.08);
-      }
-    }
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
-    body {
-      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      background: radial-gradient(1200px 600px at 70% -10%, rgba(56,189,248,.18), transparent 60%),
-                  radial-gradient(1000px 600px at -10% 20%, rgba(56,189,248,.12), transparent 60%), var(--bg);
-      color: var(--text);
-      line-height: 1.6;
-    }
-    a { color: var(--brand-2); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    header {
-      position: sticky; top: 0; z-index: 50; backdrop-filter: saturate(140%) blur(8px);
-      background: color-mix(in oklab, var(--bg) 86%, transparent);
-      border-bottom: 1px solid var(--border);
-    }
-    .container { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
-    .nav { display:flex; align-items:center; justify-content:space-between; height: 64px; }
-    .logo { display:flex; align-items:center; gap:12px; font-weight:700; letter-spacing:.1px; }
-    .logo-badge { width:32px; height:32px; border-radius:10px; background:linear-gradient(135deg, var(--brand), var(--brand-2)); box-shadow: var(--shadow); display:grid; place-items:center; color:white; font-weight:900; }
-    .nav a.btn { display:inline-flex; align-items:center; gap:10px; padding:10px 14px; border:1px solid var(--border); border-radius:12px; background:var(--panel); box-shadow:var(--shadow); }
-
-    .hero { display:grid; grid-template-columns: 1.1fr .9fr; gap: 28px; align-items: center; padding: 64px 0 36px; }
-    .hero h1 { font-size: clamp(28px, 4vw, 44px); line-height:1.2; margin: 0 0 12px; }
-    .hero p { margin: 0 0 16px; color: var(--muted); }
-    .callouts { display:flex; gap:12px; flex-wrap:wrap; margin-top: 14px; }
-    .chip { padding:6px 10px; border-radius:999px; border:1px solid var(--border); background: color-mix(in oklab, var(--panel) 92%, transparent); font-size: 13px; color: var(--muted); }
-    .download-card { background: var(--panel); border:1px solid var(--border); border-radius: 18px; padding: 18px; box-shadow: var(--shadow); }
-    .dl-grid { display:grid; grid-template-columns: 1fr; gap: 12px; }
-    .dl-row { display:flex; align-items:center; justify-content:space-between; gap: 12px; padding: 12px; border:1px dashed var(--border); border-radius: 14px; background: color-mix(in oklab, var(--panel) 92%, transparent); }
-    .dl-row .pill { font-size:12px; padding: 4px 8px; border-radius:999px; border:1px solid var(--border); color: var(--muted); }
-    .dl-row strong { font-size: 15px; }
-    .btn-primary { display:inline-flex; align-items:center; gap:10px; padding: 12px 16px; border-radius: 12px; border: none; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: white; font-weight:700; box-shadow: var(--shadow); cursor:pointer; }
-    .btn-ghost { display:inline-flex; align-items:center; gap:10px; padding: 10px 12px; border-radius: 12px; border:1px solid var(--border); background:transparent; color: var(--text); cursor: not-allowed; opacity:.55; }
-    .btn-disabled { pointer-events: none; opacity: 0.2; cursor: not-allowed; }
-    .section { padding: 48px 0; }
-    .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-    .card { background: var(--panel); border:1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
-    .card h3 { margin: 0 0 6px; font-size: 18px; }
-    .card p { margin: 0; color: var(--muted); font-size: 14px; }
-
-    .two { display:grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-    details { border:1px solid var(--border); border-radius: 14px; padding: 12px 14px; background: color-mix(in oklab, var(--panel) 92%, transparent); }
-    details + details { margin-top: 10px; }
-    summary { cursor: pointer; font-weight: 600; }
-
-    footer { border-top:1px solid var(--border); padding: 28px 0 56px; color: var(--muted); }
-    .muted { color: var(--muted); }
-    /* 拡大画像用モーダル */
-    .modal {
-      display: none;
-      position: fixed;
-      z-index: 1000;
-      left: 0; top: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8);
-      justify-content: center;
-      align-items: center;
-    }
-    .modal img {
-      max-width: 90%;
-      max-height: 90%;
-      border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
-    }
-    .small-video {
-      width: 100%;
-      /* max-height: 300px; */
-      border-radius: 12px;
-      cursor: pointer;
-      object-fit: cover;
-    }
-    .modal video {
-      max-width: 90%;
-      max-height: 90%;
-      border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
-    }
-
-    @media (max-width: 920px) { .hero { grid-template-columns: 1fr; } .two { grid-template-columns: 1fr; } .grid { grid-template-columns: 1fr; } }
+    :root { color-scheme: light dark; --bg:#f5f7fa; --surface:#fff; --text:#172033; --muted:#5d6778; --line:#dbe1e8; --brand:#0f6cbd; --brand2:#2b88d8; --soft:#eaf3fb; --shadow:0 12px 36px rgba(32,48,72,.12); }
+    @media (prefers-color-scheme:dark) { :root { --bg:#11151b; --surface:#1a2029; --text:#f2f5f8; --muted:#aeb8c5; --line:#303a47; --soft:#172c3d; --shadow:0 14px 38px rgba(0,0,0,.3); } }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; font-family:"Segoe UI","Noto Sans JP",system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.65; }
+    img,video { display:block; max-width:100%; }
+    a { color:var(--brand); }
+    .wrap { width:min(1120px,calc(100% - 40px)); margin:auto; }
+    header { position:sticky; top:0; z-index:10; background:color-mix(in srgb,var(--surface) 92%,transparent); backdrop-filter:blur(14px); border-bottom:1px solid var(--line); }
+    nav { min-height:64px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+    .brand { display:flex; align-items:center; gap:10px; color:var(--text); text-decoration:none; font-weight:700; font-size:18px; }
+    .brand img { width:34px; height:34px; border-radius:8px; }
+    .links { display:flex; gap:18px; align-items:center; flex-wrap:wrap; }
+    .links a { color:var(--muted); text-decoration:none; font-size:14px; }
+    .hero { padding:80px 0 54px; display:grid; grid-template-columns:1fr 1.05fr; gap:50px; align-items:center; }
+    .eyebrow { color:var(--brand); font-weight:700; letter-spacing:.08em; font-size:13px; text-transform:uppercase; }
+    h1 { font-size:clamp(38px,6vw,66px); line-height:1.08; margin:12px 0 22px; letter-spacing:-.035em; }
+    h2 { font-size:clamp(28px,4vw,42px); line-height:1.2; margin:0 0 12px; }
+    h3 { margin:16px 0 6px; font-size:21px; }
+    p { margin:0; }
+    .lead { color:var(--muted); font-size:18px; max-width:620px; }
+    .en { color:var(--muted); font-size:14px; margin-top:8px; }
+    .actions { display:flex; gap:12px; flex-wrap:wrap; margin-top:28px; }
+    .button { display:inline-flex; align-items:center; justify-content:center; min-height:46px; padding:0 18px; border-radius:8px; text-decoration:none; font-weight:650; border:1px solid var(--line); color:var(--text); background:var(--surface); }
+    .button.primary { color:#fff; background:var(--brand); border-color:var(--brand); }
+    .button:hover { filter:brightness(1.05); text-decoration:none; }
+    .hero-media { border:1px solid var(--line); background:var(--surface); padding:10px; border-radius:18px; box-shadow:var(--shadow); }
+    .hero-media img { border-radius:11px; width:100%; }
+    section { padding:62px 0; }
+    .section-head { max-width:700px; margin-bottom:28px; }
+    .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+    .card { background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px; box-shadow:0 5px 18px rgba(32,48,72,.05); }
+    .card img { width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:9px; }
+    .card-copy { padding:0 6px 10px; }
+    .card-copy p { color:var(--muted); font-size:14px; }
+    .demo { background:var(--surface); border-block:1px solid var(--line); }
+    .demo-grid { display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+    figure { margin:0; }
+    video { width:100%; aspect-ratio:16/9; object-fit:cover; background:#000; border-radius:12px; box-shadow:var(--shadow); }
+    figcaption { color:var(--muted); margin-top:10px; font-size:14px; }
+    .release { display:grid; grid-template-columns:1fr 1fr; gap:36px; align-items:start; }
+    .release-box { border:1px solid var(--line); background:var(--surface); border-radius:14px; padding:22px; }
+    .release-box ul { padding-left:20px; margin:12px 0 0; }
+    .release-box li+li { margin-top:7px; }
+    .note { background:var(--soft); border-radius:10px; padding:14px 16px; color:var(--muted); font-size:14px; margin-top:18px; }
+    footer { border-top:1px solid var(--line); color:var(--muted); padding:28px 0 46px; font-size:14px; }
+    .footer-row { display:flex; justify-content:space-between; gap:18px; flex-wrap:wrap; }
+    @media (max-width:820px) { .links a:not(.github){display:none}.hero,.release{grid-template-columns:1fr}.hero{padding-top:54px}.cards{grid-template-columns:1fr 1fr}.demo-grid{grid-template-columns:1fr} }
+    @media (max-width:560px) { .wrap{width:min(100% - 28px,1120px)}.cards{grid-template-columns:1fr}section{padding:46px 0}.hero{gap:30px} }
   </style>
 </head>
 <body>
   <header>
-    <div class="container nav">
-      <div class="logo">
-        <img src="https://kiritori.ruhenheim.org/static/icon_256x256.png" alt="Kiritori logo"
-            style="width:32px; height:32px; border-radius:8px; box-shadow:var(--shadow)">
-        <span>Kiritori</span>
+    <nav class="wrap" aria-label="メインナビゲーション">
+      <a class="brand" href="#top"><img src="KiritoriPackage/Images/icon_256x256.png" alt=""><span>Kiritori</span></a>
+      <div class="links">
+        <a href="#features">機能 / Features</a><a href="#demo">デモ / Demo</a><a href="#release">v1.7.2</a>
+        <a class="github" href="https://github.com/mmiyaji/Kiritori-win" target="_blank" rel="noopener">GitHub</a>
       </div>
-      <nav>
-        <a class="btn" href="#download">ダウンロード</a>
-        <a class="btn" href="#features">特徴</a>
-        <a class="btn" href="#changelog">変更履歴</a>
-        <a class="btn" href="#faq">FAQ</a>
-        <a class="btn" href="#policy">ポリシー</a>
-        <a class="btn" href="https://github.com/mmiyaji/Kiritori-win" target="_blank" rel="noopener">GitHub</a>
-      </nav>
-    </div>
+    </nav>
   </header>
-
-  <main class="container">
-    <section class="hero">
+  <main id="top">
+    <div class="wrap hero">
       <div>
-        <h1>一瞬で切り取る。<br>Windows 向けスニッピング補助 <span style="color:var(--brand-2)">Kiritori</span></h1>
-        <p>ホットキーで即キャプチャ、キャプチャした領域は付箋のように画面の最前面に固定されます。
-          画面の一部を切り取り・表示することで、一時的に別々の画面情報を並べることができ、開発・検証・資料作成の速度を上げます。</p>
-        <div class="callouts">
-          <span class="chip">常駐</span>
-          <span class="chip">高 DPI 対応</span>
-          <span class="chip">ホットキー</span>
-          <span class="chip">ズーム & 透過</span>
-          <span class="chip">OCR</span>
-          <span class="chip">ライブプレビュー</span>
-        </div>
-        <div style="display:flex; gap:12px; margin-top:18px">
-          <a class="btn-primary" href="#download">今すぐ入手</a>
-          <a class="btn-ghost" href="#changelog">変更履歴</a>
+        <div class="eyebrow">Screen capture for Windows</div>
+        <h1>必要な場所を、<br>そのまま手元に。</h1>
+        <p class="lead">画面を切り取り、付箋のように最前面へ固定。文字をOCRでコピーし、変化する領域はライブプレビューで追跡できます。</p>
+        <p class="en" lang="en">Capture, pin, read, and follow any part of your screen without breaking your flow.</p>
+        <div class="actions">
+          <a class="button primary" href="https://apps.microsoft.com/detail/9pd5wck38p07" target="_blank" rel="noopener">Microsoft Store</a>
+          <a class="button" href="https://github.com/mmiyaji/Kiritori-win/releases/latest" target="_blank" rel="noopener">GitHub Releases</a>
         </div>
       </div>
-      <div class="download-card">
-        <h2 style="margin:0 0 8px">クイックダウンロード</h2>
-        <div class="dl-grid" id="download">
-          <div class="dl-row">
-            <div>
-              <strong>Windows 10/11</strong>
-              <div class="muted">実行ファイル（.zip 推奨）</div>
-            </div>
-            <div style="display:flex; gap:10px; align-items:center">
-              <span class="pill" id="latestVersion">v—</span>
-              <a class="btn-primary" id="dlWinZip" href="#">ZIP</a>
-              <a class="btn-primary" id="dlWinExe" href="#">EXE</a>
-            </div>
-          </div>
-          <div class="dl-row">
-            <div>
-              <strong>Microsoft Store</strong>
-              <div class="muted">インストール（自動更新対応）</div>
-            </div>
-            <a href="https://apps.microsoft.com/detail/9pd5wck38p07?hl=ja-JP&gl=JP"
-              target="_blank" rel="noopener">
-              <img src="https://get.microsoft.com/images/en-us%20dark.svg"
-                  alt="Get it from Microsoft" style="height:40px">
-            </a>
-          </div>
-          <div class="dl-row" aria-disabled="true">
-            <div>
-              <strong>macOS</strong>
-              <div class="muted">現在、公開停止中です</div>
-            </div>
-            <button class="btn-ghost" title="開発中のため利用できません">利用不可</button>
-          </div>
-        </div>
-        <div style="margin-top:10px" class="muted">※ Windows 版は GitHub Releases から配布します。SmartScreen が表示された場合は発行元を確認の上、許可してください。</div>
+      <div class="hero-media"><img src="store-assets/v1.7.2/ja/04-live-preview.png" alt="Kiritoriのライブプレビュー。選択した画面領域を別ウィンドウでリアルタイム表示"></div>
+    </div>
+
+    <section id="features" class="wrap">
+      <div class="section-head"><div class="eyebrow">Core features</div><h2>切り取った瞬間から使える</h2><p class="lead">操作を増やさず、画面上の情報を見やすく、扱いやすくします。</p></div>
+      <div class="cards">
+        <article class="card"><img src="store-assets/v1.7.2/ja/01-capture.png" loading="lazy" alt="画面の範囲を選択して切り取るKiritori"><div class="card-copy"><h3>切り取り・固定</h3><p>必要な範囲だけをキャプチャし、常に手前へ表示します。</p><p class="en" lang="en">Capture any region and keep it always on top.</p></div></article>
+        <article class="card"><img src="store-assets/v1.7.2/ja/02-pin-and-control.png" loading="lazy" alt="Kiritoriの右クリックメニュー"><div class="card-copy"><h3>すぐ調整</h3><p>拡大、透明度、コピー、保存を右クリックメニューから操作。</p><p class="en" lang="en">Zoom, adjust opacity, copy, or save in place.</p></div></article>
+        <article class="card"><img src="store-assets/v1.7.2/ja/03-shortcuts.png" loading="lazy" alt="Kiritoriのショートカット一覧"><div class="card-copy"><h3>OCRとショートカット</h3><p>画像内の文字を認識。よく使う操作をキーから即実行できます。</p><p class="en" lang="en">Extract text and work quickly with familiar shortcuts.</p></div></article>
       </div>
     </section>
 
-    <section class="section" id="features">
-      <h2>主な特徴</h2>
-      <div class="grid" style="margin-top:12px">
-        <div class="card">
-          <video class="feature-video small-video" autoplay muted playsinline controls loop>
-            <source src="https://kiritori.ruhenheim.org/static/kiritori_demo.webm?v=20250831" type="video/webm">
-            <source src="https://kiritori.ruhenheim.org/static/kiritori_demo.mp4?v=20250831" type="video/mp4"> <!-- fallback for Safari -->
-            お使いのブラウザは動画をサポートしていません
-          </video>
-          <h3>画面を切り取って付箋化</h3>
-          <p>グローバルホットキーで即時に領域選択(Ctrl+Shift+5)。付箋のように画面上に固定。移動・ズーム・コピー・保存で比較や検証を効率化。OCR(テキスト抽出)にも対応。メインウィンドウを閉じてもタスクトレイに常駐します。</p>
-        </div>
-        <div class="card">
-          <video class="feature-video small-video" autoplay muted playsinline controls loop>
-            <source src="https://kiritori.ruhenheim.org/static/kiritori_demo_live.webm?v=20250907" type="video/webm">
-            <source src="https://kiritori.ruhenheim.org/static/kiritori_demo_live.mp4?v=20250907" type="video/mp4"> <!-- fallback for Safari -->
-            お使いのブラウザは動画をサポートしていません
-          </video>
-          <h3>ライブキャプチャー</h3>
-          <p>画像切り取りだけでなく、選択領域をリアルタイムで表示するライブキャプチャー機能もあります。</p>
-        </div>
-        <div class="card">
-          <a href="https://kiritori.ruhenheim.org/screenshot_004.png" target="_blank">
-            <img src="https://kiritori.ruhenheim.org/static/screenshot_004.png" alt="動作のイメージ" style="width:100%; border-radius:12px; margin-bottom:8px" class="feature-img">
-          </a>
-          <h3>簡単操作</h3>
-          <p>ショートカット操作可能。ESCでウィンドウを閉じる、Ctrl+Sで画像保存、Ctrl+Cでクリップボードに画像をコピーなど。</p>
-        </div>
-        <div class="card">
-          <a href="https://kiritori.ruhenheim.org/static/screenshot_005.png" target="_blank">
-            <img src="https://kiritori.ruhenheim.org/static/screenshot_005.png" alt="動作のイメージ" style="width:100%; border-radius:12px; margin-bottom:8px" class="feature-img">
-          </a>
-          <h3>右クリックメニューからも操作可能</h3>
-          <p>透過率やサイズも変更可能です。</p>
-        </div>
-        <div class="card">
-          <a href="https://kiritori.ruhenheim.org/static/screenshot_006.png" target="_blank">
-            <img src="https://kiritori.ruhenheim.org/static/screenshot_006.png" alt="動作のイメージ" style="width:100%; border-radius:12px; margin-bottom:8px" class="feature-img">
-          </a>
-          <h3>履歴管理</h3>
-          <p>タスクトレイから簡単にアクセス可能。履歴から再表示も可能。</p>
-        </div>
-        <div class="card">
-          <a href="https://kiritori.ruhenheim.org/static/screenshot_007.png" target="_blank">
-            <img src="https://kiritori.ruhenheim.org/static/screenshot_007.png" alt="動作のイメージ" style="width:100%; border-radius:12px; margin-bottom:8px" class="feature-img">
-          </a>
-          <h3>OCR(テキスト抽出)</h3>
-          <p>画像から文字列を抽出し、クリップボードにコピーします。</p>
+    <section id="demo" class="demo">
+      <div class="wrap">
+        <div class="section-head"><div class="eyebrow">Product demo</div><h2>実際の操作を見る</h2><p class="lead">動画が再生できない環境ではMP4へ自動的にフォールバックします。</p></div>
+        <div class="demo-grid">
+          <figure><video controls muted loop playsinline preload="metadata" poster="store-assets/v1.7.2/ja/01-capture.png"><source src="screenshot/kiritori_demo.webm" type="video/webm"><source src="screenshot/kiritori_demo.mp4" type="video/mp4">動画を再生できません。</video><figcaption>画面を切り取り、最前面に固定 / Capture and pin</figcaption></figure>
+          <figure><video controls muted loop playsinline preload="metadata" poster="store-assets/v1.7.2/ja/04-live-preview.png"><source src="screenshot/kiritori_demo_live.webm" type="video/webm"><source src="screenshot/kiritori_demo_live.mp4" type="video/mp4">動画を再生できません。</video><figcaption>選択領域をリアルタイムに追跡 / Live Preview</figcaption></figure>
         </div>
       </div>
     </section>
 
-    <section class="section two" id="changelog">
-      <div>
-        <h2>変更履歴</h2>
-        <details>
-          <summary>v1.0.0 – 2013-07-05</summary>
-          <ul>
-            <li>初回リリース</li>
-          </ul>
-        </details>
-        <p class="muted" style="margin-top:8px">※ 正式な履歴は GitHub Releases を参照してください。</p>
-      </div>
-      <div>
-        <h2>よくある質問（FAQ）</h2>
-        <details>
-          <summary>配布ファイルは EXE と ZIP どちらが良い？</summary>
-          <p>ブラウザやプロキシで誤検知されにくい ZIP を推奨します。
-            ただし、録画機能で用いるFFMPEGバイナリを含むためサイズが比較的大きいです。
-            FFMPEGを使わない場合は軽量なEXEでの実行も可能です。</p>
-        </details>
-        <details>
-          <summary>SmartScreen が出ます</summary>
-          <p>署名がない場合や配布直後は表示されることがあります。発行元を確認し、信頼できる場合のみ実行してください。</p>
-          <!-- <p>署名がない場合や配布直後は表示されることがあります。発行元/ハッシュを確認し、信頼できる場合のみ実行してください。</p> -->
-        </details>
-      </div>
-    </section>
-
-    <section class="section two" id="policy">
-      <div>
-        <h2>プライバシー & ライセンス</h2>
-        <p>Kiritori は個人情報を収集しません（トラッキングなし）。<a href="https://kiritori.ruhenheim.org/privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a></p>
-        <ul class="muted">
-          <li><a href="https://github.com/mmiyaji/Kiritori-win" target="_blank" rel="noopener">GitHub リポジトリ</a></li>
-          <li><a href="https://github.com/mmiyaji/Kiritori-win/releases" target="_blank" rel="noopener">Releases（配布）</a></li>
-        </ul>
-      </div>
-      <div>
-        <h2>サポート</h2>
-        <p>不具合やご要望は GitHub Issues へ。</p>
-        <ul class="muted">
-          <li>不具合報告: GitHub Issues</li>
-          <li>連絡先: mmiyaji / <a href="mailto:mail@ruhenheim.org">mail@ruhenheim.org</a></li>
-        </ul>
-      </div>
+    <section id="release" class="wrap release">
+      <div><div class="eyebrow">Version 1.7.2</div><h2>より速く、安定したライブプレビュー</h2><p class="lead">Windows Graphics Capture と Direct3D 11 を使うGPUキャプチャを追加。AutoモードはGPUを優先し、必要に応じてGDIへ切り替えます。</p><p class="en" lang="en">Live Preview now prefers GPU capture, with automatic GDI fallback for compatibility.</p></div>
+      <div class="release-box"><strong>主な改善 / Highlights</strong><ul><li>フレーム制御、更新領域、拡縮処理を最適化</li><li>CPU使用率を削減し、フレームレートを改善</li><li>設定とメニューからキャプチャ方式を選択可能</li><li>OCR、GIF、FFmpeg周辺の安定性を改善</li></ul><div class="note">Windows 10 / 11 対応。詳細は <a href="RELEASE_NOTES.md">リリースノート</a> と <a href="privacy.html">プライバシーポリシー</a> をご覧ください。</div></div>
     </section>
   </main>
-  <div id="imgModal" class="modal">
-    <img id="modalImg" src="" alt="">
-  </div>
-  <div id="videoModal" class="modal">
-    <video id="modalVideo" controls autoplay loop muted playsinline></video>
-  </div>
-  <footer>
-    <div class="container">
-      <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap">
-        <div>© <span id="year"></span> Ruhenheim / Kiritori</div>
-        <div class="muted">macOS 版は現在公開停止中です</div>
-      </div>
-    </div>
-  </footer>
-
-  <script>
-    // 年表示
-    document.getElementById('year').textContent = new Date().getFullYear();
-
-    // GitHub Releases から最新を取得（必要に応じてリポジトリを変更）
-    // 失敗時はフォールバックの # を維持
-  (async function(){
-      // 拡張子 / 名前規則で最適なアセットを選ぶ
-      function pickAsset(assets, extRegex) {
-        const cand = (assets || []).filter(a => extRegex.test(a.name || ''));
-        if (cand.length === 0) return null;
-
-        // スコアリング：Kiritoriで始まる > 名前にKiritoriを含む > それ以外
-        // さらに updated_at (なければ created_at) が新しいものを優先
-        const score = (name) => {
-          if (/^kiritori/i.test(name)) return 3;
-          if (/kiritori/i.test(name))  return 2;
-          return 1;
-        };
-        const getDate = (a) => new Date(a.updated_at || a.created_at || 0).getTime();
-
-        cand.sort((a, b) => {
-          const sa = score(a.name || '');
-          const sb = score(b.name || '');
-          if (sa !== sb) return sb - sa;
-          return getDate(b) - getDate(a); // 新しい方
-        });
-        return cand[0] || null;
-      }
-
-      try {
-        const repo = 'mmiyaji/Kiritori-win';
-        const r = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
-          headers: { 'Accept': 'application/vnd.github+json' }
-        });
-        if (!r.ok) return;
-        const j = await r.json();
-        const tag = j.tag_name || j.name || '';
-        document.getElementById('latestVersion').textContent = tag || 'latest';
-
-        const assets = j.assets || [];
-        const zip = pickAsset(assets, /\.zip$/i);
-        const exe = pickAsset(assets, /\.exe$/i);
-
-        if (zip) {
-          document.getElementById('dlWinZip').href = zip.browser_download_url;
-        }
-
-        const exeBtn = document.getElementById('dlWinExe');
-        if (exe) {
-          exeBtn.href = exe.browser_download_url;
-          exeBtn.removeAttribute('aria-disabled');
-          exeBtn.classList.remove('btn-disabled');
-        } else {
-          exeBtn.removeAttribute('href'); // クリック無効
-          exeBtn.setAttribute('aria-disabled', 'true');
-          exeBtn.classList.add('btn-disabled'); // CSSで見た目をグレーアウトなど
-        }
-      } catch(e) { /* ignore */ }
-    })();
-
-    document.getElementById('imgModal').addEventListener('click', () => {
-      document.getElementById('imgModal').style.display = 'none';
-    });
-    document.querySelectorAll('.small-video').forEach(v => {
-      v.addEventListener('click', () => {
-        const modal = document.getElementById('videoModal');
-        const modalVideo = document.getElementById('modalVideo');
-        modalVideo.src = v.querySelector('source').src; // 同じ動画を拡大表示
-        modal.style.display = 'flex';
-      });
-    });
-
-    document.getElementById('videoModal').addEventListener('click', () => {
-      const modal = document.getElementById('videoModal');
-      const modalVideo = document.getElementById('modalVideo');
-      modal.style.display = 'none';
-      modalVideo.pause();
-      modalVideo.src = ""; // メモリ解放
-    });
-  </script>
-  <script>
-  (async function injectReleasesAboveFirstChangelog(){
-    const ownerRepo = 'mmiyaji/Kiritori-win';
-    const endpoint  = `https://api.github.com/repos/${ownerRepo}/releases?per_page=10`;
-    const host      = document.querySelector('#changelog > div'); // 左カラム
-    if (!host) return;
-
-    // v1.0.0（初回リリース）など、すでに書かれている details を探す
-    const firstDetails = host.querySelector('details');
-
-    // ETag + localStorage でレート制限を節約
-    const keyETag = 'gh_rel_etag';
-    const keyData = 'gh_rel_cache';
-    const cached  = localStorage.getItem(keyData);
-    const etag    = localStorage.getItem(keyETag);
-    const headers = { 'Accept': 'application/vnd.github+json' };
-    if (etag) headers['If-None-Match'] = etag;
-
-    // 拡張子 / 名前規則で最適なアセットを選ぶ
-    function pickAsset(assets, extRegex) {
-      const cand = (assets || []).filter(a => extRegex.test(a.name || ''));
-      if (cand.length === 0) return null;
-
-      const score = (name) => {
-        if (/^kiritori/i.test(name)) return 3;
-        if (/kiritori/i.test(name))  return 2;
-        return 1;
-      };
-      const getDate = (a) => new Date(a.updated_at || a.created_at || 0).getTime();
-
-      cand.sort((a, b) => {
-        const sa = score(a.name || '');
-        const sb = score(b.name || '');
-        if (sa !== sb) return sb - sa;
-        return getDate(b) - getDate(a);
-      });
-      return cand[0] || null;
-    }
-
-    let releases = null;
-    try {
-      const res = await fetch(endpoint, { headers });
-      if (res.status === 304 && cached) {
-        releases = JSON.parse(cached);
-      } else if (res.ok) {
-        releases = await res.json();
-        const newEtag = res.headers.get('ETag');
-        if (newEtag) localStorage.setItem(keyETag, newEtag);
-        localStorage.setItem(keyData, JSON.stringify(releases));
-      } else {
-        return; // 失敗時は静的な履歴だけ表示
-      }
-    } catch { return; }
-
-    // draft を除外。prerelease を含めたい場合は条件を調整してください
-    releases = (releases || []).filter(r => !r.draft && !r.prerelease);
-
-    // すでに HTML に書いてある初回 v1.0.0 と重複しないようにタグで除外（必要に応じて調整）
-    releases = releases.filter(r => (r.tag_name || '').toLowerCase() !== 'v1.0.0');
-
-    // 文字列を安全に
-    const esc = (s='') => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-    // 簡易 Markdown → HTML（箇条書きの -/* のみ <li>、他は <pre>）
-    const mdToHtml = (body='') => {
-      const lines = body.split(/\r?\n/);
-      const items = lines.filter(l => /^\s*[-*]\s+/.test(l)).map(l => l.replace(/^\s*[-*]\s+/, ''));
-      if (items.length) return '<ul>' + items.map(x => `<li>${esc(x)}</li>`).join('') + '</ul>';
-      return `<pre style="white-space:pre-wrap">${esc(body)}</pre>`;
-    };
-
-    // 生成した details 群を「一塊のフラグメント」として最上部（最初の details の手前）に挿入
-    const frag = document.createDocumentFragment();
-    let firstInsertedDetails = null;
-
-    releases.forEach((r) => {
-      const tag  = r.tag_name || r.name || 'untagged';
-      const date = r.published_at ? new Date(r.published_at).toISOString().slice(0,10) : '';
-      const url  = r.html_url;
-      const body = mdToHtml(r.body || '');
-
-      // ここで Kiritori 優先のアセット選択を適用
-      const zip  = pickAsset(r.assets, /\.zip$/i);
-      const exe  = pickAsset(r.assets, /\.exe$/i);
-
-      const wrap = document.createElement('div');
-      wrap.innerHTML = `
-        <details>
-          <summary>${esc(tag)} – ${esc(date)} <a href="${url}" target="_blank" rel="noopener" style="margin-left:.5rem">Release</a></summary>
-          ${(zip || exe) ? `
-            <div style="display:flex;gap:8px;margin:.5rem 0">
-              ${zip ? `<a class="btn" href="${zip.browser_download_url}">ZIP</a>` : ''}
-              ${exe ? `<a class="btn" href="${exe.browser_download_url}">EXE</a>` : ''}
-            </div>` : ''
-          }
-          ${body}
-        </details>
-      `.trim();
-
-      const details = wrap.firstElementChild;
-      if (!firstInsertedDetails) firstInsertedDetails = details; // 最初（＝最新）を控えておく
-      frag.appendChild(details);
-    });
-
-    if (frag.childNodes.length === 0) return; // 追加するものがない
-
-    // 既存の details は一旦すべて閉じる（「最新だけ open」にするため）
-    host.querySelectorAll('details').forEach(d => d.removeAttribute('open'));
-
-    // 挿入位置：最初の details の直前（＝静的 v1.0.0 より上）
-    if (firstDetails) {
-      host.insertBefore(frag, firstDetails);
-    } else {
-      host.appendChild(frag);
-    }
-
-    // 最新（今回挿入した最初の details）だけ open
-    if (firstInsertedDetails) firstInsertedDetails.setAttribute('open', '');
-  })();
-</script>
-
-  <!-- 推奨: セキュリティヘッダ（サーバ設定例）
-  Nginx:
-  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-  add_header Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; script-src 'self' https://api.github.com; style-src 'self' 'unsafe-inline'; connect-src https://api.github.com;" always;
-  add_header X-Content-Type-Options nosniff always;
-  add_header Referrer-Policy no-referrer-when-downgrade always;
-  add_header Permissions-Policy camera=(), microphone=(), geolocation=();
-  # http -> https へ 301 リダイレクトも忘れずに
-  -->
+  <footer><div class="wrap footer-row"><span>© <span id="year"></span> Ruhenheim / Kiritori</span><span><a href="https://github.com/mmiyaji/Kiritori-win/issues" target="_blank" rel="noopener">Support / GitHub Issues</a></span></div></footer>
+  <script>document.getElementById('year').textContent=new Date().getFullYear();</script>
 </body>
 </html>
