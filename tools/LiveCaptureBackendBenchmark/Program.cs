@@ -2,6 +2,7 @@ using Kiritori.Views.LiveCapture;
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -12,6 +13,7 @@ namespace Kiritori.LiveCaptureBenchmarks
         [STAThread]
         private static int Main(string[] args)
         {
+            EnablePerMonitorDpiAwareness();
             if (args.Length < 1 || (args[0] != "gdi" && args[0] != "gpu"))
             {
                 Console.Error.WriteLine("Usage: LiveCaptureBackendBenchmark gdi|gpu [seconds] [width] [height] [fps]");
@@ -26,7 +28,15 @@ namespace Kiritori.LiveCaptureBenchmarks
             Rectangle screen = Screen.PrimaryScreen.Bounds;
             width = Math.Min(width, screen.Width);
             height = Math.Min(height, screen.Height);
-            var capture = new Rectangle(screen.Left, screen.Top, width, height);
+
+            using (var surface = AnimatedCaptureSurface.Start(screen.Left, screen.Top, width, height))
+            {
+                return RunBenchmark(mode, seconds, width, height, fps, surface.Bounds);
+            }
+        }
+
+        private static int RunBenchmark(string mode, int seconds, int width, int height, int fps, Rectangle capture)
+        {
 
             LiveCaptureBackend backend;
             if (mode == "gpu")
@@ -135,5 +145,130 @@ namespace Kiritori.LiveCaptureBenchmarks
         {
             return (value ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"");
         }
+
+        private static void EnablePerMonitorDpiAwareness()
+        {
+            try
+            {
+                SetProcessDpiAwarenessContext(new IntPtr(-4));
+            }
+            catch
+            {
+                try { SetProcessDpiAwareness(2); } catch { }
+            }
+        }
+
+        private sealed class AnimatedCaptureSurface : IDisposable
+        {
+            private readonly Thread _thread;
+            private readonly ManualResetEventSlim _ready = new ManualResetEventSlim();
+            private readonly Rectangle _bounds;
+            private AnimationForm _form;
+            private Exception _startupError;
+
+            private AnimatedCaptureSurface(int left, int top, int width, int height)
+            {
+                _bounds = new Rectangle(left, top, width, height);
+                _thread = new Thread(() =>
+                {
+                    try
+                    {
+                        _form = new AnimationForm(_bounds);
+                        _form.Shown += (s, e) => _ready.Set();
+                        Application.Run(_form);
+                    }
+                    catch (Exception ex)
+                    {
+                        _startupError = ex;
+                        _ready.Set();
+                    }
+                })
+                {
+                    IsBackground = true,
+                    Name = "LiveCaptureBenchmark.Surface",
+                };
+                _thread.SetApartmentState(ApartmentState.STA);
+                _thread.Start();
+            }
+
+            public Rectangle Bounds => _bounds;
+
+            public static AnimatedCaptureSurface Start(int left, int top, int width, int height)
+            {
+                var surface = new AnimatedCaptureSurface(left, top, width, height);
+                if (!surface._ready.Wait(5000))
+                {
+                    surface.Dispose();
+                    throw new TimeoutException("The animated benchmark surface did not start.");
+                }
+                if (surface._startupError != null)
+                {
+                    surface.Dispose();
+                    throw new InvalidOperationException("The animated benchmark surface failed to start.", surface._startupError);
+                }
+                return surface;
+            }
+
+            public void Dispose()
+            {
+                try
+                {
+                    if (_form != null && !_form.IsDisposed)
+                        _form.BeginInvoke((Action)(() => _form.Close()));
+                }
+                catch { }
+                try { _thread.Join(2000); } catch { }
+                _ready.Dispose();
+            }
+        }
+
+        private sealed class AnimationForm : Form
+        {
+            private readonly System.Windows.Forms.Timer _timer;
+            private int _phase;
+
+            public AnimationForm(Rectangle bounds)
+            {
+                Bounds = bounds;
+                StartPosition = FormStartPosition.Manual;
+                FormBorderStyle = FormBorderStyle.None;
+                ShowInTaskbar = false;
+                TopMost = true;
+                DoubleBuffered = true;
+                _timer = new System.Windows.Forms.Timer { Interval = 16 };
+                _timer.Tick += (s, e) =>
+                {
+                    _phase = (_phase + 13) % Math.Max(1, ClientSize.Width);
+                    Invalidate();
+                };
+                _timer.Start();
+            }
+
+            protected override void OnPaint(PaintEventArgs e)
+            {
+                e.Graphics.Clear(Color.FromArgb(20, 28, 42));
+                int stripe = Math.Max(24, ClientSize.Width / 12);
+                using (var accent = new SolidBrush(Color.FromArgb(40, 180, 240)))
+                using (var secondary = new SolidBrush(Color.FromArgb(245, 145, 55)))
+                {
+                    e.Graphics.FillRectangle(accent, _phase - stripe, 0, stripe, ClientSize.Height);
+                    int reverse = ClientSize.Width - _phase;
+                    e.Graphics.FillRectangle(secondary, reverse, 0, stripe / 2, ClientSize.Height);
+                }
+            }
+
+            protected override void Dispose(bool disposing)
+            {
+                if (disposing) _timer.Dispose();
+                base.Dispose(disposing);
+            }
+        }
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetProcessDpiAwarenessContext(IntPtr dpiContext);
+
+        [DllImport("shcore.dll")]
+        private static extern int SetProcessDpiAwareness(int awareness);
     }
 }
