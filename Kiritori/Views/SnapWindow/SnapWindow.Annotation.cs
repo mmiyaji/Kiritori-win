@@ -94,6 +94,9 @@ namespace Kiritori
         private AnnotationPaletteWindow _annotationPalette;
         private RadioButton[] _annotationToolButtons;
         private RadioButton[] _annotationColorButtons;
+        private Button _annotationColorMenuButton;
+        private ContextMenuStrip _annotationColorMenu;
+        private readonly List<Bitmap> _annotationColorSwatches = new List<Bitmap>();
         private Button _annotationStyleButton;
         private ContextMenuStrip _annotationStyleMenu;
         private NumericUpDown _annotationWidthInput;

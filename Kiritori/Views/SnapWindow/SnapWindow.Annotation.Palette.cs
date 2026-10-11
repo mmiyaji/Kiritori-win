@@ -23,6 +23,16 @@ namespace Kiritori
             Color.FromArgb(78, 201, 140), Color.FromArgb(255, 105, 180)
         };
         private static readonly string[] AnnotationColorKeys = { "Orange", "Blue", "Green", "Pink" };
+        private static readonly Color[] AnnotationExtendedColors =
+        {
+            Color.Black, Color.White, Color.Red, Color.Yellow, Color.Cyan, Color.Purple,
+            Color.Gray, Color.DarkBlue, Color.DarkGreen, Color.Gold, Color.Brown, Color.Magenta
+        };
+        private static readonly string[] AnnotationExtendedColorKeys =
+        {
+            "Black", "White", "Red", "Yellow", "Cyan", "Purple",
+            "Gray", "DarkBlue", "DarkGreen", "Gold", "Brown", "Magenta"
+        };
 
         private void InitializeAnnotationFeature()
         {
@@ -136,6 +146,23 @@ namespace Kiritori
                 _annotationColorButtons[i] = button;
                 colorRow.Controls.Add(button);
             }
+            _annotationColorMenu = new ContextMenuStrip();
+            for (var i = 0; i < AnnotationExtendedColors.Length; i++)
+                AddAnnotationColorMenuItem(AnnotationExtendedColorKeys[i], AnnotationExtendedColors[i]);
+            _annotationColorMenu.Items.Add(new ToolStripSeparator());
+            var moreColors = new ToolStripMenuItem(SR.T("Annotation.Color.More"))
+            {
+                Name = "Annotation.Color.More",
+                AccessibleName = SR.T("Annotation.Color.More"),
+                AccessibleDescription = SR.T("Annotation.Color.MoreHint"),
+                AccessibleRole = AccessibleRole.MenuItem
+            };
+            moreColors.Click += (s, e) => ShowAnnotationCustomColorDialog();
+            _annotationColorMenu.Items.Add(moreColors);
+            _annotationColorMenuButton = CreateAnnotationAction("Annotation.Color.More", 24, (s, e) => ShowAnnotationColorMenu());
+            _annotationColorMenuButton.AccessibleRole = AccessibleRole.ButtonDropDown;
+            _annotationColorMenuButton.Paint += (s, e) => DrawAnnotationColorMenuButton(e.Graphics);
+            colorRow.Controls.Add(_annotationColorMenuButton);
             toolbar.Controls.Add(CreateAnnotationDivider());
             _annotationStyleMenu = new ContextMenuStrip();
             _annotationStyleButton = CreateAnnotationAction("Annotation.Style", 32, (s, e) => ShowAnnotationStyleMenu());
@@ -227,11 +254,21 @@ namespace Kiritori
             Localizer.Apply(_annotationPalette);
             _annotationWidthInput.AccessibleName = SR.T("Annotation.Width");
             _annotationPaletteTips.SetToolTip(_annotationWidthInput, SR.T("Annotation.WidthHint"));
+            foreach (ToolStripItem item in _annotationColorMenu.Items)
+            {
+                if (string.IsNullOrEmpty(item.Name) || !item.Name.StartsWith("Annotation.Color.", StringComparison.Ordinal)) continue;
+                var key = item.Name.Substring("Annotation.Color.".Length);
+                item.Text = SR.T("Annotation.Color." + key);
+                item.AccessibleName = item.Text;
+                var menuItem = item as ToolStripMenuItem;
+                if (menuItem != null && key == "More") menuItem.AccessibleDescription = SR.T("Annotation.Color.MoreHint");
+            }
             var keys = new[] { "Move", "Rectangle", "Arrow", "Text", "Step", "Mosaic" };
             for (var i = 0; i < keys.Length; i++)
                 SetAnnotationControlDescription(_annotationToolButtons[i], "Annotation." + keys[i], "Annotation." + keys[i] + "Hint");
             for (var i = 0; i < _annotationColorButtons.Length; i++)
                 SetAnnotationControlDescription(_annotationColorButtons[i], "Annotation.Color." + AnnotationColorKeys[i], null);
+            SetAnnotationControlDescription(_annotationColorMenuButton, "Annotation.Color.More", "Annotation.Color.MoreHint");
             SetAnnotationControlDescription(_annotationUndoButton, "Annotation.Undo", "Annotation.UndoHint");
             SetAnnotationControlDescription(_annotationRedoButton, "Annotation.Redo", "Annotation.RedoHint");
             SetAnnotationControlDescription(_annotationClearButton, "Annotation.Clear", "Annotation.ClearHint");
@@ -336,6 +373,9 @@ namespace Kiritori
                 var fontTool = tool == AnnotationTool.Text || tool == AnnotationTool.Step;
                 _annotationWidthInput.Enabled = enabled && tool != AnnotationTool.Mosaic;
                 foreach (var button in _annotationColorButtons) button.Enabled = enabled && tool != AnnotationTool.Mosaic;
+                _annotationColorMenuButton.Enabled = enabled && tool != AnnotationTool.Mosaic;
+                _annotationColorMenuButton.Invalidate();
+                UpdateAnnotationColorMenuState();
                 _annotationWidthInput.Maximum = fontTool ? 72 : 16;
                 _annotationWidthInput.Minimum = fontTool ? 12 : 2;
                 _annotationWidthInput.AccessibleName = SR.T(fontTool ? "Annotation.FontSize" : "Annotation.Width");
@@ -407,7 +447,7 @@ namespace Kiritori
             Func<int, int> px = value => Math.Max(1, (int)Math.Round(value * scale));
             var border = new Size(_annotationPalette.Width - _annotationPalette.ClientSize.Width, _annotationPalette.Height - _annotationPalette.ClientSize.Height);
             var availableWidth = Math.Max(px(200), area.Width - border.Width - px(16));
-            var width = Math.Min(px(544), availableWidth);
+            var width = Math.Min(px(570), availableWidth);
             _annotationPalette.SuspendLayout();
             _annotationPalette.AutoScroll = false;
             _annotationPalette.AutoScrollMinSize = Size.Empty;
@@ -424,7 +464,8 @@ namespace Kiritori
                     var tools = group.Controls[0] == _annotationToolButtons[0];
                     foreach (Control button in group.Controls)
                     {
-                        button.Size = new Size(px(tools ? 30 : 20), px(30));
+                        var buttonWidth = button == _annotationColorMenuButton ? 24 : tools ? 30 : 20;
+                        button.Size = new Size(px(buttonWidth), px(30));
                         button.Margin = new Padding(0, 0, px(2), 0);
                     }
                     var groupWidth = 0;
@@ -506,6 +547,10 @@ namespace Kiritori
             }
             _annotationStyleMenu?.Dispose();
             _annotationStyleMenu = null;
+            _annotationColorMenu?.Dispose();
+            _annotationColorMenu = null;
+            foreach (var swatch in _annotationColorSwatches) swatch.Dispose();
+            _annotationColorSwatches.Clear();
             _annotationPaletteTips?.Dispose();
             _annotationPaletteTips = null;
             _annotationPalette?.Dispose();
@@ -618,6 +663,88 @@ namespace Kiritori
             catch (EntryPointNotFoundException) { return 96; }
         }
 
+        private void AddAnnotationColorMenuItem(string key, Color color)
+        {
+            var item = new ToolStripMenuItem(SR.T("Annotation.Color." + key))
+            {
+                Name = "Annotation.Color." + key,
+                AccessibleName = SR.T("Annotation.Color." + key),
+                AccessibleRole = AccessibleRole.MenuItem,
+                Tag = color,
+                Image = CreateAnnotationColorSwatch(color)
+            };
+            item.Click += (s, e) => SetAnnotationColor(color, CreateFillColorFromStroke(color));
+            _annotationColorMenu.Items.Add(item);
+        }
+
+        private Bitmap CreateAnnotationColorSwatch(Color color)
+        {
+            var bitmap = new Bitmap(16, 16);
+            using (var g = Graphics.FromImage(bitmap))
+            using (var brush = new SolidBrush(color))
+            using (var pen = new Pen(SystemColors.ControlDarkDark))
+            {
+                g.Clear(Color.Transparent);
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.FillEllipse(brush, 2, 2, 12, 12);
+                g.DrawEllipse(pen, 2, 2, 12, 12);
+            }
+            _annotationColorSwatches.Add(bitmap);
+            return bitmap;
+        }
+
+        private void ShowAnnotationColorMenu()
+        {
+            UpdateAnnotationColorMenuState();
+            _annotationColorMenu.Show(_annotationColorMenuButton, new Point(0, _annotationColorMenuButton.Height));
+        }
+
+        private void UpdateAnnotationColorMenuState()
+        {
+            if (_annotationColorMenu == null) return;
+            var selected = GetSelectedAnnotation();
+            var color = selected == null ? _annotationStrokeColor : selected.StrokeColor;
+            foreach (ToolStripItem item in _annotationColorMenu.Items)
+            {
+                var menuItem = item as ToolStripMenuItem;
+                if (menuItem == null || !(menuItem.Tag is Color)) continue;
+                menuItem.Checked = ((Color)menuItem.Tag).ToArgb() == color.ToArgb();
+            }
+        }
+
+        private void DrawAnnotationColorMenuButton(Graphics graphics)
+        {
+            var button = _annotationColorMenuButton;
+            var selected = GetSelectedAnnotation();
+            var color = selected == null ? _annotationStrokeColor : selected.StrokeColor;
+            var dpiScale = _annotationPalette.UiDpi / 96f;
+            var swatchSize = Math.Max(9, (int)Math.Round(12 * dpiScale));
+            var swatch = new Rectangle(Math.Max(2, (button.Width - swatchSize) / 2 - 2),
+                Math.Max(3, (button.Height - swatchSize) / 2 - 2), swatchSize, swatchSize);
+            using (var brush = new SolidBrush(button.Enabled ? color : SystemColors.ControlDark))
+            using (var pen = new Pen(button.Enabled ? SystemColors.ControlText : SystemColors.GrayText))
+            using (var arrow = new SolidBrush(button.Enabled ? SystemColors.ControlText : SystemColors.GrayText))
+            {
+                graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                graphics.FillEllipse(brush, swatch);
+                graphics.DrawEllipse(pen, swatch);
+                var x = button.Width - 7 * dpiScale;
+                var y = button.Height - 6 * dpiScale;
+                graphics.FillPolygon(arrow, new[] { new PointF(x - 2 * dpiScale, y), new PointF(x + 2 * dpiScale, y), new PointF(x, y + 2 * dpiScale) });
+            }
+        }
+
+        private void ShowAnnotationCustomColorDialog()
+        {
+            var selected = GetSelectedAnnotation();
+            var initialColor = selected == null ? _annotationStrokeColor : selected.StrokeColor;
+            using (var dialog = new ColorDialog { FullOpen = true, AnyColor = true, Color = initialColor })
+            {
+                if (dialog.ShowDialog(_annotationPalette) != DialogResult.OK) return;
+                SetAnnotationColor(dialog.Color, CreateFillColorFromStroke(dialog.Color));
+            }
+        }
+
         private sealed class AnnotationPaletteWindow : Form
         {
             private readonly SnapWindow _capture;
@@ -647,6 +774,7 @@ namespace Kiritori
                 _uiFont = new Font("Segoe UI", 12F * dpi / 96F, FontStyle.Regular, GraphicsUnit.Pixel);
                 Font = _uiFont;
                 if (_capture._annotationStyleMenu != null) _capture._annotationStyleMenu.Font = _uiFont;
+                if (_capture._annotationColorMenu != null) _capture._annotationColorMenu.Font = _uiFont;
                 previous?.Dispose();
                 Invalidate(true);
             }
@@ -691,4 +819,5 @@ namespace Kiritori
             }
         }
     }
+
 }

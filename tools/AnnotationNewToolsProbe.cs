@@ -36,7 +36,8 @@ internal static class AnnotationNewToolsProbe
                     VerifyMultilineTextExportAndViewportScale();
                     VerifyTextFontOutlineAndHistory();
                     VerifyTextEditorAndEditHistory();
-                    Console.WriteLine("PASS: step numbering, mosaic pixels/history, multiline text export/view scaling, text font/outline rendering/history, text editor acceptance");
+                    VerifyExtendedAnnotationColorsAndHistory();
+                    Console.WriteLine("PASS: step numbering, mosaic pixels/history, multiline text export/view scaling, text font/outline rendering/history, editor acceptance, extended colors/history");
                 }
                 catch (Exception error)
                 {
@@ -317,6 +318,57 @@ internal static class AnnotationNewToolsProbe
                 (bool)Get(shape, "TextBackground") && (string)Get(window, "_annotationFontFamily") == "Consolas" &&
                 (Color)Get(window, "_annotationTextOutlineColor") == Color.White && (bool)Get(window, "_annotationTextBackground"),
                 "Redo did not restore edited shape and text style defaults");
+        }
+    }
+
+    private static void VerifyExtendedAnnotationColorsAndHistory()
+    {
+        using (var source = WhiteImage(120, 100))
+        using (var window = NewWindow(source))
+        {
+            var quickColors = (RadioButton[])Get(window, "_annotationColorButtons");
+            Require(quickColors.Length == 4, "More colors changed the four quick color choices");
+            var menu = (ContextMenuStrip)Get(window, "_annotationColorMenu");
+            ToolStripMenuItem redPreset = null;
+            var swatchCount = 0;
+            foreach (ToolStripItem item in menu.Items)
+            {
+                if (item is ToolStripMenuItem && item.Tag is Color) swatchCount++;
+                if (item.Name == "Annotation.Color.Red") redPreset = (ToolStripMenuItem)item;
+            }
+            Require(redPreset != null && redPreset.Image != null && swatchCount == 12,
+                "Color dropdown did not expose all 12 named swatches");
+            var colorButton = (Button)Get(window, "_annotationColorMenuButton");
+            Require(!string.IsNullOrWhiteSpace(colorButton.AccessibleName), "More colors button has no accessible name");
+
+            Set(window, "_annotationRectangleStyle", Enum.Parse(_snapType.GetNestedType("AnnotationRectangleStyle", BindingFlags.NonPublic), "Filled"));
+            redPreset.PerformClick();
+            Require((Color)Get(window, "_annotationStrokeColor") == Color.Red &&
+                ((Color)Get(window, "_annotationFillColor")).A == 48, "Preset did not update default stroke/fill colors");
+            Call(window, "UndoLastAnnotation");
+            Require(((Color)Get(window, "_annotationStrokeColor")).ToArgb() == Color.FromArgb(255, 138, 61).ToArgb(),
+                "Undo did not restore default quick color");
+            Call(window, "RedoAnnotation");
+            Require((Color)Get(window, "_annotationStrokeColor") == Color.Red, "Redo did not restore preset color");
+
+            Call(window, "ClearAnnotationHistory");
+            var arrow = Call(window, "CreateAnnotationShape", Tool("Arrow"), new Point(10, 10), new Point(50, 50));
+            Set(arrow, "StrokeColor", Color.Red);
+            Set(arrow, "FillColor", Color.FromArgb(48, 255, 0, 0));
+            Shapes(window).Add(arrow);
+            Set(window, "_selectedAnnotationIndex", 0);
+            var custom = Color.FromArgb(37, 89, 203);
+            var customFill = (Color)Call(window, "CreateFillColorFromStroke", custom);
+            Call(window, "SetAnnotationColor", custom, customFill);
+            Require((Color)Get(Shapes(window)[0], "StrokeColor") == custom &&
+                (Color)Get(Shapes(window)[0], "FillColor") == customFill, "Custom color did not apply to selected shape");
+            Call(window, "UndoLastAnnotation");
+            Require((Color)Get(Shapes(window)[0], "StrokeColor") == Color.Red &&
+                ((Color)Get(Shapes(window)[0], "FillColor")).ToArgb() == Color.FromArgb(48, 255, 0, 0).ToArgb(),
+                "Undo did not restore selected shape colors");
+            Call(window, "RedoAnnotation");
+            Require((Color)Get(Shapes(window)[0], "StrokeColor") == custom &&
+                (Color)Get(Shapes(window)[0], "FillColor") == customFill, "Redo did not restore selected custom color");
         }
     }
 

@@ -1155,6 +1155,20 @@
   <data name="Annotation.Color.Blue" xml:space="preserve"><value>青</value></data>
   <data name="Annotation.Color.Green" xml:space="preserve"><value>緑</value></data>
   <data name="Annotation.Color.Pink" xml:space="preserve"><value>桃</value></data>
+  <data name="Annotation.Color.More" xml:space="preserve"><value>その他の色</value></data>
+  <data name="Annotation.Color.MoreHint" xml:space="preserve"><value>定番色またはカスタム色を選択</value></data>
+  <data name="Annotation.Color.Black" xml:space="preserve"><value>黒</value></data>
+  <data name="Annotation.Color.White" xml:space="preserve"><value>白</value></data>
+  <data name="Annotation.Color.Red" xml:space="preserve"><value>赤</value></data>
+  <data name="Annotation.Color.Yellow" xml:space="preserve"><value>黄</value></data>
+  <data name="Annotation.Color.Cyan" xml:space="preserve"><value>シアン</value></data>
+  <data name="Annotation.Color.Purple" xml:space="preserve"><value>紫</value></data>
+  <data name="Annotation.Color.Gray" xml:space="preserve"><value>灰</value></data>
+  <data name="Annotation.Color.DarkBlue" xml:space="preserve"><value>濃い青</value></data>
+  <data name="Annotation.Color.DarkGreen" xml:space="preserve"><value>濃い緑</value></data>
+  <data name="Annotation.Color.Gold" xml:space="preserve"><value>金</value></data>
+  <data name="Annotation.Color.Brown" xml:space="preserve"><value>茶</value></data>
+  <data name="Annotation.Color.Magenta" xml:space="preserve"><value>マゼンタ</value></data>
   <data name="Annotation.Style.Filled" xml:space="preserve"><value>半透明の塗り</value></data>
   <data name="Annotation.Style.Outline" xml:space="preserve"><value>枠線のみ</value></data>
   <data name="Annotation.Style.Single" xml:space="preserve"><value>片方向の矢印</value></data>
