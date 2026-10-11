@@ -26,6 +26,33 @@
       "projectUrl": "https://github.com/SharpGenTools/SharpGenTools",
       "licenseUrl": "https://opensource.org/license/mit/",
       "licenseRes": "ThirdParty/SharpGen/LICENSE.txt"
+    },
+    {
+      "id": "lucide-icons",
+      "name": "Lucide Icons (undo-2.svg)",
+      "version": "current upstream icon asset",
+      "license": "ISC",
+      "projectUrl": "https://github.com/lucide-icons/lucide",
+      "licenseUrl": "https://github.com/lucide-icons/lucide/blob/main/LICENSE",
+      "licenseRes": "ThirdParty/Lucide/LICENSE.txt"
+    },
+    {
+      "id": "svg",
+      "name": "SVG.NET",
+      "version": "3.4.8",
+      "license": "MS-PL",
+      "projectUrl": "https://github.com/svg-net/SVG",
+      "licenseUrl": "https://licenses.nuget.org/MS-PL",
+      "licenseRes": "ThirdParty/Svg/LICENSE.txt"
+    },
+    {
+      "id": "excss",
+      "name": "ExCSS",
+      "version": "4.2.3",
+      "license": "MIT",
+      "projectUrl": "https://github.com/TylerBrinks/ExCSS",
+      "licenseUrl": "https://licenses.nuget.org/MIT",
+      "licenseRes": "ThirdParty/ExCSS/LICENSE.txt"
     }
   ]
 }

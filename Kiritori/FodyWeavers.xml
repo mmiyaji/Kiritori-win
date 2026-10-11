@@ -11,6 +11,11 @@
     <!-- 埋め込む DLL をホワイトリストで指定（アセンブリの“簡易名”でOK。正規表現可） -->
     <IncludeAssemblies>
       CommunityToolkit.WinUI.Notifications
+      Svg
+      ExCSS
+      System.Buffers
+      System.Memory
+      System.Runtime.CompilerServices.Unsafe
     </IncludeAssemblies>
 
     <!-- 

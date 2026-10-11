@@ -2,13 +2,19 @@
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using System.Runtime.InteropServices;
+using Svg;
 using System.Windows.Forms;
 
 namespace Kiritori
 {
     public partial class SnapWindow
     {
+        private static readonly object UndoSvgLock = new object();
+        private readonly Dictionary<string, Bitmap> _undoSvgBitmaps = new Dictionary<string, Bitmap>();
         private static readonly Color[] AnnotationColors =
         {
             Color.FromArgb(255, 138, 61), Color.FromArgb(88, 166, 255),
@@ -427,6 +433,11 @@ namespace Kiritori
 
         private void DisposeAnnotationPalette()
         {
+            lock (UndoSvgLock)
+            {
+                foreach (var bitmap in _undoSvgBitmaps.Values) bitmap.Dispose();
+                _undoSvgBitmaps.Clear();
+            }
             _annotationStyleMenu?.Dispose();
             _annotationStyleMenu = null;
             _annotationPaletteTips?.Dispose();
@@ -435,8 +446,14 @@ namespace Kiritori
             _annotationPalette = null;
         }
 
-        private static void DrawAnnotationGlyph(Graphics graphics, Rectangle bounds, string glyph, Color color, int dpi)
+        private void DrawAnnotationGlyph(Graphics graphics, Rectangle bounds, string glyph, Color color, int dpi)
         {
+            if (glyph == "Undo")
+            {
+                DrawUndoSvg(graphics, bounds, color, dpi);
+                return;
+            }
+
             var state = graphics.Save();
             var scale = dpi / 96f;
             graphics.TranslateTransform(bounds.Left + bounds.Width / 2f - 9 * scale, bounds.Top + bounds.Height / 2f - 9 * scale);
@@ -459,17 +476,6 @@ namespace Kiritori
                             using (var fill = new SolidBrush(Color.FromArgb(65, color))) graphics.FillRectangle(fill, 2, 3, 14, 12);
                         graphics.DrawRectangle(pen, 2, 3, 14, 12);
                         break;
-                    case "Undo":
-                        // Keep the curve and arrowhead joined at the same point.
-                        // Separate arc angles left a visible gap at small icon sizes.
-                        using (var undoPath = new GraphicsPath())
-                        {
-                            undoPath.AddBezier(3, 7, 7, 2, 16, 4, 16, 10);
-                            undoPath.AddBezier(16, 10, 16, 13, 13, 15, 10, 15);
-                            graphics.DrawPath(pen, undoPath);
-                        }
-                        graphics.DrawLines(pen, new[] { new Point(3, 2), new Point(3, 7), new Point(8, 7) });
-                        break;
                     case "Clear":
                         graphics.DrawLine(pen, 3, 4, 15, 4);
                         graphics.DrawLines(pen, new[] { new Point(6, 4), new Point(6, 2), new Point(12, 2), new Point(12, 4) });
@@ -490,6 +496,50 @@ namespace Kiritori
                 }
             }
             graphics.Restore(state);
+        }
+
+        private static SvgDocument LoadUndoSvg()
+        {
+            var markup = Properties.Resources.ResourceManager.GetString("undo_2_svg");
+            if (string.IsNullOrEmpty(markup)) throw new FileNotFoundException("Embedded Lucide undo-2.svg resource was not found.");
+            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(markup)))
+            {
+                return SvgDocument.Open<SvgDocument>(stream);
+            }
+        }
+
+        private void DrawUndoSvg(Graphics graphics, Rectangle bounds, Color color, int dpi)
+        {
+            var pixelSize = Math.Max(1, (int)Math.Round(18f * dpi / 96f));
+            var cacheKey = color.ToArgb().ToString("X8") + ":" + pixelSize;
+            Bitmap bitmap;
+            lock (UndoSvgLock)
+            {
+                if (!_undoSvgBitmaps.TryGetValue(cacheKey, out bitmap))
+                {
+                    if (_undoSvgBitmaps.Count >= 16)
+                    {
+                        foreach (var cached in _undoSvgBitmaps.Values) cached.Dispose();
+                        _undoSvgBitmaps.Clear();
+                    }
+                    // SVG.NET resolves inherited currentColor while rendering. Use
+                    // a fresh document for each cached color to avoid stale paint.
+                    var svg = LoadUndoSvg();
+                    svg.Color = new SvgColourServer(color);
+                    bitmap = svg.Draw(pixelSize, pixelSize);
+                    _undoSvgBitmaps.Add(cacheKey, bitmap);
+                }
+            }
+            var state = graphics.Save();
+            try
+            {
+                graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
+                graphics.PixelOffsetMode = PixelOffsetMode.Half;
+                graphics.DrawImageUnscaled(bitmap,
+                    bounds.Left + (bounds.Width - pixelSize) / 2,
+                    bounds.Top + (bounds.Height - pixelSize) / 2);
+            }
+            finally { graphics.Restore(state); }
         }
 
         [DllImport("user32.dll", EntryPoint = "GetDpiForWindow")]
