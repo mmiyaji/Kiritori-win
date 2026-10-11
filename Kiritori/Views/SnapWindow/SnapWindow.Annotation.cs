@@ -17,6 +17,9 @@ namespace Kiritori
             Move,
             Rectangle,
             Arrow,
+            Text,
+            Step,
+            Mosaic,
         }
 
         private enum AnnotationArrowStyle
@@ -36,6 +39,9 @@ namespace Kiritori
         {
             Rectangle,
             Arrow,
+            Text,
+            Step,
+            Mosaic,
         }
 
         private enum AnnotationInteraction
@@ -79,6 +85,7 @@ namespace Kiritori
         private int _hoverAnnotationIndex = -1;
         private Point _annotationDragOriginImage;
         private Rectangle _annotationEditOriginBounds = Rectangle.Empty;
+        private int _annotationEditOriginFontSize;
         private Point _annotationEditOriginStart;
         private Point _annotationEditOriginEnd;
         private ToolStripMenuItem _annotationModeMenuItem;
@@ -105,10 +112,13 @@ namespace Kiritori
 
         private void ResetAnnotations()
         {
+            CancelAnnotationDrag();
             _annotations.Clear();
+            ClearAnnotationHistory();
             _selectedAnnotationIndex = -1;
             ResetTransientAnnotationState();
             ExitAnnotationMode(silent: true);
+            DisposeExtendedAnnotationResources();
             UpdateAnnotationMenuState();
             pictureBox1?.Invalidate();
         }
@@ -149,6 +159,7 @@ namespace Kiritori
 
         private void ExitAnnotationMode(bool silent = false)
         {
+            CancelAnnotationDrag();
             _annotationMode = false;
             ResetTransientAnnotationState();
             _selectedAnnotationIndex = -1;
@@ -172,6 +183,7 @@ namespace Kiritori
 
         private void SetAnnotationTool(AnnotationTool tool)
         {
+            CancelAnnotationDrag();
             _annotationTool = tool;
             _selectedAnnotationIndex = -1;
             _annotationPreview = null;
@@ -200,6 +212,7 @@ namespace Kiritori
 
         private void SetAnnotationColor(Color strokeColor, Color fillColor)
         {
+            BeginAnnotationHistoryChange();
             ApplyToSelectedShapeOrDefaults(
                 selected =>
                 {
@@ -218,11 +231,13 @@ namespace Kiritori
                 preview.FillColor = ResolveShapeFillColor(preview, fillColor);
             });
 
+            CommitAnnotationHistoryChange();
             RefreshAnnotationUi();
         }
 
         private void SetAnnotationArrowStyle(AnnotationArrowStyle style)
         {
+            BeginAnnotationHistoryChange();
             ApplyToSelectedShapeOrDefaults(
                 selected =>
                 {
@@ -237,11 +252,13 @@ namespace Kiritori
                     preview.ArrowStyle = style;
             });
 
+            CommitAnnotationHistoryChange();
             RefreshAnnotationUi();
         }
 
         private void SetAnnotationRectangleStyle(AnnotationRectangleStyle style)
         {
+            BeginAnnotationHistoryChange();
             ApplyToSelectedShapeOrDefaults(
                 selected =>
                 {
@@ -262,25 +279,32 @@ namespace Kiritori
                 preview.FillColor = ResolveRectangleFillColor(style, preview.StrokeColor);
             });
 
+            CommitAnnotationHistoryChange();
             RefreshAnnotationUi();
-        }
-        private void UndoLastAnnotation()
-        {
-            if (_annotations.Count == 0) return;
-            _annotations.RemoveAt(_annotations.Count - 1);
-            _selectedAnnotationIndex = AnnotationSelectionState.NormalizeIndex(_selectedAnnotationIndex, _annotations.Count);
-            RefreshAnnotationUi();
-            ShowOverlay("ANNOTATION UNDONE");
         }
 
         private void ClearAnnotations()
         {
+            CancelAnnotationDrag();
             if (_annotations.Count == 0) return;
+            BeginAnnotationHistoryChange();
             _annotations.Clear();
             _selectedAnnotationIndex = -1;
             _annotationPreview = null;
+            CommitAnnotationHistoryChange();
             RefreshAnnotationUi();
             ShowOverlay("ANNOTATIONS CLEARED");
+        }
+
+        private void DeleteSelectedAnnotation()
+        {
+            if (_annotationDragging) CancelAnnotationDrag();
+            if (_selectedAnnotationIndex < 0 || _selectedAnnotationIndex >= _annotations.Count) return;
+            BeginAnnotationHistoryChange();
+            _annotations.RemoveAt(_selectedAnnotationIndex);
+            _selectedAnnotationIndex = -1;
+            CommitAnnotationHistoryChange();
+            RefreshAnnotationUi();
         }
 
         private void DetachStandardMouseHandlers()
@@ -309,8 +333,17 @@ namespace Kiritori
             _annotationFillColor = shape.FillColor;
             if (shape.Kind == AnnotationShapeKind.Arrow)
                 _annotationArrowStyle = shape.ArrowStyle;
-            else
+            else if (shape.Kind == AnnotationShapeKind.Rectangle)
                 _annotationRectangleStyle = shape.RectangleStyle;
+            else if (shape.Kind == AnnotationShapeKind.Text)
+            {
+                _annotationFontSize = shape.FontSize;
+                _annotationTextBackground = shape.TextBackground;
+            }
+            else if (shape.Kind == AnnotationShapeKind.Step)
+                _annotationFontSize = shape.FontSize;
+            else if (shape.Kind == AnnotationShapeKind.Mosaic)
+                _annotationMosaicBlockSize = shape.MosaicBlockSize;
         }
 
         private void ApplyToSelectedShapeOrDefaults(Action<AnnotationShape> applyToSelected, Action applyToDefaults)
@@ -366,7 +399,7 @@ namespace Kiritori
             }
             var hasAnnotations = _annotations.Count > 0;
             if (_annotationClearMenuItem != null) _annotationClearMenuItem.Enabled = hasAnnotations;
-            if (_annotationUndoMenuItem != null) _annotationUndoMenuItem.Enabled = hasAnnotations;
+            if (_annotationUndoMenuItem != null) _annotationUndoMenuItem.Enabled = CanUndoAnnotations;
             UpdateAnnotationPaletteState();
         }
 
@@ -406,6 +439,7 @@ namespace Kiritori
                 return;
             }
 
+            if (TryHandleSpecialAnnotationMouseDown(imagePoint)) return;
             BeginAnnotationCreate(imagePoint);
         }
 
@@ -450,11 +484,13 @@ namespace Kiritori
 
         private void BeginAnnotationEdit(int hitIndex, AnnotationHandle hitHandle, Point imagePoint)
         {
+            BeginAnnotationHistoryChange(includeDefaults: false);
             var shape = _annotations[hitIndex];
             _selectedAnnotationIndex = hitIndex;
             SyncAnnotationDefaultsFromShape(shape);
             BeginAnnotationDrag(GetInteractionForHit(shape, hitHandle), hitHandle, imagePoint);
             _annotationEditOriginBounds = shape.Bounds;
+            _annotationEditOriginFontSize = shape.FontSize;
             _annotationEditOriginStart = shape.Start;
             _annotationEditOriginEnd = shape.End;
             UpdateAnnotationMenuState();
@@ -462,6 +498,7 @@ namespace Kiritori
 
         private void BeginAnnotationCreate(Point imagePoint)
         {
+            BeginAnnotationHistoryChange(includeDefaults: false);
             _selectedAnnotationIndex = -1;
             _annotationStartImage = imagePoint;
             _annotationPreview = CreateAnnotationShape(_annotationTool, imagePoint, imagePoint);
@@ -496,7 +533,8 @@ namespace Kiritori
             _selectedAnnotationIndex = _annotations.Count - 1;
             SyncAnnotationDefaultsFromShape(shape);
             UpdateAnnotationMenuState();
-            ShowOverlay(_annotationTool == AnnotationTool.Arrow ? "ARROW ADDED" : "RECT ADDED");
+            ShowOverlay(_annotationTool == AnnotationTool.Arrow ? "ARROW ADDED" :
+                _annotationTool == AnnotationTool.Mosaic ? "MOSAIC ADDED" : "RECT ADDED");
             Log.Info("Annotation added: " + shape.Kind, "SnapWindow");
         }
 
@@ -523,7 +561,7 @@ namespace Kiritori
         private void UpdateAnnotationDrag(Point clientPoint)
         {
             Point imagePoint;
-            if (!TryClientToImagePoint(clientPoint, out imagePoint)) return;
+            if (!TryClientToImagePointClamped(clientPoint, out imagePoint)) return;
 
             ApplyAnnotationDrag(imagePoint);
             pictureBox1.Invalidate();
@@ -613,8 +651,24 @@ namespace Kiritori
 
         private void FinishAnnotationDrag(Point clientPoint)
         {
+            UpdateAnnotationDrag(clientPoint);
             CompleteFinishedAnnotationDrag();
             EndAnnotationDragState();
+            CommitAnnotationHistoryChange();
+            RefreshAnnotationUi();
+        }
+
+        private void CancelAnnotationDrag()
+        {
+            if (!_annotationDragging) return;
+            // Clear the flag first: releasing capture raises CaptureChanged.
+            _annotationDragging = false;
+            _annotationInteraction = AnnotationInteraction.None;
+            _annotationHandle = AnnotationHandle.None;
+            CancelAnnotationHistoryChange(restore: true);
+            _annotationPreview = null;
+            if (pictureBox1 != null && !pictureBox1.IsDisposed) pictureBox1.Capture = false;
+            UpdateAnnotationCursor();
             RefreshAnnotationUi();
         }
 
@@ -658,7 +712,10 @@ namespace Kiritori
         {
             if (!TryGetSelectedRectangle(out var shape)) return;
 
-            AnnotationShapeMutator.ApplyRectangleBounds(shape, GetResizedRectangleBounds(imagePoint));
+            var newBounds = GetResizedRectangleBounds(imagePoint);
+            AnnotationShapeMutator.ApplyRectangleBounds(shape, newBounds);
+            if (shape.Kind == AnnotationShapeKind.Text)
+                ResizeTextAnnotationShape(shape, newBounds, _annotationEditOriginBounds, _annotationEditOriginFontSize);
         }
 
         private Rectangle GetMovedRectangleBounds(Point imagePoint)
@@ -700,7 +757,8 @@ namespace Kiritori
 
         private bool TryGetSelectedRectangle(out AnnotationShape shape)
         {
-            return TryGetSelectedShapeOfKind(AnnotationShapeKind.Rectangle, out shape);
+            shape = null;
+            return TryGetSelectedShape(out shape) && shape.Kind != AnnotationShapeKind.Arrow;
         }
 
         private bool TryGetSelectedShape(out AnnotationShape shape)
@@ -812,6 +870,7 @@ namespace Kiritori
         private void DrawAnnotationShape(Graphics g, AnnotationShape shape, Rectangle? displayRect, Size sourceSize)
         {
             if (shape == null) return;
+            if (DrawExtendedAnnotationShape(g, shape, displayRect, sourceSize)) return;
             AnnotationShapeRenderer.DrawShape(g, shape, displayRect, sourceSize, DrawRectangleAnnotationShape, DrawArrowAnnotationShape);
         }
         private AnnotationShape GetHoveredAnnotation()
@@ -896,7 +955,8 @@ namespace Kiritori
 
         private AnnotationShape CreateAnnotationShape(AnnotationTool tool, Point start, Point end)
         {
-            var kind = tool == AnnotationTool.Arrow ? AnnotationShapeKind.Arrow : AnnotationShapeKind.Rectangle;
+            var kind = tool == AnnotationTool.Arrow ? AnnotationShapeKind.Arrow :
+                tool == AnnotationTool.Mosaic ? AnnotationShapeKind.Mosaic : AnnotationShapeKind.Rectangle;
             return new AnnotationShape
             {
                 Kind = kind,
@@ -906,7 +966,10 @@ namespace Kiritori
                 FillColor = kind == AnnotationShapeKind.Rectangle && _annotationRectangleStyle == AnnotationRectangleStyle.Outline ? Color.Transparent : _annotationFillColor,
                 ArrowStyle = _annotationArrowStyle,
                 RectangleStyle = _annotationRectangleStyle,
-                StrokeWidth = _annotationStrokeWidth
+                StrokeWidth = _annotationStrokeWidth,
+                FontSize = _annotationFontSize,
+                TextBackground = _annotationTextBackground,
+                MosaicBlockSize = _annotationMosaicBlockSize
             };
         }
 
@@ -985,6 +1048,8 @@ namespace Kiritori
         private bool IsAnnotationShapeUsable(AnnotationShape shape)
         {
             if (shape == null) return false;
+            if (shape.Kind != AnnotationShapeKind.Arrow && shape.Kind != AnnotationShapeKind.Rectangle)
+                return IsExtendedAnnotationShapeUsable(shape);
             if (shape.Kind == AnnotationShapeKind.Arrow)
                 return DistanceSquared(shape.Start, shape.End) >= 144;
 
@@ -1010,6 +1075,16 @@ namespace Kiritori
             Bitmap source;
             if (!TryGetDisplayImageRect(out displayRect, out source)) return false;
             return AnnotationDisplayGeometry.TryClientToImagePoint(displayRect, source.Size, clientPoint, out imagePoint);
+        }
+
+        private bool TryClientToImagePointClamped(Point clientPoint, out Point imagePoint)
+        {
+            imagePoint = Point.Empty;
+            Rectangle displayRect;
+            Bitmap source;
+            if (!TryGetDisplayImageRect(out displayRect, out source)) return false;
+            imagePoint = AnnotationDisplayGeometry.ClientToImagePointClamped(displayRect, source.Size, clientPoint);
+            return true;
         }
 
         private Point ImagePointToClientPoint(Rectangle displayRect, Size sourceSize, Point imagePoint)

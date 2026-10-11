@@ -51,6 +51,16 @@ namespace Kiritori
                     UndoLastAnnotation();
                     return true;
                 }
+                if (keyData == (Keys.Control | Keys.Y) || keyData == (Keys.Control | Keys.Shift | Keys.Z))
+                {
+                    RedoAnnotation();
+                    return true;
+                }
+                if (keyData == Keys.Delete)
+                {
+                    DeleteSelectedAnnotation();
+                    return true;
+                }
             }            switch ((int)keyData)
             {
                 case (int)HOTS.MOVE_LEFT:

@@ -56,12 +56,22 @@ namespace Kiritori
                 imagePoint = Point.Empty;
                 if (!displayRect.Contains(clientPoint)) return false;
 
-                double ratioX = (double)(clientPoint.X - displayRect.X) / Math.Max(1, displayRect.Width);
-                double ratioY = (double)(clientPoint.Y - displayRect.Y) / Math.Max(1, displayRect.Height);
+                imagePoint = ClientToImagePointClamped(displayRect, sourceSize, clientPoint);
+                return true;
+            }
+
+            public static Point ClientToImagePointClamped(Rectangle displayRect, Size sourceSize, Point clientPoint)
+            {
+                // Only use this after an in-image mouse down. Capture can deliver
+                // continuation events outside the displayed image.
+                int clientX = Math.Max(displayRect.Left, Math.Min(displayRect.Right - 1, clientPoint.X));
+                int clientY = Math.Max(displayRect.Top, Math.Min(displayRect.Bottom - 1, clientPoint.Y));
+
+                double ratioX = (double)(clientX - displayRect.X) / Math.Max(1, displayRect.Width);
+                double ratioY = (double)(clientY - displayRect.Y) / Math.Max(1, displayRect.Height);
                 int x = Math.Max(0, Math.Min(sourceSize.Width - 1, (int)Math.Round(ratioX * sourceSize.Width)));
                 int y = Math.Max(0, Math.Min(sourceSize.Height - 1, (int)Math.Round(ratioY * sourceSize.Height)));
-                imagePoint = new Point(x, y);
-                return true;
+                return new Point(x, y);
             }
 
             public static Point ImagePointToClientPoint(Rectangle displayRect, Size sourceSize, Point imagePoint)
@@ -85,9 +95,9 @@ namespace Kiritori
         {
             public static AnnotationHandle HitTest(AnnotationShape shape, Point imagePoint, int arrowHandleRadius, int rectangleHandleRadius)
             {
-                return shape.Kind == AnnotationShapeKind.Rectangle
-                    ? HitTestRectangle(shape.Bounds, imagePoint, rectangleHandleRadius)
-                    : HitTestArrow(shape, imagePoint, arrowHandleRadius);
+                return shape.Kind == AnnotationShapeKind.Arrow
+                    ? HitTestArrow(shape, imagePoint, arrowHandleRadius)
+                    : HitTestRectangle(shape.Bounds, imagePoint, rectangleHandleRadius);
             }
 
             public static Dictionary<AnnotationHandle, Rectangle> GetRectangleHandleRects(Rectangle rect, int radius)

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -1145,10 +1145,10 @@
   <data name="Annotation.Color" xml:space="preserve"><value>Color</value></data>
   <data name="Annotation.Width" xml:space="preserve"><value>Width</value></data>
   <data name="Annotation.WidthHint" xml:space="preserve"><value>Stroke width in image pixels (2–16 px). Applies to the selected annotation, or to new annotations.</value></data>
-  <data name="Annotation.Undo" xml:space="preserve"><value>Remove last (Ctrl+Z)</value></data>
+  <data name="Annotation.Undo" xml:space="preserve"><value>Undo (Ctrl+Z)</value></data>
   <data name="Annotation.Clear" xml:space="preserve"><value>Clear all</value></data>
   <data name="Annotation.Done" xml:space="preserve"><value>Done (Esc)</value></data>
-  <data name="Annotation.UndoHint" xml:space="preserve"><value>Remove the last added annotation.</value></data>
+  <data name="Annotation.UndoHint" xml:space="preserve"><value>Undo the last edit (Ctrl+Z).</value></data>
   <data name="Annotation.ClearHint" xml:space="preserve"><value>Remove all annotations from this capture.</value></data>
   <data name="Annotation.DoneHint" xml:space="preserve"><value>Keep the annotations and finish editing. F6 switches between the image and this palette.</value></data>
   <data name="Annotation.MoveHint" xml:space="preserve"><value>Drag the image background to move the capture.</value></data>
@@ -1167,4 +1167,23 @@
   <data name="Annotation.Style.Double" xml:space="preserve"><value>Double arrow</value></data>
   <data name="Annotation.Style.Line" xml:space="preserve"><value>Line</value></data>
   <data name="Annotation.Style.Tapered" xml:space="preserve"><value>Tapered arrow</value></data>
+  <data name="Annotation.Redo" xml:space="preserve"><value>Redo</value></data>
+  <data name="Annotation.RedoHint" xml:space="preserve"><value>Restore the last undone edit (Ctrl+Y).</value></data>
+  <data name="Annotation.Text" xml:space="preserve"><value>Text</value></data>
+  <data name="Annotation.TextHint" xml:space="preserve"><value>Click to add text. Double-click text to edit it.</value></data>
+  <data name="Annotation.Step" xml:space="preserve"><value>Numbered marker</value></data>
+  <data name="Annotation.StepHint" xml:space="preserve"><value>Click to place the next numbered marker.</value></data>
+  <data name="Annotation.Mosaic" xml:space="preserve"><value>Pixelate area</value></data>
+  <data name="Annotation.MosaicHint" xml:space="preserve"><value>Drag to pixelate part of the image.</value></data>
+  <data name="Annotation.FontSize" xml:space="preserve"><value>Text size</value></data>
+  <data name="Annotation.Style.TextOutline" xml:space="preserve"><value>Outlined text</value></data>
+  <data name="Annotation.Style.TextBackground" xml:space="preserve"><value>Text with background</value></data>
+  <data name="Annotation.Style.EditText" xml:space="preserve"><value>Edit text…</value></data>
+  <data name="Annotation.Style.MosaicWeak" xml:space="preserve"><value>Weak pixelation</value></data>
+  <data name="Annotation.Style.MosaicMedium" xml:space="preserve"><value>Medium pixelation</value></data>
+  <data name="Annotation.Style.MosaicStrong" xml:space="preserve"><value>Strong pixelation</value></data>
+  <data name="Annotation.TextEditor.Title" xml:space="preserve"><value>Text annotation</value></data>
+  <data name="Annotation.TextEditor.Background" xml:space="preserve"><value>Add background</value></data>
+  <data name="Annotation.TextEditor.Ok" xml:space="preserve"><value>OK</value></data>
+  <data name="Annotation.TextEditor.Cancel" xml:space="preserve"><value>Cancel</value></data>
 </root>

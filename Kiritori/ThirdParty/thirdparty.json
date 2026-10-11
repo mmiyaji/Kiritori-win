@@ -29,7 +29,7 @@
     },
     {
       "id": "lucide-icons",
-      "name": "Lucide Icons (undo-2.svg)",
+      "name": "Lucide Icons (annotation toolbar)",
       "version": "current upstream icon asset",
       "license": "ISC",
       "projectUrl": "https://github.com/lucide-icons/lucide",

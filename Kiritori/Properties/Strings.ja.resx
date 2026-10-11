@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -1045,7 +1045,7 @@
     <value>注釈を編集</value>
   </data>
   <data name="Menu.UndoLastAnnotation" xml:space="preserve">
-    <value>直前の注釈を元に戻す</value>
+    <value>直前の編集を元に戻す</value>
   </data>
   <data name="Menu.ClearAnnotations" xml:space="preserve">
     <value>注釈をすべて削除</value>
@@ -1139,10 +1139,10 @@
   <data name="Annotation.Color" xml:space="preserve"><value>色</value></data>
   <data name="Annotation.Width" xml:space="preserve"><value>線幅</value></data>
   <data name="Annotation.WidthHint" xml:space="preserve"><value>画像上の線の太さ（2〜16 px）。選択した注釈、または次に描く注釈に適用します。</value></data>
-  <data name="Annotation.Undo" xml:space="preserve"><value>最後を取り消す (Ctrl+Z)</value></data>
+  <data name="Annotation.Undo" xml:space="preserve"><value>元に戻す (Ctrl+Z)</value></data>
   <data name="Annotation.Clear" xml:space="preserve"><value>すべて消去</value></data>
   <data name="Annotation.Done" xml:space="preserve"><value>完了 (Esc)</value></data>
-  <data name="Annotation.UndoHint" xml:space="preserve"><value>最後に追加した注釈を取り消します。</value></data>
+  <data name="Annotation.UndoHint" xml:space="preserve"><value>直前の編集を元に戻します（Ctrl+Z）。</value></data>
   <data name="Annotation.ClearHint" xml:space="preserve"><value>この画像の注釈をすべて消去します。</value></data>
   <data name="Annotation.DoneHint" xml:space="preserve"><value>注釈を残して編集を終了します。F6 で画像とパレットを切り替えられます。</value></data>
   <data name="Annotation.MoveHint" xml:space="preserve"><value>画像の背景をドラッグしてウィンドウを移動します。</value></data>
@@ -1161,4 +1161,23 @@
   <data name="Annotation.Style.Double" xml:space="preserve"><value>両方向の矢印</value></data>
   <data name="Annotation.Style.Line" xml:space="preserve"><value>直線</value></data>
   <data name="Annotation.Style.Tapered" xml:space="preserve"><value>先細りの矢印</value></data>
+  <data name="Annotation.Redo" xml:space="preserve"><value>やり直す</value></data>
+  <data name="Annotation.RedoHint" xml:space="preserve"><value>元に戻した編集をやり直します（Ctrl+Y）。</value></data>
+  <data name="Annotation.Text" xml:space="preserve"><value>文字</value></data>
+  <data name="Annotation.TextHint" xml:space="preserve"><value>クリックして文字を追加します。文字のダブルクリックで再編集できます。</value></data>
+  <data name="Annotation.Step" xml:space="preserve"><value>連番マーカー</value></data>
+  <data name="Annotation.StepHint" xml:space="preserve"><value>クリックするたびに次の番号を配置します。</value></data>
+  <data name="Annotation.Mosaic" xml:space="preserve"><value>部分モザイク</value></data>
+  <data name="Annotation.MosaicHint" xml:space="preserve"><value>ドラッグした範囲にモザイクをかけます。</value></data>
+  <data name="Annotation.FontSize" xml:space="preserve"><value>文字サイズ</value></data>
+  <data name="Annotation.Style.TextOutline" xml:space="preserve"><value>縁取り文字</value></data>
+  <data name="Annotation.Style.TextBackground" xml:space="preserve"><value>背景付き文字</value></data>
+  <data name="Annotation.Style.EditText" xml:space="preserve"><value>文字を編集…</value></data>
+  <data name="Annotation.Style.MosaicWeak" xml:space="preserve"><value>モザイク：弱</value></data>
+  <data name="Annotation.Style.MosaicMedium" xml:space="preserve"><value>モザイク：中</value></data>
+  <data name="Annotation.Style.MosaicStrong" xml:space="preserve"><value>モザイク：強</value></data>
+  <data name="Annotation.TextEditor.Title" xml:space="preserve"><value>テキスト注釈</value></data>
+  <data name="Annotation.TextEditor.Background" xml:space="preserve"><value>背景を付ける</value></data>
+  <data name="Annotation.TextEditor.Ok" xml:space="preserve"><value>OK</value></data>
+  <data name="Annotation.TextEditor.Cancel" xml:space="preserve"><value>キャンセル</value></data>
 </root>

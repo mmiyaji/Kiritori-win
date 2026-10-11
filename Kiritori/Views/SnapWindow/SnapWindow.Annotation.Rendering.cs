@@ -9,7 +9,7 @@ namespace Kiritori
         {
             public static void DrawHoverOverlay(Graphics g, Pen pen, AnnotationShape shape, Rectangle displayRect, Size sourceSize, Func<AnnotationShape, Rectangle?, Size, Rectangle> getShapeRect, GetShapeLineDelegate getShapeLine)
             {
-                if (shape.Kind == AnnotationShapeKind.Rectangle)
+                if (shape.Kind != AnnotationShapeKind.Arrow)
                 {
                     var rect = getShapeRect(shape, displayRect, sourceSize);
                     if (rect.Width <= 0 || rect.Height <= 0) return;
@@ -23,7 +23,7 @@ namespace Kiritori
 
             public static void DrawSelectionOverlay(Graphics g, Pen dashPen, Brush handleBrush, Pen handlePen, AnnotationShape shape, Rectangle displayRect, Size sourceSize, Func<AnnotationShape, Rectangle?, Size, Rectangle> getShapeRect, GetShapeLineDelegate getShapeLine, DrawArrowHandleDelegate drawArrowHandle)
             {
-                if (shape.Kind == AnnotationShapeKind.Rectangle)
+                if (shape.Kind != AnnotationShapeKind.Arrow)
                 {
                     var rect = getShapeRect(shape, displayRect, sourceSize);
                     if (rect.Width <= 0 || rect.Height <= 0) return;

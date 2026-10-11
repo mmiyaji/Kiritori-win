@@ -195,6 +195,7 @@ namespace Kiritori
 
         private void PictureBox1_CaptureChanged(object sender, EventArgs e)
         {
+            if (_annotationDragging) CancelAnnotationDrag();
             if (_isResizing)
             {
                 _isResizing = false;

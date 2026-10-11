@@ -1,4 +1,4 @@
-﻿using Kiritori.Helpers;
+using Kiritori.Helpers;
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -13,8 +13,10 @@ namespace Kiritori
 {
     public partial class SnapWindow
     {
-        private static readonly object UndoSvgLock = new object();
-        private readonly Dictionary<string, Bitmap> _undoSvgBitmaps = new Dictionary<string, Bitmap>();
+        private static readonly object AnnotationSvgLock = new object();
+        private readonly Dictionary<string, Bitmap> _annotationSvgBitmaps = new Dictionary<string, Bitmap>();
+        private Button _annotationRedoButton;
+        private ToolStripMenuItem _annotationRedoMenuItem;
         private static readonly Color[] AnnotationColors =
         {
             Color.FromArgb(255, 138, 61), Color.FromArgb(88, 166, 255),
@@ -30,6 +32,10 @@ namespace Kiritori
             pictureBox1.MouseDown += PictureBox1_MouseDownAnnotations;
             pictureBox1.MouseMove += PictureBox1_MouseMoveAnnotations;
             pictureBox1.MouseUp += PictureBox1_MouseUpAnnotations;
+            pictureBox1.MouseDoubleClick += (s, e) =>
+            {
+                if (_annotationMode && e.Button == MouseButtons.Left) EditSelectedAnnotationText();
+            };
             pictureBox1.Disposed += (s, e) => RestoreStandardMouseHandlers();
             CreateAnnotationPalette();
             CreateAnnotationMenuItems();
@@ -47,6 +53,8 @@ namespace Kiritori
             _annotationUndoMenuItem = new ToolStripMenuItem(SR.T("Menu.UndoLastAnnotation"));
             _annotationUndoMenuItem.Tag = "loc:Menu.UndoLastAnnotation";
             _annotationUndoMenuItem.Click += (s, e) => UndoLastAnnotation();
+            _annotationRedoMenuItem = new ToolStripMenuItem(SR.T("Annotation.Redo")) { Tag = "loc:Annotation.Redo" };
+            _annotationRedoMenuItem.Click += (s, e) => RedoAnnotation();
             _annotationClearMenuItem = new ToolStripMenuItem(SR.T("Menu.ClearAnnotations"));
             _annotationClearMenuItem.Tag = "loc:Menu.ClearAnnotations";
             _annotationClearMenuItem.Click += (s, e) => ClearAnnotations();
@@ -54,6 +62,7 @@ namespace Kiritori
             {
                 editParentMenu.DropDownItems.Add(new ToolStripSeparator());
                 editParentMenu.DropDownItems.Add(_annotationUndoMenuItem);
+                editParentMenu.DropDownItems.Add(_annotationRedoMenuItem);
                 editParentMenu.DropDownItems.Add(_annotationClearMenuItem);
             }
             UpdateAnnotationMenuState();
@@ -84,8 +93,8 @@ namespace Kiritori
             _annotationPalette.Controls.Add(toolbar);
             var toolsRow = new FlowLayoutPanel { WrapContents = false, Margin = Padding.Empty };
             toolbar.Controls.Add(toolsRow);
-            _annotationToolButtons = new RadioButton[3];
-            var toolKeys = new[] { "Move", "Rectangle", "Arrow" };
+            var toolKeys = new[] { "Move", "Rectangle", "Arrow", "Text", "Step", "Mosaic" };
+            _annotationToolButtons = new RadioButton[toolKeys.Length];
             for (var i = 0; i < toolKeys.Length; i++)
             {
                 var tool = (AnnotationTool)i;
@@ -137,7 +146,8 @@ namespace Kiritori
                 var tool = GetAnnotationStyleTool();
                 var glyph = tool == AnnotationTool.Rectangle
                     ? (selected == null ? _annotationRectangleStyle : selected.RectangleStyle).ToString()
-                    : (selected == null ? _annotationArrowStyle : selected.ArrowStyle).ToString();
+                    : tool == AnnotationTool.Arrow ? (selected == null ? _annotationArrowStyle : selected.ArrowStyle).ToString()
+                    : tool.ToString();
                 DrawAnnotationGlyph(e.Graphics, _annotationStyleButton.ClientRectangle, glyph,
                     _annotationStyleButton.Enabled ? SystemColors.ControlText : SystemColors.GrayText, _annotationPalette.UiDpi);
                 var dpiScale = _annotationPalette.UiDpi / 96f;
@@ -152,22 +162,31 @@ namespace Kiritori
             {
                 if (_updatingAnnotationPalette) return;
                 var width = (int)_annotationWidthInput.Value;
-                ApplyToSelectedShapeOrDefaults(shape => shape.StrokeWidth = width, () => _annotationStrokeWidth = width);
-                ApplyToPreviewShape(shape => shape.StrokeWidth = width);
+                var tool = GetAnnotationStyleTool();
+                if (tool == AnnotationTool.Text || tool == AnnotationTool.Step) SetAnnotationFontSize(width);
+                else
+                {
+                    BeginAnnotationHistoryChange();
+                    ApplyToSelectedShapeOrDefaults(shape => shape.StrokeWidth = width, () => _annotationStrokeWidth = width);
+                    ApplyToPreviewShape(shape => shape.StrokeWidth = width);
+                    CommitAnnotationHistoryChange();
+                }
                 RefreshAnnotationUi();
             };
             toolbar.Controls.Add(_annotationWidthInput);
             toolbar.Controls.Add(CreateAnnotationDivider());
             _annotationUndoButton = CreateAnnotationAction("Annotation.Undo", 30, (s, e) => UndoLastAnnotation());
+            _annotationRedoButton = CreateAnnotationAction("Annotation.Redo", 30, (s, e) => RedoAnnotation());
             _annotationClearButton = CreateAnnotationAction("Annotation.Clear", 30, (s, e) => ClearAnnotations());
             _annotationDoneButton = CreateAnnotationAction("Annotation.Done", 34, (s, e) => FinishAnnotationsFromPalette());
             _annotationUndoButton.Paint += (s, e) => DrawAnnotationGlyph(e.Graphics, _annotationUndoButton.ClientRectangle, "Undo", _annotationUndoButton.Enabled ? SystemColors.ControlText : SystemColors.GrayText, _annotationPalette.UiDpi);
+            _annotationRedoButton.Paint += (s, e) => DrawAnnotationGlyph(e.Graphics, _annotationRedoButton.ClientRectangle, "Redo", _annotationRedoButton.Enabled ? SystemColors.ControlText : SystemColors.GrayText, _annotationPalette.UiDpi);
             _annotationClearButton.Paint += (s, e) => DrawAnnotationGlyph(e.Graphics, _annotationClearButton.ClientRectangle, "Clear", _annotationClearButton.Enabled ? SystemColors.ControlText : SystemColors.GrayText, _annotationPalette.UiDpi);
             _annotationDoneButton.Paint += (s, e) => DrawAnnotationGlyph(e.Graphics, _annotationDoneButton.ClientRectangle, "Done", SystemColors.HighlightText, _annotationPalette.UiDpi);
             _annotationDoneButton.BackColor = SystemColors.Highlight;
             _annotationDoneButton.ForeColor = SystemColors.HighlightText;
             _annotationDoneButton.FlatAppearance.BorderColor = SystemColors.Highlight;
-            toolbar.Controls.AddRange(new Control[] { _annotationUndoButton, _annotationClearButton, _annotationDoneButton });
+            toolbar.Controls.AddRange(new Control[] { _annotationUndoButton, _annotationRedoButton, _annotationClearButton, _annotationDoneButton });
             _annotationPalette.DpiChanged += (s, e) => QueueAnnotationPaletteLayout();
             ApplyAnnotationPaletteLocalization();
         }
@@ -208,12 +227,13 @@ namespace Kiritori
             Localizer.Apply(_annotationPalette);
             _annotationWidthInput.AccessibleName = SR.T("Annotation.Width");
             _annotationPaletteTips.SetToolTip(_annotationWidthInput, SR.T("Annotation.WidthHint"));
-            var keys = new[] { "Move", "Rectangle", "Arrow" };
+            var keys = new[] { "Move", "Rectangle", "Arrow", "Text", "Step", "Mosaic" };
             for (var i = 0; i < keys.Length; i++)
                 SetAnnotationControlDescription(_annotationToolButtons[i], "Annotation." + keys[i], "Annotation." + keys[i] + "Hint");
             for (var i = 0; i < _annotationColorButtons.Length; i++)
                 SetAnnotationControlDescription(_annotationColorButtons[i], "Annotation.Color." + AnnotationColorKeys[i], null);
             SetAnnotationControlDescription(_annotationUndoButton, "Annotation.Undo", "Annotation.UndoHint");
+            SetAnnotationControlDescription(_annotationRedoButton, "Annotation.Redo", "Annotation.RedoHint");
             SetAnnotationControlDescription(_annotationClearButton, "Annotation.Clear", "Annotation.ClearHint");
             SetAnnotationControlDescription(_annotationDoneButton, "Annotation.Done", "Annotation.DoneHint");
             UpdateAnnotationMenuState();
@@ -232,6 +252,24 @@ namespace Kiritori
             while (_annotationStyleMenu.Items.Count > 0) _annotationStyleMenu.Items[0].Dispose();
             var selected = GetSelectedAnnotation();
             var tool = GetAnnotationStyleTool();
+            if (tool == AnnotationTool.Text)
+            {
+                var background = selected == null ? _annotationTextBackground : selected.TextBackground;
+                AddAnnotationStyleItem("TextOutline", !background, () => SetAnnotationTextBackground(false));
+                AddAnnotationStyleItem("TextBackground", background, () => SetAnnotationTextBackground(true));
+                if (selected != null) AddAnnotationStyleItem("EditText", false, EditSelectedAnnotationText);
+                _annotationStyleMenu.Show(_annotationStyleButton, new Point(0, _annotationStyleButton.Height));
+                return;
+            }
+            if (tool == AnnotationTool.Mosaic)
+            {
+                var block = selected == null ? _annotationMosaicBlockSize : selected.MosaicBlockSize;
+                AddAnnotationStyleItem("MosaicWeak", block == 8, () => SetAnnotationMosaicBlockSize(8));
+                AddAnnotationStyleItem("MosaicMedium", block == 16, () => SetAnnotationMosaicBlockSize(16));
+                AddAnnotationStyleItem("MosaicStrong", block == 24, () => SetAnnotationMosaicBlockSize(24));
+                _annotationStyleMenu.Show(_annotationStyleButton, new Point(0, _annotationStyleButton.Height));
+                return;
+            }
             var keys = tool == AnnotationTool.Rectangle ? new[] { "Filled", "Outline" } : new[] { "Single", "Double", "Line", "Tapered" };
             var current = tool == AnnotationTool.Rectangle ? (int)(selected == null ? _annotationRectangleStyle : selected.RectangleStyle) : (int)(selected == null ? _annotationArrowStyle : selected.ArrowStyle);
             for (var i = 0; i < keys.Length; i++)
@@ -248,10 +286,25 @@ namespace Kiritori
             _annotationStyleMenu.Show(_annotationStyleButton, new Point(0, _annotationStyleButton.Height));
         }
 
+        private void AddAnnotationStyleItem(string key, bool selected, Action action)
+        {
+            var item = new ToolStripMenuItem(SR.T("Annotation.Style." + key)) { Checked = selected };
+            item.Click += (s, e) => action();
+            _annotationStyleMenu.Items.Add(item);
+        }
+
         private AnnotationTool GetAnnotationStyleTool()
         {
             var selected = GetSelectedAnnotation();
-            return selected == null ? _annotationTool : selected.Kind == AnnotationShapeKind.Rectangle ? AnnotationTool.Rectangle : AnnotationTool.Arrow;
+            if (selected == null) return _annotationTool;
+            switch (selected.Kind)
+            {
+                case AnnotationShapeKind.Rectangle: return AnnotationTool.Rectangle;
+                case AnnotationShapeKind.Text: return AnnotationTool.Text;
+                case AnnotationShapeKind.Step: return AnnotationTool.Step;
+                case AnnotationShapeKind.Mosaic: return AnnotationTool.Mosaic;
+                default: return AnnotationTool.Arrow;
+            }
         }
 
         private void UpdateAnnotationPaletteState()
@@ -268,18 +321,28 @@ namespace Kiritori
                     SetAnnotationChoiceState(_annotationColorButtons[i], color.ToArgb() == AnnotationColors[i].ToArgb());
                 var tool = GetAnnotationStyleTool();
                 var enabled = tool != AnnotationTool.Move;
-                _annotationStyleButton.Enabled = enabled;
+                _annotationStyleButton.Enabled = enabled && tool != AnnotationTool.Step;
                 var style = tool == AnnotationTool.Rectangle
                     ? (selected == null ? _annotationRectangleStyle : selected.RectangleStyle).ToString()
-                    : (selected == null ? _annotationArrowStyle : selected.ArrowStyle).ToString();
+                    : tool == AnnotationTool.Arrow ? (selected == null ? _annotationArrowStyle : selected.ArrowStyle).ToString()
+                    : tool == AnnotationTool.Text ? ((selected == null ? _annotationTextBackground : selected.TextBackground) ? "TextBackground" : "TextOutline")
+                    : tool == AnnotationTool.Mosaic ? ((selected == null ? _annotationMosaicBlockSize : selected.MosaicBlockSize) == 8 ? "MosaicWeak" : (selected == null ? _annotationMosaicBlockSize : selected.MosaicBlockSize) == 24 ? "MosaicStrong" : "MosaicMedium") : "Single";
                 _annotationStyleButton.AccessibleName = SR.T("Annotation.Style") + ": " + SR.T("Annotation.Style." + style);
                 _annotationPaletteTips.SetToolTip(_annotationStyleButton, _annotationStyleButton.AccessibleName + " ▾");
                 _annotationStyleButton.Invalidate();
-                _annotationWidthInput.Enabled = enabled;
-                foreach (var button in _annotationColorButtons) button.Enabled = enabled;
-                var width = selected == null ? _annotationStrokeWidth : selected.StrokeWidth;
+                var fontTool = tool == AnnotationTool.Text || tool == AnnotationTool.Step;
+                _annotationWidthInput.Enabled = enabled && tool != AnnotationTool.Mosaic;
+                foreach (var button in _annotationColorButtons) button.Enabled = enabled && tool != AnnotationTool.Mosaic;
+                _annotationWidthInput.Maximum = fontTool ? 72 : 16;
+                _annotationWidthInput.Minimum = fontTool ? 12 : 2;
+                _annotationWidthInput.AccessibleName = SR.T(fontTool ? "Annotation.FontSize" : "Annotation.Width");
+                _annotationPaletteTips.SetToolTip(_annotationWidthInput, SR.T(fontTool ? "Annotation.FontSize" : "Annotation.WidthHint"));
+                var width = fontTool ? (selected == null ? _annotationFontSize : selected.FontSize) : selected == null ? _annotationStrokeWidth : selected.StrokeWidth;
                 _annotationWidthInput.Value = Math.Max(_annotationWidthInput.Minimum, Math.Min(_annotationWidthInput.Maximum, width));
-                _annotationUndoButton.Enabled = _annotations.Count > 0;
+                _annotationUndoButton.Enabled = CanUndoAnnotations;
+                _annotationRedoButton.Enabled = CanRedoAnnotations;
+                if (_annotationUndoMenuItem != null) _annotationUndoMenuItem.Enabled = CanUndoAnnotations;
+                if (_annotationRedoMenuItem != null) _annotationRedoMenuItem.Enabled = CanRedoAnnotations;
                 _annotationClearButton.Enabled = _annotations.Count > 0;
                 var hintKey = selected != null ? "Annotation.SelectedHint" : tool == AnnotationTool.Move ? "Annotation.MoveHint" : "Annotation.DrawHint";
                 _annotationPalette.AccessibleDescription = string.Format(SR.T("Annotation.Status"), _annotations.Count, SR.T(hintKey));
@@ -341,7 +404,7 @@ namespace Kiritori
             Func<int, int> px = value => Math.Max(1, (int)Math.Round(value * scale));
             var border = new Size(_annotationPalette.Width - _annotationPalette.ClientSize.Width, _annotationPalette.Height - _annotationPalette.ClientSize.Height);
             var availableWidth = Math.Max(px(200), area.Width - border.Width - px(16));
-            var width = Math.Min(px(416), availableWidth);
+            var width = Math.Min(px(544), availableWidth);
             _annotationPalette.SuspendLayout();
             _annotationPalette.AutoScroll = false;
             _annotationPalette.AutoScrollMinSize = Size.Empty;
@@ -433,10 +496,10 @@ namespace Kiritori
 
         private void DisposeAnnotationPalette()
         {
-            lock (UndoSvgLock)
+            lock (AnnotationSvgLock)
             {
-                foreach (var bitmap in _undoSvgBitmaps.Values) bitmap.Dispose();
-                _undoSvgBitmaps.Clear();
+                foreach (var bitmap in _annotationSvgBitmaps.Values) bitmap.Dispose();
+                _annotationSvgBitmaps.Clear();
             }
             _annotationStyleMenu?.Dispose();
             _annotationStyleMenu = null;
@@ -448,9 +511,9 @@ namespace Kiritori
 
         private void DrawAnnotationGlyph(Graphics graphics, Rectangle bounds, string glyph, Color color, int dpi)
         {
-            if (glyph == "Undo")
+            if (glyph == "Undo" || glyph == "Redo" || glyph == "Text" || glyph == "Step" || glyph == "Mosaic")
             {
-                DrawUndoSvg(graphics, bounds, color, dpi);
+                DrawAnnotationSvg(graphics, bounds, color, dpi, glyph);
                 return;
             }
 
@@ -498,36 +561,37 @@ namespace Kiritori
             graphics.Restore(state);
         }
 
-        private static SvgDocument LoadUndoSvg()
+        private static SvgDocument LoadAnnotationSvg(string glyph)
         {
-            var markup = Properties.Resources.ResourceManager.GetString("undo_2_svg");
-            if (string.IsNullOrEmpty(markup)) throw new FileNotFoundException("Embedded Lucide undo-2.svg resource was not found.");
+            var resource = glyph == "Undo" ? "undo_2_svg" : glyph == "Redo" ? "redo_2_svg" : glyph == "Text" ? "type_svg" : glyph == "Step" ? "list_ordered_svg" : "grid_2x2_svg";
+            var markup = Properties.Resources.ResourceManager.GetString(resource);
+            if (string.IsNullOrEmpty(markup)) throw new FileNotFoundException("Embedded annotation SVG resource was not found.");
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(markup)))
             {
                 return SvgDocument.Open<SvgDocument>(stream);
             }
         }
 
-        private void DrawUndoSvg(Graphics graphics, Rectangle bounds, Color color, int dpi)
+        private void DrawAnnotationSvg(Graphics graphics, Rectangle bounds, Color color, int dpi, string glyph)
         {
             var pixelSize = Math.Max(1, (int)Math.Round(18f * dpi / 96f));
-            var cacheKey = color.ToArgb().ToString("X8") + ":" + pixelSize;
+            var cacheKey = glyph + ":" + color.ToArgb().ToString("X8") + ":" + pixelSize;
             Bitmap bitmap;
-            lock (UndoSvgLock)
+            lock (AnnotationSvgLock)
             {
-                if (!_undoSvgBitmaps.TryGetValue(cacheKey, out bitmap))
+                if (!_annotationSvgBitmaps.TryGetValue(cacheKey, out bitmap))
                 {
-                    if (_undoSvgBitmaps.Count >= 16)
+                    if (_annotationSvgBitmaps.Count >= 16)
                     {
-                        foreach (var cached in _undoSvgBitmaps.Values) cached.Dispose();
-                        _undoSvgBitmaps.Clear();
+                        foreach (var cached in _annotationSvgBitmaps.Values) cached.Dispose();
+                        _annotationSvgBitmaps.Clear();
                     }
                     // SVG.NET resolves inherited currentColor while rendering. Use
                     // a fresh document for each cached color to avoid stale paint.
-                    var svg = LoadUndoSvg();
+                    var svg = LoadAnnotationSvg(glyph);
                     svg.Color = new SvgColourServer(color);
                     bitmap = svg.Draw(pixelSize, pixelSize);
-                    _undoSvgBitmaps.Add(cacheKey, bitmap);
+                    _annotationSvgBitmaps.Add(cacheKey, bitmap);
                 }
             }
             var state = graphics.Save();
@@ -604,6 +668,7 @@ namespace Kiritori
                     return true;
                 }
                 if (keyData == (Keys.Control | Keys.Z)) { _capture.UndoLastAnnotation(); return true; }
+                if (keyData == (Keys.Control | Keys.Y) || keyData == (Keys.Control | Keys.Shift | Keys.Z)) { _capture.RedoAnnotation(); return true; }
                 if (keyData == Keys.M || keyData == Keys.R || keyData == Keys.A)
                 {
                     _capture.SetAnnotationTool(keyData == Keys.M ? AnnotationTool.Move : keyData == Keys.R ? AnnotationTool.Rectangle : AnnotationTool.Arrow);

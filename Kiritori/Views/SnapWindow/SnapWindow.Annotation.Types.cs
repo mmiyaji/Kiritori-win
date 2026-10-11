@@ -15,6 +15,17 @@ namespace Kiritori
             public Color FillColor;
             public AnnotationArrowStyle ArrowStyle;
             public AnnotationRectangleStyle RectangleStyle;
+            public string Text;
+            public int FontSize;
+            public bool TextBackground;
+            public Size TextNaturalSize;
+            public int StepNumber;
+            public int MosaicBlockSize;
+
+            public AnnotationShape Clone()
+            {
+                return (AnnotationShape)MemberwiseClone();
+            }
 
             public Rectangle Bounds
             {

@@ -308,6 +308,7 @@ namespace Kiritori
             try { _resizeCommitTimer?.Stop(); } catch { }
 
             DisposeAnnotationPalette();
+            DisposeExtendedAnnotationResources();
             ResetImageState();
 
             foreach (var pair in _closeIconCache.Values)

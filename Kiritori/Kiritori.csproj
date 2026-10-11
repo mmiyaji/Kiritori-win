@@ -275,6 +275,8 @@
     <Compile Include="Views\SnapWindow\SnapWindow.Annotation.cs">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </Compile>
+    <Compile Include="Views\SnapWindow\SnapWindow.Annotation.History.cs" />
+    <Compile Include="Views\SnapWindow\SnapWindow.Annotation.Tools.cs" />
     <Compile Include="Views\SnapWindow\SnapWindow.Annotation.Types.cs">
       <DependentUpon>SnapWindow.cs</DependentUpon>
     </Compile>
