@@ -269,7 +269,7 @@ namespace Kiritori
             if (newW < minW)
             {
                 // 左側が動くアンカーなら、Leftを「右方向へ補正」して見た目の反転を防ぐ
-                if (anchor == ResizeAnchor.TopLeft || anchor == ResizeAnchor.BottomLeft)
+                if (anchor == ResizeAnchor.TopLeft || anchor == ResizeAnchor.BottomLeft || anchor == ResizeAnchor.Left)
                 {
                     int delta = minW - newW;     // 不足分
                     newLeft -= delta;            // 左に出た分を戻す（== 右へ寄せる）
@@ -281,7 +281,7 @@ namespace Kiritori
             if (newH < minH)
             {
                 // 上側が動くアンカーなら、Topを「下方向へ補正」して見た目の反転を防ぐ
-                if (anchor == ResizeAnchor.TopLeft || anchor == ResizeAnchor.TopRight)
+                if (anchor == ResizeAnchor.TopLeft || anchor == ResizeAnchor.TopRight || anchor == ResizeAnchor.Top)
                 {
                     int delta = minH - newH;
                     newTop -= delta;             // 上に出た分を戻す（== 下へ寄せる）

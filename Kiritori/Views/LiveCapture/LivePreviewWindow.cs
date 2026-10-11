@@ -2711,7 +2711,10 @@ namespace Kiritori.Views.LiveCapture
 
         private void ToggleTitlebar()
         {
-            var desiredClient = GetDesiredClient();
+            var clientRect = new RECT();
+            GetClientRect(this.Handle, out clientRect);
+            var desiredClient = new Size(clientRect.Right - clientRect.Left, clientRect.Bottom - clientRect.Top);
+            var clientOrigin = GetClientTopLeftOnScreen();
             var oldInsets = GetNcInsets();
 
             if (_miTitlebar.Checked) HideCaptionBarTemporarily();
@@ -2724,14 +2727,7 @@ namespace Kiritori.Views.LiveCapture
                 ResizeToKeepClient(desiredClient);
 
                 var newInsets = GetNcInsets();
-                int dx = oldInsets.Left - newInsets.Left;
-                int dy = oldInsets.Top - newInsets.Top;
-
-                if (dx != 0 || dy != 0)
-                {
-                    SetWindowPos(this.Handle, IntPtr.Zero, this.Left + dx, this.Top + dy,
-                        0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-                }
+                SnapClientTopLeftToPhysical(clientOrigin, "ToggleTitlebar");
                 UpdateShadowMenuState();
 
                 Log.Debug($"ToggleTitlebar: CaptionHidden={_captionHidden}, DeviceDpi={this.DeviceDpi}", "LivePreview");

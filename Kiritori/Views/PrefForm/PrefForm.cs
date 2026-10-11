@@ -466,16 +466,43 @@ namespace Kiritori
         {
             using (SuppressDirtyScope())
             {
-                ApplyAdvancedEditsToSettings();
-                Properties.Settings.Default.Save();
-                _baselineHash = SettingsDirtyTracker.ComputeSettingsHash();
-                _baselineMap = SettingsDirtyTracker.BuildSettingsSnapshotMap();
-                _isDirty = false;
-                _gridSettings?.Invalidate();
-                UpdateDirtyUI();
+                if (!TrySaveSettingsAndUpdateBaseline()) return;
                 Log.Info("Settings saved by user", "PrefForm");
             }
             // this.Close();
+        }
+
+        private void SaveSettingsAndUpdateBaseline()
+        {
+            // Commit the active cell so its bound RawValue is included in the save.
+            if (_gridSettings != null && !_gridSettings.EndEdit())
+                throw new InvalidOperationException("The current Advanced setting could not be committed.");
+
+            ApplyAdvancedEditsToSettings();
+            Properties.Settings.Default.Save();
+            UpdateAdvancedOriginalValues();
+            _baselineHash = SettingsDirtyTracker.ComputeSettingsHash();
+            _baselineMap = SettingsDirtyTracker.BuildSettingsSnapshotMap();
+            _isDirty = false;
+            _gridSettings?.Invalidate();
+            UpdateDirtyUI();
+        }
+
+        private bool TrySaveSettingsAndUpdateBaseline()
+        {
+            try
+            {
+                SaveSettingsAndUpdateBaseline();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Failed to save settings", "PrefForm", ex);
+                MessageBox.Show(this,
+                    "Your settings could not be saved. The window will stay open so you can try again.",
+                    "Kiritori", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
         }
 
         private void btnCancelSettings_Click(object sender, EventArgs e)
@@ -523,16 +550,19 @@ namespace Kiritori
                 {
                     if (r == DialogResult.Yes)
                     {
-                        Properties.Settings.Default.Save();
+                        if (!TrySaveSettingsAndUpdateBaseline()) return;
                     }
                     else if (r == DialogResult.No)
                     {
                         Properties.Settings.Default.Reload();
                     }
-                    _baselineHash = SettingsDirtyTracker.ComputeSettingsHash();
-                    _baselineMap = SettingsDirtyTracker.BuildSettingsSnapshotMap();
-                    _isDirty = false;
-                    UpdateDirtyUI();
+                    if (r == DialogResult.No)
+                    {
+                        _baselineHash = SettingsDirtyTracker.ComputeSettingsHash();
+                        _baselineMap = SettingsDirtyTracker.BuildSettingsSnapshotMap();
+                        _isDirty = false;
+                        UpdateDirtyUI();
+                    }
                 }
                 AppShutdown.ExitConfirmed = true;
                 Application.Exit();
@@ -1370,16 +1400,20 @@ namespace Kiritori
                 {
                     if (r == DialogResult.Yes)
                     {
-                        Properties.Settings.Default.Save();
+                        if (!TrySaveSettingsAndUpdateBaseline())
+                        {
+                            e.Cancel = true;
+                            return;
+                        }
                     }
                     else // No = 破棄
                     {
                         Properties.Settings.Default.Reload();
+                        _baselineHash = SettingsDirtyTracker.ComputeSettingsHash();
+                        _baselineMap = SettingsDirtyTracker.BuildSettingsSnapshotMap();
+                        _isDirty = false;
+                        UpdateDirtyUI();
                     }
-                    _baselineHash = SettingsDirtyTracker.ComputeSettingsHash();
-                    _baselineMap = SettingsDirtyTracker.BuildSettingsSnapshotMap();
-                    _isDirty = false;
-                    UpdateDirtyUI();
                 }
                 // ここまで来たら継続して閉じる
             }

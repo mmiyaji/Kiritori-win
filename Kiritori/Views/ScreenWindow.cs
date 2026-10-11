@@ -640,20 +640,13 @@ namespace Kiritori
                             // UIスレッドでOCRへ。sub の破棄は OCR 側で実施する
                             this.BeginInvoke(new Action(async () =>
                             {
-                                try
+                                if (sub == null)
                                 {
-                                    if (sub == null)
-                                    {
-                                        Log.Debug("sub image is null.", "OCR");
-                                        NotifyOcrError();
-                                        return;
-                                    }
-                                    await DoOcrFromSubImageAsync(sub); // 別実装に委譲
+                                    Log.Debug("sub image is null.", "OCR");
+                                    NotifyOcrError();
+                                    return;
                                 }
-                                finally
-                                {
-                                    _ocr_mode = false;
-                                }
+                                await DoOcrFromSubImageAsync(sub); // 別実装に委譲
                             }));
                             return;
                         }

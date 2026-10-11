@@ -535,7 +535,15 @@ namespace Kiritori
                 _suppressExternalSync = false;
             }
 
-            // 保存後、最新保存値を基準値に更新（未保存強調をリセット）
+            _gridSettings?.Invalidate();
+        }
+
+        private void UpdateAdvancedOriginalValues()
+        {
+            if (_rows == null) return;
+            var S = Properties.Settings.Default;
+
+            // Save 成功後に最新値を基準値に更新（未保存強調をリセット）
             foreach (var r in _rows)
             {
                 if (string.Equals(r.Name, nameof(S.HistoryLimit), StringComparison.Ordinal))

@@ -172,6 +172,7 @@ namespace Kiritori
             };
 
             InitializeComponent();
+            this.MinimumSize = new Size(MIN_WIDTH, MIN_HEIGHT);
             Localizer.Apply(this);
             ApplyAllContextMenusLocalization();
 

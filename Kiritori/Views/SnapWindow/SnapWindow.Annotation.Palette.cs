@@ -21,7 +21,11 @@ namespace Kiritori
 
             CreateAnnotationPalette();
             CreateAnnotationMenuItems();
-            Resize += (s, e) => RepositionAnnotationPalette();
+            Resize += (s, e) =>
+            {
+                LayoutAnnotationPalette();
+                RepositionAnnotationPalette();
+            };
         }
 
         private void CreateAnnotationMenuItems()
@@ -58,7 +62,8 @@ namespace Kiritori
                 Visible = false,
                 Size = AnnotationPaletteSize,
                 BackColor = Color.FromArgb(232, 26, 29, 34),
-                Padding = AnnotationPalettePadding
+                Padding = AnnotationPalettePadding,
+                AutoScroll = true
             };
 
             _annotationPaletteLabel = new Label
@@ -81,6 +86,11 @@ namespace Kiritori
             _annotationUndoButton = CreatePaletteButton(string.Empty, AnnotationPaletteUndoButtonX, AnnotationPaletteButtonSize.Width, (s, e) => UndoLastAnnotation());
             _annotationDoneButton = CreatePaletteButton(string.Empty, AnnotationPaletteDoneButtonX, AnnotationPaletteButtonSize.Width, (s, e) => ExitAnnotationMode());
 
+            _annotationPaletteLabel.AccessibleName = "Move annotation palette";
+            _annotationClearButton.AccessibleName = "Clear annotations";
+            _annotationUndoButton.AccessibleName = "Undo last annotation";
+            _annotationDoneButton.AccessibleName = "Finish annotations";
+
             CreateAnnotationPaletteMenus();
             HookPaletteDrag(_annotationPaletteLabel);
 
@@ -94,6 +104,7 @@ namespace Kiritori
 
             Controls.Add(_annotationPalette);
             _annotationPalette.BringToFront();
+            LayoutAnnotationPalette();
             RepositionAnnotationPalette();
         }
 
@@ -299,14 +310,57 @@ namespace Kiritori
         private void RepositionAnnotationPalette()
         {
             if (_annotationPalette == null) return;
-            var maxX = Math.Max(8, ClientSize.Width - _annotationPalette.Width - 8);
-            var maxY = Math.Max(8, ClientSize.Height - _annotationPalette.Height - 8);
-            var x = Math.Max(8, Math.Min(maxX, _annotationPaletteLocation.X));
-            var y = Math.Max(8, Math.Min(maxY, _annotationPaletteLocation.Y));
+            var maxX = Math.Max(0, ClientSize.Width - _annotationPalette.Width);
+            var maxY = Math.Max(0, ClientSize.Height - _annotationPalette.Height);
+            var x = Math.Max(0, Math.Min(maxX, _annotationPaletteLocation.X));
+            var y = Math.Max(0, Math.Min(maxY, _annotationPaletteLocation.Y));
             var clamped = new Point(x, y);
             _annotationPaletteLocation = clamped;
             if (_annotationPalette.Location != clamped)
                 _annotationPalette.Location = clamped;
+        }
+
+        private void LayoutAnnotationPalette()
+        {
+            if (_annotationPalette == null || _annotationToolButton == null) return;
+
+            var width = Math.Max(1, Math.Min(AnnotationPaletteSize.Width, ClientSize.Width - 16));
+            _annotationPalette.AutoScrollPosition = Point.Empty;
+            _annotationPalette.Width = width;
+
+            var controls = new[]
+            {
+                (Control)_annotationPaletteLabel,
+                _annotationClearButton,
+                _annotationToolButton,
+                _annotationColorButton,
+                _annotationStyleButton,
+                _annotationUndoButton,
+                _annotationDoneButton
+            };
+            var widths = new[] { 28, 34, 96, 92, 104, 34, 34 };
+            var innerWidth = Math.Max(1, width - _annotationPalette.Padding.Horizontal);
+            var x = _annotationPalette.Padding.Left;
+            var y = _annotationPalette.Padding.Top;
+            var rowHeight = AnnotationPaletteButtonSize.Height;
+            var gap = 4;
+
+            for (var i = 0; i < controls.Length; i++)
+            {
+                if (i > 0 && x + widths[i] > _annotationPalette.Padding.Left + innerWidth)
+                {
+                    x = _annotationPalette.Padding.Left;
+                    y += rowHeight + gap;
+                }
+
+                controls[i].SetBounds(x, y, widths[i], rowHeight);
+                x += widths[i] + gap;
+            }
+
+            var contentHeight = y + rowHeight + _annotationPalette.Padding.Bottom;
+            var availableHeight = Math.Max(1, ClientSize.Height - 16);
+            _annotationPalette.Height = Math.Min(contentHeight, availableHeight);
+            _annotationPalette.AutoScrollMinSize = new Size(0, contentHeight);
         }
     }
 }

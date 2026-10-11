@@ -82,6 +82,7 @@ namespace Kiritori
 
         public void zoomOff()
         {
+            StopZoomAnimation(false);
             // if (_smoothZoomEnabled)
             // {
             //     StartZoomAnimationToScale(1.0f, 140);
@@ -106,6 +107,7 @@ namespace Kiritori
             }
             else
             {
+                StopZoomAnimation(false);
                 _zoomStep = (int)Math.Round((percent - 100) / (STEP_LINEAR * 100f));
                 UpdateScaleFromStep();
                 ApplyZoom(false);
@@ -135,6 +137,7 @@ namespace Kiritori
 
         private void SetImageAndResetZoom(Bitmap bmp, string sourcePath)
         {
+            StopZoomAnimation(false);
             AssignMainImage(bmp, sourcePath);
             ResetAnnotations();
 
@@ -215,6 +218,7 @@ namespace Kiritori
             if (_originalImage == null) return;
             if (targetWidthPx <= 0) return;
 
+            StopZoomAnimation(false);
             // scale = 目標幅 / 元画像幅
             _scale = (float)targetWidthPx / (float)_originalImage.Width;
             UpdateStepFromScale();
@@ -228,6 +232,7 @@ namespace Kiritori
             if (_originalImage == null) return;
             if (targetHeightPx <= 0) return;
 
+            StopZoomAnimation(false);
             // scale = 目標高 / 元画像高
             _scale = (float)targetHeightPx / (float)_originalImage.Height;
             UpdateStepFromScale();
@@ -241,6 +246,7 @@ namespace Kiritori
             if (_originalImage == null) return;
             if (maxWidthPx <= 0 || maxHeightPx <= 0) return;
 
+            StopZoomAnimation(false);
             // それぞれの制約から許容スケールを求め、より厳しい方（小さい方）を採用
             float sw = (float)maxWidthPx / (float)_originalImage.Width;
             float sh = (float)maxHeightPx / (float)_originalImage.Height;
