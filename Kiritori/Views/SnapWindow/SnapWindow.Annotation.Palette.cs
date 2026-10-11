@@ -126,6 +126,10 @@ namespace Kiritori
             {
                 var color = AnnotationColors[i];
                 var button = CreateAnnotationChoice("Annotation.Color." + AnnotationColorKeys[i], 20);
+                // Color swatches are toolbar commands. AutoCheck also changes a
+                // RadioButton when it regains focus, which can reapply the color
+                // that was selected before a modal custom-color dialog opened.
+                button.AutoCheck = false;
                 button.Paint += (s, e) =>
                 {
                     var size = Math.Max(8, (int)Math.Round(12 * _annotationPalette.UiDpi / 96f));
@@ -138,9 +142,9 @@ namespace Kiritori
                         e.Graphics.DrawEllipse(pen, rect);
                     }
                 };
-                button.CheckedChanged += (s, e) =>
+                button.Click += (s, e) =>
                 {
-                    if (button.Checked && !_updatingAnnotationPalette)
+                    if (!_updatingAnnotationPalette)
                         SetAnnotationColor(color, CreateFillColorFromStroke(color));
                 };
                 _annotationColorButtons[i] = button;

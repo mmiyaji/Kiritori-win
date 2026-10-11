@@ -351,24 +351,50 @@ internal static class AnnotationNewToolsProbe
             Call(window, "RedoAnnotation");
             Require((Color)Get(window, "_annotationStrokeColor") == Color.Red, "Redo did not restore preset color");
 
+            var custom = Color.FromArgb(37, 89, 203);
+            var customFill = (Color)Call(window, "CreateFillColorFromStroke", custom);
+            Call(window, "SetAnnotationColor", custom, customFill);
+            Require(!quickColors[0].AutoCheck, "Quick color buttons can still auto-apply when they regain focus");
+            quickColors[0].Focus();
+            Require((Color)Get(window, "_annotationStrokeColor") == custom,
+                "Returning focus to the last quick color overwrote the custom default");
+
             Call(window, "ClearAnnotationHistory");
             var arrow = Call(window, "CreateAnnotationShape", Tool("Arrow"), new Point(10, 10), new Point(50, 50));
             Set(arrow, "StrokeColor", Color.Red);
             Set(arrow, "FillColor", Color.FromArgb(48, 255, 0, 0));
             Shapes(window).Add(arrow);
             Set(window, "_selectedAnnotationIndex", 0);
-            var custom = Color.FromArgb(37, 89, 203);
-            var customFill = (Color)Call(window, "CreateFillColorFromStroke", custom);
+            Call(window, "SetAnnotationColor", Color.Red, (Color)Call(window, "CreateFillColorFromStroke", Color.Red));
+            customFill = (Color)Call(window, "CreateFillColorFromStroke", custom);
             Call(window, "SetAnnotationColor", custom, customFill);
             Require((Color)Get(Shapes(window)[0], "StrokeColor") == custom &&
                 (Color)Get(Shapes(window)[0], "FillColor") == customFill, "Custom color did not apply to selected shape");
+            Require((Color)Get(window, "_annotationStrokeColor") == custom &&
+                (Color)Get(window, "_annotationFillColor") == customFill,
+                "Selected-shape color did not update the defaults for the next shape");
+            quickColors[0].Focus();
+            Require((Color)Get(Shapes(window)[0], "StrokeColor") == custom,
+                "Returning focus to a quick color overwrote the selected shape color");
+            Call(window, "SetAnnotationTool", Tool("Rectangle"));
+            Require((int)Get(window, "_selectedAnnotationIndex") == -1 &&
+                (Color)Get(window, "_annotationStrokeColor") == custom,
+                "Switching tools lost the selected custom color default");
+            var nextShape = Call(window, "CreateAnnotationShape", Tool("Rectangle"), new Point(60, 10), new Point(100, 50));
+            Require((Color)Get(nextShape, "StrokeColor") == custom && (Color)Get(nextShape, "FillColor") == customFill,
+                "The next shape did not inherit the selected custom color");
             Call(window, "UndoLastAnnotation");
             Require((Color)Get(Shapes(window)[0], "StrokeColor") == Color.Red &&
-                ((Color)Get(Shapes(window)[0], "FillColor")).ToArgb() == Color.FromArgb(48, 255, 0, 0).ToArgb(),
-                "Undo did not restore selected shape colors");
+                ((Color)Get(Shapes(window)[0], "FillColor")).ToArgb() == Color.FromArgb(48, 255, 0, 0).ToArgb() &&
+                (Color)Get(window, "_annotationStrokeColor") == Color.Red &&
+                ((Color)Get(window, "_annotationFillColor")).ToArgb() == Color.FromArgb(48, 255, 0, 0).ToArgb(),
+                "Undo did not restore selected shape colors and defaults");
             Call(window, "RedoAnnotation");
             Require((Color)Get(Shapes(window)[0], "StrokeColor") == custom &&
-                (Color)Get(Shapes(window)[0], "FillColor") == customFill, "Redo did not restore selected custom color");
+                (Color)Get(Shapes(window)[0], "FillColor") == customFill &&
+                (Color)Get(window, "_annotationStrokeColor") == custom &&
+                (Color)Get(window, "_annotationFillColor") == customFill,
+                "Redo did not restore selected custom color and defaults");
         }
     }
 

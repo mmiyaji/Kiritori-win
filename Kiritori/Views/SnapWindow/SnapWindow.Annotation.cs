@@ -216,17 +216,14 @@ namespace Kiritori
         private void SetAnnotationColor(Color strokeColor, Color fillColor)
         {
             BeginAnnotationHistoryChange();
-            ApplyToSelectedShapeOrDefaults(
-                selected =>
-                {
-                    selected.StrokeColor = strokeColor;
-                    selected.FillColor = ResolveShapeFillColor(selected, fillColor);
-                },
-                () =>
-                {
-                    _annotationStrokeColor = strokeColor;
-                    _annotationFillColor = ResolveDefaultFillColor(fillColor);
-                });
+            var selected = GetSelectedAnnotation();
+            if (selected != null)
+            {
+                selected.StrokeColor = strokeColor;
+                selected.FillColor = ResolveShapeFillColor(selected, fillColor);
+            }
+            _annotationStrokeColor = strokeColor;
+            _annotationFillColor = ResolveDefaultFillColor(fillColor);
 
             ApplyToPreviewShape(preview =>
             {
