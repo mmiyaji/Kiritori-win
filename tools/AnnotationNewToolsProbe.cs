@@ -37,7 +37,8 @@ internal static class AnnotationNewToolsProbe
                     VerifyTextFontOutlineAndHistory();
                     VerifyTextEditorAndEditHistory();
                     VerifyExtendedAnnotationColorsAndHistory();
-                    Console.WriteLine("PASS: step numbering, mosaic pixels/history, multiline text export/view scaling, text font/outline rendering/history, editor acceptance, extended colors/history");
+                    VerifyWholeImageEffectsAndHistory();
+                    Console.WriteLine("PASS: step numbering, mosaic pixels/history, multiline text export/view scaling, text font/outline rendering/history, editor acceptance, extended colors/history, whole-image effect export/history/viewport");
                 }
                 catch (Exception error)
                 {
@@ -110,6 +111,74 @@ internal static class AnnotationNewToolsProbe
             Call(window, "ClearAnnotations");
             Call(window, "TryHandleSpecialAnnotationMouseDown", new Point(50, 50));
             Require((int)Get(Shapes(window)[0], "StepNumber") == 1, "Step number did not reset after clear");
+        }
+    }
+
+    private static void VerifyWholeImageEffectsAndHistory()
+    {
+        var source = new Bitmap(32, 24);
+        for (int y = 0; y < source.Height; y++)
+        for (int x = 0; x < source.Width; x++)
+            source.SetPixel(x, y, ((x / 4 + y / 4) % 2 == 0) ? Color.Red : Color.Blue);
+        using (var window = NewWindow(source))
+        {
+            var effectType = _snapType.Assembly.GetType("Kiritori.Views.LiveCapture.LiveFrameEffect", true);
+            var mosaic = Enum.Parse(effectType, "Mosaic");
+            var sepia = Enum.Parse(effectType, "Sepia");
+            var gray = Enum.Parse(effectType, "Grayscale");
+            var clientSize = window.ClientSize;
+            var location = window.Location;
+            var step = Call(window, "CreateSpecialAnnotationShape", Kind("Step"), new Point(25, 18));
+            Set(step, "StepNumber", 1);
+            Shapes(window).Add(step);
+            var effectMenu = Get(window, "_imageEffectMenu") as ToolStripMenuItem;
+            Require(effectMenu != null && !String.IsNullOrWhiteSpace(effectMenu.Text) && effectMenu.DropDownItems.Count == 4,
+                "Image effect menu was not created or localized");
+            Set(window, "_scale", 1.25f);
+
+            Call(window, "SetWholeImageEffect", mosaic, 8);
+            var cache = Get(window, "_processedImageCache");
+            Require(cache != null && ReferenceEquals(cache, Call(window, "GetEffectedBaseImage")), "Mosaic base was not cached");
+            Require(window.ClientSize == clientSize && window.Location == location && (float)Get(window, "_scale") == 1.25f,
+                "Changing effect altered viewport geometry or zoom");
+            Require(source.GetPixel(0, 0).ToArgb() == Color.Red.ToArgb(), "Effect modified the raw source");
+            using (var export = (Bitmap)Call(window, "GetCurrentBitmapClone"))
+            {
+                Require(export.GetPixel(0, 0).ToArgb() != source.GetPixel(0, 0).ToArgb() ||
+                    export.GetPixel(1, 1).ToArgb() != source.GetPixel(1, 1).ToArgb(),
+                    "Effect was not present in the flattened export");
+                Require(export.GetPixel(0, 0).ToArgb() == export.GetPixel(7, 7).ToArgb(),
+                    "Mosaic strength did not pixelate the base image");
+            }
+            Call(window, "UndoLastAnnotation");
+            Require(Get(window, "_wholeImageEffect").ToString() == "None", "Undo did not restore no-effect state");
+            Require(Get(window, "_processedImageCache") == null, "Undo retained stale processed cache");
+            Call(window, "RedoAnnotation");
+            Require(Get(window, "_wholeImageEffect").ToString() == "Mosaic" && (int)Get(window, "_wholeImageMosaicBlockSize") == 8,
+                "Redo did not restore effect and strength");
+            Require(Shapes(window).Count == 1, "Applying effects discarded annotations");
+
+            Call(window, "SetWholeImageEffect", sepia, 16);
+            Require(Get(window, "_processedImageCache") != null && Get(window, "_wholeImageEffect").ToString() == "Sepia",
+                "Sepia effect was not applied");
+            var sepiaBase = (Bitmap)Call(window, "GetEffectedBaseImage");
+            var sepiaPixel = sepiaBase.GetPixel(2, 2);
+            Require(sepiaPixel.ToArgb() != source.GetPixel(2, 2).ToArgb() && sepiaPixel.R != sepiaPixel.B,
+                "Sepia did not change the base image pixels");
+            Call(window, "SetWholeImageEffect", gray, 16);
+            Require(Get(window, "_wholeImageEffect").ToString() == "Grayscale", "Grayscale effect was not applied");
+            var grayPixel = ((Bitmap)Call(window, "GetEffectedBaseImage")).GetPixel(2, 2);
+            Require(Math.Abs(grayPixel.R - grayPixel.G) <= 1 && Math.Abs(grayPixel.G - grayPixel.B) <= 1,
+                "Grayscale output channels were not neutral");
+            Require(Shapes(window).Count == 1, "Changing effect discarded annotations");
+            Call(window, "SetWholeImageEffect", Enum.Parse(effectType, "None"), 16);
+            Require(Get(window, "_processedImageCache") == null, "Reset did not release processed cache");
+            Require(ReferenceEquals(Call(window, "GetEffectedBaseImage"), source), "No effect did not return the raw source");
+
+            Call(window, "SetWholeImageEffect", mosaic, 32);
+            Call(window, "SetImageAndResetZoom", new Bitmap(20, 18), null);
+            Require(Get(window, "_wholeImageEffect").ToString() == "None" && Get(window, "_processedImageCache") == null,
+                "Replacing the source did not reset effect and dispose cached base");
         }
     }
 

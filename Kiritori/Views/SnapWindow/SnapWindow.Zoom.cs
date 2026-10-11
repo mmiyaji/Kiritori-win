@@ -152,11 +152,13 @@ namespace Kiritori
         {
             if (_originalImage == null) return;
 
-            int newW = Math.Max(1, (int)Math.Round(_originalImage.Width * _scale));
-            int newH = Math.Max(1, (int)Math.Round(_originalImage.Height * _scale));
+            var effectSource = GetEffectedBaseImage();
+            if (effectSource == null) return;
+            int newW = Math.Max(1, (int)Math.Round(effectSource.Width * _scale));
+            int newH = Math.Max(1, (int)Math.Round(effectSource.Height * _scale));
 
             Size oldClient = this.ClientSize;
-            Image displaySource = interactive ? (Image)(_originalStill ?? _originalImage) : _originalImage;
+            Image displaySource = interactive ? (Image)(_originalStill ?? effectSource) : effectSource;
 
             if (!ReferenceEquals(pictureBox1.Image, displaySource))
             {
@@ -186,8 +188,10 @@ namespace Kiritori
 
             var wa = Screen.FromControl(this).WorkingArea;
 
-            double capByHalfWidth = (wa.Width * 0.5) / (double)_originalImage.Width;
-            double capByHeight = (wa.Height * 1.0) / (double)_originalImage.Height;
+            var source = GetEffectedBaseImage();
+            if (source == null) return;
+            double capByHalfWidth = (wa.Width * 0.5) / (double)source.Width;
+            double capByHeight = (wa.Height * 1.0) / (double)source.Height;
             double desired = Math.Min(1.0, Math.Min(capByHalfWidth, capByHeight));
 
             if (desired >= 1.0) return;
@@ -220,7 +224,7 @@ namespace Kiritori
 
             StopZoomAnimation(false);
             // scale = 目標幅 / 元画像幅
-            _scale = (float)targetWidthPx / (float)_originalImage.Width;
+            _scale = (float)targetWidthPx / (float)GetEffectedBaseImage().Width;
             UpdateStepFromScale();
             ApplyZoom(false);
             ShowOverlay("Width " + targetWidthPx + "px  (" + (int)Math.Round(_scale * 100) + "%)");
@@ -234,7 +238,7 @@ namespace Kiritori
 
             StopZoomAnimation(false);
             // scale = 目標高 / 元画像高
-            _scale = (float)targetHeightPx / (float)_originalImage.Height;
+            _scale = (float)targetHeightPx / (float)GetEffectedBaseImage().Height;
             UpdateStepFromScale();
             ApplyZoom(false);
             ShowOverlay("Height " + targetHeightPx + "px  (" + (int)Math.Round(_scale * 100) + "%)");
@@ -248,16 +252,17 @@ namespace Kiritori
 
             StopZoomAnimation(false);
             // それぞれの制約から許容スケールを求め、より厳しい方（小さい方）を採用
-            float sw = (float)maxWidthPx / (float)_originalImage.Width;
-            float sh = (float)maxHeightPx / (float)_originalImage.Height;
+            var source = GetEffectedBaseImage();
+            float sw = (float)maxWidthPx / (float)source.Width;
+            float sh = (float)maxHeightPx / (float)source.Height;
             _scale = Math.Min(sw, sh);
 
             // 1.0 を超える指定でも OK（MAX_SCALE 側で最終クランプ）
             UpdateStepFromScale();
             ApplyZoom(false);
 
-            int outW = Math.Max(1, (int)Math.Round(_originalImage.Width * _scale));
-            int outH = Math.Max(1, (int)Math.Round(_originalImage.Height * _scale));
+            int outW = Math.Max(1, (int)Math.Round(source.Width * _scale));
+            int outH = Math.Max(1, (int)Math.Round(source.Height * _scale));
             ShowOverlay($"Fit {outW}x{outH}px  ({(int)Math.Round(_scale * 100)}%)");
         }
 

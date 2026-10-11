@@ -1200,4 +1200,12 @@
   <data name="Annotation.TextEditor.Background" xml:space="preserve"><value>背景を付ける</value></data>
   <data name="Annotation.TextEditor.Ok" xml:space="preserve"><value>OK</value></data>
   <data name="Annotation.TextEditor.Cancel" xml:space="preserve"><value>キャンセル</value></data>
+  <data name="ImageEffect.Menu" xml:space="preserve"><value>画像効果</value></data>
+  <data name="ImageEffect.None" xml:space="preserve"><value>なし</value></data>
+  <data name="ImageEffect.Mosaic" xml:space="preserve"><value>モザイク</value></data>
+  <data name="ImageEffect.MosaicWeak" xml:space="preserve"><value>弱</value></data>
+  <data name="ImageEffect.MosaicMedium" xml:space="preserve"><value>中</value></data>
+  <data name="ImageEffect.MosaicStrong" xml:space="preserve"><value>強</value></data>
+  <data name="ImageEffect.Sepia" xml:space="preserve"><value>セピア</value></data>
+  <data name="ImageEffect.Grayscale" xml:space="preserve"><value>グレースケール</value></data>
 </root>

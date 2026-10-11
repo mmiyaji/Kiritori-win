@@ -402,6 +402,7 @@ namespace Kiritori
             var hasAnnotations = _annotations.Count > 0;
             if (_annotationClearMenuItem != null) _annotationClearMenuItem.Enabled = hasAnnotations;
             if (_annotationUndoMenuItem != null) _annotationUndoMenuItem.Enabled = CanUndoAnnotations;
+            UpdateImageEffectMenuState();
             UpdateAnnotationPaletteState();
         }
 

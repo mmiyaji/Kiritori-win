@@ -259,7 +259,7 @@ namespace Kiritori
                 g.CompositingQuality = CompositingQuality.HighQuality;
                 g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                 g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                g.DrawImage(_originalImage, new Rectangle(0, 0, vw, vh));
+                g.DrawImage(GetEffectedBaseImage(), new Rectangle(0, 0, vw, vh));
             }
 
             DisposeDisplayImageIfOwned();

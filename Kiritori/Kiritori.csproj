@@ -314,6 +314,9 @@
     <Compile Include="Views\SnapWindow\SnapWindow.Effects.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Views\SnapWindow\SnapWindow.ImageEffects.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Views\SnapWindow\SnapWindow.Hotkeys.cs">
       <SubType>Form</SubType>
     </Compile>

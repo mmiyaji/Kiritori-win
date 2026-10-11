@@ -1206,4 +1206,12 @@
   <data name="Annotation.TextEditor.Background" xml:space="preserve"><value>Add background</value></data>
   <data name="Annotation.TextEditor.Ok" xml:space="preserve"><value>OK</value></data>
   <data name="Annotation.TextEditor.Cancel" xml:space="preserve"><value>Cancel</value></data>
+  <data name="ImageEffect.Menu" xml:space="preserve"><value>Image effects</value></data>
+  <data name="ImageEffect.None" xml:space="preserve"><value>None</value></data>
+  <data name="ImageEffect.Mosaic" xml:space="preserve"><value>Mosaic</value></data>
+  <data name="ImageEffect.MosaicWeak" xml:space="preserve"><value>Weak</value></data>
+  <data name="ImageEffect.MosaicMedium" xml:space="preserve"><value>Medium</value></data>
+  <data name="ImageEffect.MosaicStrong" xml:space="preserve"><value>Strong</value></data>
+  <data name="ImageEffect.Sepia" xml:space="preserve"><value>Sepia</value></data>
+  <data name="ImageEffect.Grayscale" xml:space="preserve"><value>Grayscale</value></data>
 </root>

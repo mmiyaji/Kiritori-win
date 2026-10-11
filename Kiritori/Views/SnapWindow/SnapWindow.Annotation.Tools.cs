@@ -434,7 +434,7 @@ namespace Kiritori
 
         private void DrawMosaicAnnotation(Graphics g, AnnotationShape shape, Rectangle? displayRect, Size sourceSize)
         {
-            var source = main_image ?? _originalImage as Bitmap;
+            var source = GetEffectedBaseImage();
             if (source == null) return;
             var bounds = Rectangle.Intersect(shape.Bounds, new Rectangle(Point.Empty, source.Size));
             if (bounds.Width < 1 || bounds.Height < 1) return;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Reflection;
+using Kiritori.Views.LiveCapture;
 
 namespace Kiritori
 {
@@ -31,6 +32,8 @@ namespace Kiritori
             internal readonly Color TextOutlineColor;
             internal readonly bool TextBackground;
             internal readonly int MosaicBlockSize;
+            internal readonly LiveFrameEffect WholeImageEffect;
+            internal readonly int WholeImageMosaicBlockSize;
 
             internal AnnotationHistorySnapshot(SnapWindow window)
             {
@@ -47,6 +50,8 @@ namespace Kiritori
                 TextOutlineColor = window._annotationTextOutlineColor;
                 TextBackground = window._annotationTextBackground;
                 MosaicBlockSize = window._annotationMosaicBlockSize;
+                WholeImageEffect = window._wholeImageEffect;
+                WholeImageMosaicBlockSize = window._wholeImageMosaicBlockSize;
             }
         }
 
@@ -102,7 +107,8 @@ namespace Kiritori
                 before.ArrowStyle != _annotationArrowStyle || before.RectangleStyle != _annotationRectangleStyle ||
                 before.FontSize != _annotationFontSize || before.FontFamily != _annotationFontFamily ||
                 before.TextOutlineColor != _annotationTextOutlineColor || before.TextBackground != _annotationTextBackground ||
-                before.MosaicBlockSize != _annotationMosaicBlockSize);
+                before.MosaicBlockSize != _annotationMosaicBlockSize ||
+                before.WholeImageEffect != _wholeImageEffect || before.WholeImageMosaicBlockSize != _wholeImageMosaicBlockSize);
         }
 
         private void RestoreAnnotationSnapshot(AnnotationHistorySnapshot snapshot)
@@ -122,7 +128,17 @@ namespace Kiritori
             _annotationTextOutlineColor = snapshot.TextOutlineColor;
             _annotationTextBackground = snapshot.TextBackground;
             _annotationMosaicBlockSize = snapshot.MosaicBlockSize;
+            bool effectChanged = _wholeImageEffect != snapshot.WholeImageEffect ||
+                _wholeImageMosaicBlockSize != snapshot.WholeImageMosaicBlockSize;
+            if (effectChanged)
+            {
+                _wholeImageEffect = snapshot.WholeImageEffect;
+                _wholeImageMosaicBlockSize = snapshot.WholeImageMosaicBlockSize;
+                ReleaseOriginalStill();
+                ReleaseProcessedImageCache();
+            }
             RefreshAnnotationUi();
+            if (effectChanged) RefreshFromOriginalHiQ();
         }
 
         private void UndoLastAnnotation()

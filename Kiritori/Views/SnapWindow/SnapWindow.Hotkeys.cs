@@ -25,6 +25,16 @@ namespace Kiritori
         #region ===== キー入力（�EチE��キー�E�E=====
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            if (!_annotationMode && keyData == (Keys.Control | Keys.Z) && CanUndoAnnotations)
+            {
+                UndoLastAnnotation();
+                return true;
+            }
+            if (!_annotationMode && (keyData == (Keys.Control | Keys.Y) || keyData == (Keys.Control | Keys.Shift | Keys.Z)) && CanRedoAnnotations)
+            {
+                RedoAnnotation();
+                return true;
+            }
             if (_annotationMode)
             {
                 if (keyData == Keys.M || keyData == Keys.R || keyData == Keys.A)

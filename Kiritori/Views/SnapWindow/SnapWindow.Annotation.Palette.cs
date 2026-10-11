@@ -75,6 +75,7 @@ namespace Kiritori
                 editParentMenu.DropDownItems.Add(_annotationRedoMenuItem);
                 editParentMenu.DropDownItems.Add(_annotationClearMenuItem);
             }
+            InitializeImageEffectMenu();
             UpdateAnnotationMenuState();
         }
 

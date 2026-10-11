@@ -97,7 +97,7 @@ namespace Kiritori
                 pictureBox1.Size = this.ClientSize;
 
                 // 現在の幅から一旦 _scale を更新（ゆがみは許容。確定時に正しい比率で再描画）
-                var targetScale = (float)this.ClientSize.Width / Math.Max(1, (float)_originalImage.Width);
+                var targetScale = (float)this.ClientSize.Width / Math.Max(1, (float)GetEffectedBaseImage().Width);
                 _scale = Clamp(targetScale, MIN_SCALE, MAX_SCALE);
                 _zoomStep = (int)Math.Round((_scale - 1.0f) / STEP_LINEAR);
 
@@ -120,7 +120,7 @@ namespace Kiritori
             if (_originalImage == null) return;
 
             // いまのウィンドウ幅・高さから最終スケールを決める
-            float targetScale = (float)this.ClientSize.Width / Math.Max(1, (float)_originalImage.Width);
+            float targetScale = (float)this.ClientSize.Width / Math.Max(1, (float)GetEffectedBaseImage().Width);
             _scale = Clamp(targetScale, MIN_SCALE, MAX_SCALE);
             _zoomStep = (int)Math.Round((_scale - 1.0f) / STEP_LINEAR);
 
@@ -164,16 +164,17 @@ namespace Kiritori
         {
             if (_originalImage == null) return;
 
+            var effectSource = GetEffectedBaseImage();
             if (_originalStill != null &&
-                _originalStill.Width  == _originalImage.Width &&
-                _originalStill.Height == _originalImage.Height)
+                _originalStill.Width  == effectSource.Width &&
+                _originalStill.Height == effectSource.Height)
             {
                 return; // 既に最新
             }
 
-            try { _originalStill?.Dispose(); } catch { }
+            ReleaseOriginalStill();
 
-            _originalStill = new Bitmap(_originalImage.Width, _originalImage.Height, PixelFormat.Format32bppPArgb);
+            _originalStill = new Bitmap(effectSource.Width, effectSource.Height, PixelFormat.Format32bppPArgb);
             using (var g = Graphics.FromImage(_originalStill))
             {
                 // ただのピクセルに落とす（アニメ情報を持ち込まない）
@@ -182,7 +183,7 @@ namespace Kiritori
                 g.InterpolationMode  = InterpolationMode.NearestNeighbor;
                 g.SmoothingMode      = SmoothingMode.None;
                 g.PixelOffsetMode    = PixelOffsetMode.HighSpeed;
-                g.DrawImageUnscaled(_originalImage, 0, 0);
+                g.DrawImageUnscaled(effectSource, 0, 0);
             }
         }
         #endregion

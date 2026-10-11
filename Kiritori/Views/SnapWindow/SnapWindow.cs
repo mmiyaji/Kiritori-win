@@ -182,6 +182,7 @@ namespace Kiritori
                 Localizer.Apply(this);
                 ApplyAllContextMenusLocalization();
                 ApplyAnnotationPaletteLocalization();
+                ApplyImageEffectMenuLocalization();
             };
             SR.CultureChanged += _cultureChangedHandler;
 
@@ -231,9 +232,9 @@ namespace Kiritori
         }
         internal Bitmap GetCurrentBitmapClone()
         {
-            var src = main_image ?? _originalImage as Bitmap;
+            var src = GetEffectedBaseImage();
             if (src == null) return null;
-            try { return CloneCurrentBitmapWithAnnotations(src); } catch { return new Bitmap(src); }
+            return CloneCurrentBitmapWithAnnotations(src);
         }
 
 
@@ -255,7 +256,8 @@ namespace Kiritori
         {
             var display = pictureBox1?.Image;
             if (display == null) return;
-            if (ReferenceEquals(display, _originalImage) || ReferenceEquals(display, _originalStill)) return;
+            if (ReferenceEquals(display, _originalImage) || ReferenceEquals(display, _originalStill) ||
+                ReferenceEquals(display, _processedImageCache)) return;
 
             try { display.Dispose(); } catch { }
             if (pictureBox1 != null) pictureBox1.Image = null;
@@ -269,9 +271,13 @@ namespace Kiritori
 
             DisposeBitmap(ref thumbnail_image);
             main_image = null;
+            _wholeImageEffect = Kiritori.Views.LiveCapture.LiveFrameEffect.None;
+            _wholeImageMosaicBlockSize = 16;
             DisposeBitmap(ref _originalStill);
+            ReleaseProcessedImageCache();
             DisposeImage(ref _originalImage);
             _imageSourcePath = null;
+            UpdateImageEffectMenuState();
         }
 
         private void AssignMainImage(Bitmap bitmap, string sourcePath)
@@ -284,6 +290,7 @@ namespace Kiritori
 
             if (_originalImage != null)
                 _originalImage.Tag = sourcePath;
+            UpdateImageEffectMenuState();
         }
 
         private void DisposeRuntimeResources()
