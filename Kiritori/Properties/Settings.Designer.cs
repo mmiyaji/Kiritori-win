@@ -586,6 +586,18 @@ namespace Kiritori.Properties {
                 this["LivePreviewShowStats"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool LivePreviewShowTitlebar {
+            get {
+                return ((bool)(this["LivePreviewShowTitlebar"]));
+            }
+            set {
+                this["LivePreviewShowTitlebar"] = value;
+            }
+        }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]

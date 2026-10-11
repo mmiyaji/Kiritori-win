@@ -18,7 +18,8 @@
 
 - **矩形キャプチャ**（既定: `Ctrl`+`Shift`+`5` → 画面上をドラッグで範囲選択して最前面固定）
 - **OCRキャプチャ**（既定: `Ctrl`+`Shift`+`4` → 画面上をドラッグで範囲選択してテキスト抽出）
-- **ライブキャプチャ**（既定: `Ctrl`+`Shift`+`6` → 画面上をドラッグで範囲選択してリアルタイムプレビュー）
+- **ライブキャプチャ**（既定: `Ctrl`+`Shift`+`6` → 画面上をドラッグで範囲選択してリアルタイムプレビュー。タイトルバーは初期状態で非表示で、右クリックメニューから切り替え可能。設定は次回起動にも引き継がれます）
+- **ライブ画像加工**（リアルタイム画面を右クリック →「画像加工」から加工なし／モザイク／セピア／グレースケールを選択。モザイクは弱・中・強の3段階で調整できます。画面全体に適用され、静止画保存・SnapWindow への取り込み・GIF／MP4 録画にも反映。一時停止中も切り替え可能。選択はウィンドウごとに保持され、新しい画面は加工なしで開始）
 - **GPU キャプチャ**（Windows Graphics Capture を使用。`Auto` では利用できない環境や複数モニターにまたがる範囲を自動的に GDI へフォールバック）
 - **ズーム**（拡大縮小 / マウスドラッグによる自由サイズ調整 / Shiftを押しながら縦横比率固定サイジング）
 - **不透明度の切替**（100 / 90 / 80 / 50 / 30%）
@@ -41,6 +42,8 @@
 - `Kiritori.sln` を開き、`Kiritori` プロジェクトを `Release | x64` でビルドします
 - コマンドラインでは `msbuild Kiritori\Kiritori.csproj /t:Build /m /p:Configuration=Release /p:Platform=x64 /p:SignManifests=false` を実行します
 - テストは `dotnet test Kiritori.Tests\Kiritori.Tests.csproj --configuration Release` で実行できます
+- 加工の出力経路は、Release/x64 ビルド後に `powershell.exe -NoProfile -STA -File tools\Test-LiveFrameEffects.ps1` で検証できます（FFmpeg が必要）。実際のメニューとフレーム受信処理を使い、加工表示・GIF キュー・GIF／MP4 出力・停止中の加工解除を確認します。生成物は `Kiritori.Tests\TestResults\LiveFrameEffects` に保存されます。
+- 録画の競合・GIF メモリ上限・終了時解放は `powershell.exe -NoProfile -STA -File tools\Test-LiveCaptureStability.ps1 -AssemblyPath Kiritori\bin\x64\Release\Kiritori.exe` で検証できます。GIF の待機中・処理中の元画像と蓄積済み画像には、合計512MiBの保持上限を適用します（画像加工やエンコードの一時領域を除く）。
 
 MSIX の作成方法は [Package Build ワークフロー](.github/workflows/package.yml) を参照してください。
 

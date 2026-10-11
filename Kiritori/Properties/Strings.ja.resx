@@ -1122,4 +1122,13 @@
   <data name="Text.StartupDisabledByUserGuide" xml:space="preserve">
     <value>Windows の設定でオフにされています。設定を開くので、Kiritori をオンにしてください。</value>
   </data>
+  <data name="Menu.LiveEffect" xml:space="preserve"><value>画像加工</value></data>
+  <data name="Menu.LiveEffect.None" xml:space="preserve"><value>加工なし</value></data>
+  <data name="Menu.LiveEffect.Mosaic" xml:space="preserve"><value>モザイク</value></data>
+  <data name="Menu.LiveEffect.Sepia" xml:space="preserve"><value>セピア</value></data>
+  <data name="Menu.LiveEffect.Grayscale" xml:space="preserve"><value>グレースケール</value></data>
+  <data name="Menu.LiveEffect.MosaicStrength" xml:space="preserve"><value>モザイクの強度</value></data>
+  <data name="Menu.LiveEffect.MosaicStrength.Weak" xml:space="preserve"><value>弱</value></data>
+  <data name="Menu.LiveEffect.MosaicStrength.Medium" xml:space="preserve"><value>中</value></data>
+  <data name="Menu.LiveEffect.MosaicStrength.Strong" xml:space="preserve"><value>強</value></data>
 </root>

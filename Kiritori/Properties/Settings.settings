@@ -143,6 +143,9 @@
     <Setting Name="LivePreviewShowStats" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
+    <Setting Name="LivePreviewShowTitlebar" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
     <Setting Name="LivePreviewSaveFolder" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>

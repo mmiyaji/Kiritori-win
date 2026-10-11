@@ -28,6 +28,8 @@
 
   <ItemGroup>
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <Compile Include="..\Kiritori\Views\LiveCapture\LiveFrameEffects.cs" Link="ProductionSources\LiveFrameEffects.cs" />
     <Compile Include="..\Kiritori\Helpers\Enums.cs" Link="ProductionSources\Enums.cs" />
     <Compile Include="..\Kiritori\Helpers\HotkeyUtil.cs" Link="ProductionSources\HotkeyUtil.cs" />
     <Compile Include="..\Kiritori\Helpers\ImageFileSupport.cs" Link="ProductionSources\ImageFileSupport.cs" />

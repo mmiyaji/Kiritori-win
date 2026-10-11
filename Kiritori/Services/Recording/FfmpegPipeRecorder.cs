@@ -381,6 +381,13 @@ namespace Kiritori.Services.Recording
             var clone = new Bitmap(src);
             lock (_frameLock)
             {
+                // Stop may have completed while the producer was copying this frame.
+                // Never publish a bitmap after the worker's final cleanup.
+                if (!_started || !_run || _disposed || _state != 2)
+                {
+                    clone.Dispose();
+                    return;
+                }
                 var old = _latest;
                 _latest = clone;
                 old?.Dispose();

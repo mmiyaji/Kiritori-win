@@ -31,6 +31,10 @@ namespace Kiritori.Views.LiveCapture
     {
         private LiveCaptureBackend _backend;
         private Bitmap _latest;
+        private Bitmap _effectFrame;
+        private Bitmap _effectSource;
+        private LiveFrameEffect _frameEffect;
+        private int _mosaicBlockSize = 12;
         private Size _hudRectBasisClient;
         private int _hudRectBasisDpi;
         private bool _tempExcludeUntilFirstFrame = false;
@@ -52,6 +56,7 @@ namespace Kiritori.Views.LiveCapture
 
         private float _zoom = 1.0f;     // 表示倍率（1.0=100%）
         private bool _paused = false;
+        private int _closing;
         public MainApplication MainApp { get; set; }
         private TitleIconBadger _iconBadge;
 
@@ -219,6 +224,7 @@ namespace Kiritori.Views.LiveCapture
         private const int GifMaxBufferedFrames = 1800;
         private const long GifMaxBufferedBytes = 512L * 1024 * 1024;
         private long _gifBufferedBytes;
+        private long _gifQueuedBytes; // includes queued frames and the frame currently processed by the worker
         // GIFワーカースレッド（前処理を非同期化）
         private BlockingCollection<(Bitmap bmp, int deltaCs)> _gifQueue;
         private Thread _gifWorkerThread;
@@ -1173,6 +1179,8 @@ namespace Kiritori.Views.LiveCapture
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
+            if (!_miTitlebar.Checked)
+                HideCaptionBarTemporarily();
             _revealStart = DateTime.Now;
             _revealGuard = new System.Windows.Forms.Timer { Interval = 200 };
             _revealGuard.Tick += (s, _e) =>
@@ -1290,17 +1298,20 @@ namespace Kiritori.Views.LiveCapture
             // 高FPS時またはGIF録画中はNearestNeighborで描画コストを下げる
             lock (_frameSync)
             {
-                if (_latest != null)
+                var displayed = GetDisplayedFrameLocked();
+                if (displayed != null)
                 {
-                    if (_latest.Size == this.ClientSize)
+                    if (displayed.Size == this.ClientSize)
                     {
-                        g.DrawImageUnscaled(_latest, 0, 0);
+                        g.DrawImageUnscaled(displayed, 0, 0);
                     }
                     else
                     {
-                        bool highLoad = (_gifQueue != null && !_gifQueue.IsAddingCompleted) || _srcFps >= 30;
+                        bool gifRecording;
+                        lock (_gifSync) gifRecording = _gifQueue != null && !_gifQueue.IsAddingCompleted;
+                        bool highLoad = gifRecording || _srcFps >= 30;
                         g.InterpolationMode = highLoad ? InterpolationMode.NearestNeighbor : InterpolationMode.Bilinear;
-                        g.DrawImage(_latest, this.ClientRectangle);
+                        g.DrawImage(displayed, this.ClientRectangle);
                     }
                 }
             }
@@ -1696,6 +1707,7 @@ namespace Kiritori.Views.LiveCapture
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
+            lock (_frameSync) Interlocked.Exchange(ref _closing, 1);
             try { Application.ApplicationExit -= LivePreviewWindow_ApplicationExit; } catch { }
 
             if (_appearanceSettingsChangedHandler != null)
@@ -1754,6 +1766,7 @@ namespace Kiritori.Views.LiveCapture
 
             // ---- Backend / Recording ----
             StopCaptureBackend();
+            CloseGifRecording();
 
             try { StopRecording(); } catch { }
             WaitForRecorderStopsOnExit(4000);
@@ -1761,6 +1774,7 @@ namespace Kiritori.Views.LiveCapture
             // ---- Bitmaps ----
             lock (_frameSync)
             {
+                _effectFrame?.Dispose(); _effectFrame = null; _effectSource = null;
                 if (_latest != null) { try { _latest.Dispose(); } catch { } _latest = null; }
                 if (_lastPresentedFrame != null) { try { _lastPresentedFrame.Dispose(); } catch { } _lastPresentedFrame = null; }
             }
@@ -1780,12 +1794,6 @@ namespace Kiritori.Views.LiveCapture
             {
                 try { gt.Stop(); } catch { }
             }
-
-            // GIFワーカー終了
-            var gq = _gifQueue; _gifQueue = null;
-            if (gq != null) { try { gq.CompleteAdding(); } catch { } try { gq.Dispose(); } catch { } }
-            var gwt = _gifWorkerThread; _gifWorkerThread = null;
-            if (gwt != null && gwt.IsAlive) { try { gwt.Join(3000); } catch { } }
 
             DisposePaintCache();
 
@@ -1963,6 +1971,44 @@ namespace Kiritori.Views.LiveCapture
             _miPauseResume.Click += (s, e) => TogglePause();
             _miPauseResume.ShortcutKeyDisplayString = "Space";
 
+            var effectsMenu = new ToolStripMenuItem(SR.T("Menu.LiveEffect", "Image effect"));
+            var mosaicStrengthMenu = new ToolStripMenuItem(SR.T("Menu.LiveEffect.MosaicStrength", "Mosaic strength"))
+            { Enabled = false };
+            foreach (var preset in new[] {
+                new { Size = 6, Key = "Weak", Fallback = "Weak" },
+                new { Size = 12, Key = "Medium", Fallback = "Medium" },
+                new { Size = 24, Key = "Strong", Fallback = "Strong" }
+            })
+            {
+                var item = new ToolStripMenuItem(SR.T("Menu.LiveEffect.MosaicStrength." + preset.Key, preset.Fallback))
+                { Tag = preset.Size, Checked = preset.Size == _mosaicBlockSize };
+                item.Click += (s, e) =>
+                {
+                    lock (_frameSync) _mosaicBlockSize = (int)item.Tag;
+                    foreach (ToolStripMenuItem choice in mosaicStrengthMenu.DropDownItems)
+                        choice.Checked = Equals(choice.Tag, item.Tag);
+                    RefreshEffectFrame();
+                };
+                mosaicStrengthMenu.DropDownItems.Add(item);
+            }
+            foreach (LiveFrameEffect effect in Enum.GetValues(typeof(LiveFrameEffect)))
+            {
+                var item = new ToolStripMenuItem(SR.T("Menu.LiveEffect." + effect, effect.ToString()))
+                { Tag = effect, Checked = effect == LiveFrameEffect.None };
+                item.Click += (s, e) =>
+                {
+                    lock (_frameSync) _frameEffect = (LiveFrameEffect)item.Tag;
+                    foreach (ToolStripItem choice in effectsMenu.DropDownItems)
+                        if (choice is ToolStripMenuItem effectItem && effectItem.Tag is LiveFrameEffect)
+                            effectItem.Checked = Equals(effectItem.Tag, item.Tag);
+                    mosaicStrengthMenu.Enabled = _frameEffect == LiveFrameEffect.Mosaic;
+                    RefreshEffectFrame();
+                };
+                effectsMenu.DropDownItems.Add(item);
+            }
+            effectsMenu.DropDownItems.Add(new ToolStripSeparator());
+            effectsMenu.DropDownItems.Add(mosaicStrengthMenu);
+
             _miSaveCurrentFrame = new ToolStripMenuItem("Save current frame");
             _miSaveCurrentFrame.Click += (s, e) => SaveCurrentFrame();
 
@@ -1971,7 +2017,7 @@ namespace Kiritori.Views.LiveCapture
 
             _miTitlebar = new ToolStripMenuItem(SR.T("Menu.Titlebar", "Show Title bar"));
             _miTitlebar.Click += (s, e) => ToggleTitlebar();
-            _miTitlebar.Checked = true;
+            _miTitlebar.Checked = Properties.Settings.Default.LivePreviewShowTitlebar;
             _miTitlebar.ShortcutKeys = (Keys)HOTS.TITLEBAR;
 
             _miRealign = new ToolStripMenuItem(SR.T("Menu.OriginalLocation", "Move to the initial position"));
@@ -2280,6 +2326,7 @@ namespace Kiritori.Views.LiveCapture
                 _miOpenPausedFrame,
                 miRecording,
                 _miBackendRoot,
+                effectsMenu,
                 _miPolicyRoot,
                 new ToolStripSeparator(),
                 miNewCapture,
@@ -2329,7 +2376,7 @@ namespace Kiritori.Views.LiveCapture
         }
         private void TryAutoStopGifIfCapReached()
         {
-            if (!IsHandleCreated) return;
+            if (Interlocked.CompareExchange(ref _closing, 0, 0) != 0 || !IsHandleCreated) return;
             if (_miRecordingGif != null && _miRecordingGif.Checked)
                 BeginInvoke((Action)(() => _miRecordingGif.Checked = false));
         }
@@ -2632,8 +2679,34 @@ namespace Kiritori.Views.LiveCapture
         {
             lock (_frameSync)
             {
-                return _latest != null ? (Bitmap)_latest.Clone() : null;
+                var displayed = GetDisplayedFrameLocked();
+                return displayed != null ? (Bitmap)displayed.Clone() : null;
             }
+        }
+
+        // Caller holds _frameSync. Keep the raw frame so switching effects never compounds them.
+        private Bitmap GetDisplayedFrameLocked()
+        {
+            if (_frameEffect == LiveFrameEffect.None || _latest == null) return _latest;
+            if (!ReferenceEquals(_effectSource, _latest))
+            {
+                var processed = LiveFrameEffects.Apply(_latest, _frameEffect, _mosaicBlockSize);
+                _effectFrame?.Dispose();
+                _effectFrame = processed;
+                _effectSource = _latest;
+            }
+            return _effectFrame;
+        }
+
+        private void RefreshEffectFrame()
+        {
+            lock (_frameSync)
+            {
+                _effectFrame?.Dispose(); _effectFrame = null; _effectSource = null;
+            }
+            using (var frame = CloneCurrentFrame())
+                if (frame != null) _rec?.UpdateLatestFrame(frame);
+            Invalidate();
         }
 
         private void ToggleTitlebar()
@@ -2686,6 +2759,9 @@ namespace Kiritori.Views.LiveCapture
             {
                 BeginInvoke(apply);
             }
+            Properties.Settings.Default.LivePreviewShowTitlebar = _miTitlebar.Checked;
+            try { Properties.Settings.Default.Save(); }
+            catch (Exception ex) { Log.Warn("Failed to save live preview title bar setting: " + ex.Message, "LivePreview"); }
             ShowOverlay(_captionHidden ? "TITLE BAR HIDDEN" : "TITLE BAR SHOWN");
         }
         private Size GetDesiredClientPhysical()
@@ -2787,9 +2863,15 @@ namespace Kiritori.Views.LiveCapture
                 Log.Trace($"[LivePreview] FrameArrived: paused={_paused}, maxFps={_maxFps}, policy={_policy}", "LivePreview");
             bool ownsIncoming = e != null && e.TransfersOwnership;
             bool consumedIncoming = false;
+            Bitmap recordingFrame = null;
+            var recorder = Interlocked.CompareExchange(ref _rec, null, null);
+            BlockingCollection<(Bitmap bmp, int deltaCs)> gifQueue;
+            lock (_gifSync)
+                gifQueue = Interlocked.CompareExchange(ref _closing, 0, 0) == 0 ? _gifQueue : null;
 
             try
             {
+                if (Interlocked.CompareExchange(ref _closing, 0, 0) != 0) return;
                 if (_paused) return;
                 if (bmp == null) return;
                 Interlocked.Increment(ref _srcCount);
@@ -2810,46 +2892,78 @@ namespace Kiritori.Views.LiveCapture
                     if (_presentWatch.ElapsedMilliseconds < minIntervalMs) return;
                 }
                 _presentWatch.Restart();
-                if (_rec != null && bmp != null)
+                LiveFrameEffect effect;
+                int mosaicBlockSize;
+                lock (_frameSync) { effect = _frameEffect; mosaicBlockSize = _mosaicBlockSize; }
+                if (effect != LiveFrameEffect.None && (recorder != null || gifQueue != null))
+                    recordingFrame = LiveFrameEffects.Apply(bmp, effect, mosaicBlockSize);
+                var outputFrame = recordingFrame ?? bmp;
+                if (recorder != null && bmp != null)
                 {
-                    _rec.UpdateLatestFrame(bmp); // 到着ベースで差し替え、送出はワーカーが一定間隔で実施
+                    recorder.UpdateLatestFrame(outputFrame); // 到着ベースで差し替え、送出はワーカーが一定間隔で実施
                 }
-                var gifQueue = _gifQueue;
                 if (gifQueue != null && bmp != null)
                 {
                     try
                     {
-                        if (!gifQueue.IsAddingCompleted)
+                        bool capReached = false;
+                        lock (_gifSync)
                         {
-                            int nowMs = (int)_gifClock.ElapsedMilliseconds;
-                            if (Environment.TickCount < _gifIgnoreUntilTick)
+                            if (ReferenceEquals(_gifQueue, gifQueue) &&
+                                Interlocked.CompareExchange(ref _closing, 0, 0) == 0 &&
+                                !gifQueue.IsAddingCompleted)
                             {
-                                _gifLastMs = nowMs;
-                            }
-                            else
-                            {
-                                int deltaMs = nowMs - _gifLastMs; if (deltaMs < 0) deltaMs = 0;
-                                int minIntervalMs = Math.Max(20, _gifMinIntervalCs * 10);
-                                if (deltaMs >= minIntervalMs && gifQueue.Count < GifQueueCapacity)
+                                int nowMs = (int)_gifClock.ElapsedMilliseconds;
+                                if (Environment.TickCount < _gifIgnoreUntilTick)
                                 {
-                                    int deltaCs = Math.Max(1, (int)Math.Round(deltaMs / 10.0));
-                                    Bitmap queuedFrame = null;
-                                    try
+                                    _gifLastMs = nowMs;
+                                }
+                                else
+                                {
+                                    int deltaMs = nowMs - _gifLastMs; if (deltaMs < 0) deltaMs = 0;
+                                    int minIntervalMs = Math.Max(20, _gifMinIntervalCs * 10);
+                                    if (deltaMs >= minIntervalMs && gifQueue.Count < GifQueueCapacity)
                                     {
-                                        queuedFrame = (Bitmap)bmp.Clone();
-                                        if (gifQueue.TryAdd((queuedFrame, deltaCs)))
+                                        int deltaCs = Math.Max(1, (int)Math.Round(deltaMs / 10.0));
+                                        long frameBytes = (long)outputFrame.Width * outputFrame.Height * 4L;
+                                        long availableBytes = GifMaxBufferedBytes - _gifBufferedBytes - _gifQueuedBytes;
+                                        if (frameBytes > availableBytes)
                                         {
-                                            queuedFrame = null;
-                                            _gifLastMs = nowMs;
+                                            capReached = true;
                                         }
-                                    }
-                                    finally
-                                    {
-                                        if (queuedFrame != null) queuedFrame.Dispose();
+                                        else
+                                        {
+                                            // Reserve before allocating the clone; this budget stays held until the worker finishes the raw frame.
+                                            _gifQueuedBytes += frameBytes;
+                                            Bitmap queuedFrame = null;
+                                            try
+                                            {
+                                                queuedFrame = (Bitmap)outputFrame.Clone();
+                                                if (gifQueue.TryAdd((queuedFrame, deltaCs)))
+                                                {
+                                                    queuedFrame = null;
+                                                    _gifLastMs = nowMs;
+                                                }
+                                                else
+                                                {
+                                                    _gifQueuedBytes -= frameBytes;
+                                                }
+                                            }
+                                            catch
+                                            {
+                                                _gifQueuedBytes -= frameBytes;
+                                                throw;
+                                            }
+                                            finally
+                                            {
+                                                if (queuedFrame != null) queuedFrame.Dispose();
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
+                        if (capReached) TryAutoStopGifIfCapReached();
                     }
                     catch (Exception ex)
                     {
@@ -2905,6 +3019,7 @@ namespace Kiritori.Views.LiveCapture
                 Bitmap old = null;
                 lock (_frameSync)
                 {
+                    if (Interlocked.CompareExchange(ref _closing, 0, 0) != 0) return;
                     old = _latest;
                     if (ownsIncoming)
                     {
@@ -2932,6 +3047,7 @@ namespace Kiritori.Views.LiveCapture
             }
             finally
             {
+                recordingFrame?.Dispose();
                 if (ownsIncoming && !consumedIncoming && bmp != null)
                     bmp.Dispose();
             }
@@ -3863,6 +3979,76 @@ namespace Kiritori.Views.LiveCapture
             return Interlocked.CompareExchange(ref _gifStopGate, 0, 0) != 0;
         }
 
+        private void CloseGifRecording()
+        {
+            Interlocked.Exchange(ref _gifStopGate, 1);
+            BlockingCollection<(Bitmap bmp, int deltaCs)> queue;
+            Thread worker;
+            lock (_gifSync)
+            {
+                queue = _gifQueue;
+                _gifQueue = null;
+                worker = _gifWorkerThread;
+                _gifWorkerThread = null;
+                if (queue != null && !queue.IsAddingCompleted)
+                {
+                    try { queue.CompleteAdding(); } catch { }
+                }
+            }
+
+            // A null queue means StopGifRecordAndSave already owns this session and its cleanup.
+            if (queue == null) return;
+            DrainGifQueue(queue); // discard pending frames before joining so close does not encode a backlog
+            if (worker != null && worker.IsAlive && !worker.Join(2000))
+            {
+                Log.Warn("GIF worker is still running during close; deferring cleanup until it exits", "LivePreview");
+                Task.Run(() =>
+                {
+                    try { worker.Join(); } catch { }
+                    DisposeClosedGifSession(queue);
+                });
+                return;
+            }
+            DisposeClosedGifSession(queue);
+        }
+
+        private void DisposeClosedGifSession(BlockingCollection<(Bitmap bmp, int deltaCs)> queue)
+        {
+            DrainGifQueue(queue);
+            try { queue?.Dispose(); } catch { }
+            lock (_gifSync)
+            {
+                if (_gifFrames != null)
+                    foreach (var frame in _gifFrames) { try { frame.Dispose(); } catch { } }
+                _gifFrames = null;
+                _gifDelaysCs = null;
+                _gifPendingDelayCs = 0;
+                _gifBufferedBytes = 0;
+                _gifQueuedBytes = 0;
+                _gifTick?.Reset();
+            }
+        }
+
+        private void DrainGifQueue(BlockingCollection<(Bitmap bmp, int deltaCs)> queue)
+        {
+            if (queue == null) return;
+            long drainedBytes = 0;
+            try
+            {
+                while (queue.TryTake(out var item))
+                {
+                    if (item.bmp != null)
+                    {
+                        drainedBytes += (long)item.bmp.Width * item.bmp.Height * 4L;
+                        try { item.bmp.Dispose(); } catch { }
+                    }
+                }
+            }
+            catch (ObjectDisposedException) { }
+            lock (_gifSync)
+                _gifQueuedBytes = Math.Max(0, _gifQueuedBytes - drainedBytes);
+        }
+
         private bool StartGifRecord()
         {
             if (IsGifStopInProgress()) return false;
@@ -3883,16 +4069,17 @@ namespace Kiritori.Views.LiveCapture
                 MaxWidth = setWidth,
             };
             var queue = new BlockingCollection<(Bitmap, int)>(boundedCapacity: GifQueueCapacity);
-            var worker = new Thread(GifWorkerLoop) { IsBackground = true, Name = "GifWorker" };
 
             _gifClock.Restart();
             _gifLastMs = 0;
             int minIntervalCs = Math.Max(2, (int)Math.Round(100.0 / Math.Max(1, opt.GifFps)));
+            var worker = new Thread(() => GifWorkerLoop(queue, opt, minIntervalCs))
+            { IsBackground = true, Name = "GifWorker" };
 
             BlockingCollection<(Bitmap, int)> oldQueue;
             lock (_gifSync)
             {
-                if (_gifFrames != null || _gifDelaysCs != null)
+                if (Interlocked.CompareExchange(ref _closing, 0, 0) != 0 || _gifFrames != null || _gifDelaysCs != null)
                 {
                     queue.Dispose();
                     return false;
@@ -3903,12 +4090,25 @@ namespace Kiritori.Views.LiveCapture
                 _gifDelaysCs = new List<int>();
                 _gifPendingDelayCs = 0;
                 _gifBufferedBytes = 0;
+                _gifQueuedBytes = 0;
                 _gifTick.Reset();
                 _gifMinIntervalCs = minIntervalCs;
 
                 oldQueue = _gifQueue;
                 _gifQueue = queue;
                 _gifWorkerThread = worker;
+                try { worker.Start(); }
+                catch
+                {
+                    _gifQueue = null;
+                    _gifWorkerThread = null;
+                    _gifFrames = null;
+                    _gifDelaysCs = null;
+                    _gifBufferedBytes = 0;
+                    _gifQueuedBytes = 0;
+                    queue.Dispose();
+                    throw;
+                }
             }
 
             if (oldQueue != null)
@@ -3916,8 +4116,6 @@ namespace Kiritori.Views.LiveCapture
                 try { if (!oldQueue.IsAddingCompleted) oldQueue.CompleteAdding(); } catch { }
                 try { oldQueue.Dispose(); } catch { }
             }
-
-            worker.Start();
 
             // 再入防止ゲート＆タイマー初期化
             _gifLimitTimer?.Stop();
@@ -3941,12 +4139,17 @@ namespace Kiritori.Views.LiveCapture
         }
         private void StopGifRecordAndSave(string path)
         {
-            var q = _gifQueue; _gifQueue = null;
-            if (q != null && !q.IsAddingCompleted)
+            BlockingCollection<(Bitmap bmp, int deltaCs)> q;
+            Thread wt;
+            lock (_gifSync)
             {
-                try { q.CompleteAdding(); } catch { }
+                q = _gifQueue; _gifQueue = null;
+                wt = _gifWorkerThread; _gifWorkerThread = null;
+                if (q != null && !q.IsAddingCompleted)
+                {
+                    try { q.CompleteAdding(); } catch { }
+                }
             }
-            var wt = _gifWorkerThread; _gifWorkerThread = null;
 
             ShowOverlay("SAVING GIF");
 
@@ -3955,6 +4158,17 @@ namespace Kiritori.Views.LiveCapture
 
         private void FinishGifRecordAndSave(BlockingCollection<(Bitmap bmp, int deltaCs)> q, Thread wt, string path)
         {
+            if (wt != null && wt.IsAlive && !wt.Join(30000))
+            {
+                Log.Warn("GIF worker is still running; deferring finalization until it exits", "LivePreview");
+                Task.Run(() =>
+                {
+                    try { wt.Join(); } catch { }
+                    FinishGifRecordAndSave(q, null, path);
+                });
+                return;
+            }
+
             string savedPath = null;
             Exception saveError = null;
             bool noFrames = false;
@@ -3963,9 +4177,7 @@ namespace Kiritori.Views.LiveCapture
 
             try
             {
-                if (wt != null && wt.IsAlive)
-                    wt.Join(30000);
-
+                DrainGifQueue(q);
                 q?.Dispose();
 
                 lock (_gifSync)
@@ -3976,7 +4188,8 @@ namespace Kiritori.Views.LiveCapture
                         _gifDelaysCs = null;
                         _gifPendingDelayCs = 0;
                         _gifBufferedBytes = 0;
-                        _gifTick.Reset();
+                        _gifTick?.Reset();
+                        _gifQueuedBytes = 0;
                         noFrames = true;
                         return;
                     }
@@ -3986,7 +4199,7 @@ namespace Kiritori.Views.LiveCapture
 
                     pendingCs = _gifPendingDelayCs; _gifPendingDelayCs = 0;
                     _gifBufferedBytes = 0;
-                    _gifTick.Reset();
+                    _gifTick?.Reset();
                 }
 
                 try
@@ -4074,7 +4287,7 @@ namespace Kiritori.Views.LiveCapture
             }
 
             long frameBytes = (long)frame.Width * frame.Height * 4L;
-            bool byteCapReached = frameBytes > GifMaxBufferedBytes - _gifBufferedBytes;
+            bool byteCapReached = frameBytes > GifMaxBufferedBytes - _gifBufferedBytes - _gifQueuedBytes;
             if (_gifFrames.Count >= GifMaxBufferedFrames || byteCapReached)
             {
                 capReached = true;
@@ -4088,16 +4301,12 @@ namespace Kiritori.Views.LiveCapture
             _gifDelaysCs.Add(ClampDelay(delayCs));
             _gifBufferedBytes += frameBytes;
             capReached = _gifFrames.Count >= GifMaxBufferedFrames ||
-                         _gifBufferedBytes >= GifMaxBufferedBytes;
+                         _gifBufferedBytes + _gifQueuedBytes >= GifMaxBufferedBytes;
             return true;
         }
 
-        private void GifWorkerLoop()
+        private void GifWorkerLoop(BlockingCollection<(Bitmap bmp, int deltaCs)> queue, GifRecordOptions opt, int minIntervalCs)
         {
-            // キュー開始時点の設定をスナップショット
-            GifRecordOptions opt = _gifOpt;
-            int minIntervalCs = _gifMinIntervalCs;
-            var queue = _gifQueue;
             if (queue == null) return;
 
             int workerPendingCs = 0;
@@ -4109,6 +4318,7 @@ namespace Kiritori.Views.LiveCapture
                 foreach (var item in queue.GetConsumingEnumerable())
                 {
                     Bitmap raw = item.bmp;
+                    long rawBytes = (long)raw.Width * raw.Height * 4L;
                     int deltaCs = item.deltaCs;
                     try
                     {
@@ -4169,6 +4379,8 @@ namespace Kiritori.Views.LiveCapture
                     finally
                     {
                         try { raw.Dispose(); } catch { }
+                        lock (_gifSync)
+                            _gifQueuedBytes = Math.Max(0, _gifQueuedBytes - rawBytes);
                     }
                 }
             }

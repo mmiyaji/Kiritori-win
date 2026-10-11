@@ -153,6 +153,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Helpers\DebugUiOptions.cs" />
+    <Compile Include="Views\LiveCapture\LiveFrameEffects.cs" />
     <Compile Include="Helpers\DpiUtil.cs" />
     <Compile Include="Helpers\Enums.cs" />
     <Compile Include="Helpers\FastBitmapHash.cs" />
