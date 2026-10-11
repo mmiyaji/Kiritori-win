@@ -3137,7 +3137,10 @@ namespace Kiritori.Views.LiveCapture
 
             if (_origStyle != 0)
             {
-                SetWindowLong(h, GWL_STYLE, _origStyle);
+                const int captionFrameStyle = WS_CAPTION | WS_THICKFRAME;
+                int currentStyle = GetWindowLong(h, GWL_STYLE);
+                int restoredStyle = (currentStyle & ~captionFrameStyle) | (_origStyle & captionFrameStyle);
+                SetWindowLong(h, GWL_STYLE, restoredStyle);
                 SetWindowPos(h, IntPtr.Zero, 0, 0, 0, 0,
                     SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
                 RedrawWindow(h, IntPtr.Zero, IntPtr.Zero,

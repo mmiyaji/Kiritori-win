@@ -12,6 +12,7 @@ using System.Windows.Forms;
 internal static class WindowDpiProbe
 {
     [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr hwnd);
+    [DllImport("user32.dll")] private static extern int GetWindowLong(IntPtr hwnd, int index);
     private static readonly BindingFlags Flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     private static object Field(object target, string name) { return target.GetType().GetField(name, Flags).GetValue(target); }
     private static void SetField(object target, string name, object value) { target.GetType().GetField(name, Flags).SetValue(target, value); }
@@ -50,17 +51,22 @@ internal static class WindowDpiProbe
                 type.GetMethod("ResizeToKeepClient", flags).Invoke(form, new object[] { size });
                 Console.WriteLine("{0}: nativeDpi={1}, managedDpi={2}, source=600x300, actualClient={3}", screen.DeviceName, dpi, form.DeviceDpi, form.ClientSize);
                 ((ToolStripMenuItem)Field(form, "_miTitlebar")).Checked = false;
+                // Match startup: the saved style is captured before WS_VISIBLE.
                 Call(form, "HideCaptionBarTemporarily");
+                form.Show();
+                Application.DoEvents();
                 Call(form, "ResizeToKeepClient", new Size(800, 450));
                 var origin = form.PointToScreen(Point.Empty);
                 for (int i = 0; i < 2; i++)
                 {
                     Call(form, "ToggleTitlebar");
                     Application.DoEvents();
+                    Require((GetWindowLong(form.Handle, -16) & 0x10000000) != 0, "Titlebar restore hid the window (WS_VISIBLE lost)");
                     Require(form.ClientSize == new Size(800, 450), "Titlebar changed client size: " + form.ClientSize);
                     Require(form.PointToScreen(Point.Empty) == origin, "Titlebar moved client origin");
                 }
-                Console.WriteLine("  PASS: real titlebar handlers preserve 800x450 and client origin in both directions");
+                Console.WriteLine("  PASS: real titlebar handlers preserve visibility, 800x450 and client origin in both directions");
+                form.Close();
             }
         }
         if (args.Length > 1 && args[1] == "--require-high-dpi")
