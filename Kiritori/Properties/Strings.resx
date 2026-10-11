@@ -1137,4 +1137,34 @@
   <data name="Menu.LiveEffect.MosaicStrength.Weak" xml:space="preserve"><value>Weak</value></data>
   <data name="Menu.LiveEffect.MosaicStrength.Medium" xml:space="preserve"><value>Medium</value></data>
   <data name="Menu.LiveEffect.MosaicStrength.Strong" xml:space="preserve"><value>Strong</value></data>
+  <data name="Annotation.Title" xml:space="preserve"><value>Annotations</value></data>
+  <data name="Annotation.Move" xml:space="preserve"><value>Move (M)</value></data>
+  <data name="Annotation.Rectangle" xml:space="preserve"><value>Rectangle (R)</value></data>
+  <data name="Annotation.Arrow" xml:space="preserve"><value>Arrow (A)</value></data>
+  <data name="Annotation.Style" xml:space="preserve"><value>Style</value></data>
+  <data name="Annotation.Color" xml:space="preserve"><value>Color</value></data>
+  <data name="Annotation.Width" xml:space="preserve"><value>Width</value></data>
+  <data name="Annotation.WidthHint" xml:space="preserve"><value>Stroke width in image pixels (2–16 px). Applies to the selected annotation, or to new annotations.</value></data>
+  <data name="Annotation.Undo" xml:space="preserve"><value>Remove last (Ctrl+Z)</value></data>
+  <data name="Annotation.Clear" xml:space="preserve"><value>Clear all</value></data>
+  <data name="Annotation.Done" xml:space="preserve"><value>Done (Esc)</value></data>
+  <data name="Annotation.UndoHint" xml:space="preserve"><value>Remove the last added annotation.</value></data>
+  <data name="Annotation.ClearHint" xml:space="preserve"><value>Remove all annotations from this capture.</value></data>
+  <data name="Annotation.DoneHint" xml:space="preserve"><value>Keep the annotations and finish editing. F6 switches between the image and this palette.</value></data>
+  <data name="Annotation.MoveHint" xml:space="preserve"><value>Drag the image background to move the capture.</value></data>
+  <data name="Annotation.RectangleHint" xml:space="preserve"><value>Draw a rectangle. Drag an existing annotation to move or resize it.</value></data>
+  <data name="Annotation.ArrowHint" xml:space="preserve"><value>Draw an arrow. Drag either endpoint to adjust its direction and length.</value></data>
+  <data name="Annotation.SelectedHint" xml:space="preserve"><value>Selected annotation · edit color, style or width</value></data>
+  <data name="Annotation.DrawHint" xml:space="preserve"><value>Drag to draw · click an annotation to edit it</value></data>
+  <data name="Annotation.Status" xml:space="preserve"><value>{0} annotations  ·  {1}</value></data>
+  <data name="Annotation.Color.Orange" xml:space="preserve"><value>Orange</value></data>
+  <data name="Annotation.Color.Blue" xml:space="preserve"><value>Blue</value></data>
+  <data name="Annotation.Color.Green" xml:space="preserve"><value>Green</value></data>
+  <data name="Annotation.Color.Pink" xml:space="preserve"><value>Pink</value></data>
+  <data name="Annotation.Style.Filled" xml:space="preserve"><value>Translucent fill</value></data>
+  <data name="Annotation.Style.Outline" xml:space="preserve"><value>Outline</value></data>
+  <data name="Annotation.Style.Single" xml:space="preserve"><value>Single arrow</value></data>
+  <data name="Annotation.Style.Double" xml:space="preserve"><value>Double arrow</value></data>
+  <data name="Annotation.Style.Line" xml:space="preserve"><value>Line</value></data>
+  <data name="Annotation.Style.Tapered" xml:space="preserve"><value>Tapered arrow</value></data>
 </root>

@@ -37,7 +37,12 @@ internal static class WindowUiProbe
             snap.ShowInTaskbar = true;
             snap.Text = "Kiritori UI verification";
             snap.StartPosition = FormStartPosition.Manual;
-            snap.Location = new Point(400, 250);
+            var monitorIndex = -1;
+            foreach (var argument in args)
+                if (argument.StartsWith("--monitor-index="))
+                    monitorIndex = int.Parse(argument.Substring("--monitor-index=".Length));
+            var screen = monitorIndex >= 0 ? Screen.AllScreens[monitorIndex] : Screen.PrimaryScreen;
+            snap.Location = new Point(screen.WorkingArea.Left + 400, screen.WorkingArea.Top + 250);
             var bitmap = new Bitmap(300, 200);
             using (var graphics = Graphics.FromImage(bitmap))
             using (var font = new Font("Arial", 16))
@@ -47,6 +52,14 @@ internal static class WindowUiProbe
             }
             var flags = BindingFlags.Instance | BindingFlags.NonPublic;
             snapType.GetMethod("SetImageAndResetZoom", flags).Invoke(snap, new object[] { bitmap, null });
+            // Discover the production owned palette through Computer Use as well.
+            // This changes only the isolated test host, never the application's UI.
+            var palette = snapType.GetField("_annotationPalette", flags).GetValue(snap) as Form;
+            if (palette != null)
+            {
+                palette.ShowInTaskbar = true;
+                palette.FormBorderStyle = FormBorderStyle.FixedSingle;
+            }
             Application.Run(snap);
         }
     }

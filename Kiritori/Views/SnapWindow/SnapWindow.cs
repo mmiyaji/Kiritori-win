@@ -181,6 +181,7 @@ namespace Kiritori
                 if (this.IsDisposed) return;
                 Localizer.Apply(this);
                 ApplyAllContextMenusLocalization();
+                ApplyAnnotationPaletteLocalization();
             };
             SR.CultureChanged += _cultureChangedHandler;
 
@@ -306,6 +307,7 @@ namespace Kiritori
             try { _zoomAnimTimer?.Stop(); } catch { }
             try { _resizeCommitTimer?.Stop(); } catch { }
 
+            DisposeAnnotationPalette();
             ResetImageState();
 
             foreach (var pair in _closeIconCache.Values)

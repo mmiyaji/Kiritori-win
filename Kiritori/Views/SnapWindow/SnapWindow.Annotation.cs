@@ -12,23 +12,6 @@ namespace Kiritori
     {
         private const int AnnotationArrowHandleRadius = 10;
         private const int AnnotationRectangleHandleRadius = 10;
-        private static readonly Point AnnotationPaletteDefaultLocation = new Point(14, 14);
-        private static readonly Size AnnotationPaletteSize = new Size(504, 44);
-        private static readonly Padding AnnotationPalettePadding = new Padding(8);
-        private static readonly Size AnnotationPaletteDragHandleSize = new Size(28, 28);
-        private static readonly Point AnnotationPaletteDragHandleLocation = new Point(10, 8);
-        private static readonly Size AnnotationPaletteButtonSize = new Size(34, 28);
-        private const int AnnotationPaletteButtonY = 8;
-        private const int AnnotationPaletteClearButtonX = 44;
-        private const int AnnotationPaletteToolButtonX = 84;
-        private const int AnnotationPaletteToolButtonWidth = 96;
-        private const int AnnotationPaletteColorButtonX = 186;
-        private const int AnnotationPaletteColorButtonWidth = 92;
-        private const int AnnotationPaletteStyleButtonX = 284;
-        private const int AnnotationPaletteStyleButtonWidth = 104;
-        private const int AnnotationPaletteUndoButtonX = 394;
-        private const int AnnotationPaletteDoneButtonX = 434;
-
         private enum AnnotationTool
         {
             Move,
@@ -101,21 +84,20 @@ namespace Kiritori
         private ToolStripMenuItem _annotationModeMenuItem;
         private ToolStripMenuItem _annotationClearMenuItem;
         private ToolStripMenuItem _annotationUndoMenuItem;
-        private Panel _annotationPalette;
-        private Label _annotationPaletteLabel;
-        private Button _annotationToolButton;
-        private Button _annotationColorButton;
+        private AnnotationPaletteWindow _annotationPalette;
+        private RadioButton[] _annotationToolButtons;
+        private RadioButton[] _annotationColorButtons;
         private Button _annotationStyleButton;
+        private ContextMenuStrip _annotationStyleMenu;
+        private NumericUpDown _annotationWidthInput;
         private Button _annotationUndoButton;
         private Button _annotationClearButton;
         private Button _annotationDoneButton;
-        private ContextMenuStrip _annotationToolMenu;
-        private ContextMenuStrip _annotationColorMenu;
-        private ContextMenuStrip _annotationStyleMenu;
-        private bool _annotationPaletteDragging;
-        private Point _annotationPaletteDragOrigin;
-        private Point _annotationPaletteOrigin;
-        private Point _annotationPaletteLocation = AnnotationPaletteDefaultLocation;
+        private FlowLayoutPanel[] _annotationPaletteRows;
+        private ToolTip _annotationPaletteTips;
+        private bool _updatingAnnotationPalette;
+        private bool _positioningAnnotationPalette;
+        private int _annotationStrokeWidth = 2;
         private Color _annotationStrokeColor = Color.FromArgb(255, 255, 138, 61);
         private Color _annotationFillColor = Color.FromArgb(48, 255, 138, 61);
         private AnnotationArrowStyle _annotationArrowStyle = AnnotationArrowStyle.Single;
@@ -161,7 +143,7 @@ namespace Kiritori
             RepositionAnnotationPalette();
             UpdateAnnotationMenuState();
             UpdateAnnotationCursor();
-            ShowOverlay("EDIT MODE");
+
             pictureBox1?.Invalidate();
         }
 
@@ -176,7 +158,7 @@ namespace Kiritori
             SetAnnotationPaletteVisible(false);
             UpdateAnnotationMenuState();
             UpdateAnnotationCursor();
-            if (!silent) ShowOverlay("EDIT OFF");
+
             pictureBox1?.Invalidate();
         }
 
@@ -191,6 +173,7 @@ namespace Kiritori
         private void SetAnnotationTool(AnnotationTool tool)
         {
             _annotationTool = tool;
+            _selectedAnnotationIndex = -1;
             _annotationPreview = null;
             UpdateAnnotationCursor();
             RefreshAnnotationUi();
@@ -202,12 +185,6 @@ namespace Kiritori
             _annotationPreview = null;
             _annotationInteraction = AnnotationInteraction.None;
             _annotationHandle = AnnotationHandle.None;
-        }
-
-        private void SetAnnotationPaletteVisible(bool visible)
-        {
-            if (_annotationPalette != null)
-                _annotationPalette.Visible = visible;
         }
 
         private void UpdateAnnotationCursor()
@@ -327,6 +304,7 @@ namespace Kiritori
         private void SyncAnnotationDefaultsFromShape(AnnotationShape shape)
         {
             if (shape == null) return;
+            _annotationStrokeWidth = shape.StrokeWidth;
             _annotationStrokeColor = shape.StrokeColor;
             _annotationFillColor = shape.FillColor;
             if (shape.Kind == AnnotationShapeKind.Arrow)
@@ -384,117 +362,12 @@ namespace Kiritori
             if (_annotationModeMenuItem != null)
             {
                 _annotationModeMenuItem.Checked = _annotationMode;
-                _annotationModeMenuItem.Text = _annotationMode ? "Finish annotations" : "Edit annotations";
+                _annotationModeMenuItem.Text = SR.T(_annotationMode ? "Annotation.Done" : "Menu.EditAnnotations");
             }
-
             var hasAnnotations = _annotations.Count > 0;
             if (_annotationClearMenuItem != null) _annotationClearMenuItem.Enabled = hasAnnotations;
             if (_annotationUndoMenuItem != null) _annotationUndoMenuItem.Enabled = hasAnnotations;
-
-            if (_annotationPalette == null) return;
-
-            UpdatePaletteButtonState(_annotationToolButton, true, GetToolButtonLabel(), GetAnnotationPaletteIcon(GetToolIconKey()));
-            UpdatePaletteButtonState(_annotationColorButton, true, GetColorButtonLabel(_annotationStrokeColor), CreateAnnotationColorSwatch(_annotationStrokeColor));
-            UpdatePaletteButtonState(_annotationStyleButton, true, GetStyleButtonLabel(), GetAnnotationPaletteIcon(GetStyleIconKey()));
-            UpdatePaletteButtonState(_annotationClearButton, false, string.Empty, GetAnnotationPaletteIcon("annotation_clear"));
-            UpdatePaletteButtonState(_annotationUndoButton, false, string.Empty, GetAnnotationPaletteIcon("annotation_undo"));
-            UpdatePaletteButtonState(_annotationDoneButton, false, string.Empty, GetAnnotationPaletteIcon("annotation_done"));
-            if (_annotationUndoButton != null) _annotationUndoButton.Enabled = hasAnnotations;
-            if (_annotationClearButton != null) _annotationClearButton.Enabled = hasAnnotations;
-        }
-
-        private void UpdatePaletteButtonState(Button button, bool emphasize, string text, Image icon)
-        {
-            if (button == null) return;
-
-            var oldImage = button.Image;
-            button.Text = text;
-            button.BackColor = emphasize ? Color.FromArgb(56, 62, 72) : Color.FromArgb(44, 49, 57);
-            button.ForeColor = Color.White;
-            button.Image = icon;
-
-            if (oldImage != null && !ReferenceEquals(oldImage, icon))
-                oldImage.Dispose();
-        }
-
-        private string GetToolButtonLabel()
-        {
-            switch (_annotationTool)
-            {
-                case AnnotationTool.Move:
-                    return GetToolLabel(AnnotationTool.Move);
-                case AnnotationTool.Arrow:
-                    return GetToolLabel(AnnotationTool.Arrow);
-                default:
-                    return GetToolLabel(AnnotationTool.Rectangle);
-            }
-        }
-
-        private string GetColorButtonLabel(Color color)
-        {
-            return GetColorLabel(color);
-        }
-
-        private string GetStyleButtonLabel()
-        {
-            if (_annotationTool == AnnotationTool.Move)
-                return "Window";
-            if (_annotationTool == AnnotationTool.Rectangle)
-                return GetRectangleStyleLabel(_annotationRectangleStyle);
-
-            switch (_annotationArrowStyle)
-            {
-                case AnnotationArrowStyle.Double:
-                    return GetArrowStyleLabel(AnnotationArrowStyle.Double);
-                case AnnotationArrowStyle.Line:
-                    return GetArrowStyleLabel(AnnotationArrowStyle.Line);
-                case AnnotationArrowStyle.Tapered:
-                    return GetArrowStyleLabel(AnnotationArrowStyle.Tapered);
-                default:
-                    return GetArrowStyleLabel(AnnotationArrowStyle.Single);
-            }
-        }
-
-        private string GetToolLabel(AnnotationTool tool)
-        {
-            switch (tool)
-            {
-                case AnnotationTool.Move:
-                    return "Move";
-                case AnnotationTool.Arrow:
-                    return "Arrow";
-                default:
-                    return "Rect";
-            }
-        }
-
-        private string GetArrowStyleLabel(AnnotationArrowStyle style)
-        {
-            switch (style)
-            {
-                case AnnotationArrowStyle.Double:
-                    return "Double";
-                case AnnotationArrowStyle.Line:
-                    return "Line";
-                case AnnotationArrowStyle.Tapered:
-                    return "Tapered";
-                default:
-                    return "Single";
-            }
-        }
-
-        private string GetRectangleStyleLabel(AnnotationRectangleStyle style)
-        {
-            return style == AnnotationRectangleStyle.Outline ? "Outline" : "Filled";
-        }
-
-        private string GetColorLabel(Color color)
-        {
-            if (color == Color.FromArgb(255, 255, 138, 61)) return "Orange";
-            if (color == Color.FromArgb(88, 166, 255)) return "Blue";
-            if (color == Color.FromArgb(78, 201, 140)) return "Green";
-            if (color == Color.FromArgb(255, 105, 180)) return "Pink";
-            return "Custom";
+            UpdateAnnotationPaletteState();
         }
 
         private Color CreateFillColorFromStroke(Color strokeColor)
@@ -584,6 +457,7 @@ namespace Kiritori
             _annotationEditOriginBounds = shape.Bounds;
             _annotationEditOriginStart = shape.Start;
             _annotationEditOriginEnd = shape.End;
+            UpdateAnnotationMenuState();
         }
 
         private void BeginAnnotationCreate(Point imagePoint)
@@ -592,6 +466,7 @@ namespace Kiritori
             _annotationStartImage = imagePoint;
             _annotationPreview = CreateAnnotationShape(_annotationTool, imagePoint, imagePoint);
             BeginAnnotationDrag(AnnotationInteraction.Create, AnnotationHandle.None, imagePoint);
+            UpdateAnnotationMenuState();
         }
 
         private void BeginAnnotationDrag(AnnotationInteraction interaction, AnnotationHandle handle, Point imagePoint)
@@ -740,7 +615,7 @@ namespace Kiritori
         {
             CompleteFinishedAnnotationDrag();
             EndAnnotationDragState();
-            pictureBox1.Invalidate();
+            RefreshAnnotationUi();
         }
 
         private void CompleteFinishedAnnotationDrag()
@@ -1031,7 +906,7 @@ namespace Kiritori
                 FillColor = kind == AnnotationShapeKind.Rectangle && _annotationRectangleStyle == AnnotationRectangleStyle.Outline ? Color.Transparent : _annotationFillColor,
                 ArrowStyle = _annotationArrowStyle,
                 RectangleStyle = _annotationRectangleStyle,
-                StrokeWidth = Math.Max(2, DeviceDpi / 48)
+                StrokeWidth = _annotationStrokeWidth
             };
         }
 

@@ -27,6 +27,19 @@ namespace Kiritori
         {
             if (_annotationMode)
             {
+                if (keyData == Keys.M || keyData == Keys.R || keyData == Keys.A)
+                {
+                    SetAnnotationTool(keyData == Keys.M ? AnnotationTool.Move : keyData == Keys.R ? AnnotationTool.Rectangle : AnnotationTool.Arrow);
+                    return true;
+                }
+
+                if (keyData == Keys.F6 && _annotationPalette != null)
+                {
+                    _annotationPalette.Activate();
+                    _annotationToolButtons[(int)_annotationTool].Focus();
+                    return true;
+                }
+
                 if (keyData == Keys.Escape)
                 {
                     ExitAnnotationMode();

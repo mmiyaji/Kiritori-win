@@ -1,6 +1,7 @@
 param(
     [string]$AssemblyPath = "$PSScriptRoot\..\Kiritori\bin\x64\EffectsPreview\Kiritori.exe",
-    [switch]$Live
+    [switch]$Live,
+    [int]$MonitorIndex = -1
 )
 # Shows the production form with a taskbar entry for Computer Use discovery.
 # Settings are isolated under the probe executable's own user.config.
@@ -17,4 +18,5 @@ if ($LASTEXITCODE -ne 0) { throw "UI probe compilation failed: $LASTEXITCODE" }
 Copy-Item -LiteralPath (Join-Path $workspace 'Kiritori\App.config') -Destination "$executable.config"
 $arguments = @((Resolve-Path -LiteralPath $AssemblyPath).Path)
 if ($Live) { $arguments += '--live' }
+if ($MonitorIndex -ge 0) { $arguments += "--monitor-index=$MonitorIndex" }
 Start-Process -FilePath $executable -ArgumentList $arguments -PassThru

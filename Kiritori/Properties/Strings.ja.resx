@@ -1131,4 +1131,34 @@
   <data name="Menu.LiveEffect.MosaicStrength.Weak" xml:space="preserve"><value>弱</value></data>
   <data name="Menu.LiveEffect.MosaicStrength.Medium" xml:space="preserve"><value>中</value></data>
   <data name="Menu.LiveEffect.MosaicStrength.Strong" xml:space="preserve"><value>強</value></data>
+  <data name="Annotation.Title" xml:space="preserve"><value>注釈</value></data>
+  <data name="Annotation.Move" xml:space="preserve"><value>移動 (M)</value></data>
+  <data name="Annotation.Rectangle" xml:space="preserve"><value>四角 (R)</value></data>
+  <data name="Annotation.Arrow" xml:space="preserve"><value>矢印 (A)</value></data>
+  <data name="Annotation.Style" xml:space="preserve"><value>形状</value></data>
+  <data name="Annotation.Color" xml:space="preserve"><value>色</value></data>
+  <data name="Annotation.Width" xml:space="preserve"><value>線幅</value></data>
+  <data name="Annotation.WidthHint" xml:space="preserve"><value>画像上の線の太さ（2〜16 px）。選択した注釈、または次に描く注釈に適用します。</value></data>
+  <data name="Annotation.Undo" xml:space="preserve"><value>最後を取り消す (Ctrl+Z)</value></data>
+  <data name="Annotation.Clear" xml:space="preserve"><value>すべて消去</value></data>
+  <data name="Annotation.Done" xml:space="preserve"><value>完了 (Esc)</value></data>
+  <data name="Annotation.UndoHint" xml:space="preserve"><value>最後に追加した注釈を取り消します。</value></data>
+  <data name="Annotation.ClearHint" xml:space="preserve"><value>この画像の注釈をすべて消去します。</value></data>
+  <data name="Annotation.DoneHint" xml:space="preserve"><value>注釈を残して編集を終了します。F6 で画像とパレットを切り替えられます。</value></data>
+  <data name="Annotation.MoveHint" xml:space="preserve"><value>画像の背景をドラッグしてウィンドウを移動します。</value></data>
+  <data name="Annotation.RectangleHint" xml:space="preserve"><value>四角を描きます。既存の注釈はドラッグで移動・サイズ変更できます。</value></data>
+  <data name="Annotation.ArrowHint" xml:space="preserve"><value>矢印を描きます。端点のドラッグで向きや長さを調整できます。</value></data>
+  <data name="Annotation.SelectedHint" xml:space="preserve"><value>選択中の注釈 · 色・形状・線幅を変更できます</value></data>
+  <data name="Annotation.DrawHint" xml:space="preserve"><value>ドラッグで描画 · 注釈をクリックして編集</value></data>
+  <data name="Annotation.Status" xml:space="preserve"><value>注釈 {0} 件  ·  {1}</value></data>
+  <data name="Annotation.Color.Orange" xml:space="preserve"><value>橙</value></data>
+  <data name="Annotation.Color.Blue" xml:space="preserve"><value>青</value></data>
+  <data name="Annotation.Color.Green" xml:space="preserve"><value>緑</value></data>
+  <data name="Annotation.Color.Pink" xml:space="preserve"><value>桃</value></data>
+  <data name="Annotation.Style.Filled" xml:space="preserve"><value>半透明の塗り</value></data>
+  <data name="Annotation.Style.Outline" xml:space="preserve"><value>枠線のみ</value></data>
+  <data name="Annotation.Style.Single" xml:space="preserve"><value>片方向の矢印</value></data>
+  <data name="Annotation.Style.Double" xml:space="preserve"><value>両方向の矢印</value></data>
+  <data name="Annotation.Style.Line" xml:space="preserve"><value>直線</value></data>
+  <data name="Annotation.Style.Tapered" xml:space="preserve"><value>先細りの矢印</value></data>
 </root>
