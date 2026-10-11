@@ -14,22 +14,41 @@ namespace Kiritori
                 displayRect = Rectangle.Empty;
                 if (pictureBox == null || source == null) return false;
 
+                var image = pictureBox.Image;
+                if (image == null || image.Width <= 0 || image.Height <= 0) return false;
                 var client = pictureBox.ClientRectangle;
                 if (client.Width <= 0 || client.Height <= 0) return false;
 
-                if (pictureBox.SizeMode == PictureBoxSizeMode.StretchImage)
+                // Match PictureBox's actual image rectangle. After a resize commit,
+                // Image is a resampled viewport bitmap in Normal mode; its dimensions
+                // intentionally differ from the original annotation coordinate space.
+                var padding = pictureBox.Padding;
+                displayRect = new Rectangle(client.Left + padding.Left, client.Top + padding.Top,
+                    client.Width - padding.Horizontal, client.Height - padding.Vertical);
+                switch (pictureBox.SizeMode)
                 {
-                    displayRect = client;
-                    return true;
+                    case PictureBoxSizeMode.Normal:
+                    case PictureBoxSizeMode.AutoSize:
+                        displayRect.Size = image.Size;
+                        break;
+                    case PictureBoxSizeMode.CenterImage:
+                        displayRect.X += (displayRect.Width - image.Width) / 2;
+                        displayRect.Y += (displayRect.Height - image.Height) / 2;
+                        displayRect.Size = image.Size;
+                        break;
+                    case PictureBoxSizeMode.Zoom:
+                        // WinForms Zoom uses the full client rectangle and truncates
+                        // the scaled dimensions, rather than rounding to nearest.
+                        float scale = Math.Min((float)client.Width / image.Width, (float)client.Height / image.Height);
+                        displayRect.Width = (int)(image.Width * scale);
+                        displayRect.Height = (int)(image.Height * scale);
+                        displayRect.X = (client.Width - displayRect.Width) / 2;
+                        displayRect.Y = (client.Height - displayRect.Height) / 2;
+                        break;
+                    case PictureBoxSizeMode.StretchImage:
+                        break;
                 }
-
-                float scale = Math.Min((float)client.Width / source.Width, (float)client.Height / source.Height);
-                int width = Math.Max(1, (int)Math.Round(source.Width * scale));
-                int height = Math.Max(1, (int)Math.Round(source.Height * scale));
-                int x = client.X + (client.Width - width) / 2;
-                int y = client.Y + (client.Height - height) / 2;
-                displayRect = new Rectangle(x, y, width, height);
-                return true;
+                return displayRect.Width > 0 && displayRect.Height > 0;
             }
 
             public static bool TryClientToImagePoint(Rectangle displayRect, Size sourceSize, Point clientPoint, out Point imagePoint)
