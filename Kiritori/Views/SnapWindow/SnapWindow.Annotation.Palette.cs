@@ -460,7 +460,14 @@ namespace Kiritori
                         graphics.DrawRectangle(pen, 2, 3, 14, 12);
                         break;
                     case "Undo":
-                        graphics.DrawArc(pen, 4, 5, 12, 11, 205, 245);
+                        // Keep the curve and arrowhead joined at the same point.
+                        // Separate arc angles left a visible gap at small icon sizes.
+                        using (var undoPath = new GraphicsPath())
+                        {
+                            undoPath.AddBezier(3, 7, 7, 2, 16, 4, 16, 10);
+                            undoPath.AddBezier(16, 10, 16, 13, 13, 15, 10, 15);
+                            graphics.DrawPath(pen, undoPath);
+                        }
                         graphics.DrawLines(pen, new[] { new Point(3, 2), new Point(3, 7), new Point(8, 7) });
                         break;
                     case "Clear":
