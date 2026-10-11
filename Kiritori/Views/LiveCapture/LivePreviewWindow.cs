@@ -1829,12 +1829,15 @@ namespace Kiritori.Views.LiveCapture
                 }
             }
 
+            // Once published, the capture callback can replace and dispose this bitmap.
+            // Keep diagnostic metadata before transferring ownership to _latest.
+            var firstFrameSize = bmp.Size;
             Bitmap old;
             lock (_frameSync)
             {
                 old = _latest;
                 _latest = bmp;
-                _lastFrameSize = bmp.Size;
+                _lastFrameSize = firstFrameSize;
             }
             if (old != null) old.Dispose();
 
@@ -1842,7 +1845,7 @@ namespace Kiritori.Views.LiveCapture
             // _firstFrameShown = true;
             _firstFrameReady = true;
             RevealIfReady();
-            Log.Debug($"FirstCapture: logical={RectStr(rLogical)} physical={RectStr(rPhysical)} bmp={bmp.Width}x{bmp.Height}", "LivePreview");
+            Log.Debug($"FirstCapture: logical={RectStr(rLogical)} physical={RectStr(rPhysical)} bmp={firstFrameSize.Width}x{firstFrameSize.Height}", "LivePreview");
         }
 
         // private void RealignToKiritori()
