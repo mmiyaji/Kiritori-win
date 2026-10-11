@@ -1176,6 +1176,12 @@
   <data name="Annotation.Mosaic" xml:space="preserve"><value>Pixelate area</value></data>
   <data name="Annotation.MosaicHint" xml:space="preserve"><value>Drag to pixelate part of the image.</value></data>
   <data name="Annotation.FontSize" xml:space="preserve"><value>Text size</value></data>
+  <data name="Annotation.FontFamily" xml:space="preserve"><value>Font</value></data>
+  <data name="Annotation.TextEditor.OutlineColor" xml:space="preserve"><value>Outline</value></data>
+  <data name="Annotation.TextEditor.OutlineBlack" xml:space="preserve"><value>Black</value></data>
+  <data name="Annotation.TextEditor.OutlineWhite" xml:space="preserve"><value>White</value></data>
+  <data name="Annotation.Style.TextOutlineBlack" xml:space="preserve"><value>Black outline</value></data>
+  <data name="Annotation.Style.TextOutlineWhite" xml:space="preserve"><value>White outline</value></data>
   <data name="Annotation.Style.TextOutline" xml:space="preserve"><value>Outlined text</value></data>
   <data name="Annotation.Style.TextBackground" xml:space="preserve"><value>Text with background</value></data>
   <data name="Annotation.Style.EditText" xml:space="preserve"><value>Edit text…</value></data>

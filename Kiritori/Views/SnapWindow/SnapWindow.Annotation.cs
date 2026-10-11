@@ -338,6 +338,8 @@ namespace Kiritori
             else if (shape.Kind == AnnotationShapeKind.Text)
             {
                 _annotationFontSize = shape.FontSize;
+                _annotationFontFamily = string.IsNullOrWhiteSpace(shape.FontFamily) ? "Segoe UI" : shape.FontFamily;
+                _annotationTextOutlineColor = shape.TextOutlineColor.IsEmpty ? Color.Black : shape.TextOutlineColor;
                 _annotationTextBackground = shape.TextBackground;
             }
             else if (shape.Kind == AnnotationShapeKind.Step)
@@ -968,6 +970,8 @@ namespace Kiritori
                 RectangleStyle = _annotationRectangleStyle,
                 StrokeWidth = _annotationStrokeWidth,
                 FontSize = _annotationFontSize,
+                FontFamily = _annotationFontFamily,
+                TextOutlineColor = _annotationTextOutlineColor,
                 TextBackground = _annotationTextBackground,
                 MosaicBlockSize = _annotationMosaicBlockSize
             };

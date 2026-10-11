@@ -17,6 +17,8 @@ namespace Kiritori
             public AnnotationRectangleStyle RectangleStyle;
             public string Text;
             public int FontSize;
+            public string FontFamily;
+            public Color TextOutlineColor;
             public bool TextBackground;
             public Size TextNaturalSize;
             public int StepNumber;

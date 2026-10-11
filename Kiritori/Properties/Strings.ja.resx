@@ -1170,6 +1170,12 @@
   <data name="Annotation.Mosaic" xml:space="preserve"><value>部分モザイク</value></data>
   <data name="Annotation.MosaicHint" xml:space="preserve"><value>ドラッグした範囲にモザイクをかけます。</value></data>
   <data name="Annotation.FontSize" xml:space="preserve"><value>文字サイズ</value></data>
+  <data name="Annotation.FontFamily" xml:space="preserve"><value>フォント</value></data>
+  <data name="Annotation.TextEditor.OutlineColor" xml:space="preserve"><value>縁取り</value></data>
+  <data name="Annotation.TextEditor.OutlineBlack" xml:space="preserve"><value>黒</value></data>
+  <data name="Annotation.TextEditor.OutlineWhite" xml:space="preserve"><value>白</value></data>
+  <data name="Annotation.Style.TextOutlineBlack" xml:space="preserve"><value>黒い縁取り</value></data>
+  <data name="Annotation.Style.TextOutlineWhite" xml:space="preserve"><value>白い縁取り</value></data>
   <data name="Annotation.Style.TextOutline" xml:space="preserve"><value>縁取り文字</value></data>
   <data name="Annotation.Style.TextBackground" xml:space="preserve"><value>背景付き文字</value></data>
   <data name="Annotation.Style.EditText" xml:space="preserve"><value>文字を編集…</value></data>

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Drawing.Text;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -12,6 +13,8 @@ namespace Kiritori
     public partial class SnapWindow
     {
         private int _annotationFontSize = 18;
+        private string _annotationFontFamily = "Segoe UI";
+        private Color _annotationTextOutlineColor = Color.Black;
         private bool _annotationTextBackground;
         private int _annotationMosaicBlockSize = 16;
 
@@ -41,16 +44,22 @@ namespace Kiritori
             {
                 var text = string.Empty;
                 var fontSize = _annotationFontSize;
+                var fontFamily = _annotationFontFamily;
+                var outlineColor = _annotationTextOutlineColor;
                 var background = _annotationTextBackground;
-                if (!ShowAnnotationTextEditor(ref text, ref fontSize, ref background)) return true;
+                if (!ShowAnnotationTextEditor(ref text, ref fontSize, ref fontFamily, ref outlineColor, ref background)) return true;
 
                 var shape = CreateSpecialAnnotationShape(AnnotationShapeKind.Text, imagePoint);
                 shape.Text = text;
                 shape.FontSize = fontSize;
+                shape.FontFamily = fontFamily;
+                shape.TextOutlineColor = outlineColor;
                 shape.TextBackground = background;
                 UpdateTextShapeBounds(shape);
                 BeginAnnotationHistoryChange();
                 _annotationFontSize = fontSize;
+                _annotationFontFamily = fontFamily;
+                _annotationTextOutlineColor = outlineColor;
                 _annotationTextBackground = background;
                 _annotations.Add(shape);
                 _selectedAnnotationIndex = _annotations.Count - 1;
@@ -90,6 +99,8 @@ namespace Kiritori
                 FillColor = _annotationFillColor,
                 StrokeWidth = _annotationStrokeWidth,
                 FontSize = _annotationFontSize,
+                FontFamily = _annotationFontFamily,
+                TextOutlineColor = _annotationTextOutlineColor,
                 TextBackground = _annotationTextBackground,
                 MosaicBlockSize = _annotationMosaicBlockSize
             };
@@ -151,6 +162,18 @@ namespace Kiritori
             RefreshAnnotationUi();
         }
 
+        private void SetAnnotationTextOutlineColor(Color value)
+        {
+            if (value != Color.Black && value != Color.White) return;
+            BeginAnnotationHistoryChange();
+            var selected = GetSelectedAnnotation();
+            if (selected != null && selected.Kind == AnnotationShapeKind.Text)
+                selected.TextOutlineColor = value;
+            _annotationTextOutlineColor = value;
+            CommitAnnotationHistoryChange();
+            RefreshAnnotationUi();
+        }
+
         private void SetAnnotationMosaicBlockSize(int value)
         {
             value = Math.Max(4, Math.Min(32, value));
@@ -169,26 +192,36 @@ namespace Kiritori
             if (selected == null || selected.Kind != AnnotationShapeKind.Text) return;
             var text = selected.Text ?? string.Empty;
             var fontSize = selected.FontSize > 0 ? selected.FontSize : _annotationFontSize;
+            var fontFamily = string.IsNullOrWhiteSpace(selected.FontFamily) ? _annotationFontFamily : selected.FontFamily;
+            var outlineColor = selected.TextOutlineColor.IsEmpty ? Color.Black : selected.TextOutlineColor;
             var background = selected.TextBackground;
-            if (!ShowAnnotationTextEditor(ref text, ref fontSize, ref background)) return;
+            if (!ShowAnnotationTextEditor(ref text, ref fontSize, ref fontFamily, ref outlineColor, ref background)) return;
             BeginAnnotationHistoryChange();
             selected.Text = text;
             selected.FontSize = fontSize;
+            selected.FontFamily = fontFamily;
+            selected.TextOutlineColor = outlineColor;
             selected.TextBackground = background;
             _annotationFontSize = fontSize;
+            _annotationFontFamily = fontFamily;
+            _annotationTextOutlineColor = outlineColor;
             _annotationTextBackground = background;
             UpdateTextShapeBounds(selected);
             CommitAnnotationHistoryChange();
             RefreshAnnotationUi();
         }
 
-        private bool ShowAnnotationTextEditor(ref string text, ref int fontSize, ref bool background)
+        private bool ShowAnnotationTextEditor(ref string text, ref int fontSize, ref string fontFamily, ref Color outlineColor, ref bool background)
         {
             using (var form = new Form())
             using (var editor = new TextBox())
             using (var sizeLabel = new Label())
             using (var sizeInput = new NumericUpDown())
             using (var backgroundInput = new CheckBox())
+            using (var fontLabel = new Label())
+            using (var fontInput = new ComboBox())
+            using (var outlineLabel = new Label())
+            using (var outlineInput = new ComboBox())
             using (var ok = new Button())
             using (var cancel = new Button())
             {
@@ -200,37 +233,56 @@ namespace Kiritori
                 form.MinimizeBox = false;
                 form.MaximizeBox = false;
                 form.ShowInTaskbar = false;
-                form.ClientSize = new Size(360, 215);
+                form.ClientSize = new Size(440, 250);
                 editor.Multiline = true;
                 editor.AcceptsReturn = true;
                 editor.ScrollBars = ScrollBars.Vertical;
                 editor.AccessibleName = SR.T("Annotation.TextEditor.Title");
-                editor.SetBounds(12, 12, 336, 130);
+                editor.SetBounds(12, 12, 416, 110);
                 editor.Text = text;
+                fontLabel.Text = SR.T("Annotation.FontFamily");
+                fontLabel.TextAlign = ContentAlignment.MiddleLeft;
+                fontLabel.SetBounds(12, 130, 90, 26);
+                fontInput.DropDownStyle = ComboBoxStyle.DropDownList;
+                fontInput.AccessibleName = fontLabel.Text;
+                fontInput.SetBounds(105, 130, 220, 26);
+                PopulateAnnotationFontFamilies(fontInput, fontFamily);
+                outlineLabel.Text = SR.T("Annotation.TextEditor.OutlineColor");
+                outlineLabel.TextAlign = ContentAlignment.MiddleLeft;
+                outlineLabel.SetBounds(12, 163, 90, 26);
+                outlineInput.DropDownStyle = ComboBoxStyle.DropDownList;
+                outlineInput.AccessibleName = outlineLabel.Text;
+                outlineInput.Items.Add(SR.T("Annotation.TextEditor.OutlineBlack"));
+                outlineInput.Items.Add(SR.T("Annotation.TextEditor.OutlineWhite"));
+                outlineInput.SelectedIndex = outlineColor == Color.White ? 1 : 0;
+                outlineInput.SetBounds(105, 163, 140, 26);
                 sizeLabel.Text = SR.T("Annotation.FontSize");
                 sizeLabel.AutoSize = false;
                 sizeLabel.TextAlign = ContentAlignment.MiddleLeft;
-                sizeLabel.SetBounds(12, 152, 90, 25);
+                sizeLabel.SetBounds(265, 163, 65, 26);
                 sizeInput.Minimum = 12;
                 sizeInput.Maximum = 72;
                 sizeInput.Value = Math.Max(12, Math.Min(72, fontSize));
                 sizeInput.AccessibleName = sizeLabel.Text;
-                sizeInput.SetBounds(105, 152, 64, 25);
+                sizeInput.SetBounds(332, 163, 64, 26);
                 backgroundInput.Text = SR.T("Annotation.TextEditor.Background");
                 backgroundInput.Checked = background;
-                backgroundInput.SetBounds(180, 152, 168, 25);
+                backgroundInput.AccessibleName = backgroundInput.Text;
+                backgroundInput.SetBounds(12, 196, 260, 26);
                 ok.Text = SR.T("Annotation.TextEditor.Ok");
                 ok.DialogResult = DialogResult.OK;
-                ok.SetBounds(192, 182, 75, 25);
+                ok.SetBounds(272, 215, 75, 25);
                 cancel.Text = SR.T("Annotation.TextEditor.Cancel");
                 cancel.DialogResult = DialogResult.Cancel;
-                cancel.SetBounds(273, 182, 75, 25);
-                form.Controls.AddRange(new Control[] { editor, sizeLabel, sizeInput, backgroundInput, ok, cancel });
+                cancel.SetBounds(353, 215, 75, 25);
+                form.Controls.AddRange(new Control[] { editor, fontLabel, fontInput, outlineLabel, outlineInput, sizeLabel, sizeInput, backgroundInput, ok, cancel });
                 form.AcceptButton = ok;
                 form.CancelButton = cancel;
                 if (form.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(editor.Text)) return false;
                 text = editor.Text.TrimEnd();
                 fontSize = (int)sizeInput.Value;
+                fontFamily = fontInput.SelectedItem as string ?? "Segoe UI";
+                outlineColor = outlineInput.SelectedIndex == 1 ? Color.White : Color.Black;
                 background = backgroundInput.Checked;
                 return true;
             }
@@ -238,16 +290,54 @@ namespace Kiritori
 
         private static void UpdateTextShapeBounds(AnnotationShape shape)
         {
-            shape.TextNaturalSize = MeasureTextAnnotationSize(shape.Text, shape.FontSize);
+            shape.TextNaturalSize = MeasureTextAnnotationSize(shape.Text, shape.FontSize, shape.FontFamily);
             shape.End = new Point(shape.Start.X + shape.TextNaturalSize.Width,
                 shape.Start.Y + shape.TextNaturalSize.Height);
         }
 
-        private static Size MeasureTextAnnotationSize(string text, int fontSize)
+        private static void PopulateAnnotationFontFamilies(ComboBox combo, string selectedFamily)
+        {
+            var names = new List<string>();
+            using (var fonts = new InstalledFontCollection())
+            {
+                foreach (var family in fonts.Families)
+                {
+                    try { names.Add(family.Name); }
+                    finally { family.Dispose(); }
+                }
+            }
+            names.Sort(StringComparer.CurrentCultureIgnoreCase);
+            foreach (var name in names) combo.Items.Add(name);
+            var selected = -1;
+            for (var i = 0; i < combo.Items.Count; i++)
+                if (string.Equals((string)combo.Items[i], selectedFamily, StringComparison.OrdinalIgnoreCase)) { selected = i; break; }
+            if (selected < 0)
+            {
+                combo.Items.Add("Segoe UI");
+                selected = combo.Items.Count - 1;
+            }
+            combo.SelectedIndex = selected;
+        }
+
+        private static Font CreateAnnotationFont(string familyName, float size)
+        {
+            try
+            {
+                using (var family = new FontFamily(string.IsNullOrWhiteSpace(familyName) ? "Segoe UI" : familyName))
+                {
+                    if (family.IsStyleAvailable(FontStyle.Regular))
+                        return new Font(family, Math.Max(1f, size), FontStyle.Regular, GraphicsUnit.Pixel);
+                }
+            }
+            catch (ArgumentException) { }
+            return new Font(FontFamily.GenericSansSerif, Math.Max(1f, size), FontStyle.Regular, GraphicsUnit.Pixel);
+        }
+
+        private static Size MeasureTextAnnotationSize(string text, int fontSize, string fontFamily)
         {
             using (var bitmap = new Bitmap(1, 1))
             using (var g = Graphics.FromImage(bitmap))
-            using (var font = new Font("Segoe UI", Math.Max(12, fontSize), FontStyle.Regular, GraphicsUnit.Pixel))
+            using (var font = CreateAnnotationFont(fontFamily, Math.Max(12, fontSize)))
             {
                 var size = g.MeasureString(text ?? " ", font, int.MaxValue, StringFormat.GenericTypographic);
                 return new Size(Math.Max(8, (int)Math.Ceiling(size.Width) + 8),
@@ -262,7 +352,7 @@ namespace Kiritori
             var heightScale = newBounds.Height / (float)Math.Max(1, originBounds.Height);
             shape.FontSize = Math.Max(12, Math.Min(72,
                 (int)Math.Round(originFontSize * Math.Sqrt(Math.Max(0.01f, widthScale * heightScale)))));
-            shape.TextNaturalSize = MeasureTextAnnotationSize(shape.Text, shape.FontSize);
+            shape.TextNaturalSize = MeasureTextAnnotationSize(shape.Text, shape.FontSize, shape.FontFamily);
             shape.Start = newBounds.Location;
             shape.End = new Point(newBounds.Right, newBounds.Bottom);
             _annotationFontSize = shape.FontSize;
@@ -282,8 +372,8 @@ namespace Kiritori
             var rect = shape.Bounds;
             if (rect.Width < 1 || rect.Height < 1) return;
             var natural = shape.TextNaturalSize.IsEmpty
-                ? MeasureTextAnnotationSize(shape.Text, shape.FontSize) : shape.TextNaturalSize;
-            using (var font = new Font("Segoe UI", Math.Max(1f, shape.FontSize), FontStyle.Regular, GraphicsUnit.Pixel))
+                ? MeasureTextAnnotationSize(shape.Text, shape.FontSize, shape.FontFamily) : shape.TextNaturalSize;
+            using (var font = CreateAnnotationFont(shape.FontFamily, Math.Max(1f, shape.FontSize)))
             using (var path = new GraphicsPath())
             using (var fill = new SolidBrush(shape.StrokeColor))
             {
@@ -312,7 +402,7 @@ namespace Kiritori
                 }
                 else
                 {
-                    using (var outline = new Pen(Color.FromArgb(230, 20, 20, 20),
+                    using (var outline = new Pen(Color.FromArgb(230, shape.TextOutlineColor.IsEmpty ? Color.Black : shape.TextOutlineColor),
                         Math.Max(2f, shape.FontSize / 8f) * Math.Min(scaleX, scaleY)))
                     {
                         outline.LineJoin = LineJoin.Round;

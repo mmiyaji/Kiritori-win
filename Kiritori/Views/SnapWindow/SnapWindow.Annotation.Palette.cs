@@ -255,7 +255,10 @@ namespace Kiritori
             if (tool == AnnotationTool.Text)
             {
                 var background = selected == null ? _annotationTextBackground : selected.TextBackground;
+                var outlineColor = selected == null ? _annotationTextOutlineColor : selected.TextOutlineColor;
                 AddAnnotationStyleItem("TextOutline", !background, () => SetAnnotationTextBackground(false));
+                AddAnnotationStyleItem("TextOutlineBlack", outlineColor != Color.White, () => SetAnnotationTextOutlineColor(Color.Black));
+                AddAnnotationStyleItem("TextOutlineWhite", outlineColor == Color.White, () => SetAnnotationTextOutlineColor(Color.White));
                 AddAnnotationStyleItem("TextBackground", background, () => SetAnnotationTextBackground(true));
                 if (selected != null) AddAnnotationStyleItem("EditText", false, EditSelectedAnnotationText);
                 _annotationStyleMenu.Show(_annotationStyleButton, new Point(0, _annotationStyleButton.Height));

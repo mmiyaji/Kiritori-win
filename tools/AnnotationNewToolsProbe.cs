@@ -34,7 +34,9 @@ internal static class AnnotationNewToolsProbe
                     VerifyStepSequence();
                     VerifyMosaicExportAndHistory();
                     VerifyMultilineTextExportAndViewportScale();
-                    Console.WriteLine("PASS: step numbering, mosaic pixels/history, multiline text export/view scaling");
+                    VerifyTextFontOutlineAndHistory();
+                    VerifyTextEditorAndEditHistory();
+                    Console.WriteLine("PASS: step numbering, mosaic pixels/history, multiline text export/view scaling, text font/outline rendering/history, text editor acceptance");
                 }
                 catch (Exception error)
                 {
@@ -196,6 +198,208 @@ internal static class AnnotationNewToolsProbe
                     Require((int)Get(shape, "FontSize") > 20, "Font-size control did not reflect text resize");
                 }
             }
+        }
+    }
+
+    private static void VerifyTextFontOutlineAndHistory()
+    {
+        using (var window = NewWindow(WhiteImage(240, 100)))
+        {
+            var shape = Call(window, "CreateSpecialAnnotationShape", Kind("Text"), new Point(12, 12));
+            Set(shape, "Text", "WIDE text");
+            Set(shape, "FontSize", 28);
+            Set(shape, "FontFamily", "Consolas");
+            Set(shape, "TextOutlineColor", Color.Black);
+            Set(shape, "StrokeColor", Color.Red);
+            _snapType.GetMethod("UpdateTextShapeBounds", Static).Invoke(null, new[] { shape });
+            Shapes(window).Add(shape);
+            Set(window, "_selectedAnnotationIndex", 0);
+            Set(window, "_annotationFontFamily", "Consolas");
+            Set(window, "_annotationTextOutlineColor", Color.Black);
+            using (var whiteSource = WhiteImage(240, 100))
+            using (var export = (Bitmap)Call(window, "CloneCurrentBitmapWithAnnotations", whiteSource))
+                Require(CountDarkPixels(export, (Rectangle)_shapeType.GetProperty("Bounds", Instance).GetValue(shape, null)) > 8,
+                    "Black text outline was not rendered");
+
+            Call(window, "SetAnnotationTextOutlineColor", Color.White);
+            Require((Color)Get(shape, "TextOutlineColor") == Color.White, "Outline color did not apply to selected text");
+            Call(window, "UndoLastAnnotation");
+            shape = Shapes(window)[0];
+            Require((Color)Get(shape, "TextOutlineColor") == Color.Black && (Color)Get(window, "_annotationTextOutlineColor") == Color.Black,
+                "Undo did not restore text outline shape and default");
+            Call(window, "RedoAnnotation");
+            shape = Shapes(window)[0];
+            Require((Color)Get(shape, "TextOutlineColor") == Color.White && (Color)Get(window, "_annotationTextOutlineColor") == Color.White,
+                "Redo did not restore text outline shape and default");
+
+            var sizeMethod = _snapType.GetMethod("MeasureTextAnnotationSize", Static);
+            var chosenSize = (Size)sizeMethod.Invoke(null, new object[] { "WWWWWWWW", 28, "Consolas" });
+            var defaultSize = (Size)sizeMethod.Invoke(null, new object[] { "WWWWWWWW", 28, "Segoe UI" });
+            var fallbackSize = (Size)sizeMethod.Invoke(null, new object[] { "WWWWWWWW", 28, "A font family that is not installed" });
+            Require(chosenSize.Width > 8 && fallbackSize.Width > 8, "Selected font or unavailable-font fallback could not be measured");
+            Require(chosenSize.Width != defaultSize.Width, "Selected font did not affect text measurement");
+            Require((string)Get(shape, "FontFamily") == "Consolas", "Selected font family was not retained by text annotation");
+            using (var darkSource = new Bitmap(240, 100))
+            {
+                using (var g = Graphics.FromImage(darkSource)) g.Clear(Color.DimGray);
+                using (var export = (Bitmap)Call(window, "CloneCurrentBitmapWithAnnotations", darkSource))
+                    Require(CountBrightPixels(export, (Rectangle)_shapeType.GetProperty("Bounds", Instance).GetValue(shape, null)) > 8,
+                        "White text outline was not rendered");
+            }
+        }
+    }
+
+    private static int CountDarkPixels(Bitmap image, Rectangle bounds)
+    {
+        bounds = Rectangle.Intersect(bounds, new Rectangle(Point.Empty, image.Size));
+        var count = 0;
+        for (var y = bounds.Top; y < bounds.Bottom; y++)
+        for (var x = bounds.Left; x < bounds.Right; x++)
+        {
+            var pixel = image.GetPixel(x, y);
+            if (pixel.R < 80 && pixel.G < 80 && pixel.B < 80) count++;
+        }
+        return count;
+    }
+
+    private static int CountBrightPixels(Bitmap image, Rectangle bounds)
+    {
+        bounds = Rectangle.Intersect(bounds, new Rectangle(Point.Empty, image.Size));
+        var count = 0;
+        for (var y = bounds.Top; y < bounds.Bottom; y++)
+        for (var x = bounds.Left; x < bounds.Right; x++)
+        {
+            var pixel = image.GetPixel(x, y);
+            if (pixel.R > 220 && pixel.G > 220 && pixel.B > 220) count++;
+        }
+        return count;
+    }
+
+    private static void VerifyTextEditorAndEditHistory()
+    {
+        using (var window = NewWindow(WhiteImage(240, 100)))
+        {
+            var args = InvokeTextEditorAndAccept(window, "Editor accepted", "Consolas", 30, Color.White, true);
+            Require((string)args[0] == "Editor accepted" && (int)args[1] == 30 &&
+                (string)args[2] == "Consolas" && (Color)args[3] == Color.White && (bool)args[4],
+                "Text editor did not return the selected text style values");
+
+            var shape = Call(window, "CreateSpecialAnnotationShape", Kind("Text"), new Point(20, 20));
+            Set(shape, "Text", "Before edit");
+            Set(shape, "FontSize", 16);
+            Set(shape, "FontFamily", "Segoe UI");
+            Set(shape, "TextOutlineColor", Color.Black);
+            Set(shape, "TextBackground", false);
+            _snapType.GetMethod("UpdateTextShapeBounds", Static).Invoke(null, new[] { shape });
+            Shapes(window).Clear();
+            Shapes(window).Add(shape);
+            Set(window, "_selectedAnnotationIndex", 0);
+            Set(window, "_annotationFontSize", 16);
+            Set(window, "_annotationFontFamily", "Segoe UI");
+            Set(window, "_annotationTextOutlineColor", Color.Black);
+            Set(window, "_annotationTextBackground", false);
+            ConfigureTextEditorAndRun(() => Call(window, "EditSelectedAnnotationText"), window,
+                "Edited annotation", "Consolas", 30, Color.White, true);
+            shape = Shapes(window)[0];
+            Require((string)Get(shape, "Text") == "Edited annotation" && (int)Get(shape, "FontSize") == 30 &&
+                (string)Get(shape, "FontFamily") == "Consolas" && (Color)Get(shape, "TextOutlineColor") == Color.White &&
+                (bool)Get(shape, "TextBackground"), "Editing text did not apply all selected style values");
+            Call(window, "UndoLastAnnotation");
+            shape = Shapes(window)[0];
+            Require((string)Get(shape, "Text") == "Before edit" && (int)Get(shape, "FontSize") == 16 &&
+                (string)Get(shape, "FontFamily") == "Segoe UI" && (Color)Get(shape, "TextOutlineColor") == Color.Black &&
+                !(bool)Get(shape, "TextBackground") && (string)Get(window, "_annotationFontFamily") == "Segoe UI" &&
+                (Color)Get(window, "_annotationTextOutlineColor") == Color.Black && !(bool)Get(window, "_annotationTextBackground"),
+                "Undo did not restore edited shape and text style defaults");
+            Call(window, "RedoAnnotation");
+            shape = Shapes(window)[0];
+            Require((string)Get(shape, "FontFamily") == "Consolas" && (Color)Get(shape, "TextOutlineColor") == Color.White &&
+                (bool)Get(shape, "TextBackground") && (string)Get(window, "_annotationFontFamily") == "Consolas" &&
+                (Color)Get(window, "_annotationTextOutlineColor") == Color.White && (bool)Get(window, "_annotationTextBackground"),
+                "Redo did not restore edited shape and text style defaults");
+        }
+    }
+
+    private static object[] InvokeTextEditorAndAccept(Form owner, string text, string fontName, int fontSize, Color outline, bool background)
+    {
+        var args = new object[] { "Seed", 18, "Segoe UI", Color.Black, false };
+        ConfigureTextEditorAndRun(() => _snapType.GetMethod("ShowAnnotationTextEditor", Instance).Invoke(owner, args),
+            owner, text, fontName, fontSize, outline, background);
+        return args;
+    }
+
+    private static void ConfigureTextEditorAndRun(Action openEditor, Form owner, string text, string fontName,
+        int fontSize, Color outline, bool background)
+    {
+        Exception failure = null;
+        var ticks = 0;
+        using (var timer = new Timer { Interval = 30 })
+        {
+            timer.Tick += (sender, e) =>
+            {
+                ticks++;
+                Form dialog = null;
+                foreach (Form form in Application.OpenForms)
+                {
+                    var comboCount = 0;
+                    foreach (Control control in form.Controls)
+                        if (control is ComboBox) comboCount++;
+                    if (comboCount == 2 || (ticks >= 150 && !ReferenceEquals(form, owner) && form.FormBorderStyle == FormBorderStyle.FixedDialog))
+                    { dialog = form; break; }
+                }
+                if (dialog == null && ticks < 150) return;
+                timer.Stop();
+                if (dialog == null)
+                {
+                    dialog = Form.ActiveForm;
+                    if (dialog == null || ReferenceEquals(dialog, owner))
+                    {
+                        failure = new InvalidOperationException("Text editor dialog did not open for the probe");
+                        return;
+                    }
+                }
+                try
+                {
+                    TextBox editor = null;
+                    ComboBox font = null, outlineChoice = null;
+                    NumericUpDown size = null;
+                    CheckBox withBackground = null;
+                    Button ok = null;
+                    foreach (Control control in dialog.Controls)
+                    {
+                        if (control is TextBox) editor = (TextBox)control;
+                        else if (control is ComboBox)
+                        {
+                            var combo = (ComboBox)control;
+                            if (combo.Items.Count > 2) font = combo;
+                            else outlineChoice = combo;
+                        }
+                        else if (control is NumericUpDown) size = (NumericUpDown)control;
+                        else if (control is CheckBox) withBackground = (CheckBox)control;
+                        else if (control is Button && ((Button)control).DialogResult == DialogResult.OK) ok = (Button)control;
+                    }
+                    var fontIndex = -1;
+                    if (font != null)
+                        for (var i = 0; i < font.Items.Count; i++)
+                            if (string.Equals(font.Items[i] as string, fontName, StringComparison.OrdinalIgnoreCase)) { fontIndex = i; break; }
+                    if (editor == null || fontIndex < 0 || outlineChoice == null || size == null || withBackground == null || ok == null)
+                        throw new InvalidOperationException("Text editor controls were incomplete or the requested font was unavailable");
+                    editor.Text = text;
+                    font.SelectedIndex = fontIndex;
+                    outlineChoice.SelectedIndex = outline == Color.White ? 1 : 0;
+                    size.Value = fontSize;
+                    withBackground.Checked = background;
+                    ok.PerformClick();
+                }
+                catch (Exception error)
+                {
+                    failure = error;
+                    dialog.DialogResult = DialogResult.Cancel;
+                }
+            };
+            timer.Start();
+            openEditor();
+            if (failure != null) throw new InvalidOperationException("Could not drive text editor probe", failure);
         }
     }
 

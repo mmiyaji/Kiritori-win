@@ -27,6 +27,8 @@ namespace Kiritori
             internal readonly AnnotationArrowStyle ArrowStyle;
             internal readonly AnnotationRectangleStyle RectangleStyle;
             internal readonly int FontSize;
+            internal readonly string FontFamily;
+            internal readonly Color TextOutlineColor;
             internal readonly bool TextBackground;
             internal readonly int MosaicBlockSize;
 
@@ -41,6 +43,8 @@ namespace Kiritori
                 ArrowStyle = window._annotationArrowStyle;
                 RectangleStyle = window._annotationRectangleStyle;
                 FontSize = window._annotationFontSize;
+                FontFamily = window._annotationFontFamily;
+                TextOutlineColor = window._annotationTextOutlineColor;
                 TextBackground = window._annotationTextBackground;
                 MosaicBlockSize = window._annotationMosaicBlockSize;
             }
@@ -96,7 +100,8 @@ namespace Kiritori
             return includeDefaults && (before.StrokeWidth != _annotationStrokeWidth ||
                 before.StrokeColor != _annotationStrokeColor || before.FillColor != _annotationFillColor ||
                 before.ArrowStyle != _annotationArrowStyle || before.RectangleStyle != _annotationRectangleStyle ||
-                before.FontSize != _annotationFontSize || before.TextBackground != _annotationTextBackground ||
+                before.FontSize != _annotationFontSize || before.FontFamily != _annotationFontFamily ||
+                before.TextOutlineColor != _annotationTextOutlineColor || before.TextBackground != _annotationTextBackground ||
                 before.MosaicBlockSize != _annotationMosaicBlockSize);
         }
 
@@ -113,6 +118,8 @@ namespace Kiritori
             _annotationArrowStyle = snapshot.ArrowStyle;
             _annotationRectangleStyle = snapshot.RectangleStyle;
             _annotationFontSize = snapshot.FontSize;
+            _annotationFontFamily = snapshot.FontFamily;
+            _annotationTextOutlineColor = snapshot.TextOutlineColor;
             _annotationTextBackground = snapshot.TextBackground;
             _annotationMosaicBlockSize = snapshot.MosaicBlockSize;
             RefreshAnnotationUi();
