@@ -1,51 +1,41 @@
-# Kiritori v1.7.2 リリースノート
+# Kiritori v1.8.0 Release Notes / リリースノート
 
-リリース日: 2026-07-11
+Release date / リリース日: 2026-10-12
 
-v1.7.2 は、ライブキャプチャの性能と安定性を中心に改善したリリースです。Windows Graphics Capture と Direct3D 11 を使う GPU キャプチャバックエンドを追加し、従来の GDI バックエンドも互換モードとして維持しています。
+## 日本語
 
-## ハイライト
+v1.8.0 では、キャプチャ画像への注釈と画像加工を追加しました。
 
-- ライブキャプチャに `Auto`、`GPU (Windows Graphics Capture)`、`GDI compatibility mode` を追加しました。
-- `Auto` は GPU を優先し、未対応環境、複数モニターにまたがる範囲、初期化失敗、実行時エラーでは GDI に自動フォールバックします。
-- GPU 側で対象範囲を切り出してから必要な領域だけを CPU に読み戻すことで、転送量を抑えました。
-- フレーム処理の割り当て、再描画、ハッシュ計算、アイドル時の更新を見直しました。
-- 設定画面とライブプレビューのコンテキストメニューからバックエンドを切り替えられます。
+### 新機能
 
-## ベンチマーク
+- `Ctrl`+`E` または右クリックメニューの 編集 → 注釈を編集 から、矩形、矢印、テキスト、番号付きマーカー、部分モザイクを追加できます。色、線のスタイル、幅、文字サイズとフォントを調整でき、操作の取り消し・やり直しにも対応しました。
+- 編集 → 画像効果 から、キャプチャ画像全体にモザイク、セピア、グレースケールを適用できます。モザイクは3段階で調整でき、元画像を保ったまま表示を切り替えられます。
+- ライブキャプチャにも、加工なし、モザイク、セピア、グレースケールを適用できます。モザイクは3段階で調整でき、選択中の効果は録画にも反映されます。
+- ライブプレビューのタイトルバーを初期状態で非表示にし、設定を次回起動にも引き継ぐようにしました。
+- GIF 録画のメモリ使用量に上限を設け、録画処理の競合とウィンドウ終了時のリソース解放を改善しました。
+- 注釈ツールバー、SVG アイコン、注釈色の選択とカスタムカラーを追加しました。
 
-同一のアニメーション領域をキャプチャする `LiveCaptureBackendBenchmark` の中央値です。値は実行環境や対象領域によって変動します。
+### 修正
 
-| 目標 FPS | GDI | GPU | GDI CPU | GPU CPU |
-|---:|---:|---:|---:|---:|
-| 15 | 12.97 FPS | 14.78 FPS | 0.58% | 0.35% |
-| 30 | 21.55 FPS | 27.18 FPS | 0.68% | 0.62% |
+- 画像の拡大縮小時に注釈の位置と範囲がずれる問題を修正しました。
+- 注釈ツールやウィンドウのフォーカスを切り替えたときにカスタム色を保持するようにしました。
+- ライブキャプチャ画像を通常のキャプチャウィンドウへ引き継ぐ際の初期フレーム処理を修正しました。
 
-15 FPS 設定では GPU の実測 FPS が約 14%向上し、プロセス CPU 使用率が約 40%低下しました。30 FPS 設定では実測 FPS が約 26%向上しました。
+## English
 
-## 修正と安定性
+Version 1.8.0 adds annotations and image effects for captured images.
 
-- ライブプレビューのキャプチャ状態リセットとリソース解放を改善しました。
-- GIF 録画のメモリ使用量に上限を設けました。
-- OCR 画像の所有権を整理し、処理中の画像が早期に破棄される問題を修正しました。
-- スタートアップ登録と FFmpeg 検出の失敗時処理を修正しました。
-- 拡張機能の展開先を管理ルート内に制限し、パストラバーサルを防止しました。
-- 画像ファイルパスを通常ログへ記録しないようにしました。
-- 日本語サテライトアセンブリの出力先を修正しました。
+### New features
 
-## 開発・品質
+- Press `Ctrl`+`E` or choose Edit → Edit annotations to add rectangles, arrows, text, numbered markers, and pixelation. Customize colors, line styles, stroke width, font size, and font family; undo and redo are supported.
+- Choose Edit → Image effects to apply mosaic, sepia, or grayscale to a captured image. Mosaic has three strength levels, and the original image is preserved when switching effects.
+- Live capture also supports mosaic, sepia, and grayscale, with three mosaic strengths. The selected effect is included in recordings.
+- The live preview title bar is hidden by default, and the setting is preserved across launches.
+- Added a memory limit for GIF recording and improved recording concurrency and resource cleanup when windows close.
+- Added an annotation toolbar, SVG icons, color presets, and custom annotation colors.
 
-- ライブプレビューとキャプチャバックエンドの再現可能なベンチマークツールを追加しました。
-- xUnit テスト、カバレッジゲート、NuGet 脆弱性監査を CI に追加しました。
-- MSIX パッケージビルドでも Release テストを実行するようにしました。
+### Fixes
 
-## 既知の制約
-
-- GPU モードは、キャプチャ範囲が 1 台のモニター内に収まる場合に利用できます。
-- Windows Graphics Capture を利用できない環境では GDI が使用されます。
-- 現在の GPU バックエンドは、最終描画のために切り出したフレームを CPU の Bitmap へ読み戻します。
-
-## 動作環境
-
-- Windows 10 バージョン 1809 以降（x64）
-- .NET Framework 4.8
+- Fixed annotation alignment and bounds when a captured image is resized.
+- Preserved custom annotation colors when changing tools or window focus.
+- Fixed initial-frame handling when transferring a live capture into a regular capture window.

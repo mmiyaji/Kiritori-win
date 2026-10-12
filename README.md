@@ -5,7 +5,7 @@
 **Kiritori** は、デスクトップ上に切り出したスクリーンショットを“浮かせて”表示できる軽量ツールです。  
 矩形キャプチャ、拡大縮小、透過、最前面固定、ドロップシャドウ、ショートカット操作、MS Paint 連携などをサクッと使えます。
 
-> **EN**: Kiritori is a tiny screen capture tool for Windows that lets you capture any region and keep it floating on top. It supports zoom, opacity, drop shadow, always-on-top, rich hotkeys, and editing in MS Paint.
+> **EN**: Kiritori is a tiny screen capture tool for Windows that lets you capture any region and keep it floating on top. It supports zoom, opacity, drop shadow, always-on-top, rich hotkeys, annotations, and editing in MS Paint.
 
 
 - “Kiritori” is a simple screen capture tool.
@@ -20,6 +20,8 @@
 - **OCRキャプチャ**（既定: `Ctrl`+`Shift`+`4` → 画面上をドラッグで範囲選択してテキスト抽出）
 - **ライブキャプチャ**（既定: `Ctrl`+`Shift`+`6` → 画面上をドラッグで範囲選択してリアルタイムプレビュー。タイトルバーは初期状態で非表示で、右クリックメニューから切り替え可能。設定は次回起動にも引き継がれます）
 - **ライブ画像加工**（リアルタイム画面を右クリック →「画像加工」から加工なし／モザイク／セピア／グレースケールを選択。モザイクは弱・中・強の3段階で調整できます。画面全体に適用され、静止画保存・SnapWindow への取り込み・GIF／MP4 録画にも反映。一時停止中も切り替え可能。選択はウィンドウごとに保持され、新しい画面は加工なしで開始）
+- **キャプチャ画像の加工**（画像ウィンドウを右クリック → 編集 → 画像効果 から加工なし／モザイク／セピア／グレースケールを選択。モザイクは3段階。元画像を保ったまま表示を切り替え、保存やコピーには選択中の加工を反映）
+- **注釈**（画像ウィンドウで `Ctrl`+`E` または右クリック → 編集 → 注釈を編集。矩形・矢印・テキスト・番号付きマーカー・部分モザイクを追加し、色・線・文字サイズを調整。元画像を保って編集でき、元に戻す／やり直しにも対応）
 - **GPU キャプチャ**（Windows Graphics Capture を使用。`Auto` では利用できない環境や複数モニターにまたがる範囲を自動的に GDI へフォールバック）
 - **ズーム**（拡大縮小 / マウスドラッグによる自由サイズ調整 / Shiftを押しながら縦横比率固定サイジング）
 - **不透明度の切替**（100 / 90 / 80 / 50 / 30%）
@@ -54,7 +56,7 @@ MSIX の作成方法は [Package Build ワークフロー](.github/workflows/pac
 
 GPU モードは 1 台のモニター内に収まる範囲で使用できます。`Auto`（推奨）は GPU を優先し、未対応環境・初期化失敗・キャプチャエラー時には GDI 互換モードへ切り替えます。
 
-今回の変更内容は [v1.7.2 リリースノート](RELEASE_NOTES.md) を参照してください。
+今回の変更内容は [v1.8.0 リリースノート](RELEASE_NOTES.md) を参照してください。
 
 ---
 
@@ -63,6 +65,7 @@ GPU モードは 1 台のモニター内に収まる範囲で使用できます�
 | 操作 | キー |
 |---|---|
 | キャプチャ開始（範囲ドラッグ） | `Ctrl` + `Shift` + `5` |
+| 注釈の編集 | `Ctrl` + `E` |
 | ウィンドウを閉じる | `Esc` / `Ctrl` + `W` |
 | ウィンドウを最小化 | `Ctrl` + `H` |
 | 画像を保存 | `Ctrl` + `S` |
@@ -88,7 +91,7 @@ GPU モードは 1 台のモニター内に収まる範囲で使用できます�
 
 - **Capture** … 新規キャプチャを開始
 - **File** … `Save Image` / `Open Image` / `Print`
-- **Edit** … `Copy` / `Cut` / **Edit in Paint**
+- **Edit** … `Copy` / `Cut` / **Edit annotations** / **Image effects** / **Edit in Paint**
 - **View** … `Original Size` / `Zoom In/Out` / `Zoom(%)`（10/50/100/150/200/500）/ `Opacity`（100/90/80/50/30）/ `Drop Shadow`
 - **Window** … `Keep Afloat` / `Minimize`
 - **Exit Kiritori** … アプリ終了
