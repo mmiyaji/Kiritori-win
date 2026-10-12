@@ -176,6 +176,26 @@ internal static class AnnotationNewToolsProbe
             Require(ReferenceEquals(Call(window, "GetEffectedBaseImage"), source), "No effect did not return the raw source");
 
             Call(window, "SetWholeImageEffect", mosaic, 32);
+            _snapType.GetMethod("ApplyZoom", Instance, null, new[] { typeof(bool), typeof(bool) }, null)
+                .Invoke(window, new object[] { false, false });
+            var displayCache = Get(window, "_processedImageCache");
+            Require(displayCache != null && ReferenceEquals(((PictureBox)Get(window, "pictureBox1")).Image, displayCache),
+                "Zoom did not display the processed base");
+            Call(window, "SnapWindow_ResizeBegin", window, EventArgs.Empty);
+            Require(ReferenceEquals(Get(window, "_processedImageCache"), displayCache),
+                "Resize preview disposed or replaced the processed cache");
+            Require(ReferenceEquals(Call(window, "GetEffectedBaseImage"), displayCache),
+                "Resize preview left a stale processed base");
+            Call(window, "SnapWindow_ResizeEnd", window, EventArgs.Empty);
+            _snapType.GetMethod("ApplyZoom", Instance, null, new[] { typeof(bool), typeof(bool) }, null)
+                .Invoke(window, new object[] { false, false });
+            using (var resizedExport = (Bitmap)Call(window, "GetCurrentBitmapClone"))
+            {
+                Require(resizedExport.Width == 32 && resizedExport.Height == 24,
+                    "Resize and zoom after effect did not preserve source-sized export");
+                Require(resizedExport.GetPixel(0, 0).ToArgb() == ((Bitmap)displayCache).GetPixel(0, 0).ToArgb(),
+                    "Resize/zoom export lost the effected base");
+            }
             Call(window, "SetImageAndResetZoom", new Bitmap(20, 18), null);
             Require(Get(window, "_wholeImageEffect").ToString() == "None" && Get(window, "_processedImageCache") == null,
                 "Replacing the source did not reset effect and dispose cached base");

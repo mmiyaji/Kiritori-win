@@ -153,7 +153,8 @@ namespace Kiritori
                 pictureBox1.Image = _originalStill;
                 if (prev != null &&
                     !ReferenceEquals(prev, _originalImage) &&
-                    !ReferenceEquals(prev, _originalStill))
+                    !ReferenceEquals(prev, _originalStill) &&
+                    !ReferenceEquals(prev, _processedImageCache))
                 {
                     try { prev.Dispose(); } catch { }
                 }

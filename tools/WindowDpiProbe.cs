@@ -193,7 +193,7 @@ internal static class WindowDpiProbe
                 styles.Hide();
                 Require(Field(shape, "RectangleStyle").ToString() == "Outline", "Style did not update selected annotation");
                 var colors = (RadioButton[])Field(snap, "_annotationColorButtons");
-                colors[1].Checked = true;
+                colors[1].PerformClick();
                 Require(((Color)Field(shape, "StrokeColor")).ToArgb() == Color.FromArgb(88, 166, 255).ToArgb(), "Color did not update selected annotation");
                 Require(((Color)Field(shape, "FillColor")) == Color.Transparent, "Outline color change introduced fill");
                 var buttons = (RadioButton[])Field(snap, "_annotationToolButtons");
@@ -209,7 +209,12 @@ internal static class WindowDpiProbe
                 Require(((IList)Field(snap, "_annotations")).Count == 1, "Remove last did not remove exactly one annotation");
                 ((Button)Field(snap, "_annotationClearButton")).PerformClick();
                 Require(((IList)Field(snap, "_annotations")).Count == 0, "Clear did not remove annotations");
-                Require(!((Button)Field(snap, "_annotationUndoButton")).Enabled, "Empty undo remains enabled");
+                var undoButton = (Button)Field(snap, "_annotationUndoButton");
+                Require(undoButton.Enabled, "Clear did not remain undoable");
+                undoButton.PerformClick();
+                Require(((IList)Field(snap, "_annotations")).Count == 1, "Undo did not restore annotations after clear");
+                ((Button)Field(snap, "_annotationRedoButton")).PerformClick();
+                Require(((IList)Field(snap, "_annotations")).Count == 0, "Redo did not clear restored annotations");
                 annotationPalette.Close();
                 Require(!(bool)Field(snap, "_annotationMode") && !annotationPalette.Visible && !annotationPalette.IsDisposed, "Palette close did not finish editing safely");
                 Call(snap, "EnterAnnotationMode");
