@@ -13,24 +13,34 @@
 
 アプリのリポジトリ `mmiyaji/Kiritori-win` にpushするだけでは、このPagesプロジェクトは更新されません。CloudflareはDNSだけでなくPagesでこの紹介ページをホストしています。
 
+## 構成
+
+紹介ページの元ファイルは `site/` にあり、公開用リポジトリの `sites/kiritori/` と同じ構成です。パスの書き換えは不要です。
+
+- `site/index.html`：日本語の本文。英語は `?lang=en` で表示する。
+- `site/privacy.html`：プライバシーポリシー。
+- `site/assets/i18n-en.js`：英語の文面。キーは `index.html` の `data-i18n`・`data-img` 属性と対応する。
+- `site/assets/site.js`：言語メニュー、ライト／ダーク切り替え、操作動画の切り替え、GLightbox の初期化。
+- `site/assets/theme.js`：描画前に保存済みの表示モードを適用する。
+- `site/assets/site.css`：スタイル。
+- `site/assets/img/`：画面画像（WebP）。日英で内容が違う画像は `-ja` / `-en` を付け、英語表示で自動的に差し替える。同じ画像は接尾辞なし。
+- `site/assets/video/`：操作動画とポスター画像。
+- `site/assets/glightbox.min.*`：画像の拡大表示（GLightbox、MIT）。
+
+CSS・JavaScript を変更したら、`index.html` の該当する `?v=` を内容のハッシュなどに更新し、ブラウザのキャッシュを避ける。
+
 ## 更新手順
 
-1. `Kiritori-win/index.html` で紹介ページを編集し、ローカルブラウザで確認する。
-2. 公開用リポジトリの `sites/kiritori/index.html` に反映する。
-3. 素材パスを公開用に変更する。
-   - `KiritoriPackage/Images/icon_256x256.png` → `assets/icon.png`
-   - `screenshot/` → `assets/`（JavaScript内の動画切り替えパスも含む）
-   - OGP画像には本番URLを使用する。
-   - 公開用ページの `assets/icon.png` のfaviconを維持する。
-4. 追加・更新した素材を `sites/kiritori/assets/` にコピーする。アプリのソースやローカル検証レポートを公開対象に混ぜない。
-5. `git diff --check`、素材参照、動画切り替え、ガイド・FAQの開閉、スマートフォン幅での表示を確認する。
-6. 公開用リポジトリの変更をコミットし、承認された範囲で `main` をpushする。
-7. Cloudflareダッシュボードで `kiritori` の本番デプロイ成功を確認する。
-8. 本番URLで更新内容・動画・使い方・FAQを確認する。
+1. `Kiritori-win/site/` で紹介ページを編集し、`site/` をルートにしたローカルサーバーで日本語・英語、ライト・ダーク、スマートフォン幅を確認する。
+2. `site/` の内容を公開用リポジトリの `sites/kiritori/` にコピーする。アプリのソースやローカル検証レポートを公開対象に混ぜない。不要になった素材は公開側から削除する。
+3. `git diff --check`、素材参照、動画切り替え、画像の拡大表示、言語・表示モードの切り替え、FAQの開閉を確認する。
+4. 公開用リポジトリの変更をコミットし、承認された範囲で `main` をpushする。
+5. Cloudflareダッシュボードで `kiritori` の本番デプロイ成功を確認する。
+6. 本番URLで更新内容・動画・使い方・FAQを確認する。
 
 ## 紹介ページの方針
 
-白地、簡潔な機能説明、操作動画を主役にする。概念的なキャッチコピーは置かない。Microsoft Storeを入手先として案内し、ZIP版は推奨・案内しない。詳しい使い方はGitHubへ誘導せず、ページ内の折りたたみガイドで完結させる。FAQ、対応環境、プライバシー、サポート、更新履歴への導線を維持する。
+明るい背景（ダークモード対応）、簡潔な機能説明、操作動画と実際の画面画像を中心にする。アプリの選択枠（シアン）・アイコンの点線・注釈の番号マーカー（オレンジ）を見た目に使う。概念的なキャッチコピーは置かない。Microsoft Storeを入手先として案内し、ZIP版は推奨・案内しない。詳しい使い方はGitHubへ誘導せず、ページ内の使い方・ショートカット・Tipsで完結させる。FAQ、対応環境、プライバシー、サポート、更新履歴への導線を維持する。
 
 ## 2026-10-06の更新
 
