@@ -95,6 +95,7 @@ window.KR_EN = {
  "foot.release": "Release notes",
  "foot.support": "Support",
  "foot.privacy": "Privacy",
+ "foot.ruhenheim": "Ruhenheim",
 
  "img.pin": "A full landscape photo and a cut-out of the snowy mountain shown as two windows on top",
  "img.pin-doc": "Two captures of a checklist placed side by side",

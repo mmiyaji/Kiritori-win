@@ -13,6 +13,7 @@ header .wrap{height:56px;display:flex;align-items:center;gap:24px}
 header nav{display:flex;gap:4px;margin-left:auto;font-size:13px}
 header nav a{color:var(--muted);text-decoration:none;padding:4px 10px;border:1px dashed transparent;border-radius:2px}
 header nav a:hover{border-color:var(--frame);color:var(--fg)}
+header nav a.on{color:var(--fg);background:var(--panel2);border-color:var(--line)}
 .top{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:48px;padding:56px 0 40px;align-items:center}
 h1{font-size:40px;font-weight:700;margin:0 0 14px;line-height:1.2}
 .top p{margin:0;color:var(--muted)}.top .meta{margin-top:16px;font-size:12px;color:var(--dim)}
@@ -56,7 +57,7 @@ table.keys th,table.keys td{text-align:left;padding:8px 12px;border-bottom:1px s
 .faq summary::before{content:"Q";font:12px/1.9 "Cascadia Mono",Consolas,monospace;color:var(--accent)}
 .faq p{margin:0 0 14px 22px;color:var(--muted);font-size:14.5px}
 footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:80px;padding:18px 0 32px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--dim)}
-footer nav{display:flex;gap:18px}footer a{color:var(--dim)}
+footer nav{display:flex;flex-wrap:wrap;gap:8px 18px}footer a{color:var(--dim)}
 @media (max-width:900px){header nav{display:none}.tools{margin-left:auto}.top,.usage,.grid,.item:first-child{grid-template-columns:1fr}.tips{grid-template-columns:1fr 1fr}.faq{columns:1}h1{font-size:32px}}
 @media (max-width:560px){.tips{grid-template-columns:1fr}}
 .tools{display:flex;gap:6px;align-items:center}.tool{height:34px;min-width:34px;display:grid;place-items:center;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer;padding:0 8px;font:600 13px/1 "Segoe UI","Yu Gothic UI",sans-serif}
