@@ -1,8 +1,9 @@
-:root{--bg:#f5f5f2;--panel:#fff;--panel2:#efefeb;--fg:#1c1c1c;--muted:#4d4d4d;--dim:#7c7c78;--line:#dcdcd6;--accent:#0a7f8c;--frame:#22c7d6;--mark:#ff8a3d}
+:root{--font-ja:"Yu Gothic UI","Yu Gothic",Meiryo,"Noto Sans JP","Hiragino Kaku Gothic ProN",sans-serif;--font-en:"Segoe UI Variable Text","Segoe UI","Yu Gothic UI",Meiryo,"Noto Sans JP";--bg:#f5f5f2;--panel:#fff;--panel2:#efefeb;--fg:#1c1c1c;--muted:#4d4d4d;--dim:#7c7c78;--line:#dcdcd6;--accent:#0a7f8c;--frame:#22c7d6;--mark:#ff8a3d}
 :root[data-theme="dark"]{--bg:#121314;--panel:#1b1c1e;--panel2:#242528;--fg:#ececea;--muted:#bdbdb9;--dim:#8d8d89;--line:#2f3033;--accent:#4fd6e3;--frame:#2fd3e2;--mark:#ff9a55}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#121314;--panel:#1b1c1e;--panel2:#242528;--fg:#ececea;--muted:#bdbdb9;--dim:#8d8d89;--line:#2f3033;--accent:#4fd6e3;--frame:#2fd3e2;--mark:#ff9a55}}
 *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:64px}
-body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.8 "Segoe UI","Yu Gothic UI","Meiryo",sans-serif}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.8 var(--font-ja)}
+html:lang(en) body{font-family:var(--font-en),var(--font-ja)}
 a{color:var(--accent)}
 .mono{font-family:"Cascadia Mono",Consolas,monospace}
 .wrap{width:min(1180px,calc(100% - 48px));margin-inline:auto}
@@ -60,7 +61,7 @@ footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin
 footer nav{display:flex;flex-wrap:wrap;gap:8px 18px}footer a{color:var(--dim)}
 @media (max-width:900px){header nav{display:none}.tools{margin-left:auto}.top,.usage,.grid,.item:first-child{grid-template-columns:1fr}.tips{grid-template-columns:1fr 1fr}.faq{columns:1}h1{font-size:32px}}
 @media (max-width:560px){.tips{grid-template-columns:1fr}}
-.tools{display:flex;gap:6px;align-items:center}.tool{height:34px;min-width:34px;display:grid;place-items:center;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer;padding:0 8px;font:600 13px/1 "Segoe UI","Yu Gothic UI",sans-serif}
+.tools{display:flex;gap:6px;align-items:center}.tool{height:34px;min-width:34px;display:grid;place-items:center;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer;padding:0 8px;font:600 13px/1 var(--font-ja)}html:lang(en) .tool{font-family:var(--font-en),var(--font-ja)}
 .tool:hover{background:var(--panel2)}.tool:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .theme svg{width:18px;height:18px}.theme .sun{display:none}
 :root[data-theme="dark"] .theme .sun{display:block}:root[data-theme="dark"] .theme .moon{display:none}
